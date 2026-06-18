@@ -1,5 +1,7 @@
 #pragma once
 #include "../EngineCommon.h"
+#include "../Resources/Buffer/VertexBuffer.h"
+#include "../Renderer/Pipeline/GraphicsPipeline.h"
 
 namespace Engine {
 	class Window;
@@ -24,5 +26,8 @@ namespace Engine {
 
 		std::unique_ptr<RenderDevice> m_device;
 		std::unique_ptr<CommandContext> m_context;
+
+		std::unique_ptr<Engine::VertexBuffer> m_vertexBuffer;
+		std::unique_ptr<Engine::GraphicsPipeline> m_pipeline;
 	};
 }

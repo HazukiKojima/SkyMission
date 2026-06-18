@@ -27,56 +27,60 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.cpp">
-      <Filter>Engine\Renderer\Pipeline</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Engine\Core\Application.cpp">
+    <ClCompile Include="Engine\Core\Application.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Core\Window.cpp">
+    <ClCompile Include="Engine\Core\Window.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
-    <ClCompile Include="..\main.cpp" />
-    <ClCompile Include="..\Engine\Resources\Buffer\VertexBuffer.cpp">
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp">
       <Filter>Engine\Resources\Buffer</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Renderer\Device\CommandContext.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Engine\Renderer\Device\RenderDevice.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp">
+      <Filter>Engine\Renderer\Pipeline</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h">
-      <Filter>Engine\Renderer\Pipeline</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Engine\Core\Application.h">
+    <ClInclude Include="Engine\Core\Application.h">
       <Filter>Engine\Core</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Core\Window.h">
+    <ClInclude Include="Engine\Core\Window.h">
       <Filter>Engine\Core</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Resources\Buffer\VertexBuffer.h">
+    <ClInclude Include="Engine\Renderer\Device\CommandContext.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RenderDevice.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h">
       <Filter>Engine\Resources\Buffer</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Renderer\Device\CommandContext.h">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Engine\Renderer\Device\RenderDevice.h">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Engine\Renderer\Shader\Common.hlsli">
+    <ClInclude Include="Engine\Renderer\Shader\Common.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
-    </None>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h">
+      <Filter>Engine\Renderer\Pipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\Engine\Renderer\Shader\BasicPS.hlsl">
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Engine\Renderer\Shader\BasicVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
-    <FxCompile Include="..\Engine\Renderer\Shader\BasicVS.hlsl">
+    <FxCompile Include="Engine\Renderer\Shader\BasicPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\VertexShader.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
   </ItemGroup>

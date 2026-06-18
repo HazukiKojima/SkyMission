@@ -10,6 +10,7 @@
 #include <wrl/client.h>
 #include <stdexcept>
 #include <memory>
+#include "../d3dx12.h"
 
 using Microsoft::WRL::ComPtr;
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "../EngineCommon.h"
+#include "../../EngineCommon.h"
 
 namespace Engine {
 	class RenderDevice {
