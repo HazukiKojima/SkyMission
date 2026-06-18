@@ -47,6 +47,16 @@ namespace Engine {
 			m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, rtvHandle);
 			rtvHandle.ptr += m_rtvDescriptorSize; // 次のRTVディスクリプタへ移動
 		}
+
+	// CBV/SRV/UAV ヒープを作成（テクスチャなどをシェーダから参照するためのシェーダ可視ヒープ）
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.NumDescriptors = 256; // 十分な数を確保
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
+
+	// SRV ヒープのディスクリプタサイズを取得しておく
+	m_srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
 	void RenderDevice::Present() {
@@ -57,5 +67,20 @@ namespace Engine {
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 		rtvHandle.ptr += GetFrameIndex() * m_rtvDescriptorSize;
 		return rtvHandle;
+	}
+
+
+	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::AllocateSrvDescriptor(UINT* outIndex) {
+		D3D12_CPU_DESCRIPTOR_HANDLE handle = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
+		handle.ptr += static_cast<SIZE_T>(m_srvDescriptorCount) * m_srvDescriptorSize;
+		if (outIndex) *outIndex = m_srvDescriptorCount;
+		m_srvDescriptorCount++;
+		return handle;
+	}
+
+	D3D12_GPU_DESCRIPTOR_HANDLE RenderDevice::GetSrvGpuHandle(UINT index) const {
+		D3D12_GPU_DESCRIPTOR_HANDLE handle = m_srvHeap->GetGPUDescriptorHandleForHeapStart();
+		handle.ptr += static_cast<SIZE_T>(index) * m_srvDescriptorSize;
+		return handle;
 	}
 }

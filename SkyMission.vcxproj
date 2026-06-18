@@ -26,6 +26,7 @@
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Engine\Resources\Texture\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.h" />
@@ -34,6 +35,7 @@
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h" />
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h" />
+    <ClInclude Include="Engine\Resources\Texture\Texture.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Renderer\Shader\Common.hlsli">

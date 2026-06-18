@@ -2,6 +2,10 @@
 #include "../EngineCommon.h"
 #include "../Resources/Buffer/VertexBuffer.h"
 #include "../Renderer/Pipeline/GraphicsPipeline.h"
+#include "../Resources/Texture/Texture.h"
+
+class RenderDevice;
+class CommandContext;
 
 namespace Engine {
 	class Window;
@@ -29,5 +33,8 @@ namespace Engine {
 
 		std::unique_ptr<Engine::VertexBuffer> m_vertexBuffer;
 		std::unique_ptr<Engine::GraphicsPipeline> m_pipeline;
+
+		std::unique_ptr<Engine::Texture> m_texture;
+		UINT m_textureSrvIndex = 0;
 	};
 }

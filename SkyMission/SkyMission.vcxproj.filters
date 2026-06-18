@@ -25,6 +25,9 @@
     <Filter Include="Engine\Renderer\Pipeline">
       <UniqueIdentifier>{e7d0d959-8ab3-4e1b-96fa-0002c15333fc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Resources\Texture">
+      <UniqueIdentifier>{77f88f34-1dc2-4fc7-9a57-b2c96f278bf5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.cpp">
@@ -46,6 +49,9 @@
     <ClCompile Include="..\Engine\Renderer\Device\RenderDevice.cpp">
       <Filter>Engine\Renderer\Device</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Resources\Texture\Texture.cpp">
+      <Filter>Engine\Resources\Texture</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h">
@@ -65,6 +71,9 @@
     </ClInclude>
     <ClInclude Include="..\Engine\Renderer\Device\RenderDevice.h">
       <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Resources\Texture\Texture.h">
+      <Filter>Engine\Resources\Texture</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
