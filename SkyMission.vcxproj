@@ -19,27 +19,30 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Engine\Core\Application.cpp" />
-    <ClCompile Include="..\Engine\Core\Window.cpp" />
-    <ClCompile Include="..\Engine\Renderer\Device\CommandContext.cpp" />
-    <ClCompile Include="..\Engine\Renderer\Device\RenderDevice.cpp" />
-    <ClCompile Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
-    <ClCompile Include="..\Engine\Resources\Buffer\VertexBuffer.cpp" />
-    <ClCompile Include="..\main.cpp" />
+    <ClCompile Include="Engine\Core\Application.cpp" />
+    <ClCompile Include="Engine\Core\Window.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp" />
+    <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
+    <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Engine\Core\Application.h" />
-    <ClInclude Include="..\Engine\Core\Window.h" />
-    <ClInclude Include="..\Engine\Renderer\Device\CommandContext.h" />
-    <ClInclude Include="..\Engine\Renderer\Device\RenderDevice.h" />
-    <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h" />
-    <ClInclude Include="..\Engine\Resources\Buffer\VertexBuffer.h" />
+    <ClInclude Include="Engine\Core\Application.h" />
+    <ClInclude Include="Engine\Core\Window.h" />
+    <ClInclude Include="Engine\Renderer\Device\CommandContext.h" />
+    <ClInclude Include="Engine\Renderer\Device\RenderDevice.h" />
+    <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h" />
+    <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Engine\Renderer\Shader\Common.hlsli" />
+    <ClInclude Include="Engine\Renderer\Shader\Common.hlsli">
+      <FileType>Document</FileType>
+    </ClInclude>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\Engine\Renderer\Shader\BasicPS.hlsl">
+    <FxCompile Include="Engine\Renderer\Shader\BasicPS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -47,13 +50,20 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="..\Engine\Renderer\Shader\BasicVS.hlsl">
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
+    <FxCompile Include="Engine\Renderer\Shader\BasicVS.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\VertexShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
     </FxCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
