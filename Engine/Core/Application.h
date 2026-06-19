@@ -36,5 +36,9 @@ namespace Engine {
 
 		std::unique_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
+
+		// 頂点シェーダ用の定数バッファ (MVP 行列)
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
+		UINT8* m_cbvDataPtr = nullptr;
 	};
 }

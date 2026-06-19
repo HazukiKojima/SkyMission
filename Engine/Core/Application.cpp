@@ -3,6 +3,7 @@
 #include "../Renderer/Device/RenderDevice.h"
 #include "../Renderer/Device/CommandContext.h"
 #include "../Resources/Texture/Texture.h"
+#include <DirectXMath.h>
 
 namespace Engine {
 	Application::Application(HINSTANCE hInstance) : m_hInstance(hInstance) {}
@@ -33,12 +34,13 @@ namespace Engine {
 			float pos[3];
 			float uv[2];
 		};
+		// XZ平面に広がる大きめの四角形 (Y=0 が地面)
 		Vertex quad[] = {
 			// 位置(x,y,z)             // UV(u,v)
-			{-0.25f,  0.25f, 0.0f,    0.0f, 0.0f}, // 左上
-			{ 0.25f,  0.25f, 0.0f,    1.0f, 0.0f}, // 右上
-			{-0.25f, -0.25f, 0.0f,    0.0f, 1.0f}, // 左下
-			{ 0.25f, -0.25f, 0.0f,    1.0f, 1.0f}  // 右下
+			{-2.0f,  0.0f, -2.0f,    0.0f, 0.0f}, // 左上 (ワールド座標)
+			{ 2.0f,  0.0f, -2.0f,    1.0f, 0.0f}, // 右上
+			{-2.0f,  0.0f,  2.0f,    0.0f, 1.0f}, // 左下
+			{ 2.0f,  0.0f,  2.0f,    1.0f, 1.0f}  // 右下
 		};
 
 		// 頂点バッファの生成
@@ -67,6 +69,41 @@ namespace Engine {
 		// アップロードが完了するまで待機
 		m_context->WaitForGpu();
 		m_textureSrvIndex = srvIndex;
+
+		// 定数バッファ (MVP) を作成してトップダウン視点の行列を設定
+		{
+			using namespace DirectX;
+			UINT64 cbSize = (sizeof(XMFLOAT4X4) + 255) & ~255; // 256 バイト境界にアライン
+
+			CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(cbSize);
+			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+			ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
+				&heapProps,
+				D3D12_HEAP_FLAG_NONE,
+				&desc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_constantBuffer)));
+
+			// マップして行列を書き込む
+			CD3DX12_RANGE readRange(0, 0);
+			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_cbvDataPtr)));
+
+			XMMATRIX world = XMMatrixIdentity();
+			// カメラを上方に置き、原点を見る (Y軸が上方向)
+			XMVECTOR eye = XMVectorSet(2.0f, 2.0f, -3.0f, 0.0f);
+			XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+			XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			XMMATRIX view = XMMatrixLookAtLH(eye, at, up);
+			float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
+			XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspect, 0.1f, 100.0f);
+			XMMATRIX mvp = world * view * proj;
+			XMMATRIX mvpT = XMMatrixTranspose(mvp); // シェーダとの行列オーダ互換のため転置
+
+			XMFLOAT4X4 m;
+			XMStoreFloat4x4(&m, mvpT);
+			memcpy(m_cbvDataPtr, &m, sizeof(m));
+		}
 	}
 
 	// メッセージループの駆動およびメイン更新・描画パスの制御
@@ -112,6 +149,11 @@ namespace Engine {
 			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
 			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_textureSrvIndex));
+		}
+
+		// 頂点シェーダ用の定数バッファをルートにバインド
+		if (m_constantBuffer) {
+			cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
 		}
 
 		// 描画設定（頂点バッファをバインド）
