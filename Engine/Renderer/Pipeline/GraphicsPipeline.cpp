@@ -10,11 +10,11 @@ namespace Engine {
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0
 
-		// ルートパラメータを2つ用意: 0 = SRV テーブル (ピクセルシェーダ用), 1 = CBV(b0) (頂点シェーダ用)
-		CD3DX12_ROOT_PARAMETER1 rootParams[2];
-		rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-		// static helper を使って rootParams[1] を初期化
-		CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
+	// ルートパラメータを2つ用意: 0 = SRV テーブル (ピクセルシェーダ用), 1 = CBV(b0) (頂点/ピクセル両方で使用)
+	CD3DX12_ROOT_PARAMETER1 rootParams[2];
+	rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+	// CBV を頂点とピクセルの両方で利用するためシェーダ可視性を ALL に設定
+	CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;

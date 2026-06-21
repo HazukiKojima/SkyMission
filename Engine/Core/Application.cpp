@@ -18,6 +18,8 @@ namespace Engine {
 		DirectX::XMFLOAT4X4 mvp;
 		float time;
 		float padding[3];
+		DirectX::XMFLOAT3 cameraPos;
+		float pad2;
 	};
 
 	// アプリケーション基盤および各グラフィックスコンポーネントの構築
@@ -41,14 +43,14 @@ namespace Engine {
 			float uv[2];
 		};
 		// --- 10x10 グリッドの頂点・インデックス生成 ---
-		const int gridSize = 200;
+		const int gridSize = 1000;
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 
 		for (int z = 0; z < gridSize; ++z) {
 			for (int x = 0; x < gridSize; ++x) {
-				float px = (float)x / (gridSize - 1) * 20.0f - 10.0f;
-				float pz = (float)z / (gridSize - 1) * 20.0f - 10.0f;
+				float px = (float)x / (gridSize - 1) * 500.0f - 250.0f;
+				float pz = (float)z / (gridSize - 1) * 500.0f - 250.0f;
 				float u = (float)x / (gridSize - 1);
 				float v = (float)z / (gridSize - 1);
 				vertices.push_back({ {px, 0.0f, pz}, {u, v} });
@@ -113,7 +115,7 @@ namespace Engine {
 		// 定数バッファ (MVP) を作成してトップダウン視点の行列を設定
 		{
 			using namespace DirectX;
-			UINT64 cbSize = (sizeof(XMFLOAT4X4) + 255) & ~255; // 256 バイト境界にアライン
+			UINT64 cbSize = (sizeof(ConstantBufferData) + 255) & ~255; // 256 バイト境界にアライン
 
 			CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(cbSize);
 			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
@@ -142,7 +144,11 @@ namespace Engine {
 
 			XMFLOAT4X4 m;
 			XMStoreFloat4x4(&m, mvpT);
-			memcpy(m_cbvDataPtr, &m, sizeof(m));
+			// 初期値を書き込む（カメラは初期の eye と合わせる）
+			ConstantBufferData* cbInit = reinterpret_cast<ConstantBufferData*>(m_cbvDataPtr);
+			cbInit->mvp = m;
+			cbInit->time = 0.0f;
+			cbInit->cameraPos = DirectX::XMFLOAT3(10.0f, 15.0f, -10.0f);
 		}
 	}
 
@@ -169,10 +175,11 @@ namespace Engine {
 		// MVP行列を再計算
 		using namespace DirectX;
 		XMMATRIX world = XMMatrixIdentity();
-		XMVECTOR eye = XMVectorSet(10.0f, 5.0f, -10.0f, 0.0f);
-		XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		XMVECTOR eye = XMVectorSet(15.0f, 40.0f, -0.0f, 0.0f); // 真上近くから少しずらして見下ろす
+		XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);   // ターゲットは原点
+		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);   // 上方向
 		XMMATRIX view = XMMatrixLookAtLH(eye, at, up);
+
 		float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
 		XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspect, 0.1f, 100.0f);
 		XMMATRIX mvp = world * view * proj;
@@ -181,12 +188,14 @@ namespace Engine {
 		DirectX::XMFLOAT4X4 m;
 		XMStoreFloat4x4(&m, mvpT);
 
-		// 定数バッファをマップして更新
+		// 定数バッファを更新
 		ConstantBufferData* data;
 		m_constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&data));
 
 		data->mvp = m;
 		data->time = time;
+		// カメラ位置を更新（VS/PS のフレネル計算用）
+		data->cameraPos = DirectX::XMFLOAT3(0.0f, 20.0f, -0.1f);
 
 		m_constantBuffer->Unmap(0, nullptr);
 	}
