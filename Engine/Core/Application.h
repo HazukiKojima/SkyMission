@@ -32,6 +32,9 @@ namespace Engine {
 		std::unique_ptr<CommandContext> m_context;
 
 		std::unique_ptr<Engine::VertexBuffer> m_vertexBuffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
+		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+		UINT m_indexCount;
 		std::unique_ptr<Engine::GraphicsPipeline> m_pipeline;
 
 		std::unique_ptr<Engine::Texture> m_texture;
@@ -40,5 +43,7 @@ namespace Engine {
 		// 頂点シェーダ用の定数バッファ (MVP 行列)
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
 		UINT8* m_cbvDataPtr = nullptr;
+
+		UINT m_vertexCount;
 	};
 }

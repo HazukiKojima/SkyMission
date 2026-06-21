@@ -14,9 +14,15 @@ namespace Engine {
 		}
 	}
 
+	struct ConstantBufferData {
+		DirectX::XMFLOAT4X4 mvp;
+		float time;
+		float padding[3];
+	};
+
 	// アプリケーション基盤および各グラフィックスコンポーネントの構築
 	void Application::Initialize() {
-		m_window = std::make_unique<Window>(800, 600, L"DirectX 12 Engine (Engine/Core/Renderer Style)", m_hInstance);
+		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 
 		m_device = std::make_unique<RenderDevice>();
@@ -34,18 +40,52 @@ namespace Engine {
 			float pos[3];
 			float uv[2];
 		};
-		// XZ平面に広がる大きめの四角形 (Y=0 が地面)
-		Vertex quad[] = {
-			// 位置(x,y,z)             // UV(u,v)
-			{-2.0f,  0.0f, -2.0f,    0.0f, 0.0f}, // 左上 (ワールド座標)
-			{ 2.0f,  0.0f, -2.0f,    1.0f, 0.0f}, // 右上
-			{-2.0f,  0.0f,  2.0f,    0.0f, 1.0f}, // 左下
-			{ 2.0f,  0.0f,  2.0f,    1.0f, 1.0f}  // 右下
-		};
+		// --- 10x10 グリッドの頂点・インデックス生成 ---
+		const int gridSize = 200;
+		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
 
-		// 頂点バッファの生成
+		for (int z = 0; z < gridSize; ++z) {
+			for (int x = 0; x < gridSize; ++x) {
+				float px = (float)x / (gridSize - 1) * 20.0f - 10.0f;
+				float pz = (float)z / (gridSize - 1) * 20.0f - 10.0f;
+				float u = (float)x / (gridSize - 1);
+				float v = (float)z / (gridSize - 1);
+				vertices.push_back({ {px, 0.0f, pz}, {u, v} });
+			}
+		}
+
+		for (int z = 0; z < gridSize - 1; ++z) {
+			for (int x = 0; x < gridSize - 1; ++x) {
+				uint32_t i0 = z * gridSize + x;
+				uint32_t i1 = i0 + 1;
+				uint32_t i2 = (z + 1) * gridSize + x;
+				uint32_t i3 = i2 + 1;
+				indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
+				indices.push_back(i1); indices.push_back(i3); indices.push_back(i2);
+			}
+		}
+		m_indexCount = (UINT)indices.size();
+
+		// --- 頂点バッファの初期化 ---
 		m_vertexBuffer = std::make_unique<Engine::VertexBuffer>();
-		m_vertexBuffer->Initialize(m_device->GetDevice(), quad, sizeof(quad), sizeof(Vertex));
+		m_vertexBuffer->Initialize(m_device->GetDevice(), vertices.data(), sizeof(Vertex) * vertices.size(), sizeof(Vertex));
+
+		// --- インデックスバッファの作成 ---
+		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+		auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t) * indices.size());
+		ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
+			&heapProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr, IID_PPV_ARGS(&m_indexBuffer)));
+
+		void* pData;
+		m_indexBuffer->Map(0, nullptr, &pData);
+		memcpy(pData, indices.data(), sizeof(uint32_t) * indices.size());
+		m_indexBuffer->Unmap(0, nullptr);
+
+		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_indexBufferView.SizeInBytes = sizeof(uint32_t) * indices.size();
 
 		// テクスチャを読み込み、SRV を作成してディスクリプタヒープへ配置
 		m_texture = std::make_unique<Engine::Texture>();
@@ -60,7 +100,7 @@ namespace Engine {
 		std::wstring exeDir = exePath.substr(0, exePath.find_last_of(L"\\/"));
 
 		// Assetsへの絶対パスを動的に作る
-		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\SampleImage.png";
+		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg";
 		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
@@ -91,7 +131,7 @@ namespace Engine {
 
 			XMMATRIX world = XMMatrixIdentity();
 			// カメラを上方に置き、原点を見る (Y軸が上方向)
-			XMVECTOR eye = XMVectorSet(2.0f, 2.0f, -3.0f, 0.0f);
+			XMVECTOR eye = XMVectorSet(10.0f, 15.0f, -10.0f, 0.0f);
 			XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
 			XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 			XMMATRIX view = XMMatrixLookAtLH(eye, at, up);
@@ -122,7 +162,34 @@ namespace Engine {
 		return static_cast<int>(msg.wParam);
 	}
 
-	void Application::Update() {}
+	void Application::Update() {
+		static float time = 0.0f;
+		time += 0.01f;
+
+		// MVP行列を再計算
+		using namespace DirectX;
+		XMMATRIX world = XMMatrixIdentity();
+		XMVECTOR eye = XMVectorSet(10.0f, 5.0f, -10.0f, 0.0f);
+		XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		XMMATRIX view = XMMatrixLookAtLH(eye, at, up);
+		float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
+		XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspect, 0.1f, 100.0f);
+		XMMATRIX mvp = world * view * proj;
+		XMMATRIX mvpT = XMMatrixTranspose(mvp);
+
+		DirectX::XMFLOAT4X4 m;
+		XMStoreFloat4x4(&m, mvpT);
+
+		// 定数バッファをマップして更新
+		ConstantBufferData* data;
+		m_constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&data));
+
+		data->mvp = m;
+		data->time = time;
+
+		m_constantBuffer->Unmap(0, nullptr);
+	}
 
 	// フレームのレンダリングコマンド生成・実行パス
 	void Application::Render() {
@@ -159,14 +226,15 @@ namespace Engine {
 		// 描画設定（頂点バッファをバインド）
 		auto view = m_vertexBuffer->GetView();
 		cmd->IASetVertexBuffers(0, 1, &view);
-		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		cmd->IASetIndexBuffer(&m_indexBufferView);
+		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		// クリアと描画実行
 		auto rtv = m_device->GetCurrentRtvHandle();
 		const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
-		cmd->DrawInstanced(4, 1, 0, 0); // 4頂点で四角形
+		cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
 
 		// Presentへ遷移
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
