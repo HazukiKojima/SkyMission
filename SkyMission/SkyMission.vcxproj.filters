@@ -52,6 +52,9 @@
     <ClCompile Include="..\Engine\Resources\Texture\Texture.cpp">
       <Filter>Engine\Resources\Texture</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Core\Camera.cpp">
+      <Filter>Engine\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h">
@@ -74,6 +77,9 @@
     </ClInclude>
     <ClInclude Include="..\Engine\Resources\Texture\Texture.h">
       <Filter>Engine\Resources\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Core\Camera.h">
+      <Filter>Engine\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

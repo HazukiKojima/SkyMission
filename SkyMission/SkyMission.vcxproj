@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Engine\Core\Application.cpp" />
+    <ClCompile Include="..\Engine\Core\Camera.cpp" />
     <ClCompile Include="..\Engine\Core\Window.cpp" />
     <ClCompile Include="..\Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="..\Engine\Renderer\Device\RenderDevice.cpp" />
@@ -30,6 +31,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Engine\Core\Application.h" />
+    <ClInclude Include="..\Engine\Core\Camera.h" />
     <ClInclude Include="..\Engine\Core\Window.h" />
     <ClInclude Include="..\Engine\Renderer\Device\CommandContext.h" />
     <ClInclude Include="..\Engine\Renderer\Device\RenderDevice.h" />

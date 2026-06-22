@@ -4,6 +4,7 @@
 #include "../Renderer/Device/CommandContext.h"
 #include "../Resources/Texture/Texture.h"
 #include <DirectXMath.h>
+#include <chrono>
 
 namespace Engine {
 	Application::Application(HINSTANCE hInstance) : m_hInstance(hInstance) {}
@@ -32,6 +33,7 @@ namespace Engine {
 			if (w == 0 || h == 0) return; // 最小化時など無効な値を無視
 			if (m_context) m_context->WaitForGpu(); // 未処理コマンドを完了させてからリサイズ
 			m_device->Resize(w, h);
+			if (m_camera) m_camera->OnResize(w, h);
 			// 投影は Update() で毎フレーム再計算しているためここでは何もしない
 		});
 
@@ -158,6 +160,10 @@ namespace Engine {
 			cbInit->time = 0.0f;
 			cbInit->cameraPos = DirectX::XMFLOAT3(10.0f, 15.0f, -10.0f);
 		}
+
+		m_camera = std::make_unique<Engine::Camera>();
+		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 1000.0f);
+		m_lastTime = std::chrono::steady_clock::now();
 	}
 
 	// メッセージループの駆動およびメイン更新・描画パスの制御
@@ -178,18 +184,24 @@ namespace Engine {
 
 	void Application::Update() {
 		static float time = 0.0f;
-		time += 0.01f;
+		// compute delta
+		auto now = std::chrono::steady_clock::now();
+		std::chrono::duration<float> dt = now - m_lastTime;
+		m_lastTime = now;
+		float deltaSeconds = dt.count();
+
+		time += deltaSeconds; // use real delta time for animation speed
+
+		// Update camera first
+		if (m_camera) m_camera->Update(deltaSeconds);
 
 		// MVP行列を再計算
 		using namespace DirectX;
 		XMMATRIX world = XMMatrixIdentity();
-		XMVECTOR eye = XMVectorSet(15.0f, 40.0f, -0.0f, 0.0f); // 真上近くから少しずらして見下ろす
-		XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);   // ターゲットは原点
-		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);   // 上方向
-		XMMATRIX view = XMMatrixLookAtLH(eye, at, up);
+		XMMATRIX view = m_camera->GetView();
 
 		float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
-		XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspect, 0.1f, 100.0f);
+		XMMATRIX proj = m_camera->GetProjection();
 		XMMATRIX mvp = world * view * proj;
 		XMMATRIX mvpT = XMMatrixTranspose(mvp);
 
@@ -202,8 +214,11 @@ namespace Engine {
 
 		data->mvp = m;
 		data->time = time;
-		// カメラ位置を更新（VS/PS のフレネル計算用）
-		data->cameraPos = DirectX::XMFLOAT3(0.0f, 20.0f, -0.1f);
+		// カメラ位置を現在のカメラから取得（VS/PS のフレネル計算用）
+		if (m_camera) {
+			auto camPos = m_camera->GetPosition();
+			data->cameraPos = camPos;
+		}
 
 		m_constantBuffer->Unmap(0, nullptr);
 	}

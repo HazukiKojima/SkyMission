@@ -3,6 +3,8 @@
 #include "../Resources/Buffer/VertexBuffer.h"
 #include "../Renderer/Pipeline/GraphicsPipeline.h"
 #include "../Resources/Texture/Texture.h"
+#include "Camera.h"
+#include <chrono>
 
 class RenderDevice;
 class CommandContext;
@@ -40,10 +42,15 @@ namespace Engine {
 		std::unique_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
 
-		// 鬆らせ繧ｷ繧ｧ繝ｼ繝逕ｨ縺ｮ螳壽焚繝舌ャ繝輔ぃ (MVP 陦悟��)
+		// 頂点シェーダ用の定数バッファ (MVP 行列)
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
 		UINT8* m_cbvDataPtr = nullptr;
 
 		UINT m_vertexCount;
+
+		// Camera
+		std::unique_ptr<Engine::Camera> m_camera;
+		// timing
+		std::chrono::steady_clock::time_point m_lastTime;
 	};
 }
