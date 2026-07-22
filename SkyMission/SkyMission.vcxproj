@@ -26,6 +26,7 @@
     <ClCompile Include="..\Engine\Renderer\Device\RenderDevice.cpp" />
     <ClCompile Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="..\Engine\Resources\Buffer\VertexBuffer.cpp" />
+    <ClCompile Include="..\Engine\Resources\Mesh\SkySphere.cpp" />
     <ClCompile Include="..\Engine\Resources\Texture\Texture.cpp" />
     <ClCompile Include="..\main.cpp" />
   </ItemGroup>
@@ -37,6 +38,7 @@
     <ClInclude Include="..\Engine\Renderer\Device\RenderDevice.h" />
     <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="..\Engine\Resources\Buffer\VertexBuffer.h" />
+    <ClInclude Include="..\Engine\Resources\Mesh\SkySphere.h" />
     <ClInclude Include="..\Engine\Resources\Texture\Texture.h" />
   </ItemGroup>
   <ItemGroup>
@@ -56,6 +58,18 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\SkyPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\SkyVS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
