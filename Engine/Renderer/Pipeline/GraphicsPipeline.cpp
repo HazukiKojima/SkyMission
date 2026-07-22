@@ -5,17 +5,42 @@ namespace Engine {
 	void GraphicsPipeline::Initialize(ID3D12Device* device) {
 		OutputDebugStringA("DEBUG: Starting Pipeline Initialize\n");
 
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc;
-		rootSigDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		// ルートシグネチャ: t0 に SRV をバインドするディスクリプタテーブル
+		// 頂点シェーダ用の定数バッファ(b0)とサンプラを用意する
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0
+
+	// ルートパラメータを2つ用意: 0 = SRV テーブル (ピクセルシェーダ用), 1 = CBV(b0) (頂点/ピクセル両方で使用)
+	CD3DX12_ROOT_PARAMETER1 rootParams[2];
+	rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+	// CBV を頂点とピクセルの両方で利用するためシェーダ可視性を ALL に設定
+	CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+
+		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		samplerDesc.MinLOD = 0;
+		samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+		samplerDesc.ShaderRegister = 0; // s0
+		samplerDesc.RegisterSpace = 0;
+		samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSigDesc;
+		rootSigDesc.Init_1_1(_countof(rootParams), rootParams, 1, &samplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
-		ThrowIfFailed(D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+		// CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC は D3D12_VERSIONED_ROOT_SIGNATURE_DESC のラッパーなので、そのアドレスを渡す
+		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSigDesc, &signature, &error));
 		ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 		OutputDebugStringA("DEBUG: RootSignature created\n");
 
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 
 		OutputDebugStringA("DEBUG: Loading Shaders\n");
@@ -41,6 +66,8 @@ namespace Engine {
 
 		// ラスタライザ設定を明示的に構築
 		CD3DX12_RASTERIZER_DESC rastDesc(D3D12_DEFAULT);
+		// 一時的に裏面カリングを無効化して板ポリゴンが見えるようにする
+		rastDesc.CullMode = D3D12_CULL_MODE_NONE;
 		psoDesc.RasterizerState = rastDesc;
 
 		// ブレンドステート設定

@@ -1,21 +1,41 @@
-ï»¿#include "Application.h"
+#include "Application.h"
 #include "Window.h"
 #include "../Renderer/Device/RenderDevice.h"
 #include "../Renderer/Device/CommandContext.h"
+#include "../Resources/Texture/Texture.h"
+#include <DirectXMath.h>
+#include <chrono>
 
 namespace Engine {
 	Application::Application(HINSTANCE hInstance) : m_hInstance(hInstance) {}
 
 	Application::~Application() {
 		if (m_context) {
-			m_context->WaitForGpu(); // æœªæ¶ˆåŒ–ã‚³ãƒãƒ³ãƒ‰ã«ã‚ˆã‚‹ãƒ¡ãƒ¢ãƒªãƒªãƒ¼ã‚¯ã‚„å¼·åˆ¶çµ‚äº†ã‚’æŠ‘æ­¢
+			m_context->WaitForGpu(); // –¢Á‰»ƒRƒ}ƒ“ƒh‚É‚æ‚éƒƒ‚ƒŠƒŠ[ƒN‚â‹­§I—¹‚ğ—}~
 		}
 	}
 
-	// ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³åŸºç›¤ãŠã‚ˆã³å„ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ã‚¹ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã®æ§‹ç¯‰
+	struct ConstantBufferData {
+		DirectX::XMFLOAT4X4 mvp;
+		float time;
+		float padding[3];
+		DirectX::XMFLOAT3 cameraPos;
+		float pad2;
+	};
+
+	// ƒAƒvƒŠƒP[ƒVƒ‡ƒ“Šî”Õ‚¨‚æ‚ÑŠeƒOƒ‰ƒtƒBƒbƒNƒXƒRƒ“ƒ|[ƒlƒ“ƒg‚Ì\’z
 	void Application::Initialize() {
-		m_window = std::make_unique<Window>(800, 600, L"DirectX 12 Engine (Engine/Core/Renderer Style)", m_hInstance);
+		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
+
+		// ƒŠƒTƒCƒYƒCƒxƒ“ƒg‚ğw“Ç‚µ‚ÄƒfƒoƒCƒX‚â“Š‰es—ñ‚ğXV
+		m_window->SetOnResize([this](UINT w, UINT h) {
+			if (w == 0 || h == 0) return; // Å¬‰»‚È‚Ç–³Œø‚È’l‚ğ–³‹
+			if (m_context) m_context->WaitForGpu(); // –¢ˆ—ƒRƒ}ƒ“ƒh‚ğŠ®—¹‚³‚¹‚Ä‚©‚çƒŠƒTƒCƒY
+			m_device->Resize(w, h);
+			if (m_camera) m_camera->OnResize(w, h);
+			// “Š‰e‚Í Update() ‚Å–ˆƒtƒŒ[ƒ€ÄŒvZ‚µ‚Ä‚¢‚é‚½‚ß‚±‚±‚Å‚Í‰½‚à‚µ‚È‚¢
+		});
 
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(m_window->GetHandle(), m_window->GetWidth(), m_window->GetHeight());
@@ -23,23 +43,130 @@ namespace Engine {
 		m_context = std::make_unique<CommandContext>();
 		m_context->Initialize(m_device.get());
 
-		// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã®åˆæœŸåŒ–
+		// ƒpƒCƒvƒ‰ƒCƒ“‚Ì‰Šú‰»
 		m_pipeline = std::make_unique<Engine::GraphicsPipeline>();
 		m_pipeline->Initialize(m_device->GetDevice());
 
-		// å››è§’å½¢ã®é ‚ç‚¹ãƒ‡ãƒ¼ã‚¿ä½œæˆ
-		struct Vertex { float pos[3]; };
-		Vertex quad[] = {
-			{-0.25f,  0.25f, 0.0f}, { 0.25f,  0.25f, 0.0f},
-			{-0.25f, -0.25f, 0.0f}, { 0.25f, -0.25f, 0.0f}
+		// lŠpŒ`‚Ì’¸“_ƒf[ƒ^ì¬
+		struct Vertex {
+			float pos[3];
+			float uv[2];
 		};
+		// --- 10x10 ƒOƒŠƒbƒh‚Ì’¸“_EƒCƒ“ƒfƒbƒNƒX¶¬ ---
+		const int gridSize = 1000;
+		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
 
-		// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã®ç”Ÿæˆ
+		for (int z = 0; z < gridSize; ++z) {
+			for (int x = 0; x < gridSize; ++x) {
+				float px = (float)x / (gridSize - 1) * 500.0f - 250.0f;
+				float pz = (float)z / (gridSize - 1) * 500.0f - 250.0f;
+				float u = (float)x / (gridSize - 1);
+				float v = (float)z / (gridSize - 1);
+				vertices.push_back({ {px, 0.0f, pz}, {u, v} });
+			}
+		}
+
+		for (int z = 0; z < gridSize - 1; ++z) {
+			for (int x = 0; x < gridSize - 1; ++x) {
+				uint32_t i0 = z * gridSize + x;
+				uint32_t i1 = i0 + 1;
+				uint32_t i2 = (z + 1) * gridSize + x;
+				uint32_t i3 = i2 + 1;
+				indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
+				indices.push_back(i1); indices.push_back(i3); indices.push_back(i2);
+			}
+		}
+		m_indexCount = (UINT)indices.size();
+
+		// --- ’¸“_ƒoƒbƒtƒ@‚Ì‰Šú‰» ---
 		m_vertexBuffer = std::make_unique<Engine::VertexBuffer>();
-		m_vertexBuffer->Initialize(m_device->GetDevice(), quad, sizeof(quad), sizeof(Vertex));
+		m_vertexBuffer->Initialize(m_device->GetDevice(), vertices.data(), sizeof(Vertex) * vertices.size(), sizeof(Vertex));
+
+		// --- ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@‚Ìì¬ ---
+		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+		auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t) * indices.size());
+		ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
+			&heapProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr, IID_PPV_ARGS(&m_indexBuffer)));
+
+		void* pData;
+		m_indexBuffer->Map(0, nullptr, &pData);
+		memcpy(pData, indices.data(), sizeof(uint32_t) * indices.size());
+		m_indexBuffer->Unmap(0, nullptr);
+
+		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_indexBufferView.SizeInBytes = sizeof(uint32_t) * indices.size();
+
+		// ƒeƒNƒXƒ`ƒƒ‚ğ“Ç‚İ‚İASRV ‚ğì¬‚µ‚ÄƒfƒBƒXƒNƒŠƒvƒ^ƒq[ƒv‚Ö”z’u
+		m_texture = std::make_unique<Engine::Texture>();
+		// ƒRƒ}ƒ“ƒhƒŠƒXƒg‚ğƒŠƒZƒbƒg‚µ‚ÄƒAƒbƒvƒ[ƒhˆ—‚ğs‚¤
+		m_context->BeginFrame();
+		UINT srvIndex = 0;
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_device->AllocateSrvDescriptor(&srvIndex);
+		// Àsƒtƒ@ƒCƒ‹‚ÌƒpƒX‚ğæ“¾‚·‚éŠÈˆÕ“I‚Èè–@
+		wchar_t buffer[MAX_PATH];
+		GetModuleFileName(NULL, buffer, MAX_PATH);
+		std::wstring exePath = buffer;
+		std::wstring exeDir = exePath.substr(0, exePath.find_last_of(L"\\/"));
+
+		// Assets‚Ö‚Ìâ‘ÎƒpƒX‚ğ“®“I‚Éì‚é
+		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg";
+		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
+			OutputDebugStringA("Application::Initialize - failed to load texture\n");
+		}
+		m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
+		m_context->EndFrame();
+		// ƒAƒbƒvƒ[ƒh‚ªŠ®—¹‚·‚é‚Ü‚Å‘Ò‹@
+		m_context->WaitForGpu();
+		m_textureSrvIndex = srvIndex;
+
+		// ’è”ƒoƒbƒtƒ@ (MVP) ‚ğì¬‚µ‚Äƒgƒbƒvƒ_ƒEƒ“‹“_‚Ìs—ñ‚ğİ’è
+		{
+			using namespace DirectX;
+			UINT64 cbSize = (sizeof(ConstantBufferData) + 255) & ~255; // 256 ƒoƒCƒg‹«ŠE‚ÉƒAƒ‰ƒCƒ“
+
+			CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(cbSize);
+			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+			ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
+				&heapProps,
+				D3D12_HEAP_FLAG_NONE,
+				&desc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_constantBuffer)));
+
+			// ƒ}ƒbƒv‚µ‚Äs—ñ‚ğ‘‚«‚Ş
+			CD3DX12_RANGE readRange(0, 0);
+			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_cbvDataPtr)));
+
+			XMMATRIX world = XMMatrixIdentity();
+			// ƒJƒƒ‰‚ğã•û‚É’u‚«AŒ´“_‚ğŒ©‚é (Y²‚ªã•ûŒü)
+			XMVECTOR eye = XMVectorSet(10.0f, 15.0f, -10.0f, 0.0f);
+			XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+			XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			XMMATRIX view = XMMatrixLookAtLH(eye, at, up);
+			float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
+			XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspect, 0.1f, 100.0f);
+			XMMATRIX mvp = world * view * proj;
+			XMMATRIX mvpT = XMMatrixTranspose(mvp); // ƒVƒF[ƒ_‚Æ‚Ìs—ñƒI[ƒ_ŒİŠ·‚Ì‚½‚ß“]’u
+
+			XMFLOAT4X4 m;
+			XMStoreFloat4x4(&m, mvpT);
+			// ‰Šú’l‚ğ‘‚«‚ŞiƒJƒƒ‰‚Í‰Šú‚Ì eye ‚Æ‡‚í‚¹‚éj
+			ConstantBufferData* cbInit = reinterpret_cast<ConstantBufferData*>(m_cbvDataPtr);
+			cbInit->mvp = m;
+			cbInit->time = 0.0f;
+			cbInit->cameraPos = DirectX::XMFLOAT3(10.0f, 15.0f, -10.0f);
+		}
+
+		m_camera = std::make_unique<Engine::Camera>();
+		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 1000.0f);
+		m_lastTime = std::chrono::steady_clock::now();
 	}
 
-	// ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ãƒ«ãƒ¼ãƒ—ã®é§†å‹•ãŠã‚ˆã³ãƒ¡ã‚¤ãƒ³æ›´æ–°ãƒ»æç”»ãƒ‘ã‚¹ã®åˆ¶å¾¡
+	// ƒƒbƒZ[ƒWƒ‹[ƒv‚Ì‹ì“®‚¨‚æ‚ÑƒƒCƒ“XVE•`‰æƒpƒX‚Ì§Œä
 	int Application::Run() {
 		MSG msg = {};
 		while (msg.message != WM_QUIT) {
@@ -55,16 +182,55 @@ namespace Engine {
 		return static_cast<int>(msg.wParam);
 	}
 
-	void Application::Update() {}
+	void Application::Update() {
+		static float time = 0.0f;
+		// compute delta
+		auto now = std::chrono::steady_clock::now();
+		std::chrono::duration<float> dt = now - m_lastTime;
+		m_lastTime = now;
+		float deltaSeconds = dt.count();
 
-	// ãƒ•ãƒ¬ãƒ¼ãƒ ã®ãƒ¬ãƒ³ãƒ€ãƒªãƒ³ã‚°ã‚³ãƒãƒ³ãƒ‰ç”Ÿæˆãƒ»å®Ÿè¡Œãƒ‘ã‚¹
+		time += deltaSeconds; // use real delta time for animation speed
+
+		// Update camera first
+		if (m_camera) m_camera->Update(deltaSeconds);
+
+		// MVPs—ñ‚ğÄŒvZ
+		using namespace DirectX;
+		XMMATRIX world = XMMatrixIdentity();
+		XMMATRIX view = m_camera->GetView();
+
+		float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
+		XMMATRIX proj = m_camera->GetProjection();
+		XMMATRIX mvp = world * view * proj;
+		XMMATRIX mvpT = XMMatrixTranspose(mvp);
+
+		DirectX::XMFLOAT4X4 m;
+		XMStoreFloat4x4(&m, mvpT);
+
+		// ’è”ƒoƒbƒtƒ@‚ğXV
+		ConstantBufferData* data;
+		m_constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&data));
+
+		data->mvp = m;
+		data->time = time;
+		// ƒJƒƒ‰ˆÊ’u‚ğŒ»İ‚ÌƒJƒƒ‰‚©‚çæ“¾iVS/PS ‚ÌƒtƒŒƒlƒ‹ŒvZ—pj
+		if (m_camera) {
+			auto camPos = m_camera->GetPosition();
+			data->cameraPos = camPos;
+		}
+
+		m_constantBuffer->Unmap(0, nullptr);
+	}
+
+	// ƒtƒŒ[ƒ€‚ÌƒŒƒ“ƒ_ƒŠƒ“ƒOƒRƒ}ƒ“ƒh¶¬EÀsƒpƒX
 	void Application::Render() {
 		m_context->BeginFrame();
 
 		auto cmd = m_context->GetCommandList();
 		auto resource = m_device->GetCurrentRenderTarget();
 
-		// ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã¸é·ç§»
+		// ƒŒƒ“ƒ_[ƒ^[ƒQƒbƒg‚Ö‘JˆÚ
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(m_window->GetWidth()), static_cast<float>(m_window->GetHeight()), 0.0f, 1.0f };
@@ -73,23 +239,36 @@ namespace Engine {
 		cmd->RSSetViewports(1, &viewport);
 		cmd->RSSetScissorRects(1, &scissorRect);
 
-		// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã¨ãƒ«ãƒ¼ãƒˆã‚·ã‚°ãƒãƒãƒ£ã‚’ã‚»ãƒƒãƒˆ
+		// ƒpƒCƒvƒ‰ƒCƒ“‚Æƒ‹[ƒgƒVƒOƒlƒ`ƒƒ‚ğƒZƒbƒg
 		cmd->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
 		cmd->SetPipelineState(m_pipeline->GetPSO());
 
-		// æç”»è¨­å®šï¼ˆé ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã‚’ãƒã‚¤ãƒ³ãƒ‰ï¼‰
+		// ƒeƒNƒXƒ`ƒƒ‚ª‚ ‚ê‚ÎƒfƒBƒXƒNƒŠƒvƒ^ƒq[ƒv‚ğƒZƒbƒg‚µ‚Äƒ‹[ƒg‚É SRV ‚ğƒoƒCƒ“ƒh
+		if (m_texture) {
+			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
+			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
+			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_textureSrvIndex));
+		}
+
+		// ’¸“_ƒVƒF[ƒ_—p‚Ì’è”ƒoƒbƒtƒ@‚ğƒ‹[ƒg‚ÉƒoƒCƒ“ƒh
+		if (m_constantBuffer) {
+			cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
+		}
+
+		// •`‰æİ’èi’¸“_ƒoƒbƒtƒ@‚ğƒoƒCƒ“ƒhj
 		auto view = m_vertexBuffer->GetView();
 		cmd->IASetVertexBuffers(0, 1, &view);
-		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		cmd->IASetIndexBuffer(&m_indexBufferView);
+		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		// ã‚¯ãƒªã‚¢ã¨æç”»å®Ÿè¡Œ
+		// ƒNƒŠƒA‚Æ•`‰æÀs
 		auto rtv = m_device->GetCurrentRtvHandle();
 		const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
-		cmd->DrawInstanced(4, 1, 0, 0); // 4é ‚ç‚¹ã§å››è§’å½¢
+		cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
 
-		// Presentã¸é·ç§»
+		// Present‚Ö‘JˆÚ
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 		m_context->EndFrame();

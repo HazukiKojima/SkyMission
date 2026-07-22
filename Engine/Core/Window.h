@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include "../EngineCommon.h"
 
 namespace Engine {
@@ -11,11 +12,15 @@ namespace Engine {
 		UINT GetWidth() const { return m_width; }
 		UINT GetHeight() const { return m_height; }
 
+		// リサイズイベントのコールバック登録
+		void SetOnResize(std::function<void(UINT, UINT)> cb) { m_onResize = cb; }
+
 	private:
 		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 		HWND m_hwnd = nullptr;
 		UINT m_width = 0;
 		UINT m_height = 0;
+		std::function<void(UINT, UINT)> m_onResize;
 	};
 }
