@@ -23,7 +23,7 @@ namespace Engine {
 		{
 			hr = DirectX::LoadFromWICFile(
 				filePath.c_str(),
-				DirectX::WIC_FLAGS_NONE,
+				DirectX::WIC_FLAGS_DEFAULT_SRGB,
 				&m_meta,
 				m_image);
 		}

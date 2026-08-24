@@ -9,12 +9,13 @@ struct PS_INPUT
 };
 
 // Sky Sphere Pixel Shader
-// HDR/EXRƒeƒNƒXƒ`ƒƒ‚ðƒTƒ“ƒvƒŠƒ“ƒO‚µ‚Äo—Í
+// HDR/EXRï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½ï¿½Tï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½Äoï¿½ï¿½
 float4 main(PS_INPUT input) : SV_TARGET
 {
-    // UVÀ•W‚©‚ç“V‹óƒeƒNƒXƒ`ƒƒ‚ðƒTƒ“ƒvƒŠƒ“ƒO
+    // UVï¿½ï¿½ï¿½Wï¿½ï¿½ï¿½ï¿½Vï¿½ï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½ï¿½Tï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½O
     float3 color = gSkyTexture.Sample(gSampler, input.texcoord).rgb;
     
-    // ƒŠƒjƒAƒJƒ‰[‹óŠÔ‚Å•Ô‚·iƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚ªHDR‘Î‰ž‚Ìê‡j
-    return float4(color, 1.0f);
+    // ï¿½ï¿½ï¿½jï¿½Aï¿½Jï¿½ï¿½ï¿½[ï¿½ï¿½Ô‚Å•Ô‚ï¿½ï¿½iï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½HDRï¿½Î‰ï¿½ï¿½Ìê‡ï¿½j
+    color = color / (1.0f + color);
+        return float4(max(color, 0.0f), 1.0f);
 }

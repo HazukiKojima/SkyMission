@@ -29,19 +29,21 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     // ベースの水色（深浅）を法線の傾きで補間
     float3 deepWaterColor = float3(0.01f, 0.08f, 0.14f);
-    float3 shallowWaterColor = float3(0.08f, 0.42f, 0.56f);
+    float3 shallowWaterColor = float3(0.03f, 0.16f, 0.24f);
     float NdotL = saturate(dot(N, L));
-    float3 baseColor = lerp(deepWaterColor, shallowWaterColor, NdotL);
+    float3 baseColor = lerp(deepWaterColor, shallowWaterColor, NdotL * 0.25f);
 
     // テクスチャを軽く混ぜる（法線による歪み + 時間でわずかに動かす）
-    float2 waveScroll = float2(time * 0.01f, time * -0.007f);
-    float2 distortedUV = input.texcoord + N.xz * 0.03f + waveScroll;
-    float3 tex = gDiffuse.Sample(gSampler, distortedUV).rgb;
+    float2 waveScroll = float2(time * 0.012f, time * -0.008f);
+    float2 waterUV = input.texcoord * 8.0f;
+    float3 texA = gDiffuse.Sample(gSampler, waterUV + N.xz * 0.035f + waveScroll).rgb;
+    float3 texB = gDiffuse.Sample(gSampler, waterUV * 0.63f - N.zx * 0.02f - waveScroll * 0.7f).rgb;
+    float3 tex = lerp(texA, texB, 0.35f);
 
     // スペキュラ（Blinn-Phong）
     float3 H = normalize(L + V);
-    float specPow = 200.0f; // ハイライトの鋭さ
-    float specIntensity = 3.0f;
+    float specPow = 64.0f;
+    float specIntensity = 0.22f;
     float spec = pow(saturate(dot(N, H)), specPow) * specIntensity;
 
     // フレネル（視角依存の反射）
@@ -51,8 +53,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 skyColor = float3(0.45f, 0.68f, 0.9f);
 
     // 合成: ベース + テクスチャの薄い乗算 + スペキュラ、フレネルで空を反射
-    float3 color = baseColor * 0.85f + tex * 0.15f + spec;
-    color = lerp(color, skyColor, fresnel * 0.9f);
+    float3 color = baseColor * 0.72f + tex * 0.12f + spec;
+    color = lerp(color, skyColor, fresnel * 0.72f);
+
+    float foam = smoothstep(0.78f, 0.96f, 1.0f - N.y);
+    color = lerp(color, float3(0.72f, 0.82f, 0.86f), foam * 0.12f);
 
     // 距離フォグ（遠景の波が消えすぎないように開始距離を遠めに設定）
     float distanceToCamera = length(cameraPos - input.worldPos);
@@ -62,5 +67,5 @@ float4 PS(PS_INPUT input) : SV_TARGET
     color = lerp(color, skyColor, fogFactor);
 
     // 出力（線形色空間）
-    return float4(color, 1.0f);
+    return float4(saturate(color), 1.0f);
 }
