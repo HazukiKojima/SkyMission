@@ -5,7 +5,15 @@
 
 namespace Engine {
 
+<<<<<<< Updated upstream
 	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath) {
+<<<<<<< Updated upstream
+=======
+		// DirectXTex ã‚’ä½¿ã£ã¦ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ã‚¤ãƒ¡ãƒ¼ã‚¸ã‚’èª­ã¿è¾¼ã‚€
+		HRESULT hr = DirectX::LoadFromWICFile(filePath.c_str(), DirectX::WIC_FLAGS_NONE, &m_meta, m_image);
+=======
+	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb) {
+>>>>>>> Stashed changes
 		// DirectXTex ‚ğg‚Á‚Äƒtƒ@ƒCƒ‹‚©‚çƒCƒ[ƒW‚ğ“Ç‚İ‚Ş
 		std::wstring ext = filePath.substr(filePath.find_last_of(L'.'));
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
@@ -23,11 +31,19 @@ namespace Engine {
 		{
 			hr = DirectX::LoadFromWICFile(
 				filePath.c_str(),
+<<<<<<< Updated upstream
 				DirectX::WIC_FLAGS_DEFAULT_SRGB,
+=======
+				useSrgb ? DirectX::WIC_FLAGS_DEFAULT_SRGB : DirectX::WIC_FLAGS_IGNORE_SRGB,
+>>>>>>> Stashed changes
 				&m_meta,
 				m_image);
 		}
 		
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 		if (FAILED(hr)) {
 			// Ú×‚ÈƒGƒ‰[ƒƒO
 			std::wstring ext = filePath.substr(filePath.find_last_of(L"."));

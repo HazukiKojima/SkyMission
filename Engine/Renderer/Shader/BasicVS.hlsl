@@ -20,6 +20,7 @@ struct PS_INPUT
     float time : TEXCOORD1;
     float3 worldPos : TEXCOORD2;
     float3 normal : NORMAL;
+    float3 tangent : TANGENT;
 };
 
 // ?Q???X?g?i?[?g??1??v?Z????É’??@???p?x?N?g?????????
@@ -95,6 +96,7 @@ PS_INPUT VS(VS_INPUT input)
     result.position = mul(float4(pos, 1.0f), mvp);
     result.worldPos = pos;
     result.normal = normal;
+    result.tangent = normalize(tangent);
     result.texcoord = input.texcoord;
     result.time = time;
     

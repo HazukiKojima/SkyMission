@@ -8,6 +8,7 @@ cbuffer MatrixBuffer : register(b0)
 };
 
 Texture2D gDiffuse : register(t0);
+Texture2D gOceanNormal : register(t1);
 SamplerState gSampler : register(s0);
 
 struct PS_INPUT
@@ -17,6 +18,7 @@ struct PS_INPUT
     float time : TEXCOORD1;
     float3 worldPos : TEXCOORD2;
     float3 normal : NORMAL;
+    float3 tangent : TANGENT;
 };
 
 // ピクセルシェーダ: 波のライティング（ディフューズ、スペキュラ、フレネル）と距離フォグを合成して出力
@@ -32,6 +34,15 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 shallowWaterColor = float3(0.03f, 0.16f, 0.24f);
     float NdotL = saturate(dot(N, L));
     float3 baseColor = lerp(deepWaterColor, shallowWaterColor, NdotL * 0.25f);
+
+    float2 normalUV = input.texcoord * 5.0f + float2(time * 0.018f, time * -0.011f);
+    float3 tangent = normalize(input.tangent - N * dot(input.tangent, N));
+    float3 bitangent = normalize(cross(N, tangent));
+    float3 mappedNormal = gOceanNormal.Sample(gSampler, normalUV).xyz * 2.0f - 1.0f;
+    mappedNormal.xy *= 0.55f;
+    N = normalize(tangent * mappedNormal.x + bitangent * mappedNormal.y + N * mappedNormal.z);
+    NdotL = saturate(dot(N, L));
+    baseColor = lerp(deepWaterColor, shallowWaterColor, NdotL * 0.25f);
 
     // テクスチャを軽く混ぜる（法線による歪み + 時間でわずかに動かす）
     float2 waveScroll = float2(time * 0.012f, time * -0.008f);

@@ -43,9 +43,20 @@ namespace Engine {
 
 		std::unique_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
+<<<<<<< Updated upstream
 		
 		std::unique_ptr<Engine::Texture> m_skyTexture;
 		UINT m_skyTextureSrvIndex = 0;
+=======
+<<<<<<< Updated upstream
+=======
+		std::unique_ptr<Engine::Texture> m_oceanNormalTexture;
+		UINT m_oceanNormalTextureSrvIndex = 0;
+
+		std::unique_ptr<Engine::Texture> m_skyTexture;
+		UINT m_skyTextureSrvIndex = 0;
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
 		// 頂点シェーダ用の定数バッファ (MVP 行列)
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;

@@ -125,12 +125,42 @@ namespace Engine {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
 		m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
+
+		m_oceanNormalTexture = std::make_unique<Engine::Texture>();
+		UINT normalSrvIndex = 0;
+		D3D12_CPU_DESCRIPTOR_HANDLE normalCpuHandle = m_device->AllocateSrvDescriptor(&normalSrvIndex);
+		std::vector<std::wstring> normalTexturePaths = {
+			exeDir + L"\\..\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
+			exeDir + L"\\..\\..\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
+			exeDir + L"\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
+			exeDir + L"\\Assets\\Images\\T_Ocean_Normal.jpg"
+		};
+		bool normalTextureLoaded = false;
+		for (const auto& normalPath : normalTexturePaths) {
+			WIN32_FILE_ATTRIBUTE_DATA normalFileInfo;
+			if (GetFileAttributesExW(normalPath.c_str(), GetFileExInfoStandard, &normalFileInfo) != 0 &&
+				m_oceanNormalTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), normalPath, false)) {
+				normalTextureLoaded = true;
+				break;
+			}
+		}
+		if (!normalTextureLoaded) {
+			OutputDebugStringA("Application::Initialize - failed to load ocean normal map\n");
+		}
+		m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
 		m_context->EndFrame();
 		// アップロード終了まで待機
 		m_context->WaitForGpu();
 		m_textureSrvIndex = srvIndex;
+		m_oceanNormalTextureSrvIndex = normalSrvIndex;
 
+<<<<<<< Updated upstream
 		// Sky Sphere テクスチャ（HDR/EXR）の読み込み
+=======
+<<<<<<< Updated upstream
+=======
+		// Sky Sphere ?e?N?X?`???iHDR/EXR?j???????
+>>>>>>> Stashed changes
 		m_skyTexture = std::make_unique<Engine::Texture>();
 		m_context->BeginFrame();
 		UINT skySrvIndex = 0;
@@ -189,6 +219,10 @@ namespace Engine {
 		m_context->WaitForGpu();
 		m_skyTextureSrvIndex = skySrvIndex;
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 		// 定数バッファ (MVP) を作成してトップダウン視点の行列を設定
 		{
 			using namespace DirectX;
@@ -343,7 +377,7 @@ namespace Engine {
 		cmd->SetPipelineState(m_pipeline->GetPSO());
 
 		// テクスチャがあればディスクリプタヒープをセットしてルートに SRV をバインド
-		if (m_texture) {
+		if (m_texture && m_oceanNormalTexture) {
 			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
 			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_textureSrvIndex));
