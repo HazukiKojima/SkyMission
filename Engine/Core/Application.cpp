@@ -11,7 +11,7 @@ namespace Engine {
 
 	Application::~Application() {
 		if (m_context) {
-			m_context->WaitForGpu(); // –¢Á‰»ƒRƒ}ƒ“ƒh‚É‚æ‚éƒƒ‚ƒŠƒŠ[ƒN‚â‹­§I—¹‚ğ—}~
+			m_context->WaitForGpu(); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Rï¿½}ï¿½ï¿½ï¿½hï¿½É‚ï¿½éƒï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½Nï¿½â‹­ï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½}ï¿½~
 		}
 	}
 
@@ -23,18 +23,18 @@ namespace Engine {
 		float pad2;
 	};
 
-	// ƒAƒvƒŠƒP[ƒVƒ‡ƒ“Šî”Õ‚¨‚æ‚ÑŠeƒOƒ‰ƒtƒBƒbƒNƒXƒRƒ“ƒ|[ƒlƒ“ƒg‚Ì\’z
+	// ï¿½Aï¿½vï¿½ï¿½ï¿½Pï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ‚ï¿½ï¿½ï¿½ÑŠeï¿½Oï¿½ï¿½ï¿½tï¿½Bï¿½bï¿½Nï¿½Xï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½Ì\ï¿½z
 	void Application::Initialize() {
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 
-		// ƒŠƒTƒCƒYƒCƒxƒ“ƒg‚ğw“Ç‚µ‚ÄƒfƒoƒCƒX‚â“Š‰es—ñ‚ğXV
+		// ï¿½ï¿½ï¿½Tï¿½Cï¿½Yï¿½Cï¿½xï¿½ï¿½ï¿½gï¿½ï¿½wï¿½Ç‚ï¿½ï¿½Äƒfï¿½oï¿½Cï¿½Xï¿½â“Šï¿½eï¿½sï¿½ï¿½ï¿½Xï¿½V
 		m_window->SetOnResize([this](UINT w, UINT h) {
-			if (w == 0 || h == 0) return; // Å¬‰»‚È‚Ç–³Œø‚È’l‚ğ–³‹
-			if (m_context) m_context->WaitForGpu(); // –¢ˆ—ƒRƒ}ƒ“ƒh‚ğŠ®—¹‚³‚¹‚Ä‚©‚çƒŠƒTƒCƒY
+			if (w == 0 || h == 0) return; // ï¿½Åï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚Ç–ï¿½ï¿½ï¿½ï¿½È’lï¿½ğ–³ï¿½
+			if (m_context) m_context->WaitForGpu(); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Rï¿½}ï¿½ï¿½ï¿½hï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½çƒŠï¿½Tï¿½Cï¿½Y
 			m_device->Resize(w, h);
 			if (m_camera) m_camera->OnResize(w, h);
-			// “Š‰e‚Í Update() ‚Å–ˆƒtƒŒ[ƒ€ÄŒvZ‚µ‚Ä‚¢‚é‚½‚ß‚±‚±‚Å‚Í‰½‚à‚µ‚È‚¢
+			// ï¿½ï¿½ï¿½eï¿½ï¿½ Update() ï¿½Å–ï¿½ï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ÄŒvï¿½Zï¿½ï¿½ï¿½Ä‚ï¿½ï¿½é‚½ï¿½ß‚ï¿½ï¿½ï¿½ï¿½Å‚Í‰ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½
 		});
 
 		m_device = std::make_unique<RenderDevice>();
@@ -43,24 +43,24 @@ namespace Engine {
 		m_context = std::make_unique<CommandContext>();
 		m_context->Initialize(m_device.get());
 
-		// ƒpƒCƒvƒ‰ƒCƒ“‚Ì‰Šú‰»
+		// ï¿½pï¿½Cï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
 		m_pipeline = std::make_unique<Engine::GraphicsPipeline>();
 		m_pipeline->Initialize(m_device->GetDevice());
 
-		// Sky Sphere ƒpƒCƒvƒ‰ƒCƒ“‚Ì‰Šú‰»
+		// Sky Sphere ï¿½pï¿½Cï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
 		m_skyPipeline = std::make_unique<Engine::GraphicsPipeline>();
 		m_skyPipeline->InitializeWithShaders(m_device->GetDevice(), L"SkyVS.cso", L"SkyPS.cso");
 
-		// Sky Sphere ƒƒbƒVƒ…‚Ì‰Šú‰»
+		// Sky Sphere ï¿½ï¿½ï¿½bï¿½Vï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
 		m_skySphere = std::make_unique<Engine::SkySphere>();
 		m_skySphere->Initialize(m_device->GetDevice(), 100.0f, 64, 32);
 
-		// lŠpŒ`‚Ì’¸“_ƒf[ƒ^ì¬
+		// ï¿½lï¿½pï¿½`ï¿½Ì’ï¿½ï¿½_ï¿½fï¿½[ï¿½^ï¿½ì¬
 		struct Vertex {
 			float pos[3];
 			float uv[2];
 		};
-		// --- 10x10 ƒOƒŠƒbƒh‚Ì’¸“_EƒCƒ“ƒfƒbƒNƒX¶¬ ---
+		// --- 10x10 ï¿½Oï¿½ï¿½ï¿½bï¿½hï¿½Ì’ï¿½ï¿½_ï¿½Eï¿½Cï¿½ï¿½ï¿½fï¿½bï¿½Nï¿½Xï¿½ï¿½ï¿½ï¿½ ---
 		const int gridSize = 1000;
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
@@ -87,11 +87,11 @@ namespace Engine {
 		}
 		m_indexCount = (UINT)indices.size();
 
-		// --- ’¸“_ƒoƒbƒtƒ@‚Ì‰Šú‰» ---
+		// --- ï¿½ï¿½ï¿½_ï¿½oï¿½bï¿½tï¿½@ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½ ---
 		m_vertexBuffer = std::make_unique<Engine::VertexBuffer>();
 		m_vertexBuffer->Initialize(m_device->GetDevice(), vertices.data(), sizeof(Vertex) * vertices.size(), sizeof(Vertex));
 
-		// --- ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@‚Ìì¬ ---
+		// --- ï¿½Cï¿½ï¿½ï¿½fï¿½bï¿½Nï¿½Xï¿½oï¿½bï¿½tï¿½@ï¿½Ìì¬ ---
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
 		auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t) * indices.size());
 		ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
@@ -107,19 +107,19 @@ namespace Engine {
 		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 		m_indexBufferView.SizeInBytes = sizeof(uint32_t) * indices.size();
 
-		// ƒeƒNƒXƒ`ƒƒ‚ğ“Ç‚İ‚İASRV ‚ğì¬‚µ‚ÄƒfƒBƒXƒNƒŠƒvƒ^ƒq[ƒv‚Ö”z’u
+		// ï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½ï¿½Ç‚İï¿½ï¿½İASRV ï¿½ï¿½ì¬ï¿½ï¿½ï¿½Äƒfï¿½Bï¿½Xï¿½Nï¿½ï¿½ï¿½vï¿½^ï¿½qï¿½[ï¿½vï¿½Ö”zï¿½u
 		m_texture = std::make_unique<Engine::Texture>();
-		// ƒRƒ}ƒ“ƒhƒŠƒXƒg‚ğƒŠƒZƒbƒg‚µ‚ÄƒAƒbƒvƒ[ƒhˆ—‚ğs‚¤
+		// ï¿½Rï¿½}ï¿½ï¿½ï¿½hï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½ï¿½Zï¿½bï¿½gï¿½ï¿½ï¿½ÄƒAï¿½bï¿½vï¿½ï¿½ï¿½[ï¿½hï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½
 		m_context->BeginFrame();
 		UINT srvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_device->AllocateSrvDescriptor(&srvIndex);
-		// Àsƒtƒ@ƒCƒ‹‚ÌƒpƒX‚ğæ“¾‚·‚éŠÈˆÕ“I‚Èè–@
+		// ï¿½ï¿½ï¿½sï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½Ìƒpï¿½Xï¿½ï¿½æ“¾ï¿½ï¿½ï¿½ï¿½ÈˆÕ“Iï¿½Èï¿½@
 		wchar_t buffer[MAX_PATH];
 		GetModuleFileName(NULL, buffer, MAX_PATH);
 		std::wstring exePath = buffer;
 		std::wstring exeDir = exePath.substr(0, exePath.find_last_of(L"\\/"));
 
-		// Assets ‚Ö‚ÌƒpƒX‚ğ“®“I‚É‰ğ‚­
+		// Assets ï¿½Ö‚Ìƒpï¿½Xï¿½ğ“®“Iï¿½É‰ï¿½ï¿½
 		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg";
 		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
@@ -149,24 +149,19 @@ namespace Engine {
 		}
 		m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
 		m_context->EndFrame();
-		// ƒAƒbƒvƒ[ƒhI—¹‚Ü‚Å‘Ò‹@
+		// ï¿½Aï¿½bï¿½vï¿½ï¿½ï¿½[ï¿½hï¿½Iï¿½ï¿½ï¿½Ü‚Å‘Ò‹@
 		m_context->WaitForGpu();
 		m_textureSrvIndex = srvIndex;
 		m_oceanNormalTextureSrvIndex = normalSrvIndex;
 
-<<<<<<< Updated upstream
-		// Sky Sphere ƒeƒNƒXƒ`ƒƒiHDR/EXRj‚Ì“Ç‚İ‚İ
-=======
-<<<<<<< Updated upstream
-=======
+		// Sky Sphere ï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½iHDR/EXRï¿½jï¿½Ì“Ç‚İï¿½ï¿½ï¿½
 		// Sky Sphere ?e?N?X?`???iHDR/EXR?j???????
->>>>>>> Stashed changes
 		m_skyTexture = std::make_unique<Engine::Texture>();
 		m_context->BeginFrame();
 		UINT skySrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
 		
-		// •¡”‚ÌƒpƒX‚ğ‚·
+		// ï¿½ï¿½ï¿½ï¿½ï¿½Ìƒpï¿½Xï¿½ï¿½ï¿½ï¿½ï¿½
 		std::vector<std::wstring> skyTexturePaths = {
 			L"C:\\Users\\hazu0\\DX12\\SkyMission\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
 			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
@@ -181,7 +176,7 @@ namespace Engine {
 		
 		bool skyTextureLoaded = false;
 		for (const auto& path : skyTexturePaths) {
-			// ƒtƒ@ƒCƒ‹‚ª‘¶İ‚·‚é‚©Šm”F
+			// ï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ‚ï¿½ï¿½é‚©ï¿½mï¿½F
 			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
 			if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
 				char pathBuffer[512];
@@ -219,14 +214,10 @@ namespace Engine {
 		m_context->WaitForGpu();
 		m_skyTextureSrvIndex = skySrvIndex;
 
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
-		// ’è”ƒoƒbƒtƒ@ (MVP) ‚ğì¬‚µ‚Äƒgƒbƒvƒ_ƒEƒ“‹“_‚Ìs—ñ‚ğİ’è
+		// ï¿½è”ï¿½oï¿½bï¿½tï¿½@ (MVP) ï¿½ï¿½ì¬ï¿½ï¿½ï¿½Äƒgï¿½bï¿½vï¿½_ï¿½Eï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½Ìsï¿½ï¿½ï¿½İ’ï¿½
 		{
 			using namespace DirectX;
-			UINT64 cbSize = (sizeof(ConstantBufferData) + 255) & ~255; // 256 ƒoƒCƒg‹«ŠE‚ÉƒAƒ‰ƒCƒ“
+			UINT64 cbSize = (sizeof(ConstantBufferData) + 255) & ~255; // 256 ï¿½oï¿½Cï¿½gï¿½ï¿½ï¿½Eï¿½ÉƒAï¿½ï¿½ï¿½Cï¿½ï¿½
 
 			CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(cbSize);
 			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
@@ -238,12 +229,12 @@ namespace Engine {
 				nullptr,
 				IID_PPV_ARGS(&m_constantBuffer)));
 
-			// ƒ}ƒbƒv‚µ‚Äs—ñ‚ğ‘‚«‚Ş
+			// ï¿½}ï¿½bï¿½vï¿½ï¿½ï¿½Äsï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			CD3DX12_RANGE readRange(0, 0);
 			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_cbvDataPtr)));
 
 			XMMATRIX world = XMMatrixIdentity();
-			// ƒJƒƒ‰‚ğã•û‚É’u‚«AŒ´“_‚ğŒ©‚é (Y²‚ªã•ûŒü)
+			// ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É’uï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½_ï¿½ï¿½ï¿½ï¿½ï¿½ (Yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 			XMVECTOR eye = XMVectorSet(10.0f, 15.0f, -10.0f, 0.0f);
 			XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
 			XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -251,11 +242,11 @@ namespace Engine {
 			float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
 			XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspect, 0.1f, 100.0f);
 			XMMATRIX mvp = world * view * proj;
-			XMMATRIX mvpT = XMMatrixTranspose(mvp); // ƒVƒF[ƒ_‚Æ‚Ìs—ñƒI[ƒ_ŒİŠ·‚Ì‚½‚ß“]’u
+			XMMATRIX mvpT = XMMatrixTranspose(mvp); // ï¿½Vï¿½Fï¿½[ï¿½_ï¿½Æ‚Ìsï¿½ï¿½Iï¿½[ï¿½_ï¿½İŠï¿½ï¿½Ì‚ï¿½ï¿½ß“]ï¿½u
 
 			XMFLOAT4X4 m;
 			XMStoreFloat4x4(&m, mvpT);
-			// ‰Šú’l‚ğ‘‚«‚ŞiƒJƒƒ‰‚Í‰Šú‚Ì eye ‚Æ‡‚í‚¹‚éj
+			// ï¿½ï¿½ï¿½ï¿½ï¿½lï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Şiï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½Íï¿½ï¿½ï¿½ï¿½ï¿½ eye ï¿½Æï¿½ï¿½í‚¹ï¿½ï¿½j
 			ConstantBufferData* cbInit = reinterpret_cast<ConstantBufferData*>(m_cbvDataPtr);
 			cbInit->mvp = m;
 			cbInit->time = 0.0f;
@@ -267,7 +258,7 @@ namespace Engine {
 		m_lastTime = std::chrono::steady_clock::now();
 	}
 
-	// ƒƒbƒZ[ƒWƒ‹[ƒv‚Ì‹ì“®‚¨‚æ‚ÑƒƒCƒ“XVE•`‰æƒpƒX‚Ì§Œä
+	// ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½ï¿½[ï¿½vï¿½Ì‹ì“®ï¿½ï¿½ï¿½ï¿½Ñƒï¿½ï¿½Cï¿½ï¿½ï¿½Xï¿½Vï¿½Eï¿½`ï¿½ï¿½pï¿½Xï¿½Ìï¿½ï¿½ï¿½
 	int Application::Run() {
 		MSG msg = {};
 		while (msg.message != WM_QUIT) {
@@ -296,7 +287,7 @@ namespace Engine {
 		// Update camera first
 		if (m_camera) m_camera->Update(deltaSeconds);
 
-		// MVPs—ñ‚ğÄŒvZ
+		// MVPï¿½sï¿½ï¿½ï¿½ÄŒvï¿½Z
 		using namespace DirectX;
 		XMMATRIX world = XMMatrixIdentity();
 		XMMATRIX view = m_camera->GetView();
@@ -309,13 +300,13 @@ namespace Engine {
 		DirectX::XMFLOAT4X4 m;
 		XMStoreFloat4x4(&m, mvpT);
 
-		// ’è”ƒoƒbƒtƒ@‚ğXV
+		// ï¿½è”ï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½Xï¿½V
 		ConstantBufferData* data;
 		m_constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&data));
 
 		data->mvp = m;
 		data->time = time;
-		// ƒJƒƒ‰ˆÊ’u‚ğŒ»İ‚ÌƒJƒƒ‰‚©‚çæ“¾iVS/PS ‚ÌƒtƒŒƒlƒ‹ŒvZ—pj
+		// ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½Ê’uï¿½ï¿½ï¿½ï¿½İ‚ÌƒJï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ“¾ï¿½iVS/PS ï¿½Ìƒtï¿½ï¿½ï¿½lï¿½ï¿½ï¿½vï¿½Zï¿½pï¿½j
 		if (m_camera) {
 			auto camPos = m_camera->GetPosition();
 			data->cameraPos = camPos;
@@ -324,14 +315,14 @@ namespace Engine {
 		m_constantBuffer->Unmap(0, nullptr);
 	}
 
-	// ƒtƒŒ[ƒ€‚ÌƒŒƒ“ƒ_ƒŠƒ“ƒOƒRƒ}ƒ“ƒh¶¬EÀsƒpƒX
+	// ï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½Ìƒï¿½ï¿½ï¿½ï¿½_ï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½Rï¿½}ï¿½ï¿½ï¿½hï¿½ï¿½ï¿½ï¿½ï¿½Eï¿½ï¿½ï¿½sï¿½pï¿½X
 	void Application::Render() {
 		m_context->BeginFrame();
 
 		auto cmd = m_context->GetCommandList();
 		auto resource = m_device->GetCurrentRenderTarget();
 
-		// ƒŒƒ“ƒ_[ƒ^[ƒQƒbƒg‚Ö‘JˆÚ
+		// ï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½[ï¿½^ï¿½[ï¿½Qï¿½bï¿½gï¿½Ö‘Jï¿½ï¿½
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(m_window->GetWidth()), static_cast<float>(m_window->GetHeight()), 0.0f, 1.0f };
@@ -340,64 +331,64 @@ namespace Engine {
 		cmd->RSSetViewports(1, &viewport);
 		cmd->RSSetScissorRects(1, &scissorRect);
 
-		// ƒNƒŠƒA‚Æİ’è
+		// ï¿½Nï¿½ï¿½ï¿½Aï¿½Æİ’ï¿½
 		auto rtv = m_device->GetCurrentRtvHandle();
 		const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 
-		// Sky Sphere ‚ğÅ‰‚É•`‰æi”wŒi‚Æ‚µ‚Äj
+		// Sky Sphere ï¿½ï¿½Åï¿½ï¿½É•`ï¿½ï¿½iï¿½wï¿½iï¿½Æ‚ï¿½ï¿½Äj
 		if (m_skySphere && m_skyTexture && m_skyTexture->GetResource()) {
 			cmd->SetGraphicsRootSignature(m_skyPipeline->GetRootSignature());
 			cmd->SetPipelineState(m_skyPipeline->GetPSO());
 
-			// Sky Sphere —p‚ÌƒeƒNƒXƒ`ƒƒ‚ğƒoƒCƒ“ƒh
+			// Sky Sphere ï¿½pï¿½Ìƒeï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½ï¿½oï¿½Cï¿½ï¿½ï¿½h
 			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
 			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_skyTextureSrvIndex));
 
-			// ’è”ƒoƒbƒtƒ@‚ğƒoƒCƒ“ƒh
+			// ï¿½è”ï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½oï¿½Cï¿½ï¿½ï¿½h
 			if (m_constantBuffer) {
 				cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
 			}
 
-			// Sky Sphere ‚Ì’¸“_EƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@‚ğƒoƒCƒ“ƒh
+			// Sky Sphere ï¿½Ì’ï¿½ï¿½_ï¿½Eï¿½Cï¿½ï¿½ï¿½fï¿½bï¿½Nï¿½Xï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½oï¿½Cï¿½ï¿½ï¿½h
 			auto skyView = m_skySphere->GetVertexBufferView();
 			auto& skyIndexView = m_skySphere->GetIndexBufferView();
 			cmd->IASetVertexBuffers(0, 1, &skyView);
 			cmd->IASetIndexBuffer(&skyIndexView);
 			cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-			// Sky Sphere ‚ğ•`‰æ
+			// Sky Sphere ï¿½ï¿½`ï¿½ï¿½
 			cmd->DrawIndexedInstanced(m_skySphere->GetIndexCount(), 1, 0, 0, 0);
 		}
 
-		// Ÿ‚É…–ÊƒƒbƒVƒ…‚ğ•`‰æi‘OŒi‚Æ‚µ‚Äj
+		// ï¿½ï¿½ï¿½Éï¿½ï¿½Êƒï¿½ï¿½bï¿½Vï¿½ï¿½ï¿½ï¿½`ï¿½ï¿½iï¿½Oï¿½iï¿½Æ‚ï¿½ï¿½Äj
 		cmd->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
 		cmd->SetPipelineState(m_pipeline->GetPSO());
 
-		// ƒeƒNƒXƒ`ƒƒ‚ª‚ ‚ê‚ÎƒfƒBƒXƒNƒŠƒvƒ^ƒq[ƒv‚ğƒZƒbƒg‚µ‚Äƒ‹[ƒg‚É SRV ‚ğƒoƒCƒ“ƒh
+		// ï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îƒfï¿½Bï¿½Xï¿½Nï¿½ï¿½ï¿½vï¿½^ï¿½qï¿½[ï¿½vï¿½ï¿½Zï¿½bï¿½gï¿½ï¿½ï¿½Äƒï¿½ï¿½[ï¿½gï¿½ï¿½ SRV ï¿½ï¿½oï¿½Cï¿½ï¿½ï¿½h
 		if (m_texture && m_oceanNormalTexture) {
 			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
 			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_textureSrvIndex));
 		}
 
-		// ’¸“_ƒVƒF[ƒ_—p‚Ì’è”ƒoƒbƒtƒ@‚ğƒ‹[ƒg‚ÉƒoƒCƒ“ƒh
+		// ï¿½ï¿½ï¿½_ï¿½Vï¿½Fï¿½[ï¿½_ï¿½pï¿½Ì’è”ï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½ï¿½ï¿½[ï¿½gï¿½Éƒoï¿½Cï¿½ï¿½ï¿½h
 		if (m_constantBuffer) {
 			cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
 		}
 
-		// •`‰æİ’èi’¸“_ƒoƒbƒtƒ@‚ğƒoƒCƒ“ƒhj
+		// ï¿½`ï¿½ï¿½İ’ï¿½iï¿½ï¿½ï¿½_ï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½oï¿½Cï¿½ï¿½ï¿½hï¿½j
 		auto view = m_vertexBuffer->GetView();
 		cmd->IASetVertexBuffers(0, 1, &view);
 		cmd->IASetIndexBuffer(&m_indexBufferView);
 		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		// …–ÊƒƒbƒVƒ…‚ğ•`‰æ
+		// ï¿½ï¿½ï¿½Êƒï¿½ï¿½bï¿½Vï¿½ï¿½ï¿½ï¿½`ï¿½ï¿½
 		cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
 
-		// Present ‚Ö‘JˆÚ
+		// Present ï¿½Ö‘Jï¿½ï¿½
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 		m_context->EndFrame();
