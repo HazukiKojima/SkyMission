@@ -5,6 +5,12 @@ cbuffer MatrixBuffer : register(b0)
     float3 padding;
     float3 cameraPos;
     float pad2;
+    float3 sunDirection;
+    float sunIntensity;
+    float3 sunColor;
+    float ambientIntensity;
+    float3 ambientColor;
+    float pad3;
 };
 
 Texture2D gDiffuse : register(t0);
@@ -21,15 +27,16 @@ struct PS_INPUT
     float3 tangent : TANGENT;
 };
 
-// ƒsƒNƒZƒ‹ƒVƒF[ƒ_: ”g‚Ìƒ‰ƒCƒeƒBƒ“ƒOiƒfƒBƒtƒ…[ƒYAƒXƒyƒLƒ…ƒ‰AƒtƒŒƒlƒ‹j‚Æ‹——£ƒtƒHƒO‚ğ‡¬‚µ‚Äo—Í
+// ï¿½sï¿½Nï¿½Zï¿½ï¿½ï¿½Vï¿½Fï¿½[ï¿½_: ï¿½gï¿½Ìƒï¿½ï¿½Cï¿½eï¿½Bï¿½ï¿½ï¿½Oï¿½iï¿½fï¿½Bï¿½tï¿½ï¿½ï¿½[ï¿½Yï¿½Aï¿½Xï¿½yï¿½Lï¿½ï¿½ï¿½ï¿½ï¿½Aï¿½tï¿½ï¿½ï¿½lï¿½ï¿½ï¿½jï¿½Æ‹ï¿½ï¿½ï¿½ï¿½tï¿½Hï¿½Oï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äoï¿½ï¿½
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    // –@ü‚ÆƒJƒƒ‰Eƒ‰ƒCƒg•ûŒü‚ğæ“¾
+    // ï¿½@ï¿½ï¿½ï¿½ÆƒJï¿½ï¿½ï¿½ï¿½ï¿½Eï¿½ï¿½ï¿½Cï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ“¾
     float3 N = normalize(input.normal);
-    float3 V = normalize(cameraPos - input.worldPos); // ‹ü•ûŒüiƒJƒƒ‰‚©‚çƒsƒNƒZƒ‹‚Ö‚ÌƒxƒNƒgƒ‹j
-    float3 L = normalize(float3(1.0f, 0.8f, 1.0f)); // ‘¾—ziƒ‰ƒCƒgj•ûŒüiŒÅ’èj
+    float3 V = normalize(cameraPos - input.worldPos);
+    // The sun direction is a fixed world-space vector: surface to sun.
+    float3 L = normalize(sunDirection);
 
-    // ƒx[ƒX‚Ì…Fi[ój‚ğ–@ü‚ÌŒX‚«‚Å•âŠÔ
+    // ï¿½xï¿½[ï¿½Xï¿½Ìï¿½ï¿½Fï¿½iï¿½[ï¿½ï¿½jï¿½ï¿½@ï¿½ï¿½ï¿½ÌŒXï¿½ï¿½ï¿½Å•ï¿½ï¿½
     float3 deepWaterColor = float3(0.01f, 0.08f, 0.14f);
     float3 shallowWaterColor = float3(0.03f, 0.16f, 0.24f);
     float NdotL = saturate(dot(N, L));
@@ -44,39 +51,41 @@ float4 PS(PS_INPUT input) : SV_TARGET
     NdotL = saturate(dot(N, L));
     baseColor = lerp(deepWaterColor, shallowWaterColor, NdotL * 0.25f);
 
-    // ƒeƒNƒXƒ`ƒƒ‚ğŒy‚­¬‚º‚éi–@ü‚É‚æ‚é˜c‚İ + ŠÔ‚Å‚í‚¸‚©‚É“®‚©‚·j
+    // ï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½iï¿½@ï¿½ï¿½ï¿½É‚ï¿½ï¿½cï¿½ï¿½ + ï¿½ï¿½ï¿½Ô‚Å‚í‚¸ï¿½ï¿½ï¿½É“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½j
     float2 waveScroll = float2(time * 0.012f, time * -0.008f);
     float2 waterUV = input.texcoord * 8.0f;
     float3 texA = gDiffuse.Sample(gSampler, waterUV + N.xz * 0.035f + waveScroll).rgb;
     float3 texB = gDiffuse.Sample(gSampler, waterUV * 0.63f - N.zx * 0.02f - waveScroll * 0.7f).rgb;
     float3 tex = lerp(texA, texB, 0.35f);
 
-    // ƒXƒyƒLƒ…ƒ‰iBlinn-Phongj
-    float3 H = normalize(L + V);
-    float specPow = 64.0f;
-    float specIntensity = 0.22f;
-    float spec = pow(saturate(dot(N, H)), specPow) * specIntensity;
+    // World-space sun glint. It is driven by the surface normal and sun direction,
+    // so its position does not move with the camera.
+    float3 waterF0 = float3(0.02f, 0.02f, 0.02f);
+    float sunGlint = pow(NdotL, 96.0f) * 0.18f;
+    float3 spec = sunColor * sunIntensity * sunGlint;
+    float3 directDiffuse = baseColor * (1.0f - waterF0) * NdotL * sunIntensity;
 
-    // ƒtƒŒƒlƒ‹i‹ŠpˆË‘¶‚Ì”½Ëj
-    float fresnel = pow(1.0f - saturate(dot(N, V)), 4.0f);
-
-    // ‹óFiƒtƒŒƒlƒ‹‚Æ‹——£‚É¬‚º‚é‚½‚ß‚ÌFj
+    // ï¿½tï¿½ï¿½ï¿½lï¿½ï¿½ï¿½iï¿½ï¿½ï¿½pï¿½Ë‘ï¿½ï¿½Ì”ï¿½ï¿½Ëj
+    // ï¿½ï¿½Fï¿½iï¿½tï¿½ï¿½ï¿½lï¿½ï¿½ï¿½Æ‹ï¿½ï¿½ï¿½ï¿½Éï¿½ï¿½ï¿½ï¿½é‚½ï¿½ß‚ÌFï¿½j
     float3 skyColor = float3(0.45f, 0.68f, 0.9f);
 
-    // ‡¬: ƒx[ƒX + ƒeƒNƒXƒ`ƒƒ‚Ì”–‚¢æZ + ƒXƒyƒLƒ…ƒ‰AƒtƒŒƒlƒ‹‚Å‹ó‚ğ”½Ë
-    float3 color = baseColor * 0.72f + tex * 0.12f + spec;
-    color = lerp(color, skyColor, fresnel * 0.72f);
+    // ï¿½ï¿½ï¿½ï¿½: ï¿½xï¿½[ï¿½X + ï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½Ì”ï¿½ï¿½ï¿½ï¿½ï¿½Z + ï¿½Xï¿½yï¿½Lï¿½ï¿½ï¿½ï¿½ï¿½Aï¿½tï¿½ï¿½ï¿½lï¿½ï¿½ï¿½Å‹ï¿½ğ”½ï¿½
+    float3 ambient = ambientColor * ambientIntensity * lerp(0.65f, 1.0f, saturate(N.y));
+    float3 color = ambient + directDiffuse + baseColor * 0.08f + tex * 0.12f + spec;
+    float worldSkyLight = smoothstep(0.0f, 1.0f, saturate(N.y)) * 0.08f;
+    color += skyColor * worldSkyLight;
 
     float foam = smoothstep(0.78f, 0.96f, 1.0f - N.y);
     color = lerp(color, float3(0.72f, 0.82f, 0.86f), foam * 0.12f);
 
-    // ‹——£ƒtƒHƒOi‰“Œi‚Ì”g‚ªÁ‚¦‚·‚¬‚È‚¢‚æ‚¤‚ÉŠJn‹——£‚ğ‰“‚ß‚Éİ’èj
+    // ï¿½ï¿½ï¿½ï¿½ï¿½tï¿½Hï¿½Oï¿½iï¿½ï¿½ï¿½iï¿½Ì”gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½ï¿½æ‚¤ï¿½ÉŠJï¿½nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß‚Éİ’ï¿½j
     float distanceToCamera = length(cameraPos - input.worldPos);
     const float fogStart = 600.0f;
     const float fogEnd = 3000.0f;
     float fogFactor = saturate((distanceToCamera - fogStart) / (fogEnd - fogStart));
     color = lerp(color, skyColor, fogFactor);
 
-    // o—ÍiüŒ`F‹óŠÔj
+    // Map HDR lighting into the displayable range without clipping highlights.
+    color = color / (1.0f + color);
     return float4(saturate(color), 1.0f);
 }

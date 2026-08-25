@@ -21,6 +21,12 @@ namespace Engine {
 		float padding[3];
 		DirectX::XMFLOAT3 cameraPos;
 		float pad2;
+		DirectX::XMFLOAT3 sunDirection;
+		float sunIntensity;
+		DirectX::XMFLOAT3 sunColor;
+		float ambientIntensity;
+		DirectX::XMFLOAT3 ambientColor;
+		float pad3;
 	};
 
 	// �A�v���P�[�V������Ղ���ъe�O���t�B�b�N�X�R���|�[�l���g�̍\�z
@@ -251,6 +257,11 @@ namespace Engine {
 			cbInit->mvp = m;
 			cbInit->time = 0.0f;
 			cbInit->cameraPos = DirectX::XMFLOAT3(10.0f, 15.0f, -10.0f);
+			cbInit->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
+			cbInit->sunIntensity = 1.8f;
+			cbInit->sunColor = DirectX::XMFLOAT3(1.0f, 0.91f, 0.76f);
+			cbInit->ambientIntensity = 0.32f;
+			cbInit->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 		}
 
 		m_camera = std::make_unique<Engine::Camera>();
@@ -311,6 +322,11 @@ namespace Engine {
 			auto camPos = m_camera->GetPosition();
 			data->cameraPos = camPos;
 		}
+		data->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
+		data->sunIntensity = 1.8f;
+		data->sunColor = DirectX::XMFLOAT3(1.0f, 0.91f, 0.76f);
+		data->ambientIntensity = 0.32f;
+		data->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 
 		m_constantBuffer->Unmap(0, nullptr);
 	}
