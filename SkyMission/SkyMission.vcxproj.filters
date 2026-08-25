@@ -28,6 +28,9 @@
     <Filter Include="Engine\Resources\Texture">
       <UniqueIdentifier>{77f88f34-1dc2-4fc7-9a57-b2c96f278bf5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Resources\Mesh">
+      <UniqueIdentifier>{6ec023e9-2964-4a69-97bc-b69239b1187f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.cpp">
@@ -55,6 +58,9 @@
     <ClCompile Include="..\Engine\Core\Camera.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Resources\Mesh\SkySphere.cpp">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h">
@@ -81,6 +87,9 @@
     <ClInclude Include="..\Engine\Core\Camera.h">
       <Filter>Engine\Core</Filter>
     </ClInclude>
+    <ClInclude Include="..\Engine\Resources\Mesh\SkySphere.h">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Engine\Renderer\Shader\Common.hlsli">
@@ -92,6 +101,12 @@
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
     <FxCompile Include="..\Engine\Renderer\Shader\BasicVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\SkyPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\SkyVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
   </ItemGroup>

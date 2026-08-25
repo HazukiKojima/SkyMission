@@ -47,6 +47,14 @@ namespace Engine {
 		m_pipeline = std::make_unique<Engine::GraphicsPipeline>();
 		m_pipeline->Initialize(m_device->GetDevice());
 
+		// Sky Sphere パイプラインの初期化
+		m_skyPipeline = std::make_unique<Engine::GraphicsPipeline>();
+		m_skyPipeline->InitializeWithShaders(m_device->GetDevice(), L"SkyVS.cso", L"SkyPS.cso");
+
+		// Sky Sphere メッシュの初期化
+		m_skySphere = std::make_unique<Engine::SkySphere>();
+		m_skySphere->Initialize(m_device->GetDevice(), 100.0f, 64, 32);
+
 		// 四角形の頂点データ作成
 		struct Vertex {
 			float pos[3];
@@ -111,16 +119,75 @@ namespace Engine {
 		std::wstring exePath = buffer;
 		std::wstring exeDir = exePath.substr(0, exePath.find_last_of(L"\\/"));
 
-		// Assetsへの絶対パスを動的に作る
+		// Assets へのパスを動的に解く
 		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg";
 		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
 		m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
 		m_context->EndFrame();
-		// アップロードが完了するまで待機
+		// アップロード終了まで待機
 		m_context->WaitForGpu();
 		m_textureSrvIndex = srvIndex;
+
+		// Sky Sphere テクスチャ（HDR/EXR）の読み込み
+		m_skyTexture = std::make_unique<Engine::Texture>();
+		m_context->BeginFrame();
+		UINT skySrvIndex = 0;
+		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
+		
+		// 複数のパスを試す
+		std::vector<std::wstring> skyTexturePaths = {
+			L"C:\\Users\\hazu0\\DX12\\SkyMission\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
+			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
+			exeDir + L"\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
+			exeDir + L"\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
+			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.exr",
+			exeDir + L"\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.exr",
+			exeDir + L"\\Assets\\Images\\citrus_orchard_road_puresky_4k.exr",
+			exeDir + L"\\Assets\\Images\\water-bg-pattern-04.jpg",
+			exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg",
+		};
+		
+		bool skyTextureLoaded = false;
+		for (const auto& path : skyTexturePaths) {
+			// ファイルが存在するか確認
+			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
+			if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
+				char pathBuffer[512];
+				size_t converted = 0;
+				wcstombs_s(&converted, pathBuffer, sizeof(pathBuffer), path.c_str(), _TRUNCATE);
+				OutputDebugStringA("Trying to load sky texture from: ");
+				OutputDebugStringA(pathBuffer);
+				OutputDebugStringA("\n");
+				
+				if (m_skyTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
+					OutputDebugStringA("Sky texture loaded successfully!\n");
+					skyTextureLoaded = true;
+					break;
+				}
+				else {
+					OutputDebugStringA("Failed to load this file.\n");
+				}
+			}
+			else {
+				char pathBuffer[512];
+				size_t converted = 0;
+				wcstombs_s(&converted, pathBuffer, sizeof(pathBuffer), path.c_str(), _TRUNCATE);
+				OutputDebugStringA("File not found: ");
+				OutputDebugStringA(pathBuffer);
+				OutputDebugStringA("\n");
+			}
+		}
+		
+		if (!skyTextureLoaded) {
+			OutputDebugStringA("Warning: No sky texture could be loaded from any path.\n");
+		}
+		
+		m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
+		m_context->EndFrame();
+		m_context->WaitForGpu();
+		m_skyTextureSrvIndex = skySrvIndex;
 
 		// 定数バッファ (MVP) を作成してトップダウン視点の行列を設定
 		{
@@ -239,7 +306,39 @@ namespace Engine {
 		cmd->RSSetViewports(1, &viewport);
 		cmd->RSSetScissorRects(1, &scissorRect);
 
-		// パイプラインとルートシグネチャをセット
+		// クリアと設定
+		auto rtv = m_device->GetCurrentRtvHandle();
+		const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+
+		// Sky Sphere を最初に描画（背景として）
+		if (m_skySphere && m_skyTexture && m_skyTexture->GetResource()) {
+			cmd->SetGraphicsRootSignature(m_skyPipeline->GetRootSignature());
+			cmd->SetPipelineState(m_skyPipeline->GetPSO());
+
+			// Sky Sphere 用のテクスチャをバインド
+			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
+			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
+			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_skyTextureSrvIndex));
+
+			// 定数バッファをバインド
+			if (m_constantBuffer) {
+				cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
+			}
+
+			// Sky Sphere の頂点・インデックスバッファをバインド
+			auto skyView = m_skySphere->GetVertexBufferView();
+			auto& skyIndexView = m_skySphere->GetIndexBufferView();
+			cmd->IASetVertexBuffers(0, 1, &skyView);
+			cmd->IASetIndexBuffer(&skyIndexView);
+			cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			// Sky Sphere を描画
+			cmd->DrawIndexedInstanced(m_skySphere->GetIndexCount(), 1, 0, 0, 0);
+		}
+
+		// 次に水面メッシュを描画（前景として）
 		cmd->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
 		cmd->SetPipelineState(m_pipeline->GetPSO());
 
@@ -261,14 +360,10 @@ namespace Engine {
 		cmd->IASetIndexBuffer(&m_indexBufferView);
 		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		// クリアと描画実行
-		auto rtv = m_device->GetCurrentRtvHandle();
-		const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
-		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+		// 水面メッシュを描画
 		cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
 
-		// Presentへ遷移
+		// Present へ遷移
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 		m_context->EndFrame();

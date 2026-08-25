@@ -1,21 +1,51 @@
 #include "Texture.h"
 #include <DirectXTex.h>
 #include "../../../d3dx12.h"
+#include <algorithm>
 
 namespace Engine {
 
 	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath) {
-		// DirectXTex ã‚’ä½¿ã£ã¦ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ã‚¤ãƒ¡ãƒ¼ã‚¸ã‚’èª­ã¿è¾¼ã‚€
-		HRESULT hr = DirectX::LoadFromWICFile(filePath.c_str(), DirectX::WIC_FLAGS_NONE, &m_meta, m_image);
+		// DirectXTex ‚ğg‚Á‚Äƒtƒ@ƒCƒ‹‚©‚çƒCƒ[ƒW‚ğ“Ç‚İ‚Ş
+		std::wstring ext = filePath.substr(filePath.find_last_of(L'.'));
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+
+		HRESULT hr;
+
+		if (ext == L".hdr")
+		{
+			hr = DirectX::LoadFromHDRFile(
+				filePath.c_str(),
+				&m_meta,
+				m_image);
+		}
+		else
+		{
+			hr = DirectX::LoadFromWICFile(
+				filePath.c_str(),
+				DirectX::WIC_FLAGS_DEFAULT_SRGB,
+				&m_meta,
+				m_image);
+		}
+		
 		if (FAILED(hr)) {
-			OutputDebugStringA("Texture::LoadFromFile - LoadFromWICFile failed\n");
+			// Ú×‚ÈƒGƒ‰[ƒƒO
+			std::wstring ext = filePath.substr(filePath.find_last_of(L"."));
+			char extBuffer[32];
+			size_t converted = 0;
+			wcstombs_s(&converted, extBuffer, sizeof(extBuffer), ext.c_str(), _TRUNCATE);
+			
+			char message[256];
+			sprintf_s(message, sizeof(message), "Texture::LoadFromFile - WIC loader failed for: %s (HR: 0x%08X)\n", extBuffer, hr);
+			OutputDebugStringA(message);
+			
 			return false;
 		}
 
-		// GPU ç”¨ãƒªã‚½ãƒ¼ã‚¹è¨˜è¿°ã‚’ä½œæˆ
+		// GPU —pƒŠƒ\[ƒX‹Lq‚ğì¬
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, static_cast<UINT>(m_meta.width), static_cast<UINT>(m_meta.height), static_cast<UINT16>(m_meta.arraySize), static_cast<UINT16>(m_meta.mipLevels));
 
-		// ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆãƒ’ãƒ¼ãƒ—ã«ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ä½œæˆ
+		// ƒfƒtƒHƒ‹ƒgƒq[ƒv‚ÉƒeƒNƒXƒ`ƒƒ‚ğì¬
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(
 			&heapProps,
@@ -25,7 +55,7 @@ namespace Engine {
 			nullptr,
 			IID_PPV_ARGS(&m_texture)));
 
-		// ã‚¢ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰ç”¨ãƒãƒƒãƒ•ã‚¡ã‚’ä½œæˆã—ã¦ãƒ‡ãƒ¼ã‚¿ã‚’è»¢é€
+		// ƒAƒbƒvƒ[ƒh—pƒoƒbƒtƒ@‚ğì¬‚µ‚Äƒf[ƒ^‚ğ“]‘—
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, static_cast<UINT>(m_meta.mipLevels * m_meta.arraySize));
 
 		CD3DX12_HEAP_PROPERTIES uploadHeapProps(D3D12_HEAP_TYPE_UPLOAD);
@@ -38,7 +68,7 @@ namespace Engine {
 			nullptr,
 			IID_PPV_ARGS(&m_uploadHeap)));
 
-		// ã‚µãƒ–ãƒªã‚½ãƒ¼ã‚¹ã®åˆæœŸåŒ–æ§‹é€ ã‚’ä½œæˆ
+		// ƒTƒuƒŠƒ\[ƒX‚Ì‰Šú‰»\‘¢‚ğì¬
 		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 		subresources.resize(m_meta.mipLevels * m_meta.arraySize);
 
@@ -49,7 +79,7 @@ namespace Engine {
 			subresources[i].SlicePitch = img[i].slicePitch;
 		}
 
-		// ãƒ‡ãƒ¼ã‚¿ã‚’ã‚¢ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰ã—ã¦ãƒªã‚½ãƒ¼ã‚¹ã‚’åˆæœŸçŠ¶æ…‹ã¸é·ç§»
+		// ƒf[ƒ^‚ğƒAƒbƒvƒ[ƒh‚µ‚ÄƒŠƒ\[ƒX‚ğ‰Šúó‘Ô‚Ö‘JˆÚ
 		UpdateSubresources(cmdList, m_texture.Get(), m_uploadHeap.Get(), 0, 0, static_cast<UINT>(subresources.size()), subresources.data());
 
 		D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

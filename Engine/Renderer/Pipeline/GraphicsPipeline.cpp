@@ -1,19 +1,19 @@
 #include "GraphicsPipeline.h"
-#include <d3dcompiler.h> // ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«ç”¨
+#include <d3dcompiler.h> // ƒRƒ“ƒpƒCƒ‹—p
 
 namespace Engine {
 	void GraphicsPipeline::Initialize(ID3D12Device* device) {
 		OutputDebugStringA("DEBUG: Starting Pipeline Initialize\n");
 
-		// ãƒ«ãƒ¼ãƒˆã‚·ã‚°ãƒãƒãƒ£: t0 ã« SRV ã‚’ãƒã‚¤ãƒ³ãƒ‰ã™ã‚‹ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ãƒ†ãƒ¼ãƒ–ãƒ«
-		// é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ç”¨ã®å®šæ•°ãƒãƒƒãƒ•ã‚¡(b0)ã¨ã‚µãƒ³ãƒ—ãƒ©ã‚’ç”¨æ„ã™ã‚‹
+		// ƒ‹[ƒgƒVƒOƒlƒ`ƒƒ: t0 ‚É SRV ‚ğƒoƒCƒ“ƒh‚·‚éƒfƒBƒXƒNƒŠƒvƒ^ƒe[ƒuƒ‹
+		// ’¸“_ƒVƒF[ƒ_—p‚Ì’è”ƒoƒbƒtƒ@(b0)‚ÆƒTƒ“ƒvƒ‰‚ğ—pˆÓ‚·‚é
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0
 
-	// ãƒ«ãƒ¼ãƒˆãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’2ã¤ç”¨æ„: 0 = SRV ãƒ†ãƒ¼ãƒ–ãƒ« (ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ç”¨), 1 = CBV(b0) (é ‚ç‚¹/ãƒ”ã‚¯ã‚»ãƒ«ä¸¡æ–¹ã§ä½¿ç”¨)
+	// ƒ‹[ƒgƒpƒ‰ƒ[ƒ^‚ğ2‚Â—pˆÓ: 0 = SRV ƒe[ƒuƒ‹ (ƒsƒNƒZƒ‹ƒVƒF[ƒ_—p), 1 = CBV(b0) (’¸“_/ƒsƒNƒZƒ‹—¼•û‚Åg—p)
 	CD3DX12_ROOT_PARAMETER1 rootParams[2];
 	rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-	// CBV ã‚’é ‚ç‚¹ã¨ãƒ”ã‚¯ã‚»ãƒ«ã®ä¸¡æ–¹ã§åˆ©ç”¨ã™ã‚‹ãŸã‚ã‚·ã‚§ãƒ¼ãƒ€å¯è¦–æ€§ã‚’ ALL ã«è¨­å®š
+	// CBV ‚ğ’¸“_‚ÆƒsƒNƒZƒ‹‚Ì—¼•û‚Å—˜—p‚·‚é‚½‚ßƒVƒF[ƒ_‰Â‹«‚ğ ALL ‚Éİ’è
 	CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
@@ -33,7 +33,7 @@ namespace Engine {
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
-		// CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC ã¯ D3D12_VERSIONED_ROOT_SIGNATURE_DESC ã®ãƒ©ãƒƒãƒ‘ãƒ¼ãªã®ã§ã€ãã®ã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’æ¸¡ã™
+		// CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC ‚Í D3D12_VERSIONED_ROOT_SIGNATURE_DESC ‚Ìƒ‰ƒbƒp[‚È‚Ì‚ÅA‚»‚ÌƒAƒhƒŒƒX‚ğ“n‚·
 		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSigDesc, &signature, &error));
 		ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 		OutputDebugStringA("DEBUG: RootSignature created\n");
@@ -53,24 +53,24 @@ namespace Engine {
 		if (FAILED(hrPS)) { OutputDebugStringA("ERROR: Failed to load BasicPS.cso\n"); ThrowIfFailed(hrPS); }
 		OutputDebugStringA("DEBUG: Shaders loaded successfully\n");
 
-		// PSOã®æ§‹ç¯‰
+		// PSO‚Ì\’z
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.pRootSignature = m_rootSignature.Get();
 
-		// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã®ãƒã‚¤ãƒ³ã‚¿ã¨ã‚µã‚¤ã‚ºã‚’æ¸¡ã™
+		// ƒVƒF[ƒ_[‚Ìƒ|ƒCƒ“ƒ^‚ÆƒTƒCƒY‚ğ“n‚·
 		psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
 		psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
 
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-		// ãƒ©ã‚¹ã‚¿ãƒ©ã‚¤ã‚¶è¨­å®šã‚’æ˜ç¤ºçš„ã«æ§‹ç¯‰
+		// ƒ‰ƒXƒ^ƒ‰ƒCƒUİ’è‚ğ–¾¦“I‚É\’z
 		CD3DX12_RASTERIZER_DESC rastDesc(D3D12_DEFAULT);
-		// ä¸€æ™‚çš„ã«è£é¢ã‚«ãƒªãƒ³ã‚°ã‚’ç„¡åŠ¹åŒ–ã—ã¦æ¿ãƒãƒªã‚´ãƒ³ãŒè¦‹ãˆã‚‹ã‚ˆã†ã«ã™ã‚‹
+		// ˆê“I‚É— –ÊƒJƒŠƒ“ƒO‚ğ–³Œø‰»‚µ‚Ä”Âƒ|ƒŠƒSƒ“‚ªŒ©‚¦‚é‚æ‚¤‚É‚·‚é
 		rastDesc.CullMode = D3D12_CULL_MODE_NONE;
 		psoDesc.RasterizerState = rastDesc;
 
-		// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¹ãƒ†ãƒ¼ãƒˆè¨­å®š
+		// ƒuƒŒƒ“ƒhƒXƒe[ƒgİ’è
 		CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
 		psoDesc.BlendState = blendDesc;
 
@@ -88,5 +88,79 @@ namespace Engine {
 			ThrowIfFailed(hrPSO);
 		}
 		OutputDebugStringA("DEBUG: PipelineStateObject created\n");
+	}
+
+	void GraphicsPipeline::InitializeWithShaders(ID3D12Device* device, const std::wstring& vsPath, const std::wstring& psPath) {
+		OutputDebugStringA("DEBUG: Starting Pipeline InitializeWithShaders\n");
+
+		// ƒ‹[ƒgƒVƒOƒlƒ`ƒƒ
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+		CD3DX12_ROOT_PARAMETER1 rootParams[2];
+		rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+		CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+
+		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		samplerDesc.MinLOD = 0;
+		samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+		samplerDesc.ShaderRegister = 0;
+		samplerDesc.RegisterSpace = 0;
+		samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSigDesc;
+		rootSigDesc.Init_1_1(_countof(rootParams), rootParams, 1, &samplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		ComPtr<ID3DBlob> signature;
+		ComPtr<ID3DBlob> error;
+		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSigDesc, &signature, &error));
+		ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+
+		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		};
+
+		ComPtr<ID3DBlob> vertexShader, pixelShader;
+
+		HRESULT hrVS = D3DReadFileToBlob(vsPath.c_str(), &vertexShader);
+		if (FAILED(hrVS)) { 
+			OutputDebugStringA("ERROR: Failed to load vertex shader\n"); 
+			ThrowIfFailed(hrVS); 
+		}
+
+		HRESULT hrPS = D3DReadFileToBlob(psPath.c_str(), &pixelShader);
+		if (FAILED(hrPS)) { 
+			OutputDebugStringA("ERROR: Failed to load pixel shader\n"); 
+			ThrowIfFailed(hrPS); 
+		}
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		psoDesc.pRootSignature = m_rootSignature.Get();
+		psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
+		psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
+		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+		CD3DX12_RASTERIZER_DESC rastDesc(D3D12_DEFAULT);
+		rastDesc.CullMode = D3D12_CULL_MODE_NONE;
+		psoDesc.RasterizerState = rastDesc;
+
+		CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
+		psoDesc.BlendState = blendDesc;
+
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.SampleDesc.Count = 1;
+		psoDesc.SampleDesc.Quality = 0;
+		psoDesc.SampleMask = UINT_MAX;
+
+		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pso)));
+		OutputDebugStringA("DEBUG: PipelineStateObject created with custom shaders\n");
 	}
 }

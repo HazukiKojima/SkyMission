@@ -1,6 +1,7 @@
 #pragma once
 #include "../EngineCommon.h"
 #include "../Resources/Buffer/VertexBuffer.h"
+#include "../Resources/Mesh/SkySphere.h"
 #include "../Renderer/Pipeline/GraphicsPipeline.h"
 #include "../Resources/Texture/Texture.h"
 #include "Camera.h"
@@ -38,9 +39,13 @@ namespace Engine {
 		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 		UINT m_indexCount;
 		std::unique_ptr<Engine::GraphicsPipeline> m_pipeline;
+		std::unique_ptr<Engine::GraphicsPipeline> m_skyPipeline;
 
 		std::unique_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
+		
+		std::unique_ptr<Engine::Texture> m_skyTexture;
+		UINT m_skyTextureSrvIndex = 0;
 
 		// 頂点シェーダ用の定数バッファ (MVP 行列)
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
@@ -52,5 +57,8 @@ namespace Engine {
 		std::unique_ptr<Engine::Camera> m_camera;
 		// timing
 		std::chrono::steady_clock::time_point m_lastTime;
+		
+		// Sky Sphere
+		std::unique_ptr<Engine::SkySphere> m_skySphere;
 	};
 }
