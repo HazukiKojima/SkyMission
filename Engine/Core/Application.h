@@ -43,11 +43,13 @@ namespace Engine {
 
 		std::unique_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
-		
+		std::unique_ptr<Engine::Texture> m_oceanNormalTexture;
+		UINT m_oceanNormalTextureSrvIndex = 0;
+
 		std::unique_ptr<Engine::Texture> m_skyTexture;
 		UINT m_skyTextureSrvIndex = 0;
 
-		// ’¸“_ƒVƒF[ƒ_—p‚Ì’è”ƒoƒbƒtƒ@ (MVP s—ñ)
+		// ï¿½ï¿½ï¿½_ï¿½Vï¿½Fï¿½[ï¿½_ï¿½pï¿½Ì’è”ï¿½oï¿½bï¿½tï¿½@ (MVP ï¿½sï¿½ï¿½)
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
 		UINT8* m_cbvDataPtr = nullptr;
 

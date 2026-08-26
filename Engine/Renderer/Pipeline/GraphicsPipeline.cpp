@@ -8,7 +8,7 @@ namespace Engine {
 		// ルートシグネチャ: t0 に SRV をバインドするディスクリプタテーブル
 		// 頂点シェーダ用の定数バッファ(b0)とサンプラを用意する
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0); // t0: diffuse, t1: normal map
 
 	// ルートパラメータを2つ用意: 0 = SRV テーブル (ピクセルシェーダ用), 1 = CBV(b0) (頂点/ピクセル両方で使用)
 	CD3DX12_ROOT_PARAMETER1 rootParams[2];
