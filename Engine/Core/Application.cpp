@@ -67,14 +67,15 @@ namespace Engine {
 			float uv[2];
 		};
 		// --- 10x10 �O���b�h�̒��_�E�C���f�b�N�X���� ---
-		const int gridSize = 1000;
+		const int gridSize = 256;
+		const float gridExtent = 4000.0f;
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 
 		for (int z = 0; z < gridSize; ++z) {
 			for (int x = 0; x < gridSize; ++x) {
-				float px = (float)x / (gridSize - 1) * 500.0f - 250.0f;
-				float pz = (float)z / (gridSize - 1) * 500.0f - 250.0f;
+				float px = (float)x / (gridSize - 1) * gridExtent - gridExtent * 0.5f;
+				float pz = (float)z / (gridSize - 1) * gridExtent - gridExtent * 0.5f;
 				float u = (float)x / (gridSize - 1);
 				float v = (float)z / (gridSize - 1);
 				vertices.push_back({ {px, 0.0f, pz}, {u, v} });
@@ -265,7 +266,7 @@ namespace Engine {
 		}
 
 		m_camera = std::make_unique<Engine::Camera>();
-		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 1000.0f);
+		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 5000.0f);
 		m_lastTime = std::chrono::steady_clock::now();
 	}
 

@@ -60,9 +60,12 @@ PS_INPUT VS(VS_INPUT input)
     PS_INPUT result;
     float3 pos = input.position;
     
+    // Keep the high-resolution grid centered on the camera while evaluating waves
+    // in world space so the surface remains continuous as the camera moves.
+    float3 worldPos = float3(pos.x + cameraPos.x, pos.y, pos.z + cameraPos.z);
     float3 tangent = float3(1.0f, 0.0f, 0.0f);
     float3 binormal = float3(0.0f, 0.0f, 1.0f);
-    float3 p = pos;
+    float3 p = worldPos;
     
     float2 baseWindDir = normalize(float2(1.0f, 0.6f));
     float wavelength = 30.0f;
@@ -93,8 +96,10 @@ PS_INPUT VS(VS_INPUT input)
     
     float3 normal = normalize(cross(binormal, tangent));
 
-    result.position = mul(float4(pos, 1.0f), mvp);
-    result.worldPos = pos;
+    // Include horizontal Gerstner displacement in the final world position.
+    worldPos = float3(pos.x + cameraPos.x, pos.y, pos.z + cameraPos.z);
+    result.position = mul(float4(worldPos, 1.0f), mvp);
+    result.worldPos = worldPos;
     result.normal = normal;
     result.tangent = normalize(tangent);
     result.texcoord = input.texcoord;
