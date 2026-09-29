@@ -1,21 +1,21 @@
 #include "GraphicsPipeline.h"
-#include <d3dcompiler.h> // コンパイル用
+#include <d3dcompiler.h> // シェーダコンパイル用ヘッダ
 
 namespace Engine {
 	void GraphicsPipeline::Initialize(ID3D12Device* device) {
 		OutputDebugStringA("DEBUG: Starting Pipeline Initialize\n");
 
-		// ルートシグネチャ: t0 に SRV をバインドするディスクリプタテーブル
-		// 頂点シェーダ用の定数バッファ(b0)とサンプラを用意する
+		// ルートシグネチャ: ピクセルシェーダ用にSRVテーブルを用意
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0); // t0: diffuse, t1: normal map
 
-		// ルートパラメータを2つ用意: 0 = SRV テーブル (ピクセルシェーダ用), 1 = CBV(b0) (頂点/ピクセル両方で使用)
+		// ルートパラメータ: 0=SRVテーブル(ピクセル), 1=CBV(b0)（全シェーダ可視）
 		CD3DX12_ROOT_PARAMETER1 rootParams[2];
 		rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-		// CBV を頂点とピクセルの両方で利用するためシェーダ可視性を ALL に設定
+		// CBV を頂点/ピクセル両方で使用
 		CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
+		// デフォルトサンプラ設定
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -28,12 +28,13 @@ namespace Engine {
 		samplerDesc.RegisterSpace = 0;
 		samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+		// ルートシグネチャ記述構築
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSigDesc;
 		rootSigDesc.Init_1_1(_countof(rootParams), rootParams, 1, &samplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
-		// CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC は D3D12_VERSIONED_ROOT_SIGNATURE_DESC のラッパーなので、そのアドレスを渡す
+		// シリアライズしてルートシグネチャを生成
 		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSigDesc, &signature, &error));
 		ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 		OutputDebugStringA("DEBUG: RootSignature created\n");
@@ -53,24 +54,23 @@ namespace Engine {
 		if (FAILED(hrPS)) { OutputDebugStringA("ERROR: Failed to load BasicPS.cso\n"); ThrowIfFailed(hrPS); }
 		OutputDebugStringA("DEBUG: Shaders loaded successfully\n");
 
-		// PSOの構築
+		// PSO設定
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.pRootSignature = m_rootSignature.Get();
 
-		// シェーダーのポインタとサイズを渡す
+		// シェーダーバイトコードを設定
 		psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
 		psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
 
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-		// ラスタライザ設定を明示的に構築
+		// ラスタライザ設定（裏面カリング無効にして板ポリが見えるように）
 		CD3DX12_RASTERIZER_DESC rastDesc(D3D12_DEFAULT);
-		// 一時的に裏面カリングを無効化して板ポリゴンが見えるようにする
 		rastDesc.CullMode = D3D12_CULL_MODE_NONE;
 		psoDesc.RasterizerState = rastDesc;
 
-		// ブレンドステート設定
+		// ブレンド設定
 		CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
 		psoDesc.BlendState = blendDesc;
 
@@ -93,7 +93,7 @@ namespace Engine {
 	void GraphicsPipeline::InitializeWithShaders(ID3D12Device* device, const std::wstring& vsPath, const std::wstring& psPath) {
 		OutputDebugStringA("DEBUG: Starting Pipeline InitializeWithShaders\n");
 
-		// ルートシグネチャ
+		// ルートシグネチャ: 単一SRVテーブルを使用
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
@@ -101,6 +101,7 @@ namespace Engine {
 		rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 		CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
+		// サンプラ設定
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;

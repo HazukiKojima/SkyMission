@@ -8,14 +8,14 @@ struct PS_INPUT
     float3 worldPos : TEXCOORD1;
 };
 
-// Sky Sphere Pixel Shader
-// HDR/EXR�e�N�X�`����T���v�����O���ďo��
+// 空球用ピクセルシェーダー
+// HDR/EXRテクスチャをサンプリングし、表示色に変換
 float4 main(PS_INPUT input) : SV_TARGET
 {
-    // UV���W����V��e�N�X�`����T���v�����O
+    // 球面UVで空テクスチャを参照
     float3 color = gSkyTexture.Sample(gSampler, input.texcoord).rgb;
     
-    // ���j�A�J���[��ԂŕԂ��i�t���[���o�b�t�@��HDR�Ή��̏ꍇ�j
+    // HDR色を表示可能な範囲にトーンマッピング
     color = color / (1.0f + color);
     return float4(max(color, 0.0f), 1.0f);
 }

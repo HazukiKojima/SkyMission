@@ -23,14 +23,14 @@ struct PS_INPUT
     float3 tangent : TANGENT;
 };
 
-// ?Q???X?g?i?[?g??1??v?Z????ψ??@???p?x?N?g?????????
+// Gerstner波の変位と接線・従法線の変化を計算
 float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, float3 p, inout float3 tangent, inout float3 binormal, float phaseOffset)
 {
     float k = 2.0f * 3.14159f / wavelength;
     float c = sqrt(9.8f / k);
     float2 d = normalize(dir);
     
-    // ???????i?s???????A?g?????????_?????????u?iphaseOffset?j??????????????
+    // 位置と時間から位相を計算し位相オフセットを加える
     float f = k * (dot(d, p.xz) - c * time * 0.8f) + phaseOffset;
     float a = steepness / k;
     
@@ -60,8 +60,7 @@ PS_INPUT VS(VS_INPUT input)
     PS_INPUT result;
     float3 pos = input.position;
     
-    // Keep the high-resolution grid centered on the camera while evaluating waves
-    // in world space so the surface remains continuous as the camera moves.
+    // カメラ位置を基準にグリッドを評価し、カメラ移動時も連続した水面を保つ
     float3 worldPos = float3(pos.x + cameraPos.x, pos.y, pos.z + cameraPos.z);
     float3 tangent = float3(1.0f, 0.0f, 0.0f);
     float3 binormal = float3(0.0f, 0.0f, 1.0f);
@@ -75,28 +74,27 @@ PS_INPUT VS(VS_INPUT input)
     
     for (int i = 0; i < NUM_WAVES; ++i)
     {
-        // ???K??????????????@??????i?K???????????|????o???o????I?t?Z?b?g????j
+        // 波ごとに位相をずらして重ね合わせる
         float phaseOffset = (float) i * 21.53f;
         
-        // ????????Y????A?P?????`??????s?K????U??
-        // sin(i * ????????) ??g???????A?^???I??????_????U???i-0.5?0.5???W?A?????x?j??????
+        // 波の方向を少しずつばらつかせる
         float randomAngle = sin((float) i * 7.3f) * 1.1f;
         
         float s_rot = sin(randomAngle);
         float c_rot = cos(randomAngle);
         float2 waveDir = mul(float2x2(c_rot, -s_rot, s_rot, c_rot), baseWindDir);
         
-        // phaseOffset??n????v?Z
+        // 波の変位を加算
         pos += CalculateGerstnerWave(waveDir, steepness, wavelength, p, tangent, binormal, phaseOffset);
         
-        // ????g??
+        // 次の波は波長と急峻さを小さくする
         wavelength *= 0.82f;
         steepness *= 0.72f;
     }
     
     float3 normal = normalize(cross(binormal, tangent));
 
-    // Include horizontal Gerstner displacement in the final world position.
+    // 水平方向の変位を反映したワールド位置を計算して出力に設定
     worldPos = float3(pos.x + cameraPos.x, pos.y, pos.z + cameraPos.z);
     result.position = mul(float4(worldPos, 1.0f), mvp);
     result.worldPos = worldPos;

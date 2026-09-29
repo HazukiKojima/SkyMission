@@ -27,7 +27,7 @@ struct PS_INPUT
     float3 tangent : TANGENT;
 };
 
-// �s�N�Z���V�F�[�_: �g�̃��C�e�B���O�i�f�B�t���[�Y�A�X�y�L�����A�t���l���j�Ƌ����t�H�O���������ďo��
+// 水面のライティング計算とフォグ処理
 float3 FresnelSchlick(float cosTheta, float3 F0)
 {
     return F0 + (1.0f - F0) * pow(1.0f - saturate(cosTheta), 5.0f);
@@ -54,18 +54,18 @@ float GeometrySmith(float NdotV, float NdotL, float roughness)
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    // �@���ƃJ�����E���C�g�������擾
+    // 法線と視線・光方向の計算
     float3 N = normalize(input.normal);
     float3 V = normalize(cameraPos - input.worldPos);
-    // The sun direction is a fixed world-space vector: surface to sun.
     float3 L = normalize(sunDirection);
 
-    // �x�[�X�̐��F�i�[��j��@���̌X���ŕ��
+    // 深浅のベース色を太陽方向に応じて補間
     float3 deepWaterColor = float3(0.01f, 0.08f, 0.14f);
     float3 shallowWaterColor = float3(0.03f, 0.16f, 0.24f);
     float NdotL = saturate(dot(N, L));
     float3 baseColor = lerp(deepWaterColor, shallowWaterColor, NdotL * 0.25f);
 
+    // 法線マップで細かい凹凸を合成
     float2 normalUV = input.worldPos.xz * 0.035f + float2(time * 0.018f, time * -0.011f);
     float3 tangent = normalize(input.tangent - N * dot(input.tangent, N));
     float3 bitangent = normalize(cross(N, tangent));
@@ -76,15 +76,14 @@ float4 PS(PS_INPUT input) : SV_TARGET
     NdotL = saturate(dot(N, L));
     baseColor = lerp(deepWaterColor, shallowWaterColor, NdotL * 0.25f);
 
-    // �e�N�X�`�����y��������i�@���ɂ��c�� + ���Ԃł킸���ɓ������j
+    // テクスチャを重ねて水面の模様を作る
     float2 waveScroll = float2(time * 0.012f, time * -0.008f);
     float2 waterUV = input.worldPos.xz * 0.018f;
     float3 texA = gDiffuse.Sample(gSampler, waterUV + N.xz * 0.035f + waveScroll).rgb;
     float3 texB = gDiffuse.Sample(gSampler, waterUV * 0.63f - N.zx * 0.02f - waveScroll * 0.7f).rgb;
     float3 tex = lerp(texA, texB, 0.35f);
 
-    // World-space sun glint. It is driven by the surface normal and sun direction,
-    // so its position does not move with the camera.
+    // スペキュラとディフューズの計算
     float3 waterF0 = float3(0.02f, 0.02f, 0.02f);
     float roughness = 0.16f;
     float NdotV = saturate(dot(N, V));
@@ -97,11 +96,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 specular = (distribution * geometry * fresnel) / max(4.0f * NdotV * NdotL, 0.001f);
     float3 directDiffuse = baseColor * (1.0f - fresnel) * NdotL * sunIntensity;
 
-    // �t���l���i���p�ˑ��̔��ˁj
-    // ��F�i�t���l���Ƌ����ɍ����邽�߂̐F�j
+    // 環境反射とフォグ
     float3 skyColor = float3(0.45f, 0.68f, 0.9f);
-
-    // ����: �x�[�X + �e�N�X�`���̔�����Z + �X�y�L�����A�t���l���ŋ�𔽎�
     float3 ambient = ambientColor * ambientIntensity * lerp(0.65f, 1.0f, saturate(N.y));
     float3 reflectedSky = lerp(float3(0.18f, 0.30f, 0.42f), skyColor, saturate(0.5f + 0.5f * R.y));
     float3 environmentReflection = reflectedSky * fresnel * (0.65f + 0.35f * saturate(R.y));
@@ -112,17 +108,16 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float foam = smoothstep(0.78f, 0.96f, 1.0f - N.y);
     color = lerp(color, float3(0.72f, 0.82f, 0.86f), foam * 0.12f);
 
-    // �����t�H�O�i���i�̔g�����������Ȃ��悤�ɊJ�n���������߂ɐݒ�j
+    // フォグで遠景を薄める
     float distanceToCamera = length(cameraPos - input.worldPos);
     const float fogStart = 600.0f;
     const float fogEnd = 3000.0f;
     float fogFactor = saturate((distanceToCamera - fogStart) / (fogEnd - fogStart));
-    // Increase atmospheric blending toward the horizon to hide the grid boundary.
     float horizonFactor = pow(1.0f - saturate(abs(V.y)), 2.0f);
     fogFactor = max(fogFactor, horizonFactor * 0.35f);
     color = lerp(color, skyColor, fogFactor);
 
-    // Map HDR lighting into the displayable range without clipping highlights.
+    // HDR範囲に収める
     color = color / (1.0f + color);
     return float4(saturate(color), 1.0f);
 }

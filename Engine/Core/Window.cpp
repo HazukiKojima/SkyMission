@@ -1,4 +1,4 @@
-#include "Window.h"
+﻿#include "Window.h"
 
 namespace Engine {
 	// Win32APIを使用したメインウィンドウの生成および登録

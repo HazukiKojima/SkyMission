@@ -4,7 +4,7 @@
 #include <DirectXMath.h>
 
 namespace Engine {
-	// SkySphere: 球体メッシュを生成し、GPU上での描画をサポートするクラス
+	// 球体メッシュを生成しGPU描画用のバッファを管理するクラス
 	class SkySphere {
 	public:
 		struct Vertex {
@@ -15,11 +15,7 @@ namespace Engine {
 		SkySphere() = default;
 		~SkySphere() = default;
 
-		// 球体メッシュを生成し、GPUリソースを作成
-		// @param device: GPUデバイス
-		// @param radius: 球体の半径
-		// @param slices: 経度方向の分割数
-		// @param stacks: 緯度方向の分割数
+		// 球体メッシュを生成して頂点/インデックスバッファを作成する
 		void Initialize(ID3D12Device* device, float radius = 100.0f, UINT slices = 64, UINT stacks = 32);
 
 		// 頂点バッファビューを取得
