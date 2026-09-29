@@ -17,5 +17,5 @@ float4 main(PS_INPUT input) : SV_TARGET
     
     // ���j�A�J���[��ԂŕԂ��i�t���[���o�b�t�@��HDR�Ή��̏ꍇ�j
     color = color / (1.0f + color);
-        return float4(max(color, 0.0f), 1.0f);
+    return float4(max(color, 0.0f), 1.0f);
 }

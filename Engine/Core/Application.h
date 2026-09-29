@@ -59,7 +59,7 @@ namespace Engine {
 		std::unique_ptr<Engine::Camera> m_camera;
 		// timing
 		std::chrono::steady_clock::time_point m_lastTime;
-		
+
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;
 	};

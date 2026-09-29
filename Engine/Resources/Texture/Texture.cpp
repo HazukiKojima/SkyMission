@@ -27,18 +27,18 @@ namespace Engine {
 				&m_meta,
 				m_image);
 		}
-		
+
 		if (FAILED(hr)) {
 			// �ڍׂȃG���[���O
 			std::wstring ext = filePath.substr(filePath.find_last_of(L"."));
 			char extBuffer[32];
 			size_t converted = 0;
 			wcstombs_s(&converted, extBuffer, sizeof(extBuffer), ext.c_str(), _TRUNCATE);
-			
+
 			char message[256];
 			sprintf_s(message, sizeof(message), "Texture::LoadFromFile - WIC loader failed for: %s (HR: 0x%08X)\n", extBuffer, hr);
 			OutputDebugStringA(message);
-			
+
 			return false;
 		}
 

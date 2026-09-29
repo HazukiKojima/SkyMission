@@ -1,10 +1,10 @@
 #include "RenderDevice.h"
 
 namespace Engine {
-	// DX12•`‰æ‚É•K—v‚ÈƒfƒoƒCƒXAƒXƒƒbƒvƒ`ƒF[ƒ“ARTVƒq[ƒv‚ğ‰Šú‰»
+	// DX12æç”»ã«å¿…è¦ãªãƒ‡ãƒã‚¤ã‚¹ã€ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ãƒ¼ãƒ³ã€RTVãƒ’ãƒ¼ãƒ—ã‚’åˆæœŸåŒ–
 	void RenderDevice::Initialize(HWND hwnd, UINT width, UINT height) {
 #if defined(_DEBUG)
-		// ƒfƒoƒCƒX¶¬‚æ‚èæ‚É—LŒø‰»‚µ‚È‚¢‚ÆŒx‚ğƒLƒƒƒbƒ`‚Å‚«‚È‚¢‚½‚ßÅ—Dæ‚ÅÀs
+		// ãƒ‡ãƒã‚¤ã‚¹ç”Ÿæˆã‚ˆã‚Šå…ˆã«æœ‰åŠ¹åŒ–ã—ãªã„ã¨è­¦å‘Šã‚’ã‚­ãƒ£ãƒƒãƒã§ããªã„ãŸã‚æœ€å„ªå…ˆã§å®Ÿè¡Œ
 		ComPtr<ID3D12Debug> debugController;
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
 			debugController->EnableDebugLayer();
@@ -25,8 +25,8 @@ namespace Engine {
 		swapChainDesc.Height = height;
 		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // Win10ˆÈ~‚Ì•W€ƒtƒŠƒbƒvƒ‚ƒfƒ‹
-		swapChainDesc.SampleDesc.Count = 1;                       // ƒXƒƒbƒvƒ`ƒF[ƒ“‚ÌƒoƒbƒNƒoƒbƒtƒ@‚ÍMSAA”ñ‘Î‰‚Ì‚½‚ß1ƒTƒ“ƒvƒ‹‚Å¶¬
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // Win10ä»¥é™ã®æ¨™æº–ãƒ•ãƒªãƒƒãƒ—ãƒ¢ãƒ‡ãƒ«
+		swapChainDesc.SampleDesc.Count = 1;                       // ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ãƒ¼ãƒ³ã®ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡ã¯MSAAéå¯¾å¿œã®ãŸã‚1ã‚µãƒ³ãƒ—ãƒ«ã§ç”Ÿæˆ
 
 		ComPtr<IDXGISwapChain1> swapChain;
 		ThrowIfFailed(m_factory->CreateSwapChainForHwnd(m_commandQueue.Get(), hwnd, &swapChainDesc, nullptr, nullptr, &swapChain));
@@ -38,24 +38,24 @@ namespace Engine {
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
-		// RTV‚ÌƒTƒCƒY‚ÍGPU‚²‚Æ‚ÉˆÙ‚È‚é‚½‚ßAPIŒo—R‚Å“®“I‚Éæ“¾
+		// RTVã®ã‚µã‚¤ã‚ºã¯GPUã”ã¨ã«ç•°ãªã‚‹ãŸã‚APIçµŒç”±ã§å‹•çš„ã«å–å¾—
 		m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 		for (UINT i = 0; i < FrameCount; i++) {
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i])));
 			m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, rtvHandle);
-			rtvHandle.ptr += m_rtvDescriptorSize; // Ÿ‚ÌRTVƒfƒBƒXƒNƒŠƒvƒ^‚ÖˆÚ“®
+			rtvHandle.ptr += m_rtvDescriptorSize; // æ¬¡ã®RTVãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ã¸ç§»å‹•
 		}
 
-		// CBV/SRV/UAV ƒq[ƒv‚ğì¬iƒeƒNƒXƒ`ƒƒ‚È‚Ç‚ğƒVƒF[ƒ_‚©‚çQÆ‚·‚é‚½‚ß‚ÌƒVƒF[ƒ_‰Â‹ƒq[ƒvj
+		// CBV/SRV/UAV ãƒ’ãƒ¼ãƒ—ã‚’ä½œæˆï¼ˆãƒ†ã‚¯ã‚¹ãƒãƒ£ãªã©ã‚’ã‚·ã‚§ãƒ¼ãƒ€ã‹ã‚‰å‚ç…§ã™ã‚‹ãŸã‚ã®ã‚·ã‚§ãƒ¼ãƒ€å¯è¦–ãƒ’ãƒ¼ãƒ—ï¼‰
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 256; // \•ª‚È”‚ğŠm•Û
+		srvHeapDesc.NumDescriptors = 256; // ååˆ†ãªæ•°ã‚’ç¢ºä¿
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
-		// SRV ƒq[ƒv‚ÌƒfƒBƒXƒNƒŠƒvƒ^ƒTƒCƒY‚ğæ“¾‚µ‚Ä‚¨‚­
+		// SRV ãƒ’ãƒ¼ãƒ—ã®ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ã‚µã‚¤ã‚ºã‚’å–å¾—ã—ã¦ãŠã
 		m_srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 		m_width = width;
@@ -63,7 +63,7 @@ namespace Engine {
 	}
 
 	void RenderDevice::Present() {
-		ThrowIfFailed(m_swapChain->Present(1, 0)); // ƒeƒBƒAƒŠƒ“ƒO–h~‚Ì‚½‚ßVSync—LŒø
+		ThrowIfFailed(m_swapChain->Present(1, 0)); // ãƒ†ã‚£ã‚¢ãƒªãƒ³ã‚°é˜²æ­¢ã®ãŸã‚VSyncæœ‰åŠ¹
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCurrentRtvHandle() const {
@@ -88,21 +88,21 @@ namespace Engine {
 	}
 
 	void RenderDevice::Resize(UINT width, UINT height) {
-		// ƒEƒBƒ“ƒhƒEƒTƒCƒY‚ª•Ï‚í‚ç‚È‚¢ê‡‚Í‰½‚à‚µ‚È‚¢
+		// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºãŒå¤‰ã‚ã‚‰ãªã„å ´åˆã¯ä½•ã‚‚ã—ãªã„
 		if (width == m_width && height == m_height) return;
 
 		m_width = width;
 		m_height = height;
 
-		// GPU ‚Ìg—p‚ğ‘Ò‚Á‚Ä‚©‚çƒŠƒ\[ƒX‚ğ‰ğ•ú
+		// GPU ã®ä½¿ç”¨ã‚’å¾…ã£ã¦ã‹ã‚‰ãƒªã‚½ãƒ¼ã‚¹ã‚’è§£æ”¾
 		for (UINT i = 0; i < FrameCount; ++i) {
 			m_renderTargets[i].Reset();
 		}
 
-		// ƒXƒƒbƒvƒ`ƒFƒCƒ“‚Ìƒoƒbƒtƒ@ƒTƒCƒY‚ğXV
+		// ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³ã®ãƒãƒƒãƒ•ã‚¡ã‚µã‚¤ã‚ºã‚’æ›´æ–°
 		ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
 
-		// RTV ‚ğÄì¬
+		// RTV ã‚’å†ä½œæˆ
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 		for (UINT i = 0; i < FrameCount; ++i) {
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i])));

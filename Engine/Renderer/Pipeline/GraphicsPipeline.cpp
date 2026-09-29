@@ -1,20 +1,20 @@
 #include "GraphicsPipeline.h"
-#include <d3dcompiler.h> // ƒRƒ“ƒpƒCƒ‹—p
+#include <d3dcompiler.h> // ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«ç”¨
 
 namespace Engine {
 	void GraphicsPipeline::Initialize(ID3D12Device* device) {
 		OutputDebugStringA("DEBUG: Starting Pipeline Initialize\n");
 
-		// ƒ‹[ƒgƒVƒOƒlƒ`ƒƒ: t0 ‚É SRV ‚ğƒoƒCƒ“ƒh‚·‚éƒfƒBƒXƒNƒŠƒvƒ^ƒe[ƒuƒ‹
-		// ’¸“_ƒVƒF[ƒ_—p‚Ì’è”ƒoƒbƒtƒ@(b0)‚ÆƒTƒ“ƒvƒ‰‚ğ—pˆÓ‚·‚é
+		// ãƒ«ãƒ¼ãƒˆã‚·ã‚°ãƒãƒãƒ£: t0 ã« SRV ã‚’ãƒã‚¤ãƒ³ãƒ‰ã™ã‚‹ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ãƒ†ãƒ¼ãƒ–ãƒ«
+		// é ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ç”¨ã®å®šæ•°ãƒãƒƒãƒ•ã‚¡(b0)ã¨ã‚µãƒ³ãƒ—ãƒ©ã‚’ç”¨æ„ã™ã‚‹
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0); // t0: diffuse, t1: normal map
 
-	// ƒ‹[ƒgƒpƒ‰ƒ[ƒ^‚ğ2‚Â—pˆÓ: 0 = SRV ƒe[ƒuƒ‹ (ƒsƒNƒZƒ‹ƒVƒF[ƒ_—p), 1 = CBV(b0) (’¸“_/ƒsƒNƒZƒ‹—¼•û‚Åg—p)
-	CD3DX12_ROOT_PARAMETER1 rootParams[2];
-	rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-	// CBV ‚ğ’¸“_‚ÆƒsƒNƒZƒ‹‚Ì—¼•û‚Å—˜—p‚·‚é‚½‚ßƒVƒF[ƒ_‰Â‹«‚ğ ALL ‚Éİ’è
-	CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		// ãƒ«ãƒ¼ãƒˆãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’2ã¤ç”¨æ„: 0 = SRV ãƒ†ãƒ¼ãƒ–ãƒ« (ãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ç”¨), 1 = CBV(b0) (é ‚ç‚¹/ãƒ”ã‚¯ã‚»ãƒ«ä¸¡æ–¹ã§ä½¿ç”¨)
+		CD3DX12_ROOT_PARAMETER1 rootParams[2];
+		rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+		// CBV ã‚’é ‚ç‚¹ã¨ãƒ”ã‚¯ã‚»ãƒ«ã®ä¸¡æ–¹ã§åˆ©ç”¨ã™ã‚‹ãŸã‚ã‚·ã‚§ãƒ¼ãƒ€å¯è¦–æ€§ã‚’ ALL ã«è¨­å®š
+		CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -33,7 +33,7 @@ namespace Engine {
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
-		// CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC ‚Í D3D12_VERSIONED_ROOT_SIGNATURE_DESC ‚Ìƒ‰ƒbƒp[‚È‚Ì‚ÅA‚»‚ÌƒAƒhƒŒƒX‚ğ“n‚·
+		// CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC ã¯ D3D12_VERSIONED_ROOT_SIGNATURE_DESC ã®ãƒ©ãƒƒãƒ‘ãƒ¼ãªã®ã§ã€ãã®ã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’æ¸¡ã™
 		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSigDesc, &signature, &error));
 		ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 		OutputDebugStringA("DEBUG: RootSignature created\n");
@@ -53,24 +53,24 @@ namespace Engine {
 		if (FAILED(hrPS)) { OutputDebugStringA("ERROR: Failed to load BasicPS.cso\n"); ThrowIfFailed(hrPS); }
 		OutputDebugStringA("DEBUG: Shaders loaded successfully\n");
 
-		// PSO‚Ì\’z
+		// PSOã®æ§‹ç¯‰
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.pRootSignature = m_rootSignature.Get();
 
-		// ƒVƒF[ƒ_[‚Ìƒ|ƒCƒ“ƒ^‚ÆƒTƒCƒY‚ğ“n‚·
+		// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã®ãƒã‚¤ãƒ³ã‚¿ã¨ã‚µã‚¤ã‚ºã‚’æ¸¡ã™
 		psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
 		psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
 
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-		// ƒ‰ƒXƒ^ƒ‰ƒCƒUİ’è‚ğ–¾¦“I‚É\’z
+		// ãƒ©ã‚¹ã‚¿ãƒ©ã‚¤ã‚¶è¨­å®šã‚’æ˜ç¤ºçš„ã«æ§‹ç¯‰
 		CD3DX12_RASTERIZER_DESC rastDesc(D3D12_DEFAULT);
-		// ˆê“I‚É— –ÊƒJƒŠƒ“ƒO‚ğ–³Œø‰»‚µ‚Ä”Âƒ|ƒŠƒSƒ“‚ªŒ©‚¦‚é‚æ‚¤‚É‚·‚é
+		// ä¸€æ™‚çš„ã«è£é¢ã‚«ãƒªãƒ³ã‚°ã‚’ç„¡åŠ¹åŒ–ã—ã¦æ¿ãƒãƒªã‚´ãƒ³ãŒè¦‹ãˆã‚‹ã‚ˆã†ã«ã™ã‚‹
 		rastDesc.CullMode = D3D12_CULL_MODE_NONE;
 		psoDesc.RasterizerState = rastDesc;
 
-		// ƒuƒŒƒ“ƒhƒXƒe[ƒgİ’è
+		// ãƒ–ãƒ¬ãƒ³ãƒ‰ã‚¹ãƒ†ãƒ¼ãƒˆè¨­å®š
 		CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
 		psoDesc.BlendState = blendDesc;
 
@@ -93,7 +93,7 @@ namespace Engine {
 	void GraphicsPipeline::InitializeWithShaders(ID3D12Device* device, const std::wstring& vsPath, const std::wstring& psPath) {
 		OutputDebugStringA("DEBUG: Starting Pipeline InitializeWithShaders\n");
 
-		// ƒ‹[ƒgƒVƒOƒlƒ`ƒƒ
+		// ãƒ«ãƒ¼ãƒˆã‚·ã‚°ãƒãƒãƒ£
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
@@ -129,15 +129,15 @@ namespace Engine {
 		ComPtr<ID3DBlob> vertexShader, pixelShader;
 
 		HRESULT hrVS = D3DReadFileToBlob(vsPath.c_str(), &vertexShader);
-		if (FAILED(hrVS)) { 
-			OutputDebugStringA("ERROR: Failed to load vertex shader\n"); 
-			ThrowIfFailed(hrVS); 
+		if (FAILED(hrVS)) {
+			OutputDebugStringA("ERROR: Failed to load vertex shader\n");
+			ThrowIfFailed(hrVS);
 		}
 
 		HRESULT hrPS = D3DReadFileToBlob(psPath.c_str(), &pixelShader);
-		if (FAILED(hrPS)) { 
-			OutputDebugStringA("ERROR: Failed to load pixel shader\n"); 
-			ThrowIfFailed(hrPS); 
+		if (FAILED(hrPS)) {
+			OutputDebugStringA("ERROR: Failed to load pixel shader\n");
+			ThrowIfFailed(hrPS);
 		}
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};

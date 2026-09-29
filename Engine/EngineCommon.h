@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifndef UNICODE
 #define UNICODE

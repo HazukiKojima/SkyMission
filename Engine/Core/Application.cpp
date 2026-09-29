@@ -41,7 +41,7 @@ namespace Engine {
 			m_device->Resize(w, h);
 			if (m_camera) m_camera->OnResize(w, h);
 			// ���e�� Update() �Ŗ��t���[���Čv�Z���Ă��邽�߂����ł͉�����Ȃ�
-		});
+			});
 
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(m_window->GetHandle(), m_window->GetWidth(), m_window->GetHeight());
@@ -167,7 +167,7 @@ namespace Engine {
 		m_context->BeginFrame();
 		UINT skySrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
-		
+
 		// �����̃p�X�����
 		std::vector<std::wstring> skyTexturePaths = {
 			L"C:\\Users\\hazu0\\DX12\\SkyMission\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
@@ -180,7 +180,7 @@ namespace Engine {
 			exeDir + L"\\Assets\\Images\\water-bg-pattern-04.jpg",
 			exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg",
 		};
-		
+
 		bool skyTextureLoaded = false;
 		for (const auto& path : skyTexturePaths) {
 			// �t�@�C�������݂��邩�m�F
@@ -192,7 +192,7 @@ namespace Engine {
 				OutputDebugStringA("Trying to load sky texture from: ");
 				OutputDebugStringA(pathBuffer);
 				OutputDebugStringA("\n");
-				
+
 				if (m_skyTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
 					OutputDebugStringA("Sky texture loaded successfully!\n");
 					skyTextureLoaded = true;
@@ -211,11 +211,11 @@ namespace Engine {
 				OutputDebugStringA("\n");
 			}
 		}
-		
+
 		if (!skyTextureLoaded) {
 			OutputDebugStringA("Warning: No sky texture could be loaded from any path.\n");
 		}
-		
+
 		m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
 		m_context->EndFrame();
 		m_context->WaitForGpu();

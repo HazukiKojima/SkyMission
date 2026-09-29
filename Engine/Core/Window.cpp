@@ -1,7 +1,7 @@
 #include "Window.h"
 
 namespace Engine {
-	// Win32API‚ğg—p‚µ‚½ƒƒCƒ“ƒEƒBƒ“ƒhƒE‚Ì¶¬‚¨‚æ‚Ñ“o˜^
+	// Win32APIã‚’ä½¿ç”¨ã—ãŸãƒ¡ã‚¤ãƒ³ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ç”ŸæˆãŠã‚ˆã³ç™»éŒ²
 	Window::Window(UINT width, UINT height, const wchar_t* title, HINSTANCE hInstance)
 		: m_width(width), m_height(height)
 	{
@@ -11,7 +11,7 @@ namespace Engine {
 		wc.lpszClassName = L"DX12WindowClass";
 		RegisterClass(&wc);
 
-		// ŠO˜g‚ğŠÜ‚ß‚½‘S‘Ì‚ÌƒEƒBƒ“ƒhƒEƒTƒCƒY‚ğƒNƒ‰ƒCƒAƒ“ƒg—Ìˆæ‚©‚ç‹tZ
+		// å¤–æ ã‚’å«ã‚ãŸå…¨ä½“ã®ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆé ˜åŸŸã‹ã‚‰é€†ç®—
 		RECT rc = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
 		AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -23,22 +23,22 @@ namespace Engine {
 		);
 
 		if (!m_hwnd) {
-			throw std::runtime_error("ƒEƒBƒ“ƒhƒE‚Ìì¬‚É¸”s‚µ‚Ü‚µ‚½B");
+			throw std::runtime_error("ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ä½œæˆã«å¤±æ•—ã—ã¾ã—ãŸã€‚");
 		}
 
-		// WindowProc “à‚Å this ‚ğæ“¾‚Å‚«‚é‚æ‚¤‚ÉƒEƒBƒ“ƒhƒEƒ†[ƒU[ƒf[ƒ^‚É©g‚Ìƒ|ƒCƒ“ƒ^‚ğ“o˜^
+		// WindowProc å†…ã§ this ã‚’å–å¾—ã§ãã‚‹ã‚ˆã†ã«ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒ¦ãƒ¼ã‚¶ãƒ¼ãƒ‡ãƒ¼ã‚¿ã«è‡ªèº«ã®ãƒã‚¤ãƒ³ã‚¿ã‚’ç™»éŒ²
 		SetWindowLongPtr(m_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 	}
 
-	// ƒEƒBƒ“ƒhƒEƒƒbƒZ[ƒW‚ğˆ—‚·‚éƒR[ƒ‹ƒoƒbƒNŠÖ”
+	// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’å‡¦ç†ã™ã‚‹ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯é–¢æ•°
 	LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		Window* self = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 		if (uMsg == WM_DESTROY) {
-			PostQuitMessage(0); // ƒƒCƒ“ƒ‹[ƒvI—¹‚ÌƒgƒŠƒK[
+			PostQuitMessage(0); // ãƒ¡ã‚¤ãƒ³ãƒ«ãƒ¼ãƒ—çµ‚äº†ã®ãƒˆãƒªã‚¬ãƒ¼
 			return 0;
 		}
 
-		// ƒTƒCƒY•ÏX‚ğƒnƒ“ƒhƒ‹‚µA“o˜^‚³‚ê‚½ƒR[ƒ‹ƒoƒbƒN‚ğŒÄ‚Ño‚·
+		// ã‚µã‚¤ã‚ºå¤‰æ›´ã‚’ãƒãƒ³ãƒ‰ãƒ«ã—ã€ç™»éŒ²ã•ã‚ŒãŸã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ã‚’å‘¼ã³å‡ºã™
 		if (uMsg == WM_SIZE && self) {
 			UINT newWidth = LOWORD(lParam);
 			UINT newHeight = HIWORD(lParam);
