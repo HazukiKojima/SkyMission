@@ -6,7 +6,7 @@
 namespace Engine {
 
 	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb) {
-		// DirectXTex ��g���ăt�@�C������C���[�W��ǂݍ���
+		// DirectXTex を使って画像ファイルを読み込む
 		std::wstring ext = filePath.substr(filePath.find_last_of(L'.'));
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
 
@@ -29,7 +29,7 @@ namespace Engine {
 		}
 		
 		if (FAILED(hr)) {
-			// �ڍׂȃG���[���O
+			// 画像の読み込みに失敗した
 			std::wstring ext = filePath.substr(filePath.find_last_of(L"."));
 			char extBuffer[32];
 			size_t converted = 0;
@@ -42,10 +42,15 @@ namespace Engine {
 			return false;
 		}
 
-		// GPU �p���\�[�X�L�q��쐬
-		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, static_cast<UINT>(m_meta.width), static_cast<UINT>(m_meta.height), static_cast<UINT16>(m_meta.arraySize), static_cast<UINT16>(m_meta.mipLevels));
+		// GPU用テクスチャリソースを作成
+		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			m_meta.format,
+			static_cast<UINT>(m_meta.width),
+			static_cast<UINT>(m_meta.height),
+			static_cast<UINT16>(m_meta.arraySize),
+			static_cast<UINT16>(m_meta.mipLevels));
 
-		// �f�t�H���g�q�[�v�Ƀe�N�X�`����쐬
+		// デフォルトヒープにテクスチャを確保
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(
 			&heapProps,
@@ -55,7 +60,7 @@ namespace Engine {
 			nullptr,
 			IID_PPV_ARGS(&m_texture)));
 
-		// �A�b�v���[�h�p�o�b�t�@��쐬���ăf�[�^��]��
+		// 転送用アップロードバッファを作成
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, static_cast<UINT>(m_meta.mipLevels * m_meta.arraySize));
 
 		CD3DX12_HEAP_PROPERTIES uploadHeapProps(D3D12_HEAP_TYPE_UPLOAD);
@@ -68,7 +73,7 @@ namespace Engine {
 			nullptr,
 			IID_PPV_ARGS(&m_uploadHeap)));
 
-		// �T�u���\�[�X�̏������\����쐬
+		// サブリソース配列を作成してアップロード
 		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 		subresources.resize(m_meta.mipLevels * m_meta.arraySize);
 
@@ -79,7 +84,7 @@ namespace Engine {
 			subresources[i].SlicePitch = img[i].slicePitch;
 		}
 
-		// �f�[�^��A�b�v���[�h���ă��\�[�X�������Ԃ֑J��
+		// GPUへデータを転送してピクセルシェーダ用に遷移
 		UpdateSubresources(cmdList, m_texture.Get(), m_uploadHeap.Get(), 0, 0, static_cast<UINT>(subresources.size()), subresources.data());
 
 		D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

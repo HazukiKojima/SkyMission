@@ -11,7 +11,8 @@ namespace Engine {
 
 	Application::~Application() {
 		if (m_context) {
-			m_context->WaitForGpu(); // �������R�}���h�ɂ�郁�������[�N�⋭���I����}�~
+			// GPU処理の完了を待機してリソース解放を安全に行う
+			m_context->WaitForGpu();
 		}
 	}
 
@@ -29,19 +30,21 @@ namespace Engine {
 		float pad3;
 	};
 
-	// �A�v���P�[�V������Ղ���ъe�O���t�B�b�N�X�R���|�[�l���g�̍\�z
+// アプリケーション初期化処理
 	void Application::Initialize() {
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 
-		// ���T�C�Y�C�x���g��w�ǂ��ăf�o�C�X�Ⓤ�e�s���X�V
+		// ウィンドウリサイズ時のコールバックを設定
 		m_window->SetOnResize([this](UINT w, UINT h) {
-			if (w == 0 || h == 0) return; // �ŏ������Ȃǖ����Ȓl�𖳎�
-			if (m_context) m_context->WaitForGpu(); // �������R�}���h����������Ă��烊�T�C�Y
+			// 最小化などで幅/高さが0のときは処理しない
+			if (w == 0 || h == 0) return;
+			// GPUに作業が残っている場合は完了まで待つ（リソース再作成の安全確保）
+			if (m_context) m_context->WaitForGpu();
 			m_device->Resize(w, h);
 			if (m_camera) m_camera->OnResize(w, h);
-			// ���e�� Update() �Ŗ��t���[���Čv�Z���Ă��邽�߂����ł͉�����Ȃ�
-		});
+			// リサイズ時はここでは Update() を呼ばない
+			});
 
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(m_window->GetHandle(), m_window->GetWidth(), m_window->GetHeight());
@@ -49,15 +52,6 @@ namespace Engine {
 		m_context = std::make_unique<CommandContext>();
 		m_context->Initialize(m_device.get());
 
-<<<<<<< Updated upstream
-		// �p�C�v���C���̏�����
-		m_pipeline = std::make_unique<Engine::GraphicsPipeline>();
-		m_pipeline->Initialize(m_device->GetDevice());
-
-		// Sky Sphere �p�C�v���C���̏�����
-		m_skyPipeline = std::make_unique<Engine::GraphicsPipeline>();
-		m_skyPipeline->InitializeWithShaders(m_device->GetDevice(), L"SkyVS.cso", L"SkyPS.cso");
-=======
 		// 基本描画用パイプライン
 		m_pipeline =
 			std::make_unique<Engine::GraphicsPipeline>();
@@ -89,18 +83,17 @@ namespace Engine {
 			L"SkyPS.cso",
 			1
 		);
->>>>>>> Stashed changes
 
-		// Sky Sphere ���b�V���̏�����
+		// Sky Sphere の生成
 		m_skySphere = std::make_unique<Engine::SkySphere>();
 		m_skySphere->Initialize(m_device->GetDevice(), 100.0f, 64, 32);
 
-		// �l�p�`�̒��_�f�[�^�쐬
+		// 頂点フォーマット定義
 		struct Vertex {
 			float pos[3];
 			float uv[2];
 		};
-		// --- 10x10 �O���b�h�̒��_�E�C���f�b�N�X���� ---
+		// --- グリッドメッシュ作成 ---
 		const int gridSize = 1000;
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
@@ -127,11 +120,11 @@ namespace Engine {
 		}
 		m_indexCount = (UINT)indices.size();
 
-		// --- ���_�o�b�t�@�̏����� ---
+		// --- 頂点バッファの作成 ---
 		m_vertexBuffer = std::make_unique<Engine::VertexBuffer>();
 		m_vertexBuffer->Initialize(m_device->GetDevice(), vertices.data(), sizeof(Vertex) * vertices.size(), sizeof(Vertex));
 
-		// --- �C���f�b�N�X�o�b�t�@�̍쐬 ---
+		// --- インデックス用GPUバッファ作成（アップロード） ---
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
 		auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t) * indices.size());
 		ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
@@ -147,19 +140,19 @@ namespace Engine {
 		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 		m_indexBufferView.SizeInBytes = sizeof(uint32_t) * indices.size();
 
-		// �e�N�X�`����ǂݍ��݁ASRV ��쐬���ăf�B�X�N���v�^�q�[�v�֔z�u
+		// テクスチャ読み込みとSRV作成の準備
 		m_texture = std::make_unique<Engine::Texture>();
-		// �R�}���h���X�g����Z�b�g���ăA�b�v���[�h������s��
+		// 実行ファイルパスからアセット候補パスを構築
 		m_context->BeginFrame();
 		UINT srvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_device->AllocateSrvDescriptor(&srvIndex);
-		// ���s�t�@�C���̃p�X��擾����ȈՓI�Ȏ�@
+		// 実行ファイルのパスを取得
 		wchar_t buffer[MAX_PATH];
 		GetModuleFileName(NULL, buffer, MAX_PATH);
 		std::wstring exePath = buffer;
 		std::wstring exeDir = exePath.substr(0, exePath.find_last_of(L"\\/"));
 
-		// Assets �ւ̃p�X�𓮓I�ɉ��
+		// Assets 配下の候補パスを作成
 		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg";
 		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
@@ -189,19 +182,18 @@ namespace Engine {
 		}
 		m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
 		m_context->EndFrame();
-		// �A�b�v���[�h�I���܂őҋ@
+		// フレーム終了後にGPU完了待ち
 		m_context->WaitForGpu();
 		m_textureSrvIndex = srvIndex;
 		m_oceanNormalTextureSrvIndex = normalSrvIndex;
 
-		// Sky Sphere �e�N�X�`���iHDR/EXR�j�̓ǂݍ���
-		// Sky Sphere ?e?N?X?`???iHDR/EXR?j???????
+		// Sky Sphere 用の環境テクスチャ(HDR/EXR)読み込み
 		m_skyTexture = std::make_unique<Engine::Texture>();
 		m_context->BeginFrame();
 		UINT skySrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
-		
-		// �����̃p�X�����
+
+		// 読み込み候補パス一覧
 		std::vector<std::wstring> skyTexturePaths = {
 			L"C:\\Users\\hazu0\\DX12\\SkyMission\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
 			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
@@ -213,10 +205,10 @@ namespace Engine {
 			exeDir + L"\\Assets\\Images\\water-bg-pattern-04.jpg",
 			exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg",
 		};
-		
+
 		bool skyTextureLoaded = false;
 		for (const auto& path : skyTexturePaths) {
-			// �t�@�C�������݂��邩�m�F
+				// ファイル存在チェックと読み込み
 			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
 			if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
 				char pathBuffer[512];
@@ -225,7 +217,7 @@ namespace Engine {
 				OutputDebugStringA("Trying to load sky texture from: ");
 				OutputDebugStringA(pathBuffer);
 				OutputDebugStringA("\n");
-				
+
 				if (m_skyTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
 					OutputDebugStringA("Sky texture loaded successfully!\n");
 					skyTextureLoaded = true;
@@ -244,20 +236,20 @@ namespace Engine {
 				OutputDebugStringA("\n");
 			}
 		}
-		
+
 		if (!skyTextureLoaded) {
 			OutputDebugStringA("Warning: No sky texture could be loaded from any path.\n");
 		}
-		
+
 		m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
 		m_context->EndFrame();
 		m_context->WaitForGpu();
 		m_skyTextureSrvIndex = skySrvIndex;
 
-		// �萔�o�b�t�@ (MVP) ��쐬���ăg�b�v�_�E�����_�̍s���ݒ�
+		// 定数バッファ (MVP) を作成して初期値をセット
 		{
 			using namespace DirectX;
-			UINT64 cbSize = (sizeof(ConstantBufferData) + 255) & ~255; // 256 �o�C�g���E�ɃA���C��
+			UINT64 cbSize = (sizeof(ConstantBufferData) + 255) & ~255; // 256バイト境界に揃える
 
 			CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(cbSize);
 			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
@@ -269,12 +261,12 @@ namespace Engine {
 				nullptr,
 				IID_PPV_ARGS(&m_constantBuffer)));
 
-			// �}�b�v���čs����������
+			// マッピングして初期値を書き込む
 			CD3DX12_RANGE readRange(0, 0);
 			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_cbvDataPtr)));
 
 			XMMATRIX world = XMMatrixIdentity();
-			// �J���������ɒu���A���_����� (Y���������)
+			// カメラ初期位置（視点を設定）
 			XMVECTOR eye = XMVectorSet(10.0f, 15.0f, -10.0f, 0.0f);
 			XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
 			XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -282,11 +274,11 @@ namespace Engine {
 			float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
 			XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspect, 0.1f, 100.0f);
 			XMMATRIX mvp = world * view * proj;
-			XMMATRIX mvpT = XMMatrixTranspose(mvp); // �V�F�[�_�Ƃ̍s��I�[�_�݊��̂��ߓ]�u
+			XMMATRIX mvpT = XMMatrixTranspose(mvp); // シェーダ向けに転置
 
 			XMFLOAT4X4 m;
 			XMStoreFloat4x4(&m, mvpT);
-			// �����l��������ށi�J�����͏����� eye �ƍ��킹��j
+			// 定数バッファへ初期値を書き込む（カメラ位置など）
 			ConstantBufferData* cbInit = reinterpret_cast<ConstantBufferData*>(m_cbvDataPtr);
 			cbInit->mvp = m;
 			cbInit->time = 0.0f;
@@ -303,7 +295,7 @@ namespace Engine {
 		m_lastTime = std::chrono::steady_clock::now();
 	}
 
-	// ���b�Z�[�W���[�v�̋쓮����у��C���X�V�E�`��p�X�̐���
+	// メインループ（メッセージ処理と更新/描画）
 	int Application::Run() {
 		MSG msg = {};
 		while (msg.message != WM_QUIT) {
@@ -332,7 +324,7 @@ namespace Engine {
 		// Update camera first
 		if (m_camera) m_camera->Update(deltaSeconds);
 
-		// MVP�s���Čv�Z
+		// MVPを計算して定数バッファにセット
 		using namespace DirectX;
 		XMMATRIX world = XMMatrixIdentity();
 		XMMATRIX view = m_camera->GetView();
@@ -345,13 +337,13 @@ namespace Engine {
 		DirectX::XMFLOAT4X4 m;
 		XMStoreFloat4x4(&m, mvpT);
 
-		// �萔�o�b�t�@��X�V
+		// 定数バッファへ書き込み
 		ConstantBufferData* data;
 		m_constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&data));
 
 		data->mvp = m;
 		data->time = time;
-		// �J�����ʒu����݂̃J��������擾�iVS/PS �̃t���l���v�Z�p�j
+		// カメラ位置などの情報をセット（VS/PSで参照）
 		if (m_camera) {
 			auto camPos = m_camera->GetPosition();
 			data->cameraPos = camPos;
@@ -365,14 +357,14 @@ namespace Engine {
 		m_constantBuffer->Unmap(0, nullptr);
 	}
 
-	// �t���[���̃����_�����O�R�}���h�����E���s�p�X
+// 描画処理（レンダリングコマンド発行）
 	void Application::Render() {
 		m_context->BeginFrame();
 
 		auto cmd = m_context->GetCommandList();
 		auto resource = m_device->GetCurrentRenderTarget();
 
-		// �����_�[�^�[�Q�b�g�֑J��
+		// バックバッファをレンダーターゲットへ遷移
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(m_window->GetWidth()), static_cast<float>(m_window->GetHeight()), 0.0f, 1.0f };
@@ -381,70 +373,64 @@ namespace Engine {
 		cmd->RSSetViewports(1, &viewport);
 		cmd->RSSetScissorRects(1, &scissorRect);
 
-		// �N���A�Ɛݒ�
+		// 画面クリア
 		auto rtv = m_device->GetCurrentRtvHandle();
 		const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 
-		// Sky Sphere ��ŏ��ɕ`��i�w�i�Ƃ��āj
+		// Sky Sphere を描画
 		if (m_skySphere && m_skyTexture && m_skyTexture->GetResource()) {
 			cmd->SetGraphicsRootSignature(m_skyPipeline->GetRootSignature());
 			cmd->SetPipelineState(m_skyPipeline->GetPSO());
 
-			// Sky Sphere �p�̃e�N�X�`����o�C���h
+			// Sky Sphere 用のテクスチャをバインド
 			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
 			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_skyTextureSrvIndex));
 
-			// �萔�o�b�t�@��o�C���h
+			// 定数バッファをバインド
 			if (m_constantBuffer) {
 				cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
 			}
 
-			// Sky Sphere �̒��_�E�C���f�b�N�X�o�b�t�@��o�C���h
+			// Sky Sphere の頂点/インデックスバッファをセット
 			auto skyView = m_skySphere->GetVertexBufferView();
 			auto& skyIndexView = m_skySphere->GetIndexBufferView();
 			cmd->IASetVertexBuffers(0, 1, &skyView);
 			cmd->IASetIndexBuffer(&skyIndexView);
 			cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-			// Sky Sphere ��`��
+			// 描画
 			cmd->DrawIndexedInstanced(m_skySphere->GetIndexCount(), 1, 0, 0, 0);
 		}
 
-<<<<<<< Updated upstream
-		// ���ɐ��ʃ��b�V����`��i�O�i�Ƃ��āj
-		cmd->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
-		cmd->SetPipelineState(m_pipeline->GetPSO());
-=======
 		// 海面を空の手前に描画
 		cmd->SetGraphicsRootSignature(m_oceanPipeline->GetRootSignature());
 		cmd->SetPipelineState(m_oceanPipeline->GetPSO());
->>>>>>> Stashed changes
 
-		// �e�N�X�`��������΃f�B�X�N���v�^�q�[�v��Z�b�g���ă��[�g�� SRV ��o�C���h
+		// テクスチャ用と法線マップ用のSRVをセット
 		if (m_texture && m_oceanNormalTexture) {
 			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
 			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_textureSrvIndex));
 		}
 
-		// ���_�V�F�[�_�p�̒萔�o�b�t�@����[�g�Ƀo�C���h
+		// 定数バッファ（MVP）のGPUバインド
 		if (m_constantBuffer) {
 			cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
 		}
 
-		// �`��ݒ�i���_�o�b�t�@��o�C���h�j
+		// 頂点/インデックスバッファをセット
 		auto view = m_vertexBuffer->GetView();
 		cmd->IASetVertexBuffers(0, 1, &view);
 		cmd->IASetIndexBuffer(&m_indexBufferView);
 		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		// ���ʃ��b�V����`��
+		// 描画コマンド発行
 		cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
 
-		// Present �֑J��
+		// Present 処理
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 		m_context->EndFrame();

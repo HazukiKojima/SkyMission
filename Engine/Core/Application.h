@@ -50,7 +50,7 @@ namespace Engine {
 		std::unique_ptr<Engine::Texture> m_skyTexture;
 		UINT m_skyTextureSrvIndex = 0;
 
-		// ���_�V�F�[�_�p�̒萔�o�b�t�@ (MVP �s��)
+		// 定数バッファ（MVP および関連データ）
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
 		UINT8* m_cbvDataPtr = nullptr;
 
