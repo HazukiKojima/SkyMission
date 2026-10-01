@@ -42,7 +42,7 @@
     <ClInclude Include="..\Engine\Resources\Texture\Texture.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Engine\Renderer\Shader\Common.hlsli" />
+    <None Include="..\Engine\Renderer\Shader\CommonLighting.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\Engine\Renderer\Shader\BasicPS.hlsl">
@@ -60,6 +60,11 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\OceanPS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="..\Engine\Renderer\Shader\SkyPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
