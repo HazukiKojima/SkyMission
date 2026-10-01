@@ -6,105 +6,105 @@ using namespace DirectX;
 
 namespace Engine {
 
-void Camera::Initialize(HWND hwnd, float fovY, float aspect, float nearZ, float farZ) {
-	m_hwnd = hwnd;
-	m_fovY = fovY;
-	m_aspect = aspect;
-	m_nearZ = nearZ;
-	m_farZ = farZ;
-	UpdateProjection();
-	UpdateView();
+	void Camera::Initialize(HWND hwnd, float fovY, float aspect, float nearZ, float farZ) {
+		m_hwnd = hwnd;
+		m_fovY = fovY;
+		m_aspect = aspect;
+		m_nearZ = nearZ;
+		m_farZ = farZ;
+		UpdateProjection();
+		UpdateView();
 
-	// ƒJ[ƒ\ƒ‹ˆÊ’u‚ğ‰Šú‰»
-	POINT p; GetCursorPos(&p); ScreenToClient(m_hwnd, &p);
-	m_prevCursorPos = p;
-}
-
-void Camera::OnResize(UINT width, UINT height) {
-	if (height == 0) return;
-	m_aspect = static_cast<float>(width) / static_cast<float>(height);
-	UpdateProjection();
-}
-
-void Camera::Update(float deltaSeconds) {
-	// “ü—Íƒ|[ƒŠƒ“ƒO: ƒL[ƒ{[ƒh‚ÅˆÚ“®A‰Eƒ{ƒ^ƒ“‰Ÿ‰º‚Åƒ}ƒEƒX‹“_
-	BYTE keys[256];
-	GetKeyboardState(keys);
-
-	// ƒ[ƒJƒ‹‹óŠÔ‚Å‚Ì‘O•û/‰E•ûŒüƒxƒNƒgƒ‹‚ğŒvZ
-	XMFLOAT3 forward; XMFLOAT3 right;
-	XMFLOAT3 up = {0.0f, 1.0f, 0.0f};
-
-	// yaw/pitch ‚©‚çis•ûŒü‚ğZo
-	XMVECTOR dir = XMVectorSet(cosf(m_pitch) * sinf(m_yaw), sinf(m_pitch), cosf(m_pitch) * cosf(m_yaw), 0.0f);
-	XMVECTOR f = XMVector3Normalize(dir);
-	XMVECTOR r = XMVector3Normalize(XMVector3Cross(XMLoadFloat3(&up), f));
-	XMStoreFloat3(&forward, f);
-	XMStoreFloat3(&right, r);
-
-	float moveSpeed = m_moveSpeed * deltaSeconds;
-	if (keys['W'] & 0x80) {
-		m_position.x += forward.x * moveSpeed;
-		m_position.y += forward.y * moveSpeed;
-		m_position.z += forward.z * moveSpeed;
-	}
-	if (keys['S'] & 0x80) {
-		m_position.x -= forward.x * moveSpeed;
-		m_position.y -= forward.y * moveSpeed;
-		m_position.z -= forward.z * moveSpeed;
-	}
-	if (keys['A'] & 0x80) {
-		m_position.x -= right.x * moveSpeed;
-		m_position.y -= right.y * moveSpeed;
-		m_position.z -= right.z * moveSpeed;
-	}
-	if (keys['D'] & 0x80) {
-		m_position.x += right.x * moveSpeed;
-		m_position.y += right.y * moveSpeed;
-		m_position.z += right.z * moveSpeed;
+		// ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã‚’åˆæœŸåŒ–
+		POINT p; GetCursorPos(&p); ScreenToClient(m_hwnd, &p);
+		m_prevCursorPos = p;
 	}
 
-	// ƒ}ƒEƒX: ‰Eƒ{ƒ^ƒ“‰Ÿ‰º‚Ì‚İƒLƒƒƒvƒ`ƒƒ‚µ‚Ä‹“_‰ñ“]
-	bool rmb = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
-	if (rmb) {
-		if (!m_rmbDown) {
-			// ‰Ÿ‰º’¼Œã: ƒJ[ƒ\ƒ‹‚ğƒLƒƒƒvƒ`ƒƒ
-			SetCapture(m_hwnd);
-			m_rmbDown = true;
-			POINT p; GetCursorPos(&p); ScreenToClient(m_hwnd, &p); m_prevCursorPos = p;
+	void Camera::OnResize(UINT width, UINT height) {
+		if (height == 0) return;
+		m_aspect = static_cast<float>(width) / static_cast<float>(height);
+		UpdateProjection();
+	}
+
+	void Camera::Update(float deltaSeconds) {
+		// å…¥åŠ›ãƒãƒ¼ãƒªãƒ³ã‚°: ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã§ç§»å‹•ã€å³ãƒœã‚¿ãƒ³æŠ¼ä¸‹ã§ãƒã‚¦ã‚¹è¦–ç‚¹
+		BYTE keys[256];
+		GetKeyboardState(keys);
+
+		// ãƒ­ãƒ¼ã‚«ãƒ«ç©ºé–“ã§ã®å‰æ–¹/å³æ–¹å‘ãƒ™ã‚¯ãƒˆãƒ«ã‚’è¨ˆç®—
+		XMFLOAT3 forward; XMFLOAT3 right;
+		XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
+
+		// yaw/pitch ã‹ã‚‰é€²è¡Œæ–¹å‘ã‚’ç®—å‡º
+		XMVECTOR dir = XMVectorSet(cosf(m_pitch) * sinf(m_yaw), sinf(m_pitch), cosf(m_pitch) * cosf(m_yaw), 0.0f);
+		XMVECTOR f = XMVector3Normalize(dir);
+		XMVECTOR r = XMVector3Normalize(XMVector3Cross(XMLoadFloat3(&up), f));
+		XMStoreFloat3(&forward, f);
+		XMStoreFloat3(&right, r);
+
+		float moveSpeed = m_moveSpeed * deltaSeconds;
+		if (keys['W'] & 0x80) {
+			m_position.x += forward.x * moveSpeed;
+			m_position.y += forward.y * moveSpeed;
+			m_position.z += forward.z * moveSpeed;
+		}
+		if (keys['S'] & 0x80) {
+			m_position.x -= forward.x * moveSpeed;
+			m_position.y -= forward.y * moveSpeed;
+			m_position.z -= forward.z * moveSpeed;
+		}
+		if (keys['A'] & 0x80) {
+			m_position.x -= right.x * moveSpeed;
+			m_position.y -= right.y * moveSpeed;
+			m_position.z -= right.z * moveSpeed;
+		}
+		if (keys['D'] & 0x80) {
+			m_position.x += right.x * moveSpeed;
+			m_position.y += right.y * moveSpeed;
+			m_position.z += right.z * moveSpeed;
 		}
 
-		POINT cur; GetCursorPos(&cur); ScreenToClient(m_hwnd, &cur);
-		int dx = cur.x - m_prevCursorPos.x;
-		int dy = cur.y - m_prevCursorPos.y;
-		m_prevCursorPos = cur;
+		// ãƒã‚¦ã‚¹: å³ãƒœã‚¿ãƒ³æŠ¼ä¸‹æ™‚ã®ã¿ã‚­ãƒ£ãƒ—ãƒãƒ£ã—ã¦è¦–ç‚¹å›è»¢
+		bool rmb = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
+		if (rmb) {
+			if (!m_rmbDown) {
+				// æŠ¼ä¸‹ç›´å¾Œ: ã‚«ãƒ¼ã‚½ãƒ«ã‚’ã‚­ãƒ£ãƒ—ãƒãƒ£
+				SetCapture(m_hwnd);
+				m_rmbDown = true;
+				POINT p; GetCursorPos(&p); ScreenToClient(m_hwnd, &p); m_prevCursorPos = p;
+			}
 
-		m_yaw += dx * m_mouseSensitivity; // X²‰ñ“]
-		m_pitch += -dy * m_mouseSensitivity; // Y²‰ñ“]iƒ}ƒEƒXã‰º‚Í”½“]j
-		// ƒsƒbƒ`‚ğƒNƒ‰ƒ“ƒv‚µ‚Ä”½“]‚ğ–h~
-		const float pitchLimit = XM_PIDIV2 - 0.01f;
-		if (m_pitch > pitchLimit) m_pitch = pitchLimit;
-		if (m_pitch < -pitchLimit) m_pitch = -pitchLimit;
+			POINT cur; GetCursorPos(&cur); ScreenToClient(m_hwnd, &cur);
+			int dx = cur.x - m_prevCursorPos.x;
+			int dy = cur.y - m_prevCursorPos.y;
+			m_prevCursorPos = cur;
+
+			m_yaw += dx * m_mouseSensitivity; // Xè»¸å›è»¢
+			m_pitch += -dy * m_mouseSensitivity; // Yè»¸å›è»¢ï¼ˆãƒã‚¦ã‚¹ä¸Šä¸‹ã¯åè»¢ï¼‰
+			// ãƒ”ãƒƒãƒã‚’ã‚¯ãƒ©ãƒ³ãƒ—ã—ã¦åè»¢ã‚’é˜²æ­¢
+			const float pitchLimit = XM_PIDIV2 - 0.01f;
+			if (m_pitch > pitchLimit) m_pitch = pitchLimit;
+			if (m_pitch < -pitchLimit) m_pitch = -pitchLimit;
+		}
+		else if (m_rmbDown) {
+			// æŠ¼ä¸‹è§£é™¤æ™‚: ã‚­ãƒ£ãƒ—ãƒãƒ£è§£é™¤
+			m_rmbDown = false;
+			ReleaseCapture();
+		}
+
+		UpdateView();
 	}
-	else if (m_rmbDown) {
-		// ‰Ÿ‰º‰ğœ: ƒLƒƒƒvƒ`ƒƒ‰ğœ
-		m_rmbDown = false;
-		ReleaseCapture();
+
+	void Camera::UpdateProjection() {
+		m_proj = XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, m_farZ);
 	}
 
-	UpdateView();
-}
-
-void Camera::UpdateProjection() {
-	m_proj = XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, m_farZ);
-}
-
-void Camera::UpdateView() {
-	XMVECTOR pos = XMLoadFloat3(&m_position);
-	XMVECTOR lookDir = XMVectorSet(cosf(m_pitch) * sinf(m_yaw), sinf(m_pitch), cosf(m_pitch) * cosf(m_yaw), 0.0f);
-	XMVECTOR target = pos + XMVector3Normalize(lookDir);
-	XMVECTOR up = XMVectorSet(0,1,0,0);
-	m_view = XMMatrixLookAtLH(pos, target, up);
-}
+	void Camera::UpdateView() {
+		XMVECTOR pos = XMLoadFloat3(&m_position);
+		XMVECTOR lookDir = XMVectorSet(cosf(m_pitch) * sinf(m_yaw), sinf(m_pitch), cosf(m_pitch) * cosf(m_yaw), 0.0f);
+		XMVECTOR target = pos + XMVector3Normalize(lookDir);
+		XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+		m_view = XMMatrixLookAtLH(pos, target, up);
+	}
 
 }
