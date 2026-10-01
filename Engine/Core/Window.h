@@ -12,7 +12,7 @@ namespace Engine {
 		UINT GetWidth() const { return m_width; }
 		UINT GetHeight() const { return m_height; }
 
-		// リサイズイベントのコールバック登録
+		// 繝ｪ繧ｵ繧､繧ｺ繧､繝吶Φ繝医�ｮ繧ｳ繝ｼ繝ｫ繝舌ャ繧ｯ逋ｻ骭ｲ
 		void SetOnResize(std::function<void(UINT, UINT)> cb) { m_onResize = cb; }
 
 	private:

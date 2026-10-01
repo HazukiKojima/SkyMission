@@ -24,7 +24,7 @@ PS_INPUT main(VS_INPUT input)
 {
     PS_INPUT output;
     
-    // ƒ[ƒ‹ƒhÀ•W‚ğƒJƒƒ‰ˆÊ’u‚ÉƒIƒtƒZƒbƒgií‚ÉƒJƒƒ‰‚ğ’†S‚É‹…‚ğ”z’uj
+    // ãƒ¯ãƒ¼ãƒ«ãƒ‰åº§æ¨™ã‚’ã‚«ãƒ¡ãƒ©ä½ç½®ã«ã‚ªãƒ•ã‚»ãƒƒãƒˆï¼ˆå¸¸ã«ã‚«ãƒ¡ãƒ©ã‚’ä¸­å¿ƒã«çƒã‚’é…ç½®ï¼‰
     float3 worldPos = input.position + cameraPos;
     
     output.position = mul(float4(worldPos, 1.0f), mvp);

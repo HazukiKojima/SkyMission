@@ -3,23 +3,23 @@
 #include <DirectXMath.h>
 
 namespace Engine {
-	// UEƒGƒfƒBƒ^•—‚Ìƒtƒ‰ƒCƒJƒƒ‰: WASD‚ÅˆÚ“®A‰Eƒ{ƒ^ƒ“‰Ÿ‰º‚Åƒ}ƒEƒX‹“_ˆÚ“®B
-	// ƒxƒXƒgƒvƒ‰ƒNƒeƒBƒX: “ü—Íƒ|[ƒŠƒ“ƒO‚ğƒJƒƒ‰“à•”‚É‚½‚¹AApplication‚ğƒVƒ“ƒvƒ‹‚É•Û‚ÂB
+	// UEã‚¨ãƒ‡ã‚£ã‚¿é¢¨ã®ãƒ•ãƒ©ã‚¤ã‚«ãƒ¡ãƒ©: WASDã§ç§»å‹•ã€å³ãƒœã‚¿ãƒ³æŠ¼ä¸‹ã§ãƒã‚¦ã‚¹è¦–ç‚¹ç§»å‹•ã€‚
+	// ãƒ™ã‚¹ãƒˆãƒ—ãƒ©ã‚¯ãƒ†ã‚£ã‚¹: å…¥åŠ›ãƒãƒ¼ãƒªãƒ³ã‚°ã‚’ã‚«ãƒ¡ãƒ©å†…éƒ¨ã«æŒãŸã›ã€Applicationã‚’ã‚·ãƒ³ãƒ—ãƒ«ã«ä¿ã¤ã€‚
 	class Camera {
 	public:
 		Camera() = default;
 		~Camera() = default;
 
-		// ƒEƒBƒ“ƒhƒEƒnƒ“ƒhƒ‹‚Å‰Šú‰»iƒ}ƒEƒXƒLƒƒƒvƒ`ƒƒ‚âË‰eƒpƒ‰ƒ[ƒ^—pj
-		void Initialize(HWND hwnd, float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f/9.0f, float nearZ = 0.1f, float farZ = 1000.0f);
+		// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒãƒ³ãƒ‰ãƒ«ã§åˆæœŸåŒ–ï¼ˆãƒã‚¦ã‚¹ã‚­ãƒ£ãƒ—ãƒãƒ£ã‚„å°„å½±ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ç”¨ï¼‰
+		void Initialize(HWND hwnd, float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f / 9.0f, float nearZ = 0.1f, float farZ = 1000.0f);
 
-		// –ˆƒtƒŒ[ƒ€AŒo‰ß•b‚ğ“n‚µ‚ÄŒÄ‚Ño‚·
+		// æ¯ãƒ•ãƒ¬ãƒ¼ãƒ ã€çµŒéç§’ã‚’æ¸¡ã—ã¦å‘¼ã³å‡ºã™
 		void Update(float deltaSeconds);
 
-		// ƒŒƒ“ƒ_[ƒ^[ƒQƒbƒg‚ÌƒTƒCƒY‚ª•Ï‚í‚Á‚½‚Æ‚«‚É’Ê’m‚·‚é
+		// ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã®ã‚µã‚¤ã‚ºãŒå¤‰ã‚ã£ãŸã¨ãã«é€šçŸ¥ã™ã‚‹
 		void OnResize(UINT width, UINT height);
 
-		// ƒAƒNƒZƒT
+		// ã‚¢ã‚¯ã‚»ã‚µ
 		DirectX::XMMATRIX GetView() const { return m_view; }
 		DirectX::XMMATRIX GetProjection() const { return m_proj; }
 		DirectX::XMMATRIX GetViewProjection() const { return m_view * m_proj; }
@@ -41,7 +41,7 @@ namespace Engine {
 		POINT m_prevCursorPos = { 0, 0 };
 
 		float m_fovY = DirectX::XM_PIDIV4;
-		float m_aspect = 16.0f/9.0f;
+		float m_aspect = 16.0f / 9.0f;
 		float m_nearZ = 0.1f;
 		float m_farZ = 1000.0f;
 

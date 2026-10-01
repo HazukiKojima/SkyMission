@@ -8,7 +8,7 @@ namespace Engine {
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 
-		// ‹…‘Ì‚Ì’¸“_‚ğ¶¬
+		// çƒä½“ã®é ‚ç‚¹ã‚’ç”Ÿæˆ
 		for (UINT i = 0; i <= stacks; ++i) {
 			float phi = XM_PI * i / stacks;
 			float sinPhi = sin(phi);
@@ -31,7 +31,7 @@ namespace Engine {
 			}
 		}
 
-		// ƒCƒ“ƒfƒbƒNƒX‚ğ¶¬
+		// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’ç”Ÿæˆ
 		for (UINT i = 0; i < stacks; ++i) {
 			for (UINT j = 0; j < slices; ++j) {
 				uint32_t a = i * (slices + 1) + j;
@@ -39,12 +39,12 @@ namespace Engine {
 				uint32_t c = (i + 1) * (slices + 1) + j;
 				uint32_t d = c + 1;
 
-				// Å‰‚ÌOŠpŒ`
+				// æœ€åˆã®ä¸‰è§’å½¢
 				indices.push_back(a);
 				indices.push_back(c);
 				indices.push_back(b);
 
-				// 2”Ô–Ú‚ÌOŠpŒ`
+				// 2ç•ªç›®ã®ä¸‰è§’å½¢
 				indices.push_back(b);
 				indices.push_back(c);
 				indices.push_back(d);
@@ -53,7 +53,7 @@ namespace Engine {
 
 		m_indexCount = static_cast<UINT>(indices.size());
 
-		// ’¸“_ƒoƒbƒtƒ@‚ğì¬
+		// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ã‚’ä½œæˆ
 		{
 			UINT64 vertexBufferSize = vertices.size() * sizeof(Vertex);
 			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
@@ -76,7 +76,7 @@ namespace Engine {
 			m_vertexBufferView.SizeInBytes = static_cast<UINT>(vertexBufferSize);
 		}
 
-		// ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@‚ğì¬
+		// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ã‚’ä½œæˆ
 		{
 			UINT64 indexBufferSize = indices.size() * sizeof(uint32_t);
 			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);

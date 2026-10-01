@@ -4,7 +4,7 @@
 #include <DirectXMath.h>
 
 namespace Engine {
-	// SkySphere: ‹…‘ÌƒƒbƒVƒ…‚ğ¶¬‚µAGPUã‚Å‚Ì•`‰æ‚ğƒTƒ|[ƒg‚·‚éƒNƒ‰ƒX
+	// çƒä½“ãƒ¡ãƒƒã‚·ãƒ¥ã‚’ç”Ÿæˆã—GPUæç”»ç”¨ã®ãƒãƒƒãƒ•ã‚¡ã‚’ç®¡ç†ã™ã‚‹ã‚¯ãƒ©ã‚¹
 	class SkySphere {
 	public:
 		struct Vertex {
@@ -15,20 +15,16 @@ namespace Engine {
 		SkySphere() = default;
 		~SkySphere() = default;
 
-		// ‹…‘ÌƒƒbƒVƒ…‚ğ¶¬‚µAGPUƒŠƒ\[ƒX‚ğì¬
-		// @param device: GPUƒfƒoƒCƒX
-		// @param radius: ‹…‘Ì‚Ì”¼Œa
-		// @param slices: Œo“x•ûŒü‚Ì•ªŠ„”
-		// @param stacks: ˆÜ“x•ûŒü‚Ì•ªŠ„”
+		// çƒä½“ãƒ¡ãƒƒã‚·ãƒ¥ã‚’ç”Ÿæˆã—ã¦é ‚ç‚¹/ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ã‚’ä½œæˆã™ã‚‹
 		void Initialize(ID3D12Device* device, float radius = 100.0f, UINT slices = 64, UINT stacks = 32);
 
-		// ’¸“_ƒoƒbƒtƒ@ƒrƒ…[‚ğæ“¾
+		// é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ãƒ“ãƒ¥ãƒ¼ã‚’å–å¾—
 		D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return m_vertexBufferView; }
 
-		// ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@ƒrƒ…[‚ğæ“¾
+		// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ãƒ“ãƒ¥ãƒ¼ã‚’å–å¾—
 		const D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() const { return m_indexBufferView; }
 
-		// ƒCƒ“ƒfƒbƒNƒX”‚ğæ“¾
+		// ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹æ•°ã‚’å–å¾—
 		UINT GetIndexCount() const { return m_indexCount; }
 
 	private:

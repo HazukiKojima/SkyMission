@@ -4,7 +4,7 @@
 namespace Engine {
 	class RenderDevice {
 	public:
-		// ƒoƒbƒNƒoƒbƒtƒ@”
+		// ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡æ•°
 		static const UINT FrameCount = 2;
 
 		RenderDevice() = default;
@@ -18,12 +18,12 @@ namespace Engine {
 		ID3D12CommandQueue* GetCommandQueue() const { return m_commandQueue.Get(); }
 		IDXGISwapChain3* GetSwapChain() const { return m_swapChain.Get(); }
 
-		// SRV —pƒfƒBƒXƒNƒŠƒvƒ^ƒq[ƒv‚©‚ç CPU ƒnƒ“ƒhƒ‹‚ğŠ„‚è“–‚Ä‚é
+		// SRV ç”¨ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ãƒ’ãƒ¼ãƒ—ã‹ã‚‰ CPU ãƒãƒ³ãƒ‰ãƒ«ã‚’å‰²ã‚Šå½“ã¦ã‚‹
 		D3D12_CPU_DESCRIPTOR_HANDLE AllocateSrvDescriptor(UINT* outIndex = nullptr);
 		D3D12_GPU_DESCRIPTOR_HANDLE GetSrvGpuHandle(UINT index) const;
 		UINT GetSrvDescriptorSize() const { return m_srvDescriptorSize; }
 
-		// SRV ƒq[ƒv–{‘Ì‚Ö‚ÌƒAƒNƒZƒXiƒRƒ}ƒ“ƒhƒŠƒXƒg‚ÉƒZƒbƒg‚·‚é‚½‚ßj
+		// SRV ãƒ’ãƒ¼ãƒ—æœ¬ä½“ã¸ã®ã‚¢ã‚¯ã‚»ã‚¹ï¼ˆã‚³ãƒãƒ³ãƒ‰ãƒªã‚¹ãƒˆã«ã‚»ãƒƒãƒˆã™ã‚‹ãŸã‚ï¼‰
 		ID3D12DescriptorHeap* GetSrvDescriptorHeap() const { return m_srvHeap.Get(); }
 
 		UINT GetFrameIndex() const { return m_swapChain->GetCurrentBackBufferIndex(); }
@@ -36,9 +36,9 @@ namespace Engine {
 		ComPtr<ID3D12CommandQueue>   m_commandQueue;
 		ComPtr<IDXGISwapChain3>      m_swapChain;
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		ComPtr<ID3D12DescriptorHeap> m_srvHeap; // CBV_SRV_UAV ƒq[ƒviƒVƒF[ƒ_‰Â‹j
+		ComPtr<ID3D12DescriptorHeap> m_srvHeap; // CBV_SRV_UAV ãƒ’ãƒ¼ãƒ—ï¼ˆã‚·ã‚§ãƒ¼ãƒ€å¯è¦–ï¼‰
 		UINT                         m_srvDescriptorSize = 0;
-		UINT                         m_srvDescriptorCount = 0; // g—pÏ‚İƒfƒBƒXƒNƒŠƒvƒ^”
+		UINT                         m_srvDescriptorCount = 0; // ä½¿ç”¨æ¸ˆã¿ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿æ•°
 		ComPtr<ID3D12Resource>       m_renderTargets[FrameCount];
 		UINT                         m_rtvDescriptorSize = 0;
 		UINT                         m_width = 0;
