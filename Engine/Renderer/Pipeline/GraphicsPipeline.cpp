@@ -1,12 +1,19 @@
 #include "GraphicsPipeline.h"
 #include <d3dcompiler.h> // ƒRƒ“ƒpƒCƒ‹—p
 
+<<<<<<< Updated upstream
 namespace Engine {
 	void GraphicsPipeline::Initialize(ID3D12Device* device) {
 		OutputDebugStringA("DEBUG: Starting Pipeline Initialize\n");
 
 		// ƒ‹[ƒgƒVƒOƒlƒ`ƒƒ: t0 ‚É SRV ‚ðƒoƒCƒ“ƒh‚·‚éƒfƒBƒXƒNƒŠƒvƒ^ƒe[ƒuƒ‹
 		// ’¸“_ƒVƒF[ƒ_—p‚Ì’è”ƒoƒbƒtƒ@(b0)‚ÆƒTƒ“ƒvƒ‰‚ð—pˆÓ‚·‚é
+=======
+namespace {
+	// ãƒ«ãƒ¼ãƒˆã‚·ã‚°ãƒãƒãƒ£ã‚’ç”Ÿæˆã™ã‚‹ãƒ˜ãƒ«ãƒ‘ãƒ¼
+	// srvCount: ãƒ«ãƒ¼ãƒˆãƒ†ãƒ¼ãƒ–ãƒ«å†…ã®SRVæ•°
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRootSignatureWithSrvCount(ID3D12Device* device, UINT srvCount) {
+>>>>>>> Stashed changes
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0); // t0: diffuse, t1: normal map
 
@@ -160,7 +167,77 @@ namespace Engine {
 		psoDesc.SampleDesc.Quality = 0;
 		psoDesc.SampleMask = UINT_MAX;
 
+<<<<<<< Updated upstream
 		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pso)));
+=======
+		Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
+		ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
+		return pso;
+	}
+}
+
+namespace Engine {
+	void GraphicsPipeline::Initialize(ID3D12Device* device)
+	{
+		OutputDebugStringA("DEBUG: Starting Pipeline Initialize\n");
+
+		// BasicPSã¯Diffuseã®ã¿ä½¿ç”¨
+		m_rootSignature = CreateRootSignatureWithSrvCount(device, 1);
+
+		OutputDebugStringA("DEBUG: RootSignature created\n");
+
+		Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
+		Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
+
+		HRESULT hrVS = D3DReadFileToBlob(L"BasicVS.cso", &vertexShader);
+
+		if (FAILED(hrVS))
+		{
+			OutputDebugStringA("ERROR: Failed to load BasicVS.cso\n");
+			ThrowIfFailed(hrVS);
+		}
+
+		HRESULT hrPS = D3DReadFileToBlob(L"BasicPS.cso", &pixelShader);
+
+		if (FAILED(hrPS))
+		{
+			OutputDebugStringA("ERROR: Failed to load BasicPS.cso\n");
+			ThrowIfFailed(hrPS);
+		}
+
+		m_pso = CreatePipelineState(device, m_rootSignature.Get(), vertexShader.Get(), pixelShader.Get());
+
+		OutputDebugStringA("DEBUG: PipelineStateObject created\n");
+	}
+
+	void GraphicsPipeline::InitializeWithShaders(ID3D12Device* device, const std::wstring& vsPath, const std::wstring& psPath, UINT srvCount)
+	{
+		OutputDebugStringA("DEBUG: Starting Pipeline InitializeWithShaders\n");
+
+		m_rootSignature = CreateRootSignatureWithSrvCount(device, srvCount);
+
+		Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
+		Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
+
+		HRESULT hrVS = D3DReadFileToBlob(vsPath.c_str(), &vertexShader);
+
+		if (FAILED(hrVS))
+		{
+			OutputDebugStringA("ERROR: Failed to load vertex shader\n");
+			ThrowIfFailed(hrVS);
+		}
+
+		HRESULT hrPS = D3DReadFileToBlob(psPath.c_str(), &pixelShader);
+
+		if (FAILED(hrPS))
+		{
+			OutputDebugStringA("ERROR: Failed to load pixel shader\n");
+			ThrowIfFailed(hrPS);
+		}
+
+		m_pso = CreatePipelineState(device, m_rootSignature.Get(), vertexShader.Get(), pixelShader.Get());
+
+>>>>>>> Stashed changes
 		OutputDebugStringA("DEBUG: PipelineStateObject created with custom shaders\n");
 	}
 }

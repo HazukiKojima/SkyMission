@@ -92,7 +92,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Engine\Renderer\Shader\Common.hlsli">
+    <None Include="..\Engine\Renderer\Shader\CommonLighting.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
   </ItemGroup>
@@ -107,6 +107,9 @@
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
     <FxCompile Include="..\Engine\Renderer\Shader\SkyVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\OceanPS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
   </ItemGroup>

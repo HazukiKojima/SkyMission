@@ -39,6 +39,7 @@ namespace Engine {
 		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 		UINT m_indexCount;
 		std::unique_ptr<Engine::GraphicsPipeline> m_pipeline;
+		std::unique_ptr<Engine::GraphicsPipeline> m_oceanPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_skyPipeline;
 
 		std::unique_ptr<Engine::Texture> m_texture;

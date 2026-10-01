@@ -49,6 +49,7 @@ namespace Engine {
 		m_context = std::make_unique<CommandContext>();
 		m_context->Initialize(m_device.get());
 
+<<<<<<< Updated upstream
 		// �p�C�v���C���̏�����
 		m_pipeline = std::make_unique<Engine::GraphicsPipeline>();
 		m_pipeline->Initialize(m_device->GetDevice());
@@ -56,6 +57,39 @@ namespace Engine {
 		// Sky Sphere �p�C�v���C���̏�����
 		m_skyPipeline = std::make_unique<Engine::GraphicsPipeline>();
 		m_skyPipeline->InitializeWithShaders(m_device->GetDevice(), L"SkyVS.cso", L"SkyPS.cso");
+=======
+		// 基本描画用パイプライン
+		m_pipeline =
+			std::make_unique<Engine::GraphicsPipeline>();
+
+		m_pipeline->Initialize(
+			m_device->GetDevice()
+		);
+
+
+		// 海面描画用パイプライン
+		m_oceanPipeline =
+			std::make_unique<Engine::GraphicsPipeline>();
+
+		m_oceanPipeline->InitializeWithShaders(
+			m_device->GetDevice(),
+			L"BasicVS.cso",
+			L"OceanPS.cso",
+			2
+		);
+
+
+		// 空描画用パイプライン
+		m_skyPipeline =
+			std::make_unique<Engine::GraphicsPipeline>();
+
+		m_skyPipeline->InitializeWithShaders(
+			m_device->GetDevice(),
+			L"SkyVS.cso",
+			L"SkyPS.cso",
+			1
+		);
+>>>>>>> Stashed changes
 
 		// Sky Sphere ���b�V���̏�����
 		m_skySphere = std::make_unique<Engine::SkySphere>();
@@ -379,9 +413,15 @@ namespace Engine {
 			cmd->DrawIndexedInstanced(m_skySphere->GetIndexCount(), 1, 0, 0, 0);
 		}
 
+<<<<<<< Updated upstream
 		// ���ɐ��ʃ��b�V����`��i�O�i�Ƃ��āj
 		cmd->SetGraphicsRootSignature(m_pipeline->GetRootSignature());
 		cmd->SetPipelineState(m_pipeline->GetPSO());
+=======
+		// 海面を空の手前に描画
+		cmd->SetGraphicsRootSignature(m_oceanPipeline->GetRootSignature());
+		cmd->SetPipelineState(m_oceanPipeline->GetPSO());
+>>>>>>> Stashed changes
 
 		// �e�N�X�`��������΃f�B�X�N���v�^�q�[�v��Z�b�g���ă��[�g�� SRV ��o�C���h
 		if (m_texture && m_oceanNormalTexture) {
