@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -45,6 +45,7 @@
     <None Include="..\Engine\Renderer\Shader\CommonLighting.hlsli" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="..\Engine\Renderer\Shader\CloudPS.hlsl"><EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName><ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType><ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel><EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName><ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType><ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel></FxCompile><FxCompile Include="..\Engine\Renderer\Shader\CloudVS.hlsl"><EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName><ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType><ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel><EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName><ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType><ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel></FxCompile>
     <FxCompile Include="..\Engine\Renderer\Shader\BasicPS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -209,8 +210,9 @@
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
-      <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
+      <ErrorText>縺薙・繝励Ο繧ｸ繧ｧ繧ｯ繝医・縲√％縺ｮ繧ｳ繝ｳ繝斐Η繝ｼ繧ｿ繝ｼ荳翫↓縺ｪ縺・NuGet 繝代ャ繧ｱ繝ｼ繧ｸ繧貞盾辣ｧ縺励※縺・∪縺吶ゅ◎繧後ｉ縺ｮ繝代ャ繧ｱ繝ｼ繧ｸ繧偵ム繧ｦ繝ｳ繝ｭ繝ｼ繝峨☆繧九↓縺ｯ縲ーNuGet 繝代ャ繧ｱ繝ｼ繧ｸ縺ｮ蠕ｩ蜈ゾ 繧剃ｽｿ逕ｨ縺励∪縺吶りｩｳ邏ｰ縺ｫ縺､縺・※縺ｯ縲”ttp://go.microsoft.com/fwlink/?LinkID=322105 繧貞盾辣ｧ縺励※縺上□縺輔＞縲りｦ九▽縺九ｉ縺ｪ縺・ヵ繧｡繧､繝ｫ縺ｯ {0} 縺ｧ縺吶・</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets'))" />
   </Target>
 </Project>
+

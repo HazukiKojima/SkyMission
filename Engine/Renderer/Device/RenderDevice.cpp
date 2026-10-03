@@ -33,7 +33,7 @@ namespace Engine {
 		ThrowIfFailed(swapChain.As(&m_swapChain));
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount;
+		rtvHeapDesc.NumDescriptors = FrameCount * 2;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
@@ -58,8 +58,22 @@ namespace Engine {
 		// SRV ヒープのディスクリプタサイズを取得しておく
 		m_srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+		dsvHeapDesc.NumDescriptors = 1;
+		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
+
 		m_width = width;
 		m_height = height;
+		m_srvDescriptorCount = FrameCount * 2;
+		CreateSceneResources();
+	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetSceneRtvHandle() const {
+		D3D12_CPU_DESCRIPTOR_HANDLE handle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+		handle.ptr += static_cast<SIZE_T>(FrameCount + GetFrameIndex()) * m_rtvDescriptorSize;
+		return handle;
 	}
 
 	void RenderDevice::Present() {
@@ -97,7 +111,9 @@ namespace Engine {
 		// GPU の使用を待ってからリソースを解放
 		for (UINT i = 0; i < FrameCount; ++i) {
 			m_renderTargets[i].Reset();
+			m_sceneRenderTargets[i].Reset();
 		}
+		m_sceneDepth.Reset();
 
 		// スワップチェインのバッファサイズを更新
 		ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
@@ -108,6 +124,54 @@ namespace Engine {
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i])));
 			m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, rtvHandle);
 			rtvHandle.ptr += m_rtvDescriptorSize;
+		}
+		CreateSceneResources();
+	}
+
+	void RenderDevice::CreateSceneResources() {
+		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+		for (UINT i = 0; i < FrameCount; ++i) {
+			CD3DX12_RESOURCE_DESC colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+				DXGI_FORMAT_R8G8B8A8_UNORM, m_width, m_height, 1, 1, 1, 0,
+				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+			const FLOAT clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+			CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_R8G8B8A8_UNORM, clearColor);
+			ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &colorDesc,
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clearValue, IID_PPV_ARGS(&m_sceneRenderTargets[i])));
+
+			D3D12_CPU_DESCRIPTOR_HANDLE rtv = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+			rtv.ptr += static_cast<SIZE_T>(FrameCount + i) * m_rtvDescriptorSize;
+			m_device->CreateRenderTargetView(m_sceneRenderTargets[i].Get(), nullptr, rtv);
+		}
+
+		CD3DX12_RESOURCE_DESC depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			DXGI_FORMAT_R32_TYPELESS, m_width, m_height, 1, 1, 1, 0,
+			D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+		CD3DX12_CLEAR_VALUE depthClear(DXGI_FORMAT_D32_FLOAT, 1.0f, 0);
+		ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &depthDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &depthClear, IID_PPV_ARGS(&m_sceneDepth)));
+
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+		dsv.Format = DXGI_FORMAT_D32_FLOAT;
+		dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		m_device->CreateDepthStencilView(m_sceneDepth.Get(), &dsv, GetDsvHandle());
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC colorSrv = {};
+		colorSrv.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		colorSrv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		colorSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		colorSrv.Texture2D.MipLevels = 1;
+		D3D12_SHADER_RESOURCE_VIEW_DESC depthSrv = {};
+		depthSrv.Format = DXGI_FORMAT_R32_FLOAT;
+		depthSrv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		depthSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		depthSrv.Texture2D.MipLevels = 1;
+		D3D12_CPU_DESCRIPTOR_HANDLE srv = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
+		for (UINT i = 0; i < FrameCount; ++i) {
+			srv.ptr = m_srvHeap->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>(i * 2) * m_srvDescriptorSize;
+			m_device->CreateShaderResourceView(m_sceneRenderTargets[i].Get(), &colorSrv, srv);
+			srv.ptr += m_srvDescriptorSize;
+			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, srv);
 		}
 	}
 }

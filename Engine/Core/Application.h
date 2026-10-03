@@ -41,6 +41,7 @@ namespace Engine {
 		std::unique_ptr<Engine::GraphicsPipeline> m_pipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_oceanPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_skyPipeline;
+		std::unique_ptr<Engine::GraphicsPipeline> m_cloudPipeline;
 
 		std::unique_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
@@ -53,6 +54,9 @@ namespace Engine {
 		// 定数バッファ（MVP および関連データ）
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
 		UINT8* m_cbvDataPtr = nullptr;
+		// Cloud 専用定数バッファ
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_cloudConstantBuffer;
+		UINT8* m_cloudCbvDataPtr = nullptr;
 
 		UINT m_vertexCount;
 

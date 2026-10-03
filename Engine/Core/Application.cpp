@@ -30,6 +30,25 @@ namespace Engine {
 		float pad3;
 	};
 
+	struct CloudConstants {
+		DirectX::XMFLOAT4X4 inverseViewProjection;
+		DirectX::XMFLOAT3 cameraPosition;
+		float time;
+		DirectX::XMFLOAT3 sunDirection;
+		float sunStrength;
+		DirectX::XMFLOAT3 sunColor;
+		float cloudDensity;
+		float cloudBottom;
+		float cloudTop;
+		float shapeScale;
+		float detailScale;
+		float detailStrength;
+		float absorption;
+		float stepSize;
+		int stepCount;
+		float padding[2];
+	};
+
 // アプリケーション初期化処理
 	void Application::Initialize() {
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
@@ -69,7 +88,18 @@ namespace Engine {
 			m_device->GetDevice(),
 			L"BasicVS.cso",
 			L"OceanPS.cso",
-			2
+			2,
+			false,
+			true
+		);
+
+		m_cloudPipeline = std::make_unique<Engine::GraphicsPipeline>();
+		m_cloudPipeline->InitializeWithShaders(
+			m_device->GetDevice(),
+			L"CloudVS.cso",
+			L"CloudPS.cso",
+			2,
+			true
 		);
 
 
@@ -106,6 +136,7 @@ namespace Engine {
 				float v = (float)z / (gridSize - 1);
 				vertices.push_back({ {px, 0.0f, pz}, {u, v} });
 			}
+
 		}
 
 		for (int z = 0; z < gridSize - 1; ++z) {
@@ -292,6 +323,17 @@ namespace Engine {
 
 		m_camera = std::make_unique<Engine::Camera>();
 		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 1000.0f);
+
+		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
+		CD3DX12_RESOURCE_DESC cloudCbDesc = CD3DX12_RESOURCE_DESC::Buffer(cloudCbSize);
+		CD3DX12_HEAP_PROPERTIES cloudHeapProps(D3D12_HEAP_TYPE_UPLOAD);
+		ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
+			&cloudHeapProps, D3D12_HEAP_FLAG_NONE, &cloudCbDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+			IID_PPV_ARGS(&m_cloudConstantBuffer)));
+		CD3DX12_RANGE cloudReadRange(0, 0);
+		ThrowIfFailed(m_cloudConstantBuffer->Map(0, &cloudReadRange, reinterpret_cast<void**>(&m_cloudCbvDataPtr)));
+
 		m_lastTime = std::chrono::steady_clock::now();
 	}
 
@@ -332,6 +374,7 @@ namespace Engine {
 		float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
 		XMMATRIX proj = m_camera->GetProjection();
 		XMMATRIX mvp = world * view * proj;
+		XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, view * proj);
 		XMMATRIX mvpT = XMMatrixTranspose(mvp);
 
 		DirectX::XMFLOAT4X4 m;
@@ -355,6 +398,25 @@ namespace Engine {
 		data->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 
 		m_constantBuffer->Unmap(0, nullptr);
+
+		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
+		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));
+		cloud->cameraPosition = m_camera->GetPosition();
+		cloud->time = time;
+		cloud->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
+		cloud->sunStrength = 1.8f;
+		cloud->sunColor = DirectX::XMFLOAT3(1.0f, 0.91f, 0.76f);
+		cloud->cloudDensity = 0.82f;
+		cloud->cloudBottom = 800.0f;
+		cloud->cloudTop = 1800.0f;
+		cloud->shapeScale = 0.00115f;
+		cloud->detailScale = 0.0045f;
+		cloud->detailStrength = 0.22f;
+		cloud->absorption = 0.006f;
+		cloud->stepSize = 30.0f;
+		cloud->stepCount = 96;
+		cloud->padding[0] = 0.0f;
+		cloud->padding[1] = 0.0f;
 	}
 
 // 描画処理（レンダリングコマンド発行）
@@ -363,9 +425,13 @@ namespace Engine {
 
 		auto cmd = m_context->GetCommandList();
 		auto resource = m_device->GetCurrentRenderTarget();
+		auto scene = m_device->GetSceneRenderTarget();
+		auto depth = m_device->GetSceneDepth();
 
 		// バックバッファをレンダーターゲットへ遷移
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		m_context->TransitionResource(scene, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		m_context->TransitionResource(depth, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 		D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(m_window->GetWidth()), static_cast<float>(m_window->GetHeight()), 0.0f, 1.0f };
 		D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(m_window->GetWidth()), static_cast<LONG>(m_window->GetHeight()) };
@@ -374,10 +440,12 @@ namespace Engine {
 		cmd->RSSetScissorRects(1, &scissorRect);
 
 		// 画面クリア
-		auto rtv = m_device->GetCurrentRtvHandle();
+		auto rtv = m_device->GetSceneRtvHandle();
 		const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
-		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+		auto dsv = m_device->GetDsvHandle();
+		cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		cmd->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
 		// Sky Sphere を描画
 		if (m_skySphere && m_skyTexture && m_skyTexture->GetResource()) {
@@ -429,6 +497,23 @@ namespace Engine {
 
 		// 描画コマンド発行
 		cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
+		m_context->TransitionResource(scene, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		m_context->TransitionResource(depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		rtv = m_device->GetCurrentRtvHandle();
+		const float backBufferClear[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		cmd->ClearRenderTargetView(rtv, backBufferClear, 0, nullptr);
+		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+
+		// ボリューム雲を海面・空へアルファ合成
+		cmd->SetGraphicsRootSignature(m_cloudPipeline->GetRootSignature());
+		cmd->SetPipelineState(m_cloudPipeline->GetPSO());
+		// Scene Color SRV は常にバインドしておく（Cloud PSで参照するため）
+		ID3D12DescriptorHeap* cloudHeaps[] = { m_device->GetSrvDescriptorHeap() };
+		cmd->SetDescriptorHeaps(_countof(cloudHeaps), cloudHeaps);
+		cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_device->GetSceneColorSrvIndex()));
+		cmd->SetGraphicsRootConstantBufferView(1, m_cloudConstantBuffer->GetGPUVirtualAddress());
+		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		cmd->DrawInstanced(3, 1, 0, 0);
 
 		// Present 処理
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

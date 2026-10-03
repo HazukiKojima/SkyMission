@@ -79,7 +79,9 @@ namespace
 		ID3D12Device* device,
 		ID3D12RootSignature* rootSignature,
 		ID3DBlob* vertexShader,
-		ID3DBlob* pixelShader)
+		ID3DBlob* pixelShader,
+		bool enableAlphaBlend,
+		bool enableDepth)
 	{
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
@@ -138,6 +140,15 @@ namespace
 
 		// ブレンド設定
 		CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
+		if (enableAlphaBlend) {
+			blendDesc.RenderTarget[0].BlendEnable = TRUE;
+			blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+			blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+			blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+			blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+			blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+			blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		}
 
 		psoDesc.BlendState = blendDesc;
 
@@ -148,6 +159,13 @@ namespace
 		psoDesc.SampleDesc.Quality = 0;
 
 		psoDesc.SampleMask = UINT_MAX;
+
+		CD3DX12_DEPTH_STENCIL_DESC depthDesc(D3D12_DEFAULT);
+		depthDesc.DepthEnable = enableDepth;
+		depthDesc.DepthWriteMask = enableDepth ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+		depthDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		psoDesc.DepthStencilState = depthDesc;
+		psoDesc.DSVFormat = enableDepth ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_UNKNOWN;
 
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
 
@@ -208,7 +226,9 @@ namespace Engine
 				device,
 				m_rootSignature.Get(),
 				vertexShader.Get(),
-				pixelShader.Get());
+				pixelShader.Get(),
+				false,
+				false);
 
 		OutputDebugStringA(
 			"DEBUG: PipelineStateObject created\n");
@@ -218,7 +238,9 @@ namespace Engine
 		ID3D12Device* device,
 		const std::wstring& vsPath,
 		const std::wstring& psPath,
-		UINT srvCount)
+		UINT srvCount,
+		bool enableAlphaBlend,
+		bool enableDepth)
 	{
 		OutputDebugStringA(
 			"DEBUG: Starting Pipeline InitializeWithShaders\n");
@@ -262,7 +284,9 @@ namespace Engine
 				device,
 				m_rootSignature.Get(),
 				vertexShader.Get(),
-				pixelShader.Get());
+				pixelShader.Get(),
+				enableAlphaBlend,
+				enableDepth);
 
 		OutputDebugStringA(
 			"DEBUG: PipelineStateObject created with custom shaders\n");
