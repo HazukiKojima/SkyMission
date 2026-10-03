@@ -93,13 +93,15 @@ namespace Engine {
 			true
 		);
 
-		m_cloudPipeline = std::make_unique<Engine::GraphicsPipeline>();
+		m_cloudPipeline =
+			std::make_unique<Engine::GraphicsPipeline>();
+
 		m_cloudPipeline->InitializeWithShaders(
 			m_device->GetDevice(),
 			L"CloudVS.cso",
 			L"CloudPS.cso",
 			2,
-			true
+			false
 		);
 
 
@@ -360,6 +362,15 @@ namespace Engine {
 		std::chrono::duration<float> dt = now - m_lastTime;
 		m_lastTime = now;
 		float deltaSeconds = dt.count();
+		m_fpsTimer += deltaSeconds;
+		++m_fpsFrameCount;
+		if (m_fpsTimer >= 0.25f) {
+			const float fps = static_cast<float>(m_fpsFrameCount) / m_fpsTimer;
+			std::wstring title = L"SkyMission | FPS: " + std::to_wstring(static_cast<int>(fps + 0.5f));
+			SetWindowTextW(m_window->GetHandle(), title.c_str());
+			m_fpsTimer = 0.0f;
+			m_fpsFrameCount = 0;
+		}
 
 		time += deltaSeconds; // use real delta time for animation speed
 
@@ -413,8 +424,8 @@ namespace Engine {
 		cloud->detailScale = 0.0045f;
 		cloud->detailStrength = 0.22f;
 		cloud->absorption = 0.006f;
-		cloud->stepSize = 30.0f;
-		cloud->stepCount = 96;
+		cloud->stepSize = 120.0f;
+		cloud->stepCount = 12;
 		cloud->padding[0] = 0.0f;
 		cloud->padding[1] = 0.0f;
 	}
@@ -504,7 +515,7 @@ namespace Engine {
 		cmd->ClearRenderTargetView(rtv, backBufferClear, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 
-		// ボリューム雲を海面・空へアルファ合成
+		// Scene Colorを含む完成色をCloud Passからバックバッファへ書き込む
 		cmd->SetGraphicsRootSignature(m_cloudPipeline->GetRootSignature());
 		cmd->SetPipelineState(m_cloudPipeline->GetPSO());
 		// Scene Color SRV は常にバインドしておく（Cloud PSで参照するため）
