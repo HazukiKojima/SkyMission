@@ -1,3 +1,5 @@
+#include "CommonLighting.hlsli"
+
 cbuffer CloudConstants : register(b0)
 {
     float4x4 inverseViewProjection;
@@ -6,27 +8,30 @@ cbuffer CloudConstants : register(b0)
     float time;
 
     float3 sunDirection;
-    float sunStrength;
+    float sunIntensity;
 
     float3 sunColor;
     float cloudDensity;
 
     float cloudBottom;
     float cloudTop;
+
     float shapeScale;
     float detailScale;
 
     float detailStrength;
     float absorption;
+
     float stepSize;
     int stepCount;
 
-    float2 padding;
+    float ambientIntensity;
+    float3 ambientColor;
 };
 
-SamplerState gSampler : register(s0);
 Texture2D gSceneColor : register(t0);
 Texture2D gSceneDepth : register(t1);
+SamplerState gSampler : register(s0);
 
 struct PS_INPUT
 {
@@ -34,193 +39,628 @@ struct PS_INPUT
     float2 texcoord : TEXCOORD0;
 };
 
-static const float3 CLOUD_MIN = float3(-12000.0f, 800.0f, -12000.0f);
-static const float3 CLOUD_MAX = float3( 12000.0f, 1800.0f,  12000.0f);
+static const float3 CLOUD_MIN =
+    float3(-12000.0f, 800.0f, -12000.0f);
+
+static const float3 CLOUD_MAX =
+    float3(12000.0f, 1800.0f, 12000.0f);
+
+
+// ============================================================
+// Hash
+// ============================================================
 
 float Hash31(float3 p)
 {
     p = frac(p * 0.1031f);
-    p += dot(p, p.yzx + 33.33f);
-    return frac((p.x + p.y) * p.z);
+
+    p += dot(
+        p,
+        p.yzx + 33.33f
+    );
+
+    return frac(
+        (p.x + p.y) * p.z
+    );
 }
+
+
+// ============================================================
+// Value Noise 3D
+// ============================================================
 
 float ValueNoise3D(float3 p)
 {
     float3 cell = floor(p);
-    float3 local = frac(p);
-    local = local * local * (3.0f - 2.0f * local);
+    float3 f = frac(p);
 
-    float n000 = Hash31(cell + float3(0, 0, 0));
+    f = f * f * (3.0f - 2.0f * f);
+
+    float n000 = Hash31(cell);
     float n100 = Hash31(cell + float3(1, 0, 0));
     float n010 = Hash31(cell + float3(0, 1, 0));
     float n110 = Hash31(cell + float3(1, 1, 0));
+
     float n001 = Hash31(cell + float3(0, 0, 1));
     float n101 = Hash31(cell + float3(1, 0, 1));
     float n011 = Hash31(cell + float3(0, 1, 1));
     float n111 = Hash31(cell + float3(1, 1, 1));
 
-    float nx00 = lerp(n000, n100, local.x);
-    float nx10 = lerp(n010, n110, local.x);
-    float nx01 = lerp(n001, n101, local.x);
-    float nx11 = lerp(n011, n111, local.x);
-    return lerp(lerp(nx00, nx10, local.y), lerp(nx01, nx11, local.y), local.z);
+    float nx00 = lerp(n000, n100, f.x);
+    float nx10 = lerp(n010, n110, f.x);
+
+    float nx01 = lerp(n001, n101, f.x);
+    float nx11 = lerp(n011, n111, f.x);
+
+    float nxy0 = lerp(nx00, nx10, f.y);
+    float nxy1 = lerp(nx01, nx11, f.y);
+
+    return lerp(nxy0, nxy1, f.z);
 }
 
-float FbmShape(float3 p)
+
+// ============================================================
+// FBM
+// ============================================================
+
+float CloudFBM(float3 p)
 {
     float value = 0.0f;
-    float amplitude = 0.5f;
-    float frequency = 1.0f;
-    [unroll]
-    for (int i = 0; i < 4; ++i)
-    {
-        value += ValueNoise3D(p * frequency) * amplitude;
-        frequency *= 2.03f;
-        amplitude *= 0.5f;
-    }
+
+    value += ValueNoise3D(p) * 0.60f;
+
+    p =
+        p * 2.02f +
+        float3(13.1f, 7.7f, 19.3f);
+
+    value += ValueNoise3D(p) * 0.28f;
+
+    p =
+        p * 2.05f +
+        float3(5.3f, 17.1f, 3.7f);
+
+    value += ValueNoise3D(p) * 0.12f;
+
     return value;
 }
 
-float WorleyLike(float3 p)
+
+// ============================================================
+// Height Profile
+// ============================================================
+
+float CloudHeightProfile(float h)
 {
-    float3 cell = floor(p);
-    float3 local = frac(p) - 0.5f;
-    float nearest = 1.0f;
-    [unroll]
-    for (int z = -1; z <= 1; ++z)
+    float bottom =
+        smoothstep(
+            0.0f,
+            0.12f,
+            h
+        );
+
+    float top =
+        1.0f -
+        smoothstep(
+            0.82f,
+            1.0f,
+            h
+        );
+
+    return bottom * top;
+}
+
+
+// ============================================================
+// Density
+// ============================================================
+
+float CloudDensityAt(
+    float3 worldPosition,
+    bool detail)
+{
+    float h =
+        saturate(
+            (worldPosition.y - cloudBottom) /
+            max(
+                cloudTop - cloudBottom,
+                1.0f
+            )
+        );
+
+    float heightMask =
+        CloudHeightProfile(h);
+
+    if (heightMask <= 0.001f)
+        return 0.0f;
+
+
+    float3 wind =
+        normalize(
+            float3(
+                0.75f,
+                0.0f,
+                0.35f
+            )
+        );
+
+    float3 windOffset =
+        wind *
+        time *
+        12.0f;
+
+
+    float3 shapePosition =
+        (worldPosition + windOffset) *
+        shapeScale;
+    shapePosition.y *= 0.65f;
+
+    float shape =
+        CloudFBM(shapePosition);
+
+
+    float coverage =
+        saturate(cloudDensity);
+
+    float density =
+        smoothstep(
+            1.0f - coverage,
+            1.0f,
+            shape
+        );
+
+
+    if (detail)
     {
-        for (int y = -1; y <= 1; ++y)
-        {
-            for (int x = -1; x <= 1; ++x)
-            {
-                float3 offset = float3(x, y, z);
-                float3 featurePoint = Hash31(cell + offset).xxx;
-                featurePoint = frac(featurePoint * float3(1.73f, 2.41f, 3.17f)) - 0.5f;
-                nearest = min(nearest, length(offset + featurePoint - local));
-            }
-        }
-    }
-    return 1.0f - saturate(nearest * 1.35f);
-}
+        float3 detailPosition =
+            (worldPosition + windOffset * 1.7f) *
+            detailScale;
+        detailPosition.y *= 1.25f;
 
-float CloudDensity(float3 worldPos)
-{
-    float height01 = saturate((worldPos.y - cloudBottom) / max(cloudTop - cloudBottom, 1.0f));
-    float bottomGradient = smoothstep(0.02f, 0.22f, height01);
-    float topGradient = 1.0f - smoothstep(0.72f, 0.98f, height01);
-    float heightGradient = bottomGradient * topGradient;
+        float detailNoise =
+            ValueNoise3D(detailPosition);
 
-    float3 windOffset = float3(time * 0.012f, time * 0.002f, -time * 0.008f);
-    float3 shapeCoord = worldPos * shapeScale + windOffset;
-    float shape = FbmShape(shapeCoord);
-    float detail = ValueNoise3D(worldPos * detailScale + windOffset * 2.0f);
-    float billow = WorleyLike(worldPos * shapeScale * 2.2f + windOffset * 0.7f);
-
-    float coverage = shape * 0.72f + billow * 0.28f;
-    coverage += (detail - 0.5f) * detailStrength;
-    float density = smoothstep(0.56f, 0.72f, coverage) * heightGradient;
-    return saturate(density * cloudDensity);
-}
-
-bool RayBox(float3 origin, float3 direction, out float tEnter, out float tExit)
-{
-    float3 inverseDirection = 1.0f / direction;
-    float3 t0 = (CLOUD_MIN - origin) * inverseDirection;
-    float3 t1 = (CLOUD_MAX - origin) * inverseDirection;
-    float3 nearPoint = min(t0, t1);
-    float3 farPoint = max(t0, t1);
-
-    tEnter = max(max(nearPoint.x, nearPoint.y), nearPoint.z);
-    tExit = min(min(farPoint.x, farPoint.y), farPoint.z);
-    return tExit >= max(tEnter, 0.0f);
-}
-
-float3 ReconstructWorld(float2 uv, float depth)
-{
-    float2 ndc = uv * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f);
-    float4 world = mul(float4(ndc, depth, 1.0f), inverseViewProjection);
-    return world.xyz / max(world.w, 1e-5f);
-}
-
-float SampleLightTransmittance(float3 position)
-{
-    float3 lightDirection = normalize(sunDirection);
-    float lightDistance = 260.0f;
-    float lightStep = lightDistance / 6.0f;
-    float opticalDepth = 0.0f;
-
-    [unroll]
-    for (int i = 0; i < 6; ++i)
-    {
-        position += lightDirection * lightStep;
-        opticalDepth += CloudDensity(position) * lightStep;
+        density -=
+            (1.0f - detailNoise) *
+            detailStrength *
+            density;
     }
 
-    return exp(-opticalDepth * absorption);
+
+    density *= heightMask;
+
+    return saturate(density);
 }
+
+
+// ============================================================
+// Ray Box
+// ============================================================
+
+bool RayBox(
+    float3 origin,
+    float3 direction,
+    float3 boxMin,
+    float3 boxMax,
+    out float tMin,
+    out float tMax)
+{
+    float3 invDir =
+        1.0f /
+        max(
+            abs(direction),
+            1e-5f
+        );
+
+    invDir *= sign(direction);
+
+    float3 t0 =
+        (boxMin - origin) *
+        invDir;
+
+    float3 t1 =
+        (boxMax - origin) *
+        invDir;
+
+    float3 tSmall =
+        min(t0, t1);
+
+    float3 tLarge =
+        max(t0, t1);
+
+    tMin =
+        max(
+            max(tSmall.x, tSmall.y),
+            tSmall.z
+        );
+
+    tMax =
+        min(
+            min(tLarge.x, tLarge.y),
+            tLarge.z
+        );
+
+    return
+        tMax >
+        max(
+            tMin,
+            0.0f
+        );
+}
+
+
+// ============================================================
+// World Position
+// ============================================================
+
+float3 ReconstructWorldPosition(
+    float2 uv,
+    float depth)
+{
+    float2 ndc =
+        uv * 2.0f -
+        1.0f;
+
+    ndc.y =
+        -ndc.y;
+
+    float4 clip =
+        float4(
+            ndc,
+            depth,
+            1.0f
+        );
+
+    float4 world =
+        mul(
+            clip,
+            inverseViewProjection
+        );
+
+    return
+        world.xyz /
+        max(
+            world.w,
+            1e-5f
+        );
+}
+
+
+// ============================================================
+// Phase
+// ============================================================
+
+float PhaseHG(
+    float cosTheta,
+    float g)
+{
+    float g2 = g * g;
+
+    float denominator =
+        1.0f +
+        g2 -
+        2.0f *
+        g *
+        cosTheta;
+
+    return
+        (1.0f - g2) /
+        (
+            4.0f *
+            PI *
+            pow(
+                max(
+                    denominator,
+                    0.001f
+                ),
+                1.5f
+            )
+        );
+}
+
+
+// ============================================================
+// Light March
+// ============================================================
+
+float SampleCloudLight(float3 position)
+{
+    float3 lightDirection =
+        SafeNormalize(sunDirection);
+
+    const float LIGHT_STEP = 180.0f;
+
+    float d0 =
+        CloudDensityAt(
+            position +
+            lightDirection * LIGHT_STEP,
+            false
+        );
+
+    float d1 =
+        CloudDensityAt(
+            position +
+            lightDirection *
+            LIGHT_STEP *
+            2.0f,
+            false
+        );
+
+    float opticalDepth =
+        d0 * 0.75f +
+        d1 * 0.50f;
+
+    return
+        exp(
+            -opticalDepth *
+            absorption *
+            180.0f
+        );
+}
+
+
+// ============================================================
+// Pixel Shader
+// ============================================================
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
+    CommonLightingParameters lighting;
+    lighting.sunDirection = sunDirection;
+    lighting.sunIntensity = sunIntensity;
+    lighting.sunColor = sunColor;
+    lighting.ambientIntensity = ambientIntensity;
+    lighting.ambientColor = ambientColor;
+    lighting.padding = 0.0f;
+
     float3 sceneColor = gSceneColor.SampleLevel(gSampler, input.texcoord, 0).rgb;
-    float3 farWorld = ReconstructWorld(input.texcoord, 1.0f);
-    float3 rayDirection = normalize(farWorld - cameraPosition);
 
-    float tEnter;
-    float tExit;
-    if (!RayBox(cameraPosition, rayDirection, tEnter, tExit))
+    float3 farPosition =
+        ReconstructWorldPosition(
+            input.texcoord,
+            1.0f
+        );
+
+    float3 rayDirection =
+        normalize(
+            farPosition -
+            cameraPosition
+        );
+
+
+    float cloudEnter;
+    float cloudExit;
+
+    if (!RayBox(
+        cameraPosition,
+        rayDirection,
+        CLOUD_MIN,
+        CLOUD_MAX,
+        cloudEnter,
+        cloudExit))
+    {
+        return float4(sceneColor, 1.0f);
+    }
+
+
+    cloudEnter =
+        max(
+            cloudEnter,
+            0.0f
+        );
+
+
+    float rayLength =
+        cloudExit -
+        cloudEnter;
+
+    if (rayLength <= 0.0f)
         return float4(sceneColor, 1.0f);
 
-    tEnter = max(tEnter, 0.0f);
-    if (tExit <= tEnter)
-        return float4(sceneColor, 1.0f);
-
-    float marchLength = tExit - tEnter;
     float sceneDepth = gSceneDepth.SampleLevel(gSampler, input.texcoord, 0).r;
     if (sceneDepth < 0.9999f)
     {
-        float3 sceneWorld = ReconstructWorld(input.texcoord, sceneDepth);
-        float sceneDistance = max(0.0f, dot(sceneWorld - cameraPosition, rayDirection));
-        marchLength = min(marchLength, max(0.0f, sceneDistance - tEnter));
+        float3 scenePosition = ReconstructWorldPosition(input.texcoord, sceneDepth);
+        float sceneDistance = dot(scenePosition - cameraPosition, rayDirection);
+        rayLength = min(rayLength, max(0.0f, sceneDistance - cloudEnter));
     }
-    if (marchLength <= 0.0f)
+
+    if (rayLength <= 0.0f)
         return float4(sceneColor, 1.0f);
-    int steps = min(max(stepCount, 1), 96);
-    float marchStep = max(stepSize, marchLength / (float)steps);
-    marchStep = min(marchStep, 80.0f);
-    float3 position = cameraPosition + rayDirection * tEnter;
+
+
+    int samples =
+        clamp(
+            stepCount,
+            4,
+            8
+        );
+
+
+    float marchStep =
+        rayLength /
+        (float) samples;
+
+
+    float jitter = 0.0f;
+
+
+    float3 rayPosition =
+        cameraPosition +
+        rayDirection *
+        (
+            cloudEnter +
+            marchStep *
+            jitter *
+            0.35f
+        );
+
+
     float transmittance = 1.0f;
-    float3 cloudLight = 0.0f;
-    float marched = 0.0f;
+
+    float3 accumulatedLight =
+        float3(
+            0.0f,
+            0.0f,
+            0.0f
+        );
+
+
+    float3 viewDirection =
+        -rayDirection;
+
+    float3 lightDirection =
+        SafeNormalize(lighting.sunDirection);
+
+    float cosTheta =
+        dot(
+            viewDirection,
+            lightDirection
+        );
+
+    float phase =
+        saturate(
+            PhaseHG(
+                cosTheta,
+                0.35f
+            ) * 4.0f
+        );
+
 
     [loop]
-    for (int i = 0; i < 128; ++i)
+    for (int i = 0; i < 8; ++i)
     {
-        if (i >= steps || marched >= marchLength || transmittance < 0.02f)
+        if (i >= samples)
             break;
 
-        float density = CloudDensity(position);
-        if (density > 0.001f)
-        {
-            float lightTransmittance = SampleLightTransmittance(position);
-            float3 viewDirection = -rayDirection;
-            float sunDot = saturate(dot(viewDirection, normalize(sunDirection)));
-            float forwardScatter = pow(sunDot, 6.0f) * 0.65f;
-            float rim = pow(1.0f - saturate(density * 2.5f), 2.0f) * 0.35f;
-            float3 light = sunColor * (0.45f + sunStrength * lightTransmittance);
-            light += sunColor * (forwardScatter + rim);
-            light += float3(0.18f, 0.24f, 0.32f);
 
-            float opticalDepth = density * marchStep * absorption;
-            float stepTransmittance = exp(-opticalDepth);
-            cloudLight += light * density * marchStep * transmittance * 0.45f;
-            transmittance *= stepTransmittance;
+        bool useDetail =
+            (i == 1) ||
+            (i == 3) ||
+            (i == 5) ||
+            (i == 7) ||
+            (i == 9);
+
+
+        float density =
+            CloudDensityAt(
+                rayPosition,
+                useDetail
+            );
+
+
+        if (density > 0.002f)
+        {
+            float light =
+                SampleCloudLight(
+                    rayPosition
+                );
+
+
+            float edge =
+                1.0f -
+                saturate(
+                    density * 3.5f
+                );
+
+
+            float silverLining =
+                pow(
+                    saturate(edge),
+                    3.0f
+                );
+
+
+            float sunLight =
+                light *
+                (
+                    0.55f +
+                    phase * 0.45f
+                );
+
+
+            float3 cloudLighting = GetSunRadiance(lighting) * sunLight;
+
+
+            cloudLighting *=
+                1.0f +
+                silverLining * 0.85f;
+
+
+            float h =
+                saturate(
+                    (
+                        rayPosition.y -
+                        cloudBottom
+                    ) /
+                    max(
+                        cloudTop -
+                        cloudBottom,
+                        1.0f
+                    )
+                );
+
+
+            cloudLighting +=
+                GetAmbientRadiance(lighting) *
+                lerp(
+                    1.0f,
+                    2.0f,
+                    h
+                );
+
+
+            float opticalDepth =
+                density *
+                absorption *
+                marchStep;
+
+
+            float alpha =
+                1.0f -
+                exp(
+                    -opticalDepth
+                );
+
+
+            accumulatedLight +=
+                cloudLighting *
+                alpha *
+                transmittance;
+
+
+            transmittance *=
+                1.0f -
+                alpha;
+
+
+            if (transmittance < 0.025f)
+                break;
         }
 
-        position += rayDirection * marchStep;
-        marched += marchStep;
+
+        rayPosition +=
+            rayDirection *
+            marchStep;
     }
 
-    float cloudAlpha = saturate(1.0f - transmittance) * 0.72f;
-    float3 color = lerp(sceneColor, saturate(cloudLight), cloudAlpha);
-    return float4(color, 1.0f);
+
+    float alpha =
+        saturate(
+            1.0f -
+            transmittance
+        );
+
+
+    float3 color =
+        accumulatedLight /
+        max(
+            alpha,
+            0.001f
+        );
+
+
+    return float4(
+        lerp(sceneColor, color, alpha),
+        1.0f
+    );
 }

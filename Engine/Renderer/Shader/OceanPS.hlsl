@@ -72,12 +72,20 @@ float3 SampleOceanNormal(float3 wavePos)
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
+    CommonLightingParameters lighting;
+    lighting.sunDirection = sunDirection;
+    lighting.sunIntensity = sunIntensity;
+    lighting.sunColor = sunColor;
+    lighting.ambientIntensity = ambientIntensity;
+    lighting.ambientColor = ambientColor;
+    lighting.padding = 0.0f;
+
     // --------------------------------------------------------
     // View / Light Direction
     // --------------------------------------------------------
 
     float3 V = SafeNormalize(cameraPos - input.worldPos);
-    float3 L = SafeNormalize(sunDirection);
+    float3 L = SafeNormalize(lighting.sunDirection);
 
     // --------------------------------------------------------
     // Base TBN
@@ -118,7 +126,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // --------------------------------------------------------
 
     float3 R = reflect(-V, N);
-    float3 reflectedSky = GetSkyColor(R, sunDirection, sunColor, sunIntensity);
+    float3 reflectedSky = GetSkyColor(R, lighting);
     float3 reflection = reflectedSky * F;
 
     // --------------------------------------------------------
@@ -133,13 +141,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // --------------------------------------------------------
 
     float3 sunSpecular = CalculateSunSpecular(
-        N,
-        V,
-        L,
-        0.08f,
-        sunColor,
-        sunIntensity
-    );
+    N,
+    V,
+    L,
+    0.08f,
+    lighting
+);
 
     // --------------------------------------------------------
     // Ambient
@@ -149,8 +156,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float3 ambient =
         waterColor *
-        ambientColor *
-        ambientIntensity *
+        GetAmbientRadiance(lighting) *
         skyLight;
 
     // --------------------------------------------------------
@@ -211,12 +217,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     fogFactor = max(fogFactor, horizon * 0.75f);
 
-    float3 atmosphere = GetSkyColor(
-        V,
-        sunDirection,
-        sunColor,
-        sunIntensity
-    );
+    float3 atmosphere = GetSkyColor(V, lighting);
 
     color = lerp(color, atmosphere, fogFactor);
 
@@ -224,7 +225,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Tonemapping
     // --------------------------------------------------------
 
-    color = color / (1.0f + color);
+    color = ToneMapReinhard(color);
 
     return float4(saturate(color), 1.0f);
 }

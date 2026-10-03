@@ -64,6 +64,8 @@ namespace Engine {
 		std::unique_ptr<Engine::Camera> m_camera;
 		// timing
 		std::chrono::steady_clock::time_point m_lastTime;
+		float m_fpsTimer = 0.0f;
+		UINT m_fpsFrameCount = 0;
 		
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;

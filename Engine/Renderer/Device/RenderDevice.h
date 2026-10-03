@@ -53,5 +53,21 @@ namespace Engine {
 		UINT                         m_rtvDescriptorSize = 0;
 		UINT                         m_width = 0;
 		UINT                         m_height = 0;
+
+		ComPtr<ID3D12Resource> m_cloudRenderTarget;
+
+		UINT m_cloudSrvIndex = 0;
+
+		void CreateCloudResources();
+
+		D3D12_CPU_DESCRIPTOR_HANDLE GetCloudRtvHandle() const;
+
+		ID3D12Resource* GetCloudRenderTarget() const {
+			return m_cloudRenderTarget.Get();
+		}
+
+		UINT GetCloudSrvIndex() const {
+			return m_cloudSrvIndex;
+		}
 	};
 }
