@@ -35,7 +35,7 @@ namespace Engine {
 		DirectX::XMFLOAT3 cameraPosition;
 		float time;
 		DirectX::XMFLOAT3 sunDirection;
-		float sunStrength;
+		float sunIntensity;
 		DirectX::XMFLOAT3 sunColor;
 		float cloudDensity;
 		float cloudBottom;
@@ -46,7 +46,8 @@ namespace Engine {
 		float absorption;
 		float stepSize;
 		int stepCount;
-		float padding[2];
+		float ambientIntensity;
+		DirectX::XMFLOAT3 ambientColor;
 	};
 
 // アプリケーション初期化処理
@@ -318,7 +319,7 @@ namespace Engine {
 			cbInit->cameraPos = DirectX::XMFLOAT3(10.0f, 15.0f, -10.0f);
 			cbInit->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
 			cbInit->sunIntensity = 1.8f;
-			cbInit->sunColor = DirectX::XMFLOAT3(1.0f, 0.91f, 0.76f);
+			cbInit->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
 			cbInit->ambientIntensity = 0.32f;
 			cbInit->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 		}
@@ -404,7 +405,7 @@ namespace Engine {
 		}
 		data->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
 		data->sunIntensity = 1.8f;
-		data->sunColor = DirectX::XMFLOAT3(1.0f, 0.91f, 0.76f);
+		data->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
 		data->ambientIntensity = 0.32f;
 		data->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 
@@ -415,19 +416,19 @@ namespace Engine {
 		cloud->cameraPosition = m_camera->GetPosition();
 		cloud->time = time;
 		cloud->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
-		cloud->sunStrength = 1.8f;
-		cloud->sunColor = DirectX::XMFLOAT3(1.0f, 0.91f, 0.76f);
-		cloud->cloudDensity = 0.82f;
+		cloud->sunIntensity = 1.8f;
+		cloud->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
+		cloud->cloudDensity = 0.52f;
 		cloud->cloudBottom = 800.0f;
 		cloud->cloudTop = 1800.0f;
 		cloud->shapeScale = 0.00115f;
 		cloud->detailScale = 0.0045f;
-		cloud->detailStrength = 0.22f;
+		cloud->detailStrength = 0.34f;
 		cloud->absorption = 0.006f;
 		cloud->stepSize = 120.0f;
-		cloud->stepCount = 12;
-		cloud->padding[0] = 0.0f;
-		cloud->padding[1] = 0.0f;
+		cloud->stepCount = 6;
+		cloud->ambientIntensity = 0.32f;
+		cloud->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 	}
 
 // 描画処理（レンダリングコマンド発行）

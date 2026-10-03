@@ -8,7 +8,7 @@ cbuffer CloudConstants : register(b0)
     float time;
 
     float3 sunDirection;
-    float sunStrength;
+    float sunIntensity;
 
     float3 sunColor;
     float cloudDensity;
@@ -25,7 +25,8 @@ cbuffer CloudConstants : register(b0)
     float stepSize;
     int stepCount;
 
-    float2 padding;
+    float ambientIntensity;
+    float3 ambientColor;
 };
 
 Texture2D gSceneColor : register(t0);
@@ -133,14 +134,14 @@ float CloudHeightProfile(float h)
     float bottom =
         smoothstep(
             0.0f,
-            0.15f,
+            0.12f,
             h
         );
 
     float top =
         1.0f -
         smoothstep(
-            0.72f,
+            0.82f,
             1.0f,
             h
         );
@@ -191,6 +192,7 @@ float CloudDensityAt(
     float3 shapePosition =
         (worldPosition + windOffset) *
         shapeScale;
+    shapePosition.y *= 0.65f;
 
     float shape =
         CloudFBM(shapePosition);
@@ -212,6 +214,7 @@ float CloudDensityAt(
         float3 detailPosition =
             (worldPosition + windOffset * 1.7f) *
             detailScale;
+        detailPosition.y *= 1.25f;
 
         float detailNoise =
             ValueNoise3D(detailPosition);
@@ -362,9 +365,7 @@ float PhaseHG(
 float SampleCloudLight(float3 position)
 {
     float3 lightDirection =
-        normalize(
-            -sunDirection
-        );
+        SafeNormalize(sunDirection);
 
     const float LIGHT_STEP = 180.0f;
 
@@ -403,10 +404,15 @@ float SampleCloudLight(float3 position)
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
+    CommonLightingParameters lighting;
+    lighting.sunDirection = sunDirection;
+    lighting.sunIntensity = sunIntensity;
+    lighting.sunColor = sunColor;
+    lighting.ambientIntensity = ambientIntensity;
+    lighting.ambientColor = ambientColor;
+    lighting.padding = 0.0f;
+
     float3 sceneColor = gSceneColor.SampleLevel(gSampler, input.texcoord, 0).rgb;
-    uint2 pixel = uint2(input.position.xy);
-    if (((pixel.x | pixel.y) & 1u) != 0u)
-        return float4(sceneColor, 1.0f);
 
     float3 farPosition =
         ReconstructWorldPosition(
@@ -466,7 +472,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         clamp(
             stepCount,
             4,
-            12
+            8
         );
 
 
@@ -475,13 +481,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         (float) samples;
 
 
-    float jitter =
-        Hash31(
-            float3(
-                input.position.xy,
-                time
-            )
-        );
+    float jitter = 0.0f;
 
 
     float3 rayPosition =
@@ -509,9 +509,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         -rayDirection;
 
     float3 lightDirection =
-        normalize(
-            -sunDirection
-        );
+        SafeNormalize(lighting.sunDirection);
 
     float cosTheta =
         dot(
@@ -529,7 +527,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
 
     [loop]
-    for (int i = 0; i < 12; ++i)
+    for (int i = 0; i < 8; ++i)
     {
         if (i >= samples)
             break;
@@ -580,15 +578,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
                 );
 
 
-            float3 lighting =
-                sunColor *
-                sunStrength *
-                sunLight;
+            float3 cloudLighting = GetSunRadiance(lighting) * sunLight;
 
 
-            lighting *=
+            cloudLighting *=
                 1.0f +
-                silverLining * 1.25f;
+                silverLining * 0.85f;
 
 
             float h =
@@ -605,11 +600,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
                 );
 
 
-            lighting +=
-                sunColor *
+            cloudLighting +=
+                GetAmbientRadiance(lighting) *
                 lerp(
-                    0.22f,
-                    0.50f,
+                    1.0f,
+                    2.0f,
                     h
                 );
 
@@ -628,7 +623,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
 
             accumulatedLight +=
-                lighting *
+                cloudLighting *
                 alpha *
                 transmittance;
 

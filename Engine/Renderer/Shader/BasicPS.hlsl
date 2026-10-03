@@ -1,9 +1,5 @@
 #include "CommonLighting.hlsli"
 
-// ============================================================
-// Constant Buffer
-// ============================================================
-
 cbuffer MatrixBuffer : register(b0)
 {
     float4x4 mvp;
@@ -24,16 +20,8 @@ cbuffer MatrixBuffer : register(b0)
     float pad3;
 };
 
-// ============================================================
-// Resources
-// ============================================================
-
 Texture2D gDiffuse : register(t0);
 SamplerState gSampler : register(s0);
-
-// ============================================================
-// Input
-// ============================================================
 
 struct PS_INPUT
 {
@@ -47,92 +35,154 @@ struct PS_INPUT
     float3 tangent : TANGENT;
 };
 
-// ============================================================
-// Main
-// ============================================================
-
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    // --------------------------------------------------------
+    // ========================================================
+    // Common Lighting
+    // ========================================================
+
+    CommonLightingParameters lighting;
+
+    lighting.sunDirection = sunDirection;
+    lighting.sunIntensity = sunIntensity;
+    lighting.sunColor = sunColor;
+    lighting.ambientIntensity = ambientIntensity;
+    lighting.ambientColor = ambientColor;
+    lighting.padding = 0.0f;
+
+    // ========================================================
     // View / Light Direction
-    // --------------------------------------------------------
+    // ========================================================
 
-    float3 V = SafeNormalize(cameraPos - input.worldPos);
-    float3 L = SafeNormalize(sunDirection);
+    float3 V =
+        SafeNormalize(
+            cameraPos -
+            input.worldPos
+        );
 
-    // --------------------------------------------------------
+    float3 L =
+        SafeNormalize(
+            lighting.sunDirection
+        );
+
+    // ========================================================
     // Normal
-    // --------------------------------------------------------
+    // ========================================================
 
     float3 N;
     float3 T;
     float3 B;
 
-    BuildTBN(input.normal, input.tangent, N, T, B);
-
-    float NdotV = saturate(dot(N, V));
-    float NdotL = saturate(dot(N, L));
-
-    // --------------------------------------------------------
-    // Diffuse
-    // --------------------------------------------------------
-
-    float3 albedo = gDiffuse.Sample(gSampler, input.texcoord).rgb;
-    float3 diffuse = albedo * NdotL;
-
-    // --------------------------------------------------------
-    // Ambient
-    // --------------------------------------------------------
-
-    float3 ambient = albedo * ambientColor * ambientIntensity;
-
-    // --------------------------------------------------------
-    // Sun Specular
-    // --------------------------------------------------------
-
-    float3 sunSpecular = CalculateSunSpecular(
+    BuildTBN(
+        input.normal,
+        input.tangent,
         N,
-        V,
-        L,
-        0.35f,
-        sunColor,
-        sunIntensity
+        T,
+        B
     );
 
-    // --------------------------------------------------------
+    float NdotL =
+        saturate(
+            dot(N, L)
+        );
+
+    // ========================================================
+    // Diffuse
+    // ========================================================
+
+    float3 albedo =
+        gDiffuse.Sample(
+            gSampler,
+            input.texcoord
+        ).rgb;
+
+    float3 diffuse =
+        albedo * NdotL;
+
+    // ========================================================
+    // Ambient
+    // ========================================================
+
+    float3 ambient =
+        albedo *
+        GetAmbientRadiance(
+            lighting
+        );
+
+    // ========================================================
+    // Sun Specular
+    // ========================================================
+
+    float3 sunSpecular =
+        CalculateSunSpecular(
+            N,
+            V,
+            L,
+            0.35f,
+            lighting
+        );
+
+    // ========================================================
     // Final Lighting
-    // --------------------------------------------------------
+    // ========================================================
 
-    float3 color = diffuse + ambient + sunSpecular;
+    float3 color =
+        diffuse +
+        ambient +
+        sunSpecular;
 
-    // --------------------------------------------------------
+    // ========================================================
     // Atmospheric Fog
-    // --------------------------------------------------------
+    // ========================================================
 
-    float distanceToCamera = length(cameraPos - input.worldPos);
+    float distanceToCamera =
+        length(
+            cameraPos -
+            input.worldPos
+        );
 
-    float fogStart = 1500.0f;
-    float fogEnd = 12000.0f;
+    float fogStart =
+        1500.0f;
 
-    float fogFactor = saturate(
-        (distanceToCamera - fogStart) /
-        (fogEnd - fogStart)
-    );
+    float fogEnd =
+        12000.0f;
 
-    float3 atmosphere = GetSkyColor(
-        V,
-        sunDirection,
-        sunColor,
-        sunIntensity
-    );
+    float fogFactor =
+        saturate(
+            (
+                distanceToCamera -
+                fogStart
+            ) /
+            (
+                fogEnd -
+                fogStart
+            )
+        );
 
-    color = lerp(color, atmosphere, fogFactor);
+    float3 atmosphere =
+        GetSkyColor(
+            V,
+            lighting
+        );
 
-    // --------------------------------------------------------
+    color =
+        lerp(
+            color,
+            atmosphere,
+            fogFactor
+        );
+
+    // ========================================================
     // Tonemapping
-    // --------------------------------------------------------
+    // ========================================================
 
-    color = color / (1.0f + color);
+    color =
+        ToneMapReinhard(
+            color
+        );
 
-    return float4(saturate(color), 1.0f);
+    return float4(
+        saturate(color),
+        1.0f
+    );
 }
