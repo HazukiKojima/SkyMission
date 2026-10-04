@@ -23,13 +23,16 @@ struct PS_INPUT
 PS_INPUT main(VS_INPUT input)
 {
     PS_INPUT output;
-    
-    // ワールド座標をカメラ位置にオフセット（常にカメラを中心に球を配置）
+
     float3 worldPos = input.position + cameraPos;
-    
-    output.position = mul(float4(worldPos, 1.0f), mvp);
+
+    output.position = mul(
+        float4(worldPos, 1.0f),
+        mvp
+    );
+
     output.worldPos = worldPos;
     output.texcoord = input.texcoord;
-    
+
     return output;
 }

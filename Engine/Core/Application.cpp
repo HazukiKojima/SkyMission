@@ -50,7 +50,7 @@ namespace Engine {
 		DirectX::XMFLOAT3 ambientColor;
 	};
 
-// アプリケーション初期化処理
+	// アプリケーション初期化処理
 	void Application::Initialize() {
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
@@ -128,18 +128,29 @@ namespace Engine {
 		};
 		// --- グリッドメッシュ作成 ---
 		const int gridSize = 1000;
+		const float oceanSize = 5000.0f;
+
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 
 		for (int z = 0; z < gridSize; ++z) {
 			for (int x = 0; x < gridSize; ++x) {
-				float px = (float)x / (gridSize - 1) * 500.0f - 250.0f;
-				float pz = (float)z / (gridSize - 1) * 500.0f - 250.0f;
+				float px =
+					(float)x / (gridSize - 1) * oceanSize
+					- oceanSize * 0.5f;
+
+				float pz =
+					(float)z / (gridSize - 1) * oceanSize
+					- oceanSize * 0.5f;
+
 				float u = (float)x / (gridSize - 1);
 				float v = (float)z / (gridSize - 1);
-				vertices.push_back({ {px, 0.0f, pz}, {u, v} });
-			}
 
+				vertices.push_back({
+					{ px, 0.0f, pz },
+					{ u, v }
+					});
+			}
 		}
 
 		for (int z = 0; z < gridSize - 1; ++z) {
@@ -242,7 +253,7 @@ namespace Engine {
 
 		bool skyTextureLoaded = false;
 		for (const auto& path : skyTexturePaths) {
-				// ファイル存在チェックと読み込み
+			// ファイル存在チェックと読み込み
 			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
 			if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
 				char pathBuffer[512];
@@ -325,7 +336,7 @@ namespace Engine {
 		}
 
 		m_camera = std::make_unique<Engine::Camera>();
-		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 1000.0f);
+		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 5000.0f);
 
 		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
 		CD3DX12_RESOURCE_DESC cloudCbDesc = CD3DX12_RESOURCE_DESC::Buffer(cloudCbSize);
@@ -418,20 +429,20 @@ namespace Engine {
 		cloud->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
 		cloud->sunIntensity = 1.8f;
 		cloud->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
-		cloud->cloudDensity = 0.52f;
+		cloud->cloudDensity = 0.62f;
 		cloud->cloudBottom = 800.0f;
-		cloud->cloudTop = 1800.0f;
-		cloud->shapeScale = 0.00115f;
+		cloud->cloudTop = 2100.0f;
+		cloud->shapeScale = 0.0018f;
 		cloud->detailScale = 0.0045f;
-		cloud->detailStrength = 0.34f;
-		cloud->absorption = 0.006f;
+		cloud->detailStrength = 0.10f;
+		cloud->absorption = 0.010f;
 		cloud->stepSize = 120.0f;
-		cloud->stepCount = 6;
+		cloud->stepCount = 32;
 		cloud->ambientIntensity = 0.32f;
 		cloud->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 	}
 
-// 描画処理（レンダリングコマンド発行）
+	// 描画処理（レンダリングコマンド発行）
 	void Application::Render() {
 		m_context->BeginFrame();
 
