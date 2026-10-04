@@ -43,9 +43,25 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Engine\Renderer\Shader\CommonLighting.hlsli" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\Engine\Renderer\Shader\CloudPS.hlsl"><EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName><ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType><ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel><EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName><ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType><ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel></FxCompile><FxCompile Include="..\Engine\Renderer\Shader\CloudVS.hlsl"><EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName><ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType><ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel><EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName><ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType><ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel></FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\CloudPS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\CloudVS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
     <FxCompile Include="..\Engine\Renderer\Shader\BasicPS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -207,12 +223,13 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets" Condition="Exists('..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" />
+    <Import Project="..\packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets" Condition="Exists('..\packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>縺薙・繝励Ο繧ｸ繧ｧ繧ｯ繝医・縲√％縺ｮ繧ｳ繝ｳ繝斐Η繝ｼ繧ｿ繝ｼ荳翫↓縺ｪ縺・NuGet 繝代ャ繧ｱ繝ｼ繧ｸ繧貞盾辣ｧ縺励※縺・∪縺吶ゅ◎繧後ｉ縺ｮ繝代ャ繧ｱ繝ｼ繧ｸ繧偵ム繧ｦ繝ｳ繝ｭ繝ｼ繝峨☆繧九↓縺ｯ縲ーNuGet 繝代ャ繧ｱ繝ｼ繧ｸ縺ｮ蠕ｩ蜈ゾ 繧剃ｽｿ逕ｨ縺励∪縺吶りｩｳ邏ｰ縺ｫ縺､縺・※縺ｯ縲”ttp://go.microsoft.com/fwlink/?LinkID=322105 繧貞盾辣ｧ縺励※縺上□縺輔＞縲りｦ九▽縺九ｉ縺ｪ縺・ヵ繧｡繧､繝ｫ縺ｯ {0} 縺ｧ縺吶・</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets'))" />
+    <Error Condition="!Exists('..\packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />
   </Target>
 </Project>
-

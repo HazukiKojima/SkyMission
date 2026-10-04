@@ -95,6 +95,7 @@
     <None Include="..\Engine\Renderer\Shader\CommonLighting.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\Engine\Renderer\Shader\BasicPS.hlsl">
