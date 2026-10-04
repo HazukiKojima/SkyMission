@@ -112,5 +112,11 @@
     <FxCompile Include="..\Engine\Renderer\Shader\OceanPS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\CloudPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\CloudVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
