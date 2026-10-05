@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -27,6 +27,7 @@
     <ClCompile Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="..\Engine\Resources\Buffer\VertexBuffer.cpp" />
     <ClCompile Include="..\Engine\Resources\Mesh\SkySphere.cpp" />
+    <ClCompile Include="..\Engine\Resources\Mesh\Model.cpp" />
     <ClCompile Include="..\Engine\Resources\Texture\Texture.cpp" />
     <ClCompile Include="..\main.cpp" />
   </ItemGroup>
@@ -39,6 +40,7 @@
     <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="..\Engine\Resources\Buffer\VertexBuffer.h" />
     <ClInclude Include="..\Engine\Resources\Mesh\SkySphere.h" />
+    <ClInclude Include="..\Engine\Resources\Mesh\Model.h" />
     <ClInclude Include="..\Engine\Resources\Texture\Texture.h" />
   </ItemGroup>
   <ItemGroup>
@@ -92,6 +94,22 @@
     <FxCompile Include="..\Engine\Renderer\Shader\SkyVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\ModelPS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\Engine\Renderer\Shader\ModelVS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
