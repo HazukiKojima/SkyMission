@@ -1,6 +1,7 @@
 #pragma once
 #include "../EngineCommon.h"
 #include "../Resources/Buffer/VertexBuffer.h"
+#include "../Resources/Mesh/Model.h"
 #include "../Resources/Mesh/SkySphere.h"
 #include "../Renderer/Pipeline/GraphicsPipeline.h"
 #include "../Resources/Texture/Texture.h"
@@ -42,6 +43,7 @@ namespace Engine {
 		std::unique_ptr<Engine::GraphicsPipeline> m_oceanPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_skyPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_cloudPipeline;
+		std::unique_ptr<Engine::GraphicsPipeline> m_modelPipeline;
 
 		std::unique_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
@@ -69,5 +71,6 @@ namespace Engine {
 		
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;
+		std::unique_ptr<Engine::Model> m_model;
 	};
 }

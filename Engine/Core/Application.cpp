@@ -117,6 +117,16 @@ namespace Engine {
 			1
 		);
 
+		m_modelPipeline = std::make_unique<Engine::GraphicsPipeline>();
+		m_modelPipeline->InitializeWithShaders(
+			m_device->GetDevice(),
+			L"ModelVS.cso",
+			L"ModelPS.cso",
+			1,
+			false,
+			true
+		);
+
 		// Sky Sphere の生成
 		m_skySphere = std::make_unique<Engine::SkySphere>();
 		m_skySphere->Initialize(m_device->GetDevice(), 100.0f, 64, 32);
@@ -287,6 +297,30 @@ namespace Engine {
 		}
 
 		m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
+
+		const std::vector<std::wstring> modelPaths = {
+			exeDir + L"\\..\\..\\Assets\\Models\\model.fbx",
+			exeDir + L"\\..\\..\\..\\Assets\\Models\\model.fbx",
+			exeDir + L"\\..\\Assets\\Models\\model.fbx",
+			exeDir + L"\\Assets\\Models\\model.fbx"
+		};
+		for (const auto& modelPath : modelPaths) {
+			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
+			if (GetFileAttributesExW(modelPath.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
+				m_model = std::make_unique<Engine::Model>();
+				if (m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath)) {
+					OutputDebugStringA("Application::Initialize - FBX model loaded\n");
+				}
+				else {
+					m_model.reset();
+				}
+				break;
+			}
+		}
+		if (!m_model) {
+			OutputDebugStringA("Application::Initialize - place an FBX at Assets\\Models\\model.fbx to render it\n");
+		}
+
 		m_context->EndFrame();
 		m_context->WaitForGpu();
 		m_skyTextureSrvIndex = skySrvIndex;
@@ -520,6 +554,16 @@ namespace Engine {
 
 		// 描画コマンド発行
 		cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
+
+		if (m_model && m_model->IsLoaded()) {
+			cmd->SetGraphicsRootSignature(m_modelPipeline->GetRootSignature());
+			cmd->SetPipelineState(m_modelPipeline->GetPSO());
+			ID3D12DescriptorHeap* modelHeaps[] = { m_device->GetSrvDescriptorHeap() };
+			cmd->SetDescriptorHeaps(_countof(modelHeaps), modelHeaps);
+			cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
+			m_model->Draw(cmd, m_device.get());
+		}
+
 		m_context->TransitionResource(scene, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		m_context->TransitionResource(depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		rtv = m_device->GetCurrentRtvHandle();
