@@ -65,6 +65,7 @@ namespace Engine {
 		// Camera
 		std::unique_ptr<Engine::Camera> m_camera;
 		// timing
+		float m_elapsedTime = 0.0f;
 		std::chrono::steady_clock::time_point m_lastTime;
 		float m_fpsTimer = 0.0f;
 		UINT m_fpsFrameCount = 0;

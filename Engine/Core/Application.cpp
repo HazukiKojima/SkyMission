@@ -143,6 +143,9 @@ namespace Engine {
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 
+		vertices.reserve(static_cast<size_t>(gridSize)* gridSize);
+		indices.reserve(static_cast<size_t>(gridSize - 1)* (gridSize - 1) * 6);
+
 		for (int z = 0; z < gridSize; ++z) {
 			for (int x = 0; x < gridSize; ++x) {
 				float px =
@@ -250,14 +253,8 @@ namespace Engine {
 
 		// 読み込み候補パス一覧
 		std::vector<std::wstring> skyTexturePaths = {
-			L"C:\\Users\\hazu0\\DX12\\SkyMission\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
 			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
-			exeDir + L"\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
-			exeDir + L"\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
 			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.exr",
-			exeDir + L"\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.exr",
-			exeDir + L"\\Assets\\Images\\citrus_orchard_road_puresky_4k.exr",
-			exeDir + L"\\Assets\\Images\\water-bg-pattern-04.jpg",
 			exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg",
 		};
 
@@ -325,6 +322,10 @@ namespace Engine {
 		m_context->WaitForGpu();
 		m_skyTextureSrvIndex = skySrvIndex;
 
+		m_camera = std::make_unique<Engine::Camera>();
+		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 5000.0f);
+
+
 		// 定数バッファ (MVP) を作成して初期値をセット
 		{
 			using namespace DirectX;
@@ -345,15 +346,10 @@ namespace Engine {
 			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_cbvDataPtr)));
 
 			XMMATRIX world = XMMatrixIdentity();
-			// カメラ初期位置（視点を設定）
-			XMVECTOR eye = XMVectorSet(10.0f, 15.0f, -10.0f, 0.0f);
-			XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-			XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-			XMMATRIX view = XMMatrixLookAtLH(eye, at, up);
-			float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
-			XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspect, 0.1f, 100.0f);
+			XMMATRIX view = m_camera->GetView();
+			XMMATRIX proj = m_camera->GetProjection();
 			XMMATRIX mvp = world * view * proj;
-			XMMATRIX mvpT = XMMatrixTranspose(mvp); // シェーダ向けに転置
+			XMMATRIX mvpT = XMMatrixTranspose(mvp);
 
 			XMFLOAT4X4 m;
 			XMStoreFloat4x4(&m, mvpT);
@@ -368,9 +364,6 @@ namespace Engine {
 			cbInit->ambientIntensity = 0.32f;
 			cbInit->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 		}
-
-		m_camera = std::make_unique<Engine::Camera>();
-		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 5000.0f);
 
 		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
 		CD3DX12_RESOURCE_DESC cloudCbDesc = CD3DX12_RESOURCE_DESC::Buffer(cloudCbSize);
@@ -402,7 +395,7 @@ namespace Engine {
 	}
 
 	void Application::Update() {
-		static float time = 0.0f;
+		//static float time = 0.0f;
 		// compute delta
 		auto now = std::chrono::steady_clock::now();
 		std::chrono::duration<float> dt = now - m_lastTime;
@@ -418,7 +411,7 @@ namespace Engine {
 			m_fpsFrameCount = 0;
 		}
 
-		time += deltaSeconds; // use real delta time for animation speed
+		m_elapsedTime += deltaSeconds; // use real delta time for animation speed
 
 		// Update camera first
 		if (m_camera) m_camera->Update(deltaSeconds);
@@ -428,7 +421,6 @@ namespace Engine {
 		XMMATRIX world = XMMatrixIdentity();
 		XMMATRIX view = m_camera->GetView();
 
-		float aspect = static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight());
 		XMMATRIX proj = m_camera->GetProjection();
 		XMMATRIX mvp = world * view * proj;
 		XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, view * proj);
@@ -438,11 +430,10 @@ namespace Engine {
 		XMStoreFloat4x4(&m, mvpT);
 
 		// 定数バッファへ書き込み
-		ConstantBufferData* data;
-		m_constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&data));
+		ConstantBufferData* data = reinterpret_cast<ConstantBufferData*>(m_cbvDataPtr);
 
 		data->mvp = m;
-		data->time = time;
+		data->time = m_elapsedTime;
 		// カメラ位置などの情報をセット（VS/PSで参照）
 		if (m_camera) {
 			auto camPos = m_camera->GetPosition();
@@ -454,12 +445,10 @@ namespace Engine {
 		data->ambientIntensity = 0.32f;
 		data->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 
-		m_constantBuffer->Unmap(0, nullptr);
-
 		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
 		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));
 		cloud->cameraPosition = m_camera->GetPosition();
-		cloud->time = time;
+		cloud->time = m_elapsedTime;
 		cloud->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
 		cloud->sunIntensity = 1.8f;
 		cloud->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
