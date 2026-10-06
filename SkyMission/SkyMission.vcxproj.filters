@@ -64,6 +64,9 @@
     <ClCompile Include="..\Engine\Resources\Mesh\Model.cpp">
       <Filter>Engine\Resources\Mesh</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Renderer\Device\Renderer.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h">
@@ -95,6 +98,9 @@
     </ClInclude>
     <ClInclude Include="..\Engine\Resources\Mesh\Model.h">
       <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Renderer\Device\Renderer.h">
+      <Filter>Engine\Renderer\Device</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

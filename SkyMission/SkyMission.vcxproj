@@ -24,6 +24,7 @@
     <ClCompile Include="..\Engine\Core\Window.cpp" />
     <ClCompile Include="..\Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="..\Engine\Renderer\Device\RenderDevice.cpp" />
+    <ClCompile Include="..\Engine\Renderer\Device\Renderer.cpp" />
     <ClCompile Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="..\Engine\Resources\Buffer\VertexBuffer.cpp" />
     <ClCompile Include="..\Engine\Resources\Mesh\SkySphere.cpp" />
@@ -37,6 +38,7 @@
     <ClInclude Include="..\Engine\Core\Window.h" />
     <ClInclude Include="..\Engine\Renderer\Device\CommandContext.h" />
     <ClInclude Include="..\Engine\Renderer\Device\RenderDevice.h" />
+    <ClInclude Include="..\Engine\Renderer\Device\Renderer.h" />
     <ClInclude Include="..\Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="..\Engine\Resources\Buffer\VertexBuffer.h" />
     <ClInclude Include="..\Engine\Resources\Mesh\SkySphere.h" />
