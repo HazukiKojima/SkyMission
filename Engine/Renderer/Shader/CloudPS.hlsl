@@ -23,6 +23,10 @@ cbuffer CloudConstants : register(b0)
     int stepCount;
     float ambientIntensity;
     float3 ambientColor;
+    float oceanFogBottom;
+    float oceanFogTop;
+    float oceanFogDensity;
+    float oceanFogDistance;
 };
 
 // ============================================================
@@ -315,6 +319,92 @@ float3 ReconstructWorldPosition(float2 uv, float depth)
 }
 
 // ============================================================
+// Ocean Horizon Fog Density
+// ============================================================
+
+float OceanFogDensityAt(float3 worldPosition)
+{
+    float height = saturate(
+        (worldPosition.y - oceanFogBottom) /
+        max(oceanFogTop - oceanFogBottom, 1.0f));
+
+    // 海面付近ほど濃く、上空へ行くほど薄くする。
+    float heightDensity = 1.0f - smoothstep(
+        0.0f,
+        1.0f,
+        height);
+
+    return heightDensity;
+}
+
+// ============================================================
+// Ocean Horizon Fog
+// ============================================================
+
+float OceanHorizonFog(
+    float3 rayOrigin,
+    float3 rayDirection,
+    float maxDistance)
+{
+    float3 fogMin = float3(
+        rayOrigin.x - oceanFogDistance,
+        oceanFogBottom,
+        rayOrigin.z - oceanFogDistance);
+
+    float3 fogMax = float3(
+        rayOrigin.x + oceanFogDistance,
+        oceanFogTop,
+        rayOrigin.z + oceanFogDistance);
+
+    float fogEnter;
+    float fogExit;
+
+    if (!RayBox(
+        rayOrigin,
+        rayDirection,
+        fogMin,
+        fogMax,
+        fogEnter,
+        fogExit))
+    {
+        return 0.0f;
+    }
+
+    fogEnter = max(fogEnter, 0.0f);
+    fogExit = min(fogExit, maxDistance);
+
+    if (fogExit <= fogEnter)
+        return 0.0f;
+
+    const int FOG_STEPS = 8;
+    float distance = fogExit - fogEnter;
+    float fogStep = distance / FOG_STEPS;
+    float opticalDepth = 0.0f;
+
+    [unroll]
+    for (int i = 0; i < FOG_STEPS; ++i)
+    {
+        float t = fogEnter + fogStep * ((float) i + 0.5f);
+        float3 samplePosition = rayOrigin + rayDirection * t;
+        float density = OceanFogDensityAt(samplePosition);
+
+        opticalDepth +=
+            density *
+            oceanFogDensity *
+            fogStep;
+    }
+
+    float horizonMask = pow(
+        1.0f - saturate(abs(rayDirection.y)),
+        4.0f);
+
+    return saturate(
+        (1.0f -
+        exp(-opticalDepth)) *
+        horizonMask);
+}
+
+// ============================================================
 // Sun Light March
 // ============================================================
 
@@ -458,6 +548,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
         0
     ).rgb;
 
+    float sceneDepth = gSceneDepth.SampleLevel(
+        gSampler,
+        input.texcoord,
+        0
+    ).r;
+
     // ========================================================
     // Camera Ray
     // ========================================================
@@ -469,6 +565,42 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 rayDirection = SafeNormalize(
         farPosition -
         cameraPosition);
+
+    // ========================================================
+    // Ocean Horizon Fog
+    // ========================================================
+
+    float oceanFogDistanceLimit = oceanFogDistance;
+
+    if (sceneDepth < 0.9999f)
+    {
+        float3 scenePosition = ReconstructWorldPosition(
+            input.texcoord,
+            sceneDepth);
+
+        float sceneDistance = dot(
+            scenePosition -
+            cameraPosition,
+            rayDirection);
+
+        oceanFogDistanceLimit = min(
+            oceanFogDistanceLimit,
+            sceneDistance);
+    }
+
+    float oceanFogFactor = OceanHorizonFog(
+        cameraPosition,
+        rayDirection,
+        oceanFogDistanceLimit);
+
+    float3 horizonColor = GetSkyColor(
+        rayDirection,
+        lighting);
+
+    sceneColor = lerp(
+        sceneColor,
+        horizonColor,
+        oceanFogFactor);
 
     // ========================================================
     // Cloud Volume Intersection
@@ -493,12 +625,6 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // ========================================================
     // Scene Depth
     // ========================================================
-
-    float sceneDepth = gSceneDepth.SampleLevel(
-        gSampler,
-        input.texcoord,
-        0
-    ).r;
 
     if (sceneDepth < 0.9999f)
     {

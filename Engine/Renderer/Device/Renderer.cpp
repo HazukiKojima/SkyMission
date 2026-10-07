@@ -38,6 +38,10 @@ namespace Engine {
 		int stepCount;
 		float ambientIntensity;
 		DirectX::XMFLOAT3 ambientColor;
+		float oceanFogBottom;
+		float oceanFogTop;
+		float oceanFogDensity;
+		float oceanFogDistance;
 	};
 
 	Renderer::~Renderer() {
@@ -411,6 +415,10 @@ namespace Engine {
 		cloud->stepCount = 32;
 		cloud->ambientIntensity = 0.32f;
 		cloud->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
+		cloud->oceanFogBottom = 0.0f;
+		cloud->oceanFogTop = 350.0f;
+		cloud->oceanFogDensity = 0.00035f;
+		cloud->oceanFogDistance = 12000.0f;
 	}
 
 	void Renderer::Render(UINT width, UINT height) {
