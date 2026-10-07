@@ -1,50 +1,49 @@
 #include "Application.h"
 #include "Window.h"
-#include "../Renderer/Device/RenderDevice.h"
-#include "../Renderer/Device/CommandContext.h"
 #include "../Renderer/Device/Renderer.h"
 #include <DirectXMath.h>
 #include <chrono>
 
 namespace Engine {
+
 	Application::Application(HINSTANCE hInstance) : m_hInstance(hInstance) {}
 
-	Application::~Application() {
-		if (m_context) {
-			// GPU処理の完了を待機してリソース解放を安全に行う
-			m_context->WaitForGpu();
-		}
-	}
+	Application::~Application() {}
 
 	// アプリケーション初期化処理
 	void Application::Initialize() {
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 
+		m_renderer = std::make_unique<Renderer>();
+		m_renderer->Initialize(
+			m_window->GetHandle(),
+			m_window->GetWidth(),
+			m_window->GetHeight()
+		);
+
+		m_camera = std::make_unique<Engine::Camera>();
+		m_camera->Initialize(
+			m_window->GetHandle(),
+			DirectX::XM_PIDIV4,
+			static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()),
+			0.1f,
+			5000.0f
+		);
+
+		m_renderer->InitializeConstantBuffers(m_camera.get());
+
 		// ウィンドウリサイズ時のコールバックを設定
 		m_window->SetOnResize([this](UINT w, UINT h) {
 			// 最小化などで幅/高さが0のときは処理しない
 			if (w == 0 || h == 0) return;
-			// GPUに作業が残っている場合は完了まで待つ（リソース再作成の安全確保）
-			if (m_context) m_context->WaitForGpu();
-			m_device->Resize(w, h);
-			if (m_camera) m_camera->OnResize(w, h);
-			// リサイズ時はここでは Update() を呼ばない
+
+			m_renderer->Resize(w, h);
+
+			if (m_camera) {
+				m_camera->OnResize(w, h);
+			}
 			});
-
-		m_device = std::make_unique<RenderDevice>();
-		m_device->Initialize(m_window->GetHandle(), m_window->GetWidth(), m_window->GetHeight());
-
-		m_context = std::make_unique<CommandContext>();
-		m_context->Initialize(m_device.get());
-
-		m_renderer = std::make_unique<Renderer>();
-		m_renderer->Initialize(m_device.get(), m_context.get());
-
-		m_camera = std::make_unique<Engine::Camera>();
-		m_camera->Initialize(m_window->GetHandle(), DirectX::XM_PIDIV4, static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 0.1f, 5000.0f);
-
-		m_renderer->InitializeConstantBuffers(m_camera.get());
 
 		m_lastTime = std::chrono::steady_clock::now();
 	}
@@ -82,10 +81,12 @@ namespace Engine {
 			m_fpsFrameCount = 0;
 		}
 
-		m_elapsedTime += deltaSeconds; // use real delta time for animation speed
+		m_elapsedTime += deltaSeconds;
 
 		// Update camera first
-		if (m_camera) m_camera->Update(deltaSeconds);
+		if (m_camera) {
+			m_camera->Update(deltaSeconds);
+		}
 
 		m_renderer->Update(m_camera.get(), m_elapsedTime);
 	}

@@ -40,9 +40,19 @@ namespace Engine {
 		DirectX::XMFLOAT3 ambientColor;
 	};
 
-	void Renderer::Initialize(RenderDevice* device, CommandContext* context) {
-		m_device = device;
-		m_context = context;
+	Renderer::~Renderer() {
+		if (m_context) {
+			// GPU処理の完了を待機してリソース解放を安全に行う
+			m_context->WaitForGpu();
+		}
+	}
+
+	void Renderer::Initialize(HWND hwnd, UINT width, UINT height) {
+		m_device = std::make_unique<RenderDevice>();
+		m_device->Initialize(hwnd, width, height);
+
+		m_context = std::make_unique<CommandContext>();
+		m_context->Initialize(m_device.get());
 
 		// 基本描画用パイプライン
 		m_pipeline =
@@ -277,7 +287,7 @@ namespace Engine {
 			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
 			if (GetFileAttributesExW(modelPath.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
 				m_model = std::make_unique<Engine::Model>();
-				if (m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device, modelPath)) {
+				if (m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath)) {
 					OutputDebugStringA("Application::Initialize - FBX model loaded\n");
 				}
 				else {
@@ -480,7 +490,7 @@ namespace Engine {
 			ID3D12DescriptorHeap* modelHeaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(modelHeaps), modelHeaps);
 			cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
-			m_model->Draw(cmd, m_device);
+			m_model->Draw(cmd, m_device.get());
 		}
 
 		m_context->TransitionResource(scene, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -506,7 +516,15 @@ namespace Engine {
 
 		m_context->EndFrame();
 		m_device->Present();
-		m_context->MoveToNextFrame(m_device);
+		m_context->MoveToNextFrame(m_device.get());
 	}
 
+	void Renderer::Resize(UINT width, UINT height) {
+		if (!m_context || !m_device) {
+			return;
+		}
+
+		m_context->WaitForGpu();
+		m_device->Resize(width, height);
+	}
 }

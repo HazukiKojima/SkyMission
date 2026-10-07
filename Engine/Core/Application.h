@@ -3,13 +3,8 @@
 #include "Camera.h"
 #include <chrono>
 
-class RenderDevice;
-class CommandContext;
-
 namespace Engine {
 	class Window;
-	class RenderDevice;
-	class CommandContext;
 	class Renderer;
 
 	class Application {
@@ -28,8 +23,6 @@ namespace Engine {
 		HINSTANCE m_hInstance;
 		std::unique_ptr<Window> m_window;
 
-		std::unique_ptr<RenderDevice> m_device;
-		std::unique_ptr<CommandContext> m_context;
 		std::unique_ptr<Renderer> m_renderer;
 
 		// Camera

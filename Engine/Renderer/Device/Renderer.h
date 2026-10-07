@@ -1,29 +1,29 @@
-#pragma once
 #include "../../EngineCommon.h"
 #include "../../Resources/Buffer/VertexBuffer.h"
 #include "../../Resources/Mesh/Model.h"
 #include "../../Resources/Mesh/SkySphere.h"
 #include "../Pipeline/GraphicsPipeline.h"
 #include "../../Resources/Texture/Texture.h"
+#include "../Device/RenderDevice.h"
+#include "../Device/CommandContext.h"
 
 namespace Engine {
-	class RenderDevice;
-	class CommandContext;
 	class Camera;
 
 	class Renderer {
 	public:
 		Renderer() = default;
-		~Renderer() = default;
+		~Renderer();
 
-		void Initialize(RenderDevice* device, CommandContext* context);
+		void Initialize(HWND hwnd, UINT width, UINT height);
 		void InitializeConstantBuffers(Camera* camera);
 		void Update(Camera* camera, float elapsedTime);
 		void Render(UINT width, UINT height);
+		void Resize(UINT width, UINT height);
 
 	private:
-		RenderDevice* m_device = nullptr;
-		CommandContext* m_context = nullptr;
+		std::unique_ptr<RenderDevice> m_device;
+		std::unique_ptr<CommandContext> m_context;
 
 		std::unique_ptr<Engine::VertexBuffer> m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
