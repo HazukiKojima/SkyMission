@@ -9,7 +9,7 @@ namespace Engine {
 	struct ConstantBufferData {
 		DirectX::XMFLOAT4X4 mvp;
 		float time;
-		float padding[3];
+		float oceanOffset[3];
 		DirectX::XMFLOAT3 cameraPos;
 		float pad2;
 		DirectX::XMFLOAT3 sunDirection;
@@ -69,7 +69,7 @@ namespace Engine {
 
 		m_oceanPipeline->InitializeWithShaders(
 			m_device->GetDevice(),
-			L"BasicVS.cso",
+			L"OceanVS.cso",
 			L"OceanPS.cso",
 			2,
 			false,
@@ -337,6 +337,9 @@ namespace Engine {
 			ConstantBufferData* cbInit = reinterpret_cast<ConstantBufferData*>(m_cbvDataPtr);
 			cbInit->mvp = m;
 			cbInit->time = 0.0f;
+			cbInit->oceanOffset[0] = 10.0f;
+			cbInit->oceanOffset[1] = 0.0f;
+			cbInit->oceanOffset[2] = -10.0f;
 			cbInit->cameraPos = DirectX::XMFLOAT3(10.0f, 15.0f, -10.0f);
 			cbInit->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
 			cbInit->sunIntensity = 1.8f;
@@ -379,6 +382,10 @@ namespace Engine {
 		if (camera) {
 			auto camPos = camera->GetPosition();
 			data->cameraPos = camPos;
+
+			data->oceanOffset[0] = camPos.x;
+			data->oceanOffset[1] = 0.0f;
+			data->oceanOffset[2] = camPos.z;
 		}
 		data->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
 		data->sunIntensity = 1.8f;

@@ -139,5 +139,8 @@
     <FxCompile Include="Engine\Renderer\Shader\SkyVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\OceanVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
