@@ -20,7 +20,7 @@ struct PS_INPUT
     float3 worldPos : TEXCOORD1;
 };
 
-PS_INPUT main(VS_INPUT input)
+PS_INPUT VS(VS_INPUT input)
 {
     PS_INPUT output;
 
