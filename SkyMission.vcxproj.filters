@@ -25,6 +25,12 @@
     <Filter Include="Engine\Renderer\Pipeline">
       <UniqueIdentifier>{e7d0d959-8ab3-4e1b-96fa-0002c15333fc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Resources\Mesh">
+      <UniqueIdentifier>{7272f4cc-86f4-478a-b597-81449d6f3e32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Resources\Texture">
+      <UniqueIdentifier>{34ae2c3c-d26a-4887-b6c8-36809e90687f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Core\Application.cpp">
@@ -46,6 +52,21 @@
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp">
       <Filter>Engine\Renderer\Pipeline</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Core\Camera.cpp">
+      <Filter>Engine\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\Renderer.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\Model.cpp">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Texture\Texture.cpp">
+      <Filter>Engine\Resources\Texture</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.h">
@@ -63,15 +84,32 @@
     <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h">
       <Filter>Engine\Resources\Buffer</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Shader\Common.hlsli">
-      <Filter>Engine\Renderer\Shader</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h">
       <Filter>Engine\Renderer\Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Core\Camera.h">
+      <Filter>Engine\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\Renderer.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\SkySphere.h">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Texture\Texture.h">
+      <Filter>Engine\Resources\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\Model.h">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="Engine\Renderer\Shader\Common.hlsli">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </None>
+    <None Include="Engine\Renderer\Shader\CommonLighting.hlsli">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Engine\Renderer\Shader\BasicVS.hlsl">
@@ -80,7 +118,28 @@
     <FxCompile Include="Engine\Renderer\Shader\BasicPS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\VertexShader.hlsl">
+    <FxCompile Include="Engine\Renderer\Shader\CloudPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\CloudVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\ModelPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\ModelVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\OceanPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\SkyPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\SkyVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\OceanVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
   </ItemGroup>
