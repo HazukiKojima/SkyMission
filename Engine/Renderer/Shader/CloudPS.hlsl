@@ -376,7 +376,7 @@ float OceanHorizonFog(
     if (fogExit <= fogEnter)
         return 0.0f;
 
-    const int FOG_STEPS = 8;
+    const int FOG_STEPS = 24;
     float distance = fogExit - fogEnter;
     float fogStep = distance / FOG_STEPS;
     float opticalDepth = 0.0f;

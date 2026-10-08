@@ -20,6 +20,7 @@ namespace Engine {
 		void Update(Camera* camera, float elapsedTime);
 		void Render(UINT width, UINT height);
 		void Resize(UINT width, UINT height);
+		float GetOceanSize() const { return m_oceanSize; }
 
 	private:
 		std::unique_ptr<RenderDevice> m_device;
@@ -51,6 +52,7 @@ namespace Engine {
 		UINT8* m_cloudCbvDataPtr = nullptr;
 
 		UINT m_vertexCount;
+		float m_oceanSize = 10000000.0f;
 
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;

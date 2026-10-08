@@ -22,6 +22,12 @@ cbuffer MatrixBuffer : register(b0)
 
     float3 ambientColor;
     float pad3;
+
+    float oceanSize;
+    float oceanUvReferenceSize;
+    float oceanFogStartRatio;
+    float oceanFogEndRatio;
+    float oceanWaveScale;
 };
 
 // ============================================================
@@ -52,9 +58,11 @@ struct PS_INPUT
 
 float3 SampleOceanNormal(float3 wavePos)
 {
-    float2 uv1 = wavePos.xz * 0.010f + float2(time * 0.010f, time * -0.007f);
-    float2 uv2 = wavePos.xz * 0.035f + float2(time * -0.014f, time * 0.009f);
-    float2 uv3 = wavePos.xz * 0.090f + float2(time * 0.025f, time * 0.018f);
+    float uvScale = 1.0f / max(oceanWaveScale, 1e-4f);
+
+    float2 uv1 = (wavePos.xz * 0.010f + float2(time * 0.010f, time * -0.007f)) * uvScale;
+    float2 uv2 = (wavePos.xz * 0.035f + float2(time * -0.014f, time * 0.009f)) * uvScale;
+    float2 uv3 = (wavePos.xz * 0.090f + float2(time * 0.025f, time * 0.018f)) * uvScale;
 
     float3 n1 = gOceanNormal.Sample(gSampler, uv1).xyz * 2.0f - 1.0f;
     float3 n2 = gOceanNormal.Sample(gSampler, uv2).xyz * 2.0f - 1.0f;
@@ -174,10 +182,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Wave Brightness
     // --------------------------------------------------------
 
+    float uvScale = 1.0f / max(oceanWaveScale, 1e-4f);
+
     float wavePattern = gDiffuse.Sample(
         gSampler,
-        input.wavePos.xz * 0.025f +
-        float2(time * 0.006f, -time * 0.004f)
+        (input.wavePos.xz * 0.025f + float2(time * 0.006f, -time * 0.004f)) * uvScale
     ).r;
 
     wavePattern = smoothstep(0.30f, 0.70f, wavePattern);
@@ -202,20 +211,28 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float distanceToCamera = length(cameraPos - input.worldPos);
 
-    float fogStart = 1500.0f;
-    float fogEnd = 12000.0f;
+    float fogStart = oceanSize * oceanFogStartRatio;
+    float fogEnd = max(oceanSize * oceanFogEndRatio, fogStart + 1.0f);
 
     float fogFactor = saturate(
         (distanceToCamera - fogStart) /
         (fogEnd - fogStart)
     );
 
+    float2 oceanLocalPosition = input.wavePos.xz - cameraPos.xz;
+    float oceanEdgeDistance = max(
+        abs(oceanLocalPosition.x),
+        abs(oceanLocalPosition.y)
+    ) / max(oceanSize * 0.5f, 1.0f);
+    float edgeFade = smoothstep(0.82f, 0.98f, oceanEdgeDistance);
+    fogFactor = max(fogFactor, edgeFade);
+
     float horizon = pow(
         1.0f - saturate(abs(V.y)),
         4.0f
     );
 
-    fogFactor = max(fogFactor, horizon * 0.75f);
+    fogFactor = max(fogFactor, horizon * 0.2f);
 
     float3 atmosphere = GetSkyColor(V, lighting);
 
@@ -225,6 +242,10 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Tonemapping
     // --------------------------------------------------------
 
+    //color = ToneMapReinhard(color);
+
+    //return float4(saturate(color), 1.0f);
+    
     color = ToneMapReinhard(color);
 
     return float4(saturate(color), 1.0f);
