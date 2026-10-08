@@ -58,11 +58,12 @@ struct PS_INPUT
 
 float3 SampleOceanNormal(float3 wavePos)
 {
-    float uvScale = 1.0f / max(oceanWaveScale, 1e-4f);
+    float detailScale = min(oceanWaveScale, 25.0f);
+    float uvScale = 1.0f / max(detailScale, 1e-4f);
 
-    float2 uv1 = (wavePos.xz * 0.010f + float2(time * 0.010f, time * -0.007f)) * uvScale;
-    float2 uv2 = (wavePos.xz * 0.035f + float2(time * -0.014f, time * 0.009f)) * uvScale;
-    float2 uv3 = (wavePos.xz * 0.090f + float2(time * 0.025f, time * 0.018f)) * uvScale;
+    float2 uv1 = (wavePos.xz * 0.010f + float2(time * 0.12f, time * -0.08f)) * uvScale;
+    float2 uv2 = (wavePos.xz * 0.035f + float2(time * -0.25f, time * 0.18f)) * uvScale;
+    float2 uv3 = (wavePos.xz * 0.090f + float2(time * 0.45f, time * 0.32f)) * uvScale;
 
     float3 n1 = gOceanNormal.Sample(gSampler, uv1).xyz * 2.0f - 1.0f;
     float3 n2 = gOceanNormal.Sample(gSampler, uv2).xyz * 2.0f - 1.0f;
@@ -182,11 +183,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Wave Brightness
     // --------------------------------------------------------
 
-    float uvScale = 1.0f / max(oceanWaveScale, 1e-4f);
+    float detailScale = min(oceanWaveScale, 25.0f);
+    float uvScale = 1.0f / max(detailScale, 1e-4f);
 
     float wavePattern = gDiffuse.Sample(
         gSampler,
-        (input.wavePos.xz * 0.025f + float2(time * 0.006f, -time * 0.004f)) * uvScale
+        (input.wavePos.xz * 0.025f + float2(time * 0.40f, -time * 0.30f)) * uvScale
     ).r;
 
     wavePattern = smoothstep(0.30f, 0.70f, wavePattern);
@@ -224,7 +226,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         abs(oceanLocalPosition.x),
         abs(oceanLocalPosition.y)
     ) / max(oceanSize * 0.5f, 1.0f);
-    float edgeFade = smoothstep(0.82f, 0.98f, oceanEdgeDistance);
+    float edgeFade = smoothstep(0.98f, 0.995f, oceanEdgeDistance);
     fogFactor = max(fogFactor, edgeFade);
 
     float horizon = pow(
@@ -234,7 +236,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     fogFactor = max(fogFactor, horizon * 0.2f);
 
-    float3 atmosphere = GetSkyColor(V, lighting);
+    float3 atmosphere = GetSkyColor(-V, lighting);
 
     color = lerp(color, atmosphere, fogFactor);
 
@@ -248,5 +250,5 @@ float4 PS(PS_INPUT input) : SV_TARGET
     
     color = ToneMapReinhard(color);
 
-    return float4(saturate(color), 1.0f);
+    return float4(saturate(color), 0.0f);
 }

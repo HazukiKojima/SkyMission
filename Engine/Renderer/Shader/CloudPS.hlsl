@@ -334,7 +334,13 @@ float OceanFogDensityAt(float3 worldPosition)
         1.0f,
         height);
 
-    return heightDensity;
+    float2 oceanLocalPosition = worldPosition.xz - cameraPosition.xz;
+    float oceanEdgeDistance = max(
+        abs(oceanLocalPosition.x),
+        abs(oceanLocalPosition.y)) / max(oceanFogDistance, 1.0f);
+    float edgeDensity = smoothstep(0.58f, 0.98f, oceanEdgeDistance);
+
+    return heightDensity * edgeDensity;
 }
 
 // ============================================================
@@ -402,6 +408,35 @@ float OceanHorizonFog(
         (1.0f -
         exp(-opticalDepth)) *
         horizonMask);
+}
+
+float3 SampleSceneSkyAbove(float2 uv, float pixelHeight, float3 fallback)
+{
+    [unroll]
+    for (int i = 0; i < 8; ++i)
+    {
+        float sampleOffset = pixelHeight * exp2((float)i);
+        float2 sampleUv = float2(
+            uv.x,
+            max(uv.y - sampleOffset, pixelHeight * 0.5f));
+        float sampleDepth = gSceneDepth.SampleLevel(
+            gSampler,
+            sampleUv,
+            0).r;
+
+        if (sampleDepth >= 1.0f)
+        {
+            float4 sampleColor = gSceneColor.SampleLevel(
+                gSampler,
+                sampleUv,
+                0);
+
+            if (sampleColor.a > 0.99f)
+                return sampleColor.rgb;
+        }
+    }
+
+    return fallback;
 }
 
 // ============================================================
@@ -542,17 +577,19 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Scene
     // ========================================================
 
-    float3 sceneColor = gSceneColor.SampleLevel(
+    float4 sceneSample = gSceneColor.SampleLevel(
         gSampler,
         input.texcoord,
-        0
-    ).rgb;
+        0);
+    float3 sceneColor = sceneSample.rgb;
+    bool isOceanPixel = sceneSample.a < 0.5f;
 
     float sceneDepth = gSceneDepth.SampleLevel(
         gSampler,
         input.texcoord,
         0
     ).r;
+    float pixelHeight = max(abs(ddy(input.texcoord.y)), 1e-6f);
 
     // ========================================================
     // Camera Ray
@@ -571,31 +608,45 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // ========================================================
 
     float oceanFogDistanceLimit = oceanFogDistance;
+    float sceneDistance = oceanFogDistance;
+    float oceanEdgeFade = 0.0f;
 
-    if (sceneDepth < 0.9999f)
+    if (isOceanPixel)
     {
-        float3 scenePosition = ReconstructWorldPosition(
-            input.texcoord,
-            sceneDepth);
+        if (abs(rayDirection.y) > 1e-5f)
+            sceneDistance = max(-cameraPosition.y / rayDirection.y, 0.0f);
 
-        float sceneDistance = dot(
-            scenePosition -
-            cameraPosition,
-            rayDirection);
-
-        oceanFogDistanceLimit = min(
-            oceanFogDistanceLimit,
-            sceneDistance);
+        float3 oceanPosition = cameraPosition + rayDirection * sceneDistance;
+        float2 oceanLocalPosition = oceanPosition.xz - cameraPosition.xz;
+        float oceanEdgeDistance = max(
+            abs(oceanLocalPosition.x),
+            abs(oceanLocalPosition.y)) / max(oceanFogDistance, 1.0f);
+        oceanEdgeFade = smoothstep(0.98f, 0.995f, oceanEdgeDistance);
+    }
+    else if (sceneDepth < 1.0f)
+    {
+        float3 scenePosition = ReconstructWorldPosition(input.texcoord, sceneDepth);
+        sceneDistance = dot(scenePosition - cameraPosition, rayDirection);
     }
 
-    float oceanFogFactor = OceanHorizonFog(
-        cameraPosition,
-        rayDirection,
-        oceanFogDistanceLimit);
+    oceanFogDistanceLimit = min(oceanFogDistanceLimit, sceneDistance);
 
-    float3 horizonColor = GetSkyColor(
+    float oceanFogFactor = 0.0f;
+    if (isOceanPixel || sceneDepth < 1.0f)
+    {
+        oceanFogFactor = OceanHorizonFog(
+            cameraPosition,
+            rayDirection,
+            oceanFogDistanceLimit);
+        oceanFogFactor = max(oceanFogFactor, oceanEdgeFade);
+    }
+
+    float3 horizonFallback = ToneMapReinhard(GetSkyColor(
         rayDirection,
-        lighting);
+        lighting));
+    float3 horizonColor = horizonFallback;
+    if (isOceanPixel && oceanFogFactor > 0.001f)
+        horizonColor = SampleSceneSkyAbove(input.texcoord, pixelHeight, horizonFallback);
 
     sceneColor = lerp(
         sceneColor,
@@ -626,17 +677,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Scene Depth
     // ========================================================
 
-    if (sceneDepth < 0.9999f)
+    if (isOceanPixel || sceneDepth < 1.0f)
     {
-        float3 scenePosition = ReconstructWorldPosition(
-            input.texcoord,
-            sceneDepth);
-
-        float sceneDistance = dot(
-            scenePosition -
-            cameraPosition,
-            rayDirection);
-
         cloudExit = min(
             cloudExit,
             sceneDistance);

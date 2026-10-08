@@ -13,8 +13,8 @@ namespace Engine {
 		constexpr float kOceanUvReferenceSize = 20000.0f;
 		constexpr float kOceanFogStartRatio = 0.65f;
 		constexpr float kOceanFogEndRatio = 10000.0f / kDefaultOceanSize;
-		constexpr float kCloudOceanFogTopRatio = 350.0f / kDefaultOceanSize;
-		constexpr float kCloudOceanFogDensityAtDefaultSize = 0.000035f;
+		constexpr float kCloudOceanFogTop = 350.0f;
+		constexpr float kCloudOceanFogDensityAtDefaultSize = 0.00056f;
 		constexpr float kCloudOceanFogDistanceRatio = 10000.0f / kDefaultOceanSize;
 	}
 
@@ -455,7 +455,7 @@ namespace Engine {
 		cloud->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 		const float oceanScale = kDefaultOceanSize / oceanSizeSafe;
 		cloud->oceanFogBottom = 0.0f;
-		cloud->oceanFogTop = m_oceanSize * kCloudOceanFogTopRatio;
+		cloud->oceanFogTop = kCloudOceanFogTop;
 		cloud->oceanFogDensity = kCloudOceanFogDensityAtDefaultSize * oceanScale;
 		cloud->oceanFogDistance = m_oceanSize * kCloudOceanFogDistanceRatio;
 	}
