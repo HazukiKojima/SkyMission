@@ -9,13 +9,17 @@
 namespace Engine {
 
 	namespace {
-		constexpr float kDefaultOceanSize = 20000.0f;
-		constexpr float kOceanUvReferenceSize = 20000.0f;
-		constexpr float kOceanFogStartRatio = 0.65f;
-		constexpr float kOceanFogEndRatio = 10000.0f / kDefaultOceanSize;
+		constexpr float kOceanWaveLength = 40000.0f;
+		constexpr float kOceanWaveSteepness = 0.014f;
+		constexpr float kOceanNormalUvScale = 0.04f;
+		constexpr float kOceanWavePatternUvScale = 0.04f;
+		constexpr float kOceanFogStartDistance = 6500000.0f;
+		constexpr float kOceanFogEndDistance = 10000000.0f;
+		constexpr float kOceanEdgeFadeStart = 0.98f;
+		constexpr float kOceanEdgeFadeWidth = 0.015f;
 		constexpr float kCloudOceanFogTop = 350.0f;
-		constexpr float kCloudOceanFogDensityAtDefaultSize = 0.00056f;
-		constexpr float kCloudOceanFogDistanceRatio = 10000.0f / kDefaultOceanSize;
+		constexpr float kCloudOceanFogDensity = 0.00000112f;
+		constexpr float kCloudOceanFogDistance = 5000000.0f;
 	}
 
 	struct ConstantBufferData {
@@ -31,10 +35,14 @@ namespace Engine {
 		DirectX::XMFLOAT3 ambientColor;
 		float pad3;
 		float oceanSize;
-		float oceanUvReferenceSize;
-		float oceanFogStartRatio;
-		float oceanFogEndRatio;
-		float oceanWaveScale;
+		float oceanWaveLength;
+		float oceanWaveSteepness;
+		float oceanNormalUvScale;
+		float oceanWavePatternUvScale;
+		float oceanFogStartDistance;
+		float oceanFogEndDistance;
+		float oceanEdgeFadeStart;
+		float oceanEdgeFadeWidth;
 	};
 
 	struct CloudConstants {
@@ -368,10 +376,14 @@ namespace Engine {
 			cbInit->ambientIntensity = 0.32f;
 			cbInit->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 			cbInit->oceanSize = m_oceanSize;
-			cbInit->oceanUvReferenceSize = kOceanUvReferenceSize;
-			cbInit->oceanFogStartRatio = kOceanFogStartRatio;
-			cbInit->oceanFogEndRatio = kOceanFogEndRatio;
-			cbInit->oceanWaveScale = m_oceanSize / kOceanUvReferenceSize;
+			cbInit->oceanWaveLength = kOceanWaveLength;
+			cbInit->oceanWaveSteepness = kOceanWaveSteepness;
+			cbInit->oceanNormalUvScale = kOceanNormalUvScale;
+			cbInit->oceanWavePatternUvScale = kOceanWavePatternUvScale;
+			cbInit->oceanFogStartDistance = kOceanFogStartDistance;
+			cbInit->oceanFogEndDistance = kOceanFogEndDistance;
+			cbInit->oceanEdgeFadeStart = kOceanEdgeFadeStart;
+			cbInit->oceanEdgeFadeWidth = kOceanEdgeFadeWidth;
 		}
 
 		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
@@ -425,15 +437,18 @@ namespace Engine {
 		data->ambientIntensity = 0.32f;
 		data->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
 		data->oceanSize = m_oceanSize;
-		data->oceanUvReferenceSize = kOceanUvReferenceSize;
-		const float oceanSizeSafe = (m_oceanSize > 1.0f) ? m_oceanSize : 1.0f;
-		const float baseFogStart = m_oceanSize * kOceanFogStartRatio;
-		const float fogStart = (cameraHeight > baseFogStart) ? cameraHeight : baseFogStart;
-		const float baseFogEnd = m_oceanSize * kOceanFogEndRatio;
-		const float fogEnd = (oceanCornerDistance > baseFogEnd) ? oceanCornerDistance : baseFogEnd;
-		data->oceanFogStartRatio = fogStart / oceanSizeSafe;
-		data->oceanFogEndRatio = fogEnd / oceanSizeSafe;
-		data->oceanWaveScale = m_oceanSize / kOceanUvReferenceSize;
+		data->oceanWaveLength = kOceanWaveLength;
+		data->oceanWaveSteepness = kOceanWaveSteepness;
+		data->oceanNormalUvScale = kOceanNormalUvScale;
+		data->oceanWavePatternUvScale = kOceanWavePatternUvScale;
+		data->oceanFogStartDistance = (cameraHeight > kOceanFogStartDistance)
+			? cameraHeight
+			: kOceanFogStartDistance;
+		data->oceanFogEndDistance = (std::max)(
+			(std::max)(oceanCornerDistance, kOceanFogEndDistance),
+			data->oceanFogStartDistance + 1.0f);
+		data->oceanEdgeFadeStart = kOceanEdgeFadeStart;
+		data->oceanEdgeFadeWidth = kOceanEdgeFadeWidth;
 
 		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
 		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));
@@ -453,11 +468,10 @@ namespace Engine {
 		cloud->stepCount = 32;
 		cloud->ambientIntensity = 0.32f;
 		cloud->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
-		const float oceanScale = kDefaultOceanSize / oceanSizeSafe;
 		cloud->oceanFogBottom = 0.0f;
 		cloud->oceanFogTop = kCloudOceanFogTop;
-		cloud->oceanFogDensity = kCloudOceanFogDensityAtDefaultSize * oceanScale;
-		cloud->oceanFogDistance = m_oceanSize * kCloudOceanFogDistanceRatio;
+		cloud->oceanFogDensity = kCloudOceanFogDensity;
+		cloud->oceanFogDistance = kCloudOceanFogDistance;
 	}
 
 	void Renderer::Render(UINT width, UINT height) {

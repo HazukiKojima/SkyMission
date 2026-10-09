@@ -24,10 +24,14 @@ cbuffer MatrixBuffer : register(b0)
     float pad3;
 
     float oceanSize;
-    float oceanUvReferenceSize;
-    float oceanFogStartRatio;
-    float oceanFogEndRatio;
-    float oceanWaveScale;
+    float oceanWaveLength;
+    float oceanWaveSteepness;
+    float oceanNormalUvScale;
+    float oceanWavePatternUvScale;
+    float oceanFogStartDistance;
+    float oceanFogEndDistance;
+    float oceanEdgeFadeStart;
+    float oceanEdgeFadeWidth;
 };
 
 // ============================================================
@@ -58,8 +62,7 @@ struct PS_INPUT
 
 float3 SampleOceanNormal(float3 wavePos)
 {
-    float detailScale = min(oceanWaveScale, 25.0f);
-    float uvScale = 1.0f / max(detailScale, 1e-4f);
+    float uvScale = max(oceanNormalUvScale, 1e-6f);
 
     float2 uv1 = (wavePos.xz * 0.010f + float2(time * 0.12f, time * -0.08f)) * uvScale;
     float2 uv2 = (wavePos.xz * 0.035f + float2(time * -0.25f, time * 0.18f)) * uvScale;
@@ -183,12 +186,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Wave Brightness
     // --------------------------------------------------------
 
-    float detailScale = min(oceanWaveScale, 25.0f);
-    float uvScale = 1.0f / max(detailScale, 1e-4f);
-
     float wavePattern = gDiffuse.Sample(
         gSampler,
-        (input.wavePos.xz * 0.025f + float2(time * 0.40f, -time * 0.30f)) * uvScale
+        (input.wavePos.xz * 0.025f +
+         float2(time * 0.40f, -time * 0.30f)) *
+        oceanWavePatternUvScale
     ).r;
 
     wavePattern = smoothstep(0.30f, 0.70f, wavePattern);
@@ -213,8 +215,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float distanceToCamera = length(cameraPos - input.worldPos);
 
-    float fogStart = oceanSize * oceanFogStartRatio;
-    float fogEnd = max(oceanSize * oceanFogEndRatio, fogStart + 1.0f);
+    float fogStart = oceanFogStartDistance;
+    float fogEnd = max(oceanFogEndDistance, fogStart + 1.0f);
 
     float fogFactor = saturate(
         (distanceToCamera - fogStart) /
@@ -226,7 +228,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
         abs(oceanLocalPosition.x),
         abs(oceanLocalPosition.y)
     ) / max(oceanSize * 0.5f, 1.0f);
-    float edgeFade = smoothstep(0.98f, 0.995f, oceanEdgeDistance);
+    float edgeFadeEnd = min(oceanEdgeFadeStart + oceanEdgeFadeWidth, 1.0f);
+    float edgeFade = smoothstep(
+        oceanEdgeFadeStart,
+        max(edgeFadeEnd, oceanEdgeFadeStart + 1e-4f),
+        oceanEdgeDistance
+    );
     fogFactor = max(fogFactor, edgeFade);
 
     float horizon = pow(
