@@ -10,7 +10,7 @@ namespace Engine {
 
 	namespace {
 		constexpr float kOceanWaveLength = 40000.0f;
-		constexpr float kOceanWaveSteepness = 0.014f;
+		constexpr float kOceanWaveSteepness = 0.0f;
 		constexpr float kOceanNormalUvScale = 0.04f;
 		constexpr float kOceanWavePatternUvScale = 0.04f;
 		constexpr float kOceanFogStartDistance = 6500000.0f;
@@ -223,7 +223,7 @@ namespace Engine {
 
 		// Assets 配下の候補パスを作成
 		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg";
-		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
+		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path, true, true)) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
 		m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
@@ -241,7 +241,7 @@ namespace Engine {
 		for (const auto& normalPath : normalTexturePaths) {
 			WIN32_FILE_ATTRIBUTE_DATA normalFileInfo;
 			if (GetFileAttributesExW(normalPath.c_str(), GetFileExInfoStandard, &normalFileInfo) != 0 &&
-				m_oceanNormalTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), normalPath, false)) {
+				m_oceanNormalTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), normalPath, false, true)) {
 				normalTextureLoaded = true;
 				break;
 			}

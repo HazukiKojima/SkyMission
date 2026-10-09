@@ -9,7 +9,7 @@ namespace Engine {
 		Texture() = default;
 		~Texture() = default;
 
-		bool LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb = true);
+		bool LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb = true, bool generateMipmaps = false);
 		// 作業用の単色テクスチャを作成する（ロード失敗時のフォールバック）
 		bool CreateFromSolidColor(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
 		void CreateShaderResourceView(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE srvHandle) const;

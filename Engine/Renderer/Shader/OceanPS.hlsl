@@ -122,16 +122,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
     );
 
     float NdotV = saturate(dot(N, V));
-    float NdotL = saturate(dot(N, L));
 
     // --------------------------------------------------------
     // Water Material
     // --------------------------------------------------------
 
-    float3 F0 = float3(0.020f, 0.020f, 0.020f);
-
-    float3 F = FresnelSchlickRoughness(NdotV, F0, 0.08f);
-    F = max(F, 0.035f);
+    float3 F = float3(0.035f, 0.035f, 0.035f);
 
     // --------------------------------------------------------
     // Reflection
@@ -145,20 +141,20 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Water Color
     // --------------------------------------------------------
 
-    float3 waterColor = float3(0.015f, 0.075f, 0.12f);
-    float3 waterBase = waterColor * 0.35f;
+    float3 waterColor = float3(0.015f, 0.065f, 0.14f);
+    float3 waterBase = waterColor * 0.65f;
 
     // --------------------------------------------------------
     // Ocean Specular
     // --------------------------------------------------------
 
     float3 sunSpecular = CalculateSunSpecular(
-    N,
-    V,
-    L,
-    0.08f,
-    lighting
-);
+        N,
+        V,
+        L,
+        0.08f,
+        lighting
+    );
 
     // --------------------------------------------------------
     // Ambient
@@ -178,9 +174,9 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float backLight = saturate(dot(-L, N));
 
     float3 subsurface =
-        float3(0.00f, 0.12f, 0.18f) *
-        pow(backLight, 2.0f) *
-        0.35f;
+    float3(0.005f, 0.035f, 0.10f) *
+    pow(backLight, 2.0f) *
+    0.25f;
 
     // --------------------------------------------------------
     // Wave Brightness
@@ -213,49 +209,21 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Atmospheric Fog
     // --------------------------------------------------------
 
-    float distanceToCamera = length(cameraPos - input.worldPos);
-
-    float fogStart = oceanFogStartDistance;
-    float fogEnd = max(oceanFogEndDistance, fogStart + 1.0f);
-
-    float fogFactor = saturate(
-        (distanceToCamera - fogStart) /
-        (fogEnd - fogStart)
-    );
-
-    float2 oceanLocalPosition = input.wavePos.xz - cameraPos.xz;
-    float oceanEdgeDistance = max(
-        abs(oceanLocalPosition.x),
-        abs(oceanLocalPosition.y)
-    ) / max(oceanSize * 0.5f, 1.0f);
-    float edgeFadeEnd = min(oceanEdgeFadeStart + oceanEdgeFadeWidth, 1.0f);
-    float edgeFade = smoothstep(
-        oceanEdgeFadeStart,
-        max(edgeFadeEnd, oceanEdgeFadeStart + 1e-4f),
-        oceanEdgeDistance
-    );
-    fogFactor = max(fogFactor, edgeFade);
-
-    float horizon = pow(
-        1.0f - saturate(abs(V.y)),
-        4.0f
-    );
-
+    float cameraDistance = length(cameraPos - input.worldPos);
+    float fogFactor = 1.0f - exp(-cameraDistance * 0.000006f);
+    fogFactor = saturate(fogFactor);
+    float horizon = pow(1.0f - saturate(abs(V.y)), 4.0f);
     fogFactor = max(fogFactor, horizon * 0.2f);
-
     float3 atmosphere = GetSkyColor(-V, lighting);
-
+    atmosphere = lerp(atmosphere, float3(0.75f, 0.85f, 0.92f), 0.35f);
+    fogFactor *= 0.5f;
     color = lerp(color, atmosphere, fogFactor);
 
     // --------------------------------------------------------
     // Tonemapping
     // --------------------------------------------------------
 
-    //color = ToneMapReinhard(color);
-
-    //return float4(saturate(color), 1.0f);
-    
     color = ToneMapReinhard(color);
 
-    return float4(saturate(color), 0.0f);
+    return float4(saturate(color), 1.0f);
 }
