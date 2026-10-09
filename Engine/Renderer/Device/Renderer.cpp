@@ -441,12 +441,8 @@ namespace Engine {
 		data->oceanWaveSteepness = kOceanWaveSteepness;
 		data->oceanNormalUvScale = kOceanNormalUvScale;
 		data->oceanWavePatternUvScale = kOceanWavePatternUvScale;
-		data->oceanFogStartDistance = (cameraHeight > kOceanFogStartDistance)
-			? cameraHeight
-			: kOceanFogStartDistance;
-		data->oceanFogEndDistance = (std::max)(
-			(std::max)(oceanCornerDistance, kOceanFogEndDistance),
-			data->oceanFogStartDistance + 1.0f);
+		data->oceanFogStartDistance = kOceanFogStartDistance;
+		data->oceanFogEndDistance = kOceanFogEndDistance;
 		data->oceanEdgeFadeStart = kOceanEdgeFadeStart;
 		data->oceanEdgeFadeWidth = kOceanEdgeFadeWidth;
 
