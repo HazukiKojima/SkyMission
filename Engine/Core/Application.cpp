@@ -27,8 +27,8 @@ namespace Engine {
 			m_window->GetHandle(),
 			DirectX::XM_PIDIV4,
 			static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()),
-			0.1f,
-			5000.0f
+			1.0f,
+			m_renderer->GetOceanSize()
 		);
 
 		m_renderer->InitializeConstantBuffers(m_camera.get());

@@ -7,6 +7,14 @@ cbuffer MatrixBuffer : register(b0)
 
     float3 cameraPos;
     float pad2;
+
+    float4 oceanLightingPadding[3];
+
+    float oceanSize;
+    float oceanUvReferenceSize;
+    float oceanFogStartRatio;
+    float oceanFogEndRatio;
+    float oceanWaveScale;
 };
 
 struct VS_INPUT
@@ -35,7 +43,7 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
     float c = sqrt(9.8f / k);
     float2 d = normalize(dir);
 
-    float f = k * (dot(d, p.xz) - c * time * 0.8f) + phaseOffset;
+    float f = k * (dot(d, p.xz) - c * time * 3.0f) + phaseOffset;
     float a = steepness / k;
 
     float sinf = sin(f);
@@ -84,8 +92,8 @@ PS_INPUT VS(VS_INPUT input)
     // --------------------------------------------------------
 
     float2 baseWindDir = normalize(float2(1.0f, 0.6f));
-    float wavelength = 30.0f;
-    float steepness = 0.055f;
+    float wavelength = 80.0f * max(oceanWaveScale, 1e-4f);
+    float steepness = 0.014f;
 
     const int NUM_WAVES = 6;
 

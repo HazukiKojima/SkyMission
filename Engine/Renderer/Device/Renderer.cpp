@@ -3,8 +3,20 @@
 #include "../Device/CommandContext.h"
 #include "../../Core/Camera.h"
 #include <DirectXMath.h>
+#include <algorithm>
+#include <cmath>
 
 namespace Engine {
+
+	namespace {
+		constexpr float kDefaultOceanSize = 20000.0f;
+		constexpr float kOceanUvReferenceSize = 20000.0f;
+		constexpr float kOceanFogStartRatio = 0.65f;
+		constexpr float kOceanFogEndRatio = 10000.0f / kDefaultOceanSize;
+		constexpr float kCloudOceanFogTop = 350.0f;
+		constexpr float kCloudOceanFogDensityAtDefaultSize = 0.00056f;
+		constexpr float kCloudOceanFogDistanceRatio = 10000.0f / kDefaultOceanSize;
+	}
 
 	struct ConstantBufferData {
 		DirectX::XMFLOAT4X4 mvp;
@@ -18,6 +30,11 @@ namespace Engine {
 		float ambientIntensity;
 		DirectX::XMFLOAT3 ambientColor;
 		float pad3;
+		float oceanSize;
+		float oceanUvReferenceSize;
+		float oceanFogStartRatio;
+		float oceanFogEndRatio;
+		float oceanWaveScale;
 	};
 
 	struct CloudConstants {
@@ -124,7 +141,7 @@ namespace Engine {
 		};
 		// --- グリッドメッシュ作成 ---
 		const int gridSize = 1000;
-		const float oceanSize = 5000.0f;
+		const float oceanSize = m_oceanSize;
 
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
@@ -350,6 +367,11 @@ namespace Engine {
 			cbInit->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
 			cbInit->ambientIntensity = 0.32f;
 			cbInit->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
+			cbInit->oceanSize = m_oceanSize;
+			cbInit->oceanUvReferenceSize = kOceanUvReferenceSize;
+			cbInit->oceanFogStartRatio = kOceanFogStartRatio;
+			cbInit->oceanFogEndRatio = kOceanFogEndRatio;
+			cbInit->oceanWaveScale = m_oceanSize / kOceanUvReferenceSize;
 		}
 
 		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
@@ -366,6 +388,13 @@ namespace Engine {
 	void Renderer::Update(Camera* camera, float elapsedTime) {
 		// MVPを計算して定数バッファにセット
 		using namespace DirectX;
+		const auto camPos = camera->GetPosition();
+		const float cameraHeight = (camPos.y < 0.0f) ? -camPos.y : camPos.y;
+		const float oceanHalfDiagonal = m_oceanSize * 0.70710678f;
+		const float oceanCornerDistance = std::sqrt(
+			oceanHalfDiagonal * oceanHalfDiagonal + cameraHeight * cameraHeight);
+		camera->SetFarPlane(oceanCornerDistance * 1.1f);
+
 		XMMATRIX world = XMMatrixIdentity();
 		XMMATRIX view = camera->GetView();
 
@@ -384,7 +413,6 @@ namespace Engine {
 		data->time = elapsedTime;
 		// カメラ位置などの情報をセット（VS/PSで参照）
 		if (camera) {
-			auto camPos = camera->GetPosition();
 			data->cameraPos = camPos;
 
 			data->oceanOffset[0] = camPos.x;
@@ -396,6 +424,16 @@ namespace Engine {
 		data->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
 		data->ambientIntensity = 0.32f;
 		data->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
+		data->oceanSize = m_oceanSize;
+		data->oceanUvReferenceSize = kOceanUvReferenceSize;
+		const float oceanSizeSafe = (m_oceanSize > 1.0f) ? m_oceanSize : 1.0f;
+		const float baseFogStart = m_oceanSize * kOceanFogStartRatio;
+		const float fogStart = (cameraHeight > baseFogStart) ? cameraHeight : baseFogStart;
+		const float baseFogEnd = m_oceanSize * kOceanFogEndRatio;
+		const float fogEnd = (oceanCornerDistance > baseFogEnd) ? oceanCornerDistance : baseFogEnd;
+		data->oceanFogStartRatio = fogStart / oceanSizeSafe;
+		data->oceanFogEndRatio = fogEnd / oceanSizeSafe;
+		data->oceanWaveScale = m_oceanSize / kOceanUvReferenceSize;
 
 		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
 		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));
@@ -415,10 +453,11 @@ namespace Engine {
 		cloud->stepCount = 32;
 		cloud->ambientIntensity = 0.32f;
 		cloud->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
+		const float oceanScale = kDefaultOceanSize / oceanSizeSafe;
 		cloud->oceanFogBottom = 0.0f;
-		cloud->oceanFogTop = 350.0f;
-		cloud->oceanFogDensity = 0.00035f;
-		cloud->oceanFogDistance = 12000.0f;
+		cloud->oceanFogTop = kCloudOceanFogTop;
+		cloud->oceanFogDensity = kCloudOceanFogDensityAtDefaultSize * oceanScale;
+		cloud->oceanFogDistance = m_oceanSize * kCloudOceanFogDistanceRatio;
 	}
 
 	void Renderer::Render(UINT width, UINT height) {
