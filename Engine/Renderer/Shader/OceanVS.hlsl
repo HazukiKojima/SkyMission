@@ -11,10 +11,14 @@ cbuffer MatrixBuffer : register(b0)
     float4 oceanLightingPadding[3];
 
     float oceanSize;
-    float oceanUvReferenceSize;
-    float oceanFogStartRatio;
-    float oceanFogEndRatio;
-    float oceanWaveScale;
+    float oceanWaveLength;
+    float oceanWaveSteepness;
+    float oceanNormalUvScale;
+    float oceanWavePatternUvScale;
+    float oceanFogStartDistance;
+    float oceanFogEndDistance;
+    float oceanEdgeFadeStart;
+    float oceanEdgeFadeWidth;
 };
 
 struct VS_INPUT
@@ -92,8 +96,8 @@ PS_INPUT VS(VS_INPUT input)
     // --------------------------------------------------------
 
     float2 baseWindDir = normalize(float2(1.0f, 0.6f));
-    float wavelength = 80.0f * max(oceanWaveScale, 1e-4f);
-    float steepness = 0.014f;
+    float wavelength = max(oceanWaveLength, 1e-4f);
+    float steepness = max(oceanWaveSteepness, 0.0f);
 
     const int NUM_WAVES = 6;
 

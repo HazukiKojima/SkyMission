@@ -5,7 +5,7 @@
 
 namespace Engine {
 
-	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb) {
+	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb, bool generateMipmaps) {
 		// DirectXTex を使って画像ファイルを読み込む
 		std::wstring ext = filePath.substr(filePath.find_last_of(L'.'));
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
@@ -40,6 +40,21 @@ namespace Engine {
 			OutputDebugStringA(message);
 			
 			return false;
+		}
+
+		if (generateMipmaps && m_meta.mipLevels == 1 && m_meta.dimension == DirectX::TEX_DIMENSION_TEXTURE2D) {
+			DirectX::ScratchImage mipmappedImage;
+			hr = DirectX::GenerateMipMaps(
+				m_image.GetImages(),
+				m_image.GetImageCount(),
+				m_meta,
+				DirectX::TEX_FILTER_DEFAULT,
+				0,
+				mipmappedImage);
+			if (SUCCEEDED(hr)) {
+				m_image = std::move(mipmappedImage);
+				m_meta = m_image.GetMetadata();
+			}
 		}
 
 		// GPU用テクスチャリソースを作成
