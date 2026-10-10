@@ -62,18 +62,19 @@ struct PS_INPUT
 
 float3 SampleOceanNormal(float3 wavePos)
 {
-    float uvScale = max(oceanNormalUvScale, 1e-6f);
+    float coordinateScale = 7500.0f / max(oceanSize, 7500.0f);
+    float uvScale = coordinateScale * max(oceanNormalUvScale, 0.0f) * 10.0f;
 
-    float2 uv1 = (wavePos.xz * 0.010f + float2(time * 0.12f, time * -0.08f)) * uvScale;
-    float2 uv2 = (wavePos.xz * 0.035f + float2(time * -0.25f, time * 0.18f)) * uvScale;
-    float2 uv3 = (wavePos.xz * 0.090f + float2(time * 0.45f, time * 0.32f)) * uvScale;
+    float2 uv1 = wavePos.xz * (0.010f * uvScale) + float2(time * 0.010f, time * -0.007f);
+    float2 uv2 = wavePos.xz * (0.035f * uvScale) + float2(time * -0.014f, time * 0.009f);
+    float2 uv3 = wavePos.xz * (0.090f * uvScale) + float2(time * 0.025f, time * 0.018f);
 
     float3 n1 = gOceanNormal.Sample(gSampler, uv1).xyz * 2.0f - 1.0f;
     float3 n2 = gOceanNormal.Sample(gSampler, uv2).xyz * 2.0f - 1.0f;
     float3 n3 = gOceanNormal.Sample(gSampler, uv3).xyz * 2.0f - 1.0f;
 
     float3 normal = n1 * 0.55f + n2 * 0.30f + n3 * 0.15f;
-    normal.xy *= 0.75f;
+    normal.xy *= 0.075f;
 
     return SafeNormalize(normal);
 }
@@ -186,11 +187,14 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Wave Brightness
     // --------------------------------------------------------
 
+    float coordinateScale = 7500.0f / max(oceanSize, 7500.0f);
+    float2 wavePatternUv = input.wavePos.xz *
+        (0.025f * coordinateScale * max(oceanWavePatternUvScale, 0.0f)) +
+        float2(time * 0.006f, -time * 0.004f);
+
     float wavePattern = gDiffuse.Sample(
         gSampler,
-        (input.wavePos.xz * 0.025f +
-         float2(time * 0.40f, -time * 0.30f)) *
-        oceanWavePatternUvScale
+        wavePatternUv
     ).r;
 
     wavePattern = smoothstep(0.30f, 0.70f, wavePattern);

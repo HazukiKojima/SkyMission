@@ -47,7 +47,7 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
     float c = sqrt(9.8f / k);
     float2 d = normalize(dir);
 
-    float f = k * (dot(d, p.xz) - c * time * 3.0f) + phaseOffset;
+    float f = k * (dot(d, p.xz) - c * time * 0.8f) + phaseOffset;
     float a = steepness / k;
 
     float sinf = sin(f);
@@ -80,30 +80,19 @@ PS_INPUT VS(VS_INPUT input)
 {
     PS_INPUT result;
 
-    float3 wavePos = input.position + oceanOffset;
-
+    float sceneScale = max(oceanSize / 7500.0f, 1e-6f);
+    float3 worldWavePos = input.position + oceanOffset;
+    float3 wavePos = worldWavePos / sceneScale;
     float3 pos = wavePos;
-
-    // --------------------------------------------------------
-    // Tangent / Binormal
-    // --------------------------------------------------------
 
     float3 tangent = float3(1.0f, 0.0f, 0.0f);
     float3 binormal = float3(0.0f, 0.0f, 1.0f);
 
-    // --------------------------------------------------------
-    // Wave Settings
-    // --------------------------------------------------------
-
     float2 baseWindDir = normalize(float2(1.0f, 0.6f));
-    float wavelength = max(oceanWaveLength, 1e-4f);
+    float wavelength = max(oceanWaveLength / sceneScale, 1e-4f);
     float steepness = max(oceanWaveSteepness, 0.0f);
 
     const int NUM_WAVES = 6;
-
-    // --------------------------------------------------------
-    // Gerstner Waves
-    // --------------------------------------------------------
 
     for (int i = 0; i < NUM_WAVES; ++i)
     {
@@ -134,18 +123,9 @@ PS_INPUT VS(VS_INPUT input)
         wavelength *= 0.82f;
         steepness *= 0.72f;
     }
-
-    // --------------------------------------------------------
-    // Normal
-    // --------------------------------------------------------
-
+    
     float3 normal = normalize(cross(binormal, tangent));
-
-    // --------------------------------------------------------
-    // World Position
-    // --------------------------------------------------------
-
-    float3 worldPos = pos;
+    float3 worldPos = worldWavePos + (pos - wavePos) * sceneScale;
 
     // --------------------------------------------------------
     // Output
@@ -153,7 +133,7 @@ PS_INPUT VS(VS_INPUT input)
 
     result.position = mul(float4(worldPos, 1.0f), mvp);
     result.worldPos = worldPos;
-    result.wavePos = wavePos;
+    result.wavePos = worldWavePos;
     result.normal = normalize(normal);
     result.tangent = normalize(tangent);
     result.texcoord = input.texcoord;

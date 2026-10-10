@@ -9,10 +9,10 @@
 namespace Engine {
 
 	namespace {
-		constexpr float kOceanWaveLength = 40000.0f;
+		constexpr float kOceanWaveLength = 20000.0f;
 		constexpr float kOceanWaveSteepness = 0.0f;
-		constexpr float kOceanNormalUvScale = 0.04f;
-		constexpr float kOceanWavePatternUvScale = 0.04f;
+		constexpr float kOceanNormalUvScale = 1.0f;
+		constexpr float kOceanWavePatternUvScale = 1.0f;
 		constexpr float kOceanFogStartDistance = 6500000.0f;
 		constexpr float kOceanFogEndDistance = 10000000.0f;
 		constexpr float kOceanEdgeFadeStart = 0.98f;
@@ -148,7 +148,7 @@ namespace Engine {
 			float uv[2];
 		};
 		// --- グリッドメッシュ作成 ---
-		const int gridSize = 1000;
+		const int gridSize = 2000;
 		const float oceanSize = m_oceanSize;
 
 		std::vector<Vertex> vertices;
