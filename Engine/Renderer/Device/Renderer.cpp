@@ -9,12 +9,12 @@
 namespace Engine {
 
 	namespace {
-		constexpr float kOceanWaveLength = 20000.0f;
-		constexpr float kOceanWaveSteepness = 0.0f;
+		constexpr float kOceanWaveLength = 30.0f;
+		constexpr float kOceanWaveSteepness = 0.055f;
 		constexpr float kOceanNormalUvScale = 1.0f;
 		constexpr float kOceanWavePatternUvScale = 1.0f;
-		constexpr float kOceanFogStartDistance = 6500000.0f;
-		constexpr float kOceanFogEndDistance = 10000000.0f;
+		constexpr float kOceanFogStartDistance = 1500.0f;
+		constexpr float kOceanFogEndDistance = 12000.0f;
 		constexpr float kOceanEdgeFadeStart = 0.98f;
 		constexpr float kOceanEdgeFadeWidth = 0.015f;
 		constexpr float kCloudOceanFogTop = 350.0f;
@@ -148,8 +148,8 @@ namespace Engine {
 			float uv[2];
 		};
 		// --- グリッドメッシュ作成 ---
-		const int gridSize = 2000;
-		const float oceanSize = m_oceanSize;
+		const int gridSize = 1000;
+		const float meshSize = 10000.0f;
 
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
@@ -160,12 +160,12 @@ namespace Engine {
 		for (int z = 0; z < gridSize; ++z) {
 			for (int x = 0; x < gridSize; ++x) {
 				float px =
-					(float)x / (gridSize - 1) * oceanSize
-					- oceanSize * 0.5f;
+					(float)x / (gridSize - 1) * meshSize
+					- meshSize * 0.5f;
 
 				float pz =
-					(float)z / (gridSize - 1) * oceanSize
-					- oceanSize * 0.5f;
+					(float)z / (gridSize - 1) * meshSize
+					- meshSize * 0.5f;
 
 				float u = (float)x / (gridSize - 1);
 				float v = (float)z / (gridSize - 1);
@@ -188,6 +188,7 @@ namespace Engine {
 			}
 		}
 		m_indexCount = (UINT)indices.size();
+
 
 		// --- 頂点バッファの作成 ---
 		m_vertexBuffer = std::make_unique<Engine::VertexBuffer>();

@@ -22,16 +22,6 @@ cbuffer MatrixBuffer : register(b0)
 
     float3 ambientColor;
     float pad3;
-
-    float oceanSize;
-    float oceanWaveLength;
-    float oceanWaveSteepness;
-    float oceanNormalUvScale;
-    float oceanWavePatternUvScale;
-    float oceanFogStartDistance;
-    float oceanFogEndDistance;
-    float oceanEdgeFadeStart;
-    float oceanEdgeFadeWidth;
 };
 
 // ============================================================
@@ -62,19 +52,35 @@ struct PS_INPUT
 
 float3 SampleOceanNormal(float3 wavePos)
 {
-    float coordinateScale = 7500.0f / max(oceanSize, 7500.0f);
-    float uvScale = coordinateScale * max(oceanNormalUvScale, 0.0f) * 10.0f;
+    // 大きめの波紋
+    float2 uv1 = wavePos.xz * 0.018f
+        + float2(time * 0.012f, time * -0.008f);
 
-    float2 uv1 = wavePos.xz * (0.010f * uvScale) + float2(time * 0.010f, time * -0.007f);
-    float2 uv2 = wavePos.xz * (0.035f * uvScale) + float2(time * -0.014f, time * 0.009f);
-    float2 uv3 = wavePos.xz * (0.090f * uvScale) + float2(time * 0.025f, time * 0.018f);
+    // 異なる方向に流れる中間スケールの波紋
+    float2 uv2 = wavePos.xz * 0.047f
+        + float2(time * -0.009f, time * 0.014f);
+
+    // 細かな波紋
+    float2 uv3 = wavePos.xz * 0.115f
+        + float2(time * 0.019f, time * 0.011f);
+
+    // さらに細かな波紋
+    float2 uv4 = wavePos.xz * 0.21f
+        + float2(time * -0.016f, time * -0.013f);
 
     float3 n1 = gOceanNormal.Sample(gSampler, uv1).xyz * 2.0f - 1.0f;
     float3 n2 = gOceanNormal.Sample(gSampler, uv2).xyz * 2.0f - 1.0f;
     float3 n3 = gOceanNormal.Sample(gSampler, uv3).xyz * 2.0f - 1.0f;
+    float3 n4 = gOceanNormal.Sample(gSampler, uv4).xyz * 2.0f - 1.0f;
 
-    float3 normal = n1 * 0.55f + n2 * 0.30f + n3 * 0.15f;
-    normal.xy *= 0.075f;
+    // 細かな波ほど控えめに合成
+    float3 normal =
+        n1 * 0.40f +
+        n2 * 0.30f +
+        n3 * 0.20f +
+        n4 * 0.10f;
+
+    normal.xy *= 0.85f;
 
     return SafeNormalize(normal);
 }
@@ -85,23 +91,11 @@ float3 SampleOceanNormal(float3 wavePos)
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    CommonLightingParameters lighting;
-    lighting.sunDirection = sunDirection;
-    lighting.sunIntensity = sunIntensity;
-    lighting.sunColor = sunColor;
-    lighting.ambientIntensity = ambientIntensity;
-    lighting.ambientColor = ambientColor;
-    lighting.padding = 0.0f;
-
-    // --------------------------------------------------------
-    // View / Light Direction
-    // --------------------------------------------------------
-
     float3 V = SafeNormalize(cameraPos - input.worldPos);
-    float3 L = SafeNormalize(lighting.sunDirection);
+    float3 L = SafeNormalize(sunDirection);
 
     // --------------------------------------------------------
-    // Base TBN
+    // TBN
     // --------------------------------------------------------
 
     float3 baseN;
@@ -111,7 +105,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     BuildTBN(input.normal, input.tangent, baseN, T, B);
 
     // --------------------------------------------------------
-    // Ocean Normal
+    // Normal Map
     // --------------------------------------------------------
 
     float3 tangentNormal = SampleOceanNormal(input.wavePos);
@@ -123,10 +117,9 @@ float4 PS(PS_INPUT input) : SV_TARGET
     );
 
     float NdotV = saturate(dot(N, V));
-    float NdotL = saturate(dot(N, L));
 
     // --------------------------------------------------------
-    // Water Material
+    // Reflection
     // --------------------------------------------------------
 
     float3 F0 = float3(0.020f, 0.020f, 0.020f);
@@ -134,11 +127,16 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 F = FresnelSchlickRoughness(NdotV, F0, 0.08f);
     F = max(F, 0.035f);
 
-    // --------------------------------------------------------
-    // Reflection
-    // --------------------------------------------------------
-
     float3 R = reflect(-V, N);
+
+    CommonLightingParameters lighting;
+    lighting.sunDirection = sunDirection;
+    lighting.sunIntensity = sunIntensity;
+    lighting.sunColor = sunColor;
+    lighting.ambientIntensity = ambientIntensity;
+    lighting.ambientColor = ambientColor;
+    lighting.padding = 0.0f;
+
     float3 reflectedSky = GetSkyColor(R, lighting);
     float3 reflection = reflectedSky * F;
 
@@ -150,16 +148,16 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 waterBase = waterColor * 0.35f;
 
     // --------------------------------------------------------
-    // Ocean Specular
+    // Sun Specular
     // --------------------------------------------------------
 
     float3 sunSpecular = CalculateSunSpecular(
-    N,
-    V,
-    L,
-    0.08f,
-    lighting
-);
+        N,
+        V,
+        L,
+        0.08f,
+        lighting
+    );
 
     // --------------------------------------------------------
     // Ambient
@@ -184,24 +182,20 @@ float4 PS(PS_INPUT input) : SV_TARGET
         0.35f;
 
     // --------------------------------------------------------
-    // Wave Brightness
+    // Wave Pattern
     // --------------------------------------------------------
 
-    float coordinateScale = 7500.0f / max(oceanSize, 7500.0f);
-    float2 wavePatternUv = input.wavePos.xz *
-        (0.025f * coordinateScale * max(oceanWavePatternUvScale, 0.0f)) +
-        float2(time * 0.006f, -time * 0.004f);
-
     float wavePattern = gDiffuse.Sample(
-        gSampler,
-        wavePatternUv
-    ).r;
+    gSampler,
+    input.wavePos.xz * 0.025f +
+    float2(time * 0.006f, -time * 0.004f)
+).r;
 
     wavePattern = smoothstep(0.30f, 0.70f, wavePattern);
 
     float3 waveColor = waterColor * wavePattern * 0.25f;
 
-        // --------------------------------------------------------
+    // --------------------------------------------------------
     // Final Water
     // --------------------------------------------------------
 
@@ -217,15 +211,26 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Atmospheric Fog
     // --------------------------------------------------------
 
-    float cameraDistance = length(cameraPos - input.worldPos);
+    float distanceToCamera = length(cameraPos - input.worldPos);
 
-    float fogFactor = 1.0f - exp(-cameraDistance * 0.00001f);
-    fogFactor = saturate(fogFactor);
+    float fogStart = 1500.0f;
+    float fogEnd = 12000.0f;
 
-    // 霧の色を空の色に合わせる。
-    float3 fogColor = GetSkyColor(float3(0.0f, 0.3f, 1.0f), lighting);
+    float fogFactor = saturate(
+        (distanceToCamera - fogStart) /
+        (fogEnd - fogStart)
+    );
 
-    color = lerp(color, fogColor, fogFactor);
+    float horizon = pow(
+        1.0f - saturate(abs(V.y)),
+        4.0f
+    );
+
+    fogFactor = max(fogFactor, horizon * 0.75f);
+
+    float3 atmosphere = GetSkyColor(V, lighting);
+
+    color = lerp(color, atmosphere, fogFactor);
 
     // --------------------------------------------------------
     // Tonemapping
@@ -233,5 +238,5 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     color = ToneMapReinhard(color);
 
-    return float4(saturate(color), 0.0f);
+    return float4(saturate(color), 1.0f);
 }
