@@ -206,7 +206,7 @@ float3 CalculateProceduralWaveNormal(
             length(ddx(noisePosition)),
             length(ddy(noisePosition))
         );
-        float screenFilter = exp(-0.5f * footprint * footprint);
+        float screenFilter = exp(-2.0f * footprint * footprint);
 
         float detailFade = lerp(0.2f, 1.0f, distanceFade);
         detailFade = lerp(

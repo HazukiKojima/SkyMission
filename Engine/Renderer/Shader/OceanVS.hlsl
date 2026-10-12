@@ -128,6 +128,14 @@ PS_INPUT VS(VS_INPUT input)
     // ========================================================
 
     float2 baseWindDir = normalize(float2(1.0f, 0.6f));
+    float halfOceanSize = max(oceanSize * 0.5f, 1.0f);
+    float2 normalizedGridPosition = saturate(
+        abs(input.position.xz) / halfOceanSize
+    );
+    float2 meshSpacing = halfOceanSize
+        * (2.5f / 1024.0f)
+        * pow(normalizedGridPosition, 0.6f);
+    float localMeshSpacing = max(meshSpacing.x, meshSpacing.y);
 
     const int NUM_WAVES = 8;
 
@@ -162,6 +170,13 @@ PS_INPUT VS(VS_INPUT input)
             0.008f,
             0.025f,
             amplitudeRandom
+        );
+
+        float waveResolution = localMeshSpacing / wavelength;
+        amplitudeScale *= 1.0f - smoothstep(
+            0.25f,
+            0.5f,
+            waveResolution
         );
 
         // 主風向きの周囲に波を分散させる
