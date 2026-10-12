@@ -38,9 +38,9 @@ namespace Engine {
 		void UpdateView();
 
 		HWND m_hwnd = nullptr;
-		DirectX::XMFLOAT3 m_position = { 0.0f, 10.0f, -10.0f };
+		DirectX::XMFLOAT3 m_position = { 0.0f, 1738.0f, -10.0f };
 		float m_yaw = 0.0f;   // radians
-		float m_pitch = -0.4f; // radians
+		float m_pitch = -1.35f; // radians
 		float m_moveSpeed = 3000.0f; // units per second
 		float m_mouseSensitivity = 0.0025f; // radians per pixel
 		bool m_rmbDown = false;

@@ -38,8 +38,6 @@ namespace Engine {
 
 		std::unique_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
-		std::unique_ptr<Engine::Texture> m_oceanNormalTexture;
-		UINT m_oceanNormalTextureSrvIndex = 0;
 
 		std::unique_ptr<Engine::Texture> m_skyTexture;
 		UINT m_skyTextureSrvIndex = 0;

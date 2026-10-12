@@ -13,8 +13,8 @@ namespace Engine {
 		constexpr float kOceanWaveSteepness = 0.055f;
 		constexpr float kOceanNormalUvScale = 1.0f;
 		constexpr float kOceanWavePatternUvScale = 1.0f;
-		constexpr float kOceanFogStartDistance = 1500.0f;
-		constexpr float kOceanFogEndDistance = 12000.0f;
+		constexpr float kOceanFogStartDistance = 6500000.0f;
+		constexpr float kOceanFogEndDistance = 10000000.0f;
 		constexpr float kOceanEdgeFadeStart = 0.98f;
 		constexpr float kOceanEdgeFadeWidth = 0.015f;
 		constexpr float kCloudOceanFogTop = 350.0f;
@@ -100,7 +100,7 @@ namespace Engine {
 			m_device->GetDevice(),
 			L"OceanVS.cso",
 			L"OceanPS.cso",
-			2,
+			1,
 			false,
 			true
 		);
@@ -148,8 +148,9 @@ namespace Engine {
 			float uv[2];
 		};
 		// --- グリッドメッシュ作成 ---
-		const int gridSize = 1000;
-		const float meshSize = 10000.0f;
+		const int gridSize = 2049;
+		const float meshSize = m_oceanSize;
+		const float halfMeshSize = meshSize * 0.5f;
 
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
@@ -159,16 +160,15 @@ namespace Engine {
 
 		for (int z = 0; z < gridSize; ++z) {
 			for (int x = 0; x < gridSize; ++x) {
-				float px =
-					(float)x / (gridSize - 1) * meshSize
-					- meshSize * 0.5f;
+				const float normalizedX =
+					static_cast<float>(x) / (gridSize - 1) * 2.0f - 1.0f;
+				const float normalizedZ =
+					static_cast<float>(z) / (gridSize - 1) * 2.0f - 1.0f;
+				const float px = std::copysign(std::pow(std::abs(normalizedX), 2.5f), normalizedX) * halfMeshSize;
+				const float pz = std::copysign(std::pow(std::abs(normalizedZ), 2.5f), normalizedZ) * halfMeshSize;
 
-				float pz =
-					(float)z / (gridSize - 1) * meshSize
-					- meshSize * 0.5f;
-
-				float u = (float)x / (gridSize - 1);
-				float v = (float)z / (gridSize - 1);
+				const float u = static_cast<float>(x) / (gridSize - 1);
+				const float v = static_cast<float>(z) / (gridSize - 1);
 
 				vertices.push_back({
 					{ px, 0.0f, pz },
@@ -179,16 +179,22 @@ namespace Engine {
 
 		for (int z = 0; z < gridSize - 1; ++z) {
 			for (int x = 0; x < gridSize - 1; ++x) {
-				uint32_t i0 = z * gridSize + x;
-				uint32_t i1 = i0 + 1;
-				uint32_t i2 = (z + 1) * gridSize + x;
-				uint32_t i3 = i2 + 1;
-				indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
-				indices.push_back(i1); indices.push_back(i3); indices.push_back(i2);
+				const uint32_t i0 = static_cast<uint32_t>(z) * gridSize + x;
+				const uint32_t i1 = i0 + 1;
+				const uint32_t i2 = i0 + gridSize;
+				const uint32_t i3 = i2 + 1;
+
+				indices.push_back(i0);
+				indices.push_back(i1);
+				indices.push_back(i2);
+
+				indices.push_back(i1);
+				indices.push_back(i3);
+				indices.push_back(i2);
 			}
 		}
-		m_indexCount = (UINT)indices.size();
 
+		m_indexCount = static_cast<UINT>(indices.size());
 
 		// --- 頂点バッファの作成 ---
 		m_vertexBuffer = std::make_unique<Engine::VertexBuffer>();
@@ -229,33 +235,10 @@ namespace Engine {
 		}
 		m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
 
-		m_oceanNormalTexture = std::make_unique<Engine::Texture>();
-		UINT normalSrvIndex = 0;
-		D3D12_CPU_DESCRIPTOR_HANDLE normalCpuHandle = m_device->AllocateSrvDescriptor(&normalSrvIndex);
-		std::vector<std::wstring> normalTexturePaths = {
-			exeDir + L"\\..\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\..\\..\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\Assets\\Images\\T_Ocean_Normal.jpg"
-		};
-		bool normalTextureLoaded = false;
-		for (const auto& normalPath : normalTexturePaths) {
-			WIN32_FILE_ATTRIBUTE_DATA normalFileInfo;
-			if (GetFileAttributesExW(normalPath.c_str(), GetFileExInfoStandard, &normalFileInfo) != 0 &&
-				m_oceanNormalTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), normalPath, false, true)) {
-				normalTextureLoaded = true;
-				break;
-			}
-		}
-		if (!normalTextureLoaded) {
-			OutputDebugStringA("Application::Initialize - failed to load ocean normal map\n");
-		}
-		m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
 		m_context->EndFrame();
 		// フレーム終了後にGPU完了待ち
 		m_context->WaitForGpu();
 		m_textureSrvIndex = srvIndex;
-		m_oceanNormalTextureSrvIndex = normalSrvIndex;
 
 		// Sky Sphere 用の環境テクスチャ(HDR/EXR)読み込み
 		m_skyTexture = std::make_unique<Engine::Texture>();
@@ -403,10 +386,10 @@ namespace Engine {
 		using namespace DirectX;
 		const auto camPos = camera->GetPosition();
 		const float cameraHeight = (camPos.y < 0.0f) ? -camPos.y : camPos.y;
-		const float oceanHalfDiagonal = m_oceanSize * 0.70710678f;
-		const float oceanCornerDistance = std::sqrt(
-			oceanHalfDiagonal * oceanHalfDiagonal + cameraHeight * cameraHeight);
-		camera->SetFarPlane(oceanCornerDistance * 1.1f);
+		const float farPlane = (std::max)(
+			kOceanFogEndDistance * 2.5f,
+			cameraHeight * 2.0f);
+		camera->SetFarPlane(farPlane);
 
 		XMMATRIX world = XMMatrixIdentity();
 		XMMATRIX view = camera->GetView();
@@ -528,8 +511,8 @@ namespace Engine {
 		cmd->SetGraphicsRootSignature(m_oceanPipeline->GetRootSignature());
 		cmd->SetPipelineState(m_oceanPipeline->GetPSO());
 
-		// テクスチャ用と法線マップ用のSRVをセット
-		if (m_texture && m_oceanNormalTexture) {
+		// 海面の色テクスチャをセット
+		if (m_texture) {
 			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
 			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_textureSrvIndex));
