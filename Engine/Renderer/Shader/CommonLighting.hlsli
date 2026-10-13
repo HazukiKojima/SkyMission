@@ -218,16 +218,16 @@ float3 GetSkyColor(float3 direction, CommonLightingParameters lighting)
 
     // Horizon
     float3 horizonColor = float3(
-        0.58f,
-        0.74f,
-        0.91f
+        0.68f,
+        0.82f,
+        0.98f
     );
 
     // Zenith
     float3 zenithColor = float3(
-        0.055f,
-        0.19f,
-        0.48f
+        0.07f,
+        0.23f,
+        0.54f
     );
 
     float skyGradient = pow(height, 0.42f);

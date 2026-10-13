@@ -10,7 +10,7 @@ namespace Engine {
 
 	namespace {
 		constexpr float kOceanWaveLength = 40000.0f;
-		constexpr float kOceanWaveSteepness = 0.0f;
+		constexpr float kOceanWaveSteepness = 0.0005f;
 		constexpr float kOceanNormalUvScale = 0.04f;
 		constexpr float kOceanWavePatternUvScale = 0.04f;
 		constexpr float kOceanFogStartDistance = 6500000.0f;
