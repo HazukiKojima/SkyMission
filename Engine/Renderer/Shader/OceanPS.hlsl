@@ -122,6 +122,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     );
 
     float NdotV = saturate(dot(N, V));
+    float NdotL = saturate(dot(N, L));
 
     // --------------------------------------------------------
     // Water Material
@@ -149,12 +150,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // --------------------------------------------------------
 
     float3 sunSpecular = CalculateSunSpecular(
-        N,
-        V,
-        L,
-        0.08f,
-        lighting
-    );
+    N,
+    V,
+    L,
+    0.08f,
+    lighting
+);
 
     sunSpecular *= 1.35f;
 
@@ -196,7 +197,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float3 waveColor = waterColor * wavePattern * 0.35f;
 
-    // --------------------------------------------------------
+        // --------------------------------------------------------
     // Final Water
     // --------------------------------------------------------
 
@@ -213,7 +214,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // --------------------------------------------------------
 
     float cameraDistance = length(cameraPos - input.worldPos);
-    float fogFactor = 1.0f - exp(-cameraDistance * 0.000006f);
+
+    float fogFactor = 1.0f - exp(-cameraDistance * 0.00001f);
     fogFactor = saturate(fogFactor);
 
     float horizon = pow(1.0f - saturate(abs(V.y)), 4.0f);
@@ -232,5 +234,5 @@ float4 PS(PS_INPUT input) : SV_TARGET
     color *= 1.2f;
     color = ToneMapReinhard(color);
 
-    return float4(saturate(color), 1.0f);
+    return float4(saturate(color), 0.0f);
 }
