@@ -128,10 +128,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Water Material
     // --------------------------------------------------------
 
-    float3 F0 = float3(0.020f, 0.020f, 0.020f);
-
-    float3 F = FresnelSchlickRoughness(NdotV, F0, 0.08f);
-    F = max(F, 0.035f);
+    float3 F = float3(0.06f, 0.06f, 0.06f);
 
     // --------------------------------------------------------
     // Reflection
@@ -145,8 +142,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Water Color
     // --------------------------------------------------------
 
-    float3 waterColor = float3(0.015f, 0.075f, 0.12f);
-    float3 waterBase = waterColor * 0.35f;
+    float3 waterColor = float3(0.045f, 0.14f, 0.25f);
+    float3 waterBase = waterColor * 0.85f;
 
     // --------------------------------------------------------
     // Ocean Specular
@@ -160,16 +157,19 @@ float4 PS(PS_INPUT input) : SV_TARGET
     lighting
 );
 
+    sunSpecular *= 1.35f;
+
     // --------------------------------------------------------
     // Ambient
     // --------------------------------------------------------
 
-    float skyLight = lerp(0.75f, 1.0f, saturate(N.y));
+    float skyLight = lerp(0.85f, 1.15f, saturate(N.y));
 
     float3 ambient =
         waterColor *
         GetAmbientRadiance(lighting) *
-        skyLight;
+        skyLight *
+        1.25f;
 
     // --------------------------------------------------------
     // Subsurface
@@ -178,7 +178,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float backLight = saturate(dot(-L, N));
 
     float3 subsurface =
-        float3(0.00f, 0.12f, 0.18f) *
+        float3(0.015f, 0.055f, 0.12f) *
         pow(backLight, 2.0f) *
         0.35f;
 
@@ -195,7 +195,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     wavePattern = smoothstep(0.30f, 0.70f, wavePattern);
 
-    float3 waveColor = waterColor * wavePattern * 0.25f;
+    float3 waveColor = waterColor * wavePattern * 0.35f;
 
         // --------------------------------------------------------
     // Final Water
@@ -218,15 +218,20 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float fogFactor = 1.0f - exp(-cameraDistance * 0.00001f);
     fogFactor = saturate(fogFactor);
 
-    // 霧の色を空の色に合わせる。
-    float3 fogColor = GetSkyColor(float3(0.0f, 0.3f, 1.0f), lighting);
+    float horizon = pow(1.0f - saturate(abs(V.y)), 4.0f);
+    fogFactor = max(fogFactor, horizon * 0.2f);
 
-    color = lerp(color, fogColor, fogFactor);
+    float3 atmosphere = GetSkyColor(-V, lighting);
+    atmosphere = lerp(atmosphere, float3(0.82f, 0.90f, 0.96f), 0.35f);
+
+    fogFactor *= 0.5f;
+    color = lerp(color, atmosphere, fogFactor);
 
     // --------------------------------------------------------
     // Tonemapping
     // --------------------------------------------------------
 
+    color *= 1.2f;
     color = ToneMapReinhard(color);
 
     return float4(saturate(color), 0.0f);

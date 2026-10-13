@@ -69,7 +69,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Exposure
     // ========================================================
 
-    const float exposure = 0.65f;
+    const float exposure = 0.9f;
 
     float3 color = hdrColor * exposure;
 
