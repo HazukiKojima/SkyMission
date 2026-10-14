@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 
 namespace Engine {
 
@@ -215,14 +216,13 @@ namespace Engine {
 		m_context->BeginFrame();
 		UINT srvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_device->AllocateSrvDescriptor(&srvIndex);
-		// 実行ファイルのパスを取得
 		wchar_t buffer[MAX_PATH];
-		GetModuleFileName(NULL, buffer, MAX_PATH);
-		std::wstring exePath = buffer;
-		std::wstring exeDir = exePath.substr(0, exePath.find_last_of(L"\\/"));
+		GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+		const std::filesystem::path exeDir = std::filesystem::path(buffer).parent_path();
+		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
 
 		// Assets 配下の候補パスを作成
-		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg";
+		std::filesystem::path path = assetsDir / L"Environment/Ocean/Textures/water-bg-pattern-04.jpg";
 		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path, true, true)) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
@@ -231,22 +231,8 @@ namespace Engine {
 		m_oceanNormalTexture = std::make_unique<Engine::Texture>();
 		UINT normalSrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE normalCpuHandle = m_device->AllocateSrvDescriptor(&normalSrvIndex);
-		std::vector<std::wstring> normalTexturePaths = {
-			exeDir + L"\\..\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\..\\..\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\Assets\\Images\\T_Ocean_Normal.jpg"
-		};
-		bool normalTextureLoaded = false;
-		for (const auto& normalPath : normalTexturePaths) {
-			WIN32_FILE_ATTRIBUTE_DATA normalFileInfo;
-			if (GetFileAttributesExW(normalPath.c_str(), GetFileExInfoStandard, &normalFileInfo) != 0 &&
-				m_oceanNormalTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), normalPath, false, true)) {
-				normalTextureLoaded = true;
-				break;
-			}
-		}
-		if (!normalTextureLoaded) {
+		std::filesystem::path normalPath = assetsDir / L"Environment/Ocean/Textures/T_Ocean_Normal.jpg";
+		if (!m_oceanNormalTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), normalPath.wstring(), false, true)) {
 			OutputDebugStringA("Application::Initialize - failed to load ocean normal map\n");
 		}
 		m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
@@ -263,10 +249,9 @@ namespace Engine {
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
 
 		// 読み込み候補パス一覧
-		std::vector<std::wstring> skyTexturePaths = {
-			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
-			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.exr",
-			exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg",
+		std::vector<std::filesystem::path> skyTexturePaths = {
+			assetsDir / L"Environment/Sky/Textures/citrus_orchard_road_puresky_4k.hdr",
+			assetsDir / L"Environment/Sky/Textures/citrus_orchard_road_puresky_4k.exr",
 		};
 
 		bool skyTextureLoaded = false;
@@ -281,7 +266,7 @@ namespace Engine {
 				OutputDebugStringA(pathBuffer);
 				OutputDebugStringA("\n");
 
-				if (m_skyTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
+				if (m_skyTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path.wstring())) {
 					OutputDebugStringA("Sky texture loaded successfully!\n");
 					skyTextureLoaded = true;
 					break;
@@ -306,27 +291,12 @@ namespace Engine {
 
 		m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
 
-		const std::vector<std::wstring> modelPaths = {
-			exeDir + L"\\..\\..\\Assets\\Models\\model.fbx",
-			exeDir + L"\\..\\..\\..\\Assets\\Models\\model.fbx",
-			exeDir + L"\\..\\Assets\\Models\\model.fbx",
-			exeDir + L"\\Assets\\Models\\model.fbx"
-		};
-		for (const auto& modelPath : modelPaths) {
-			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-			if (GetFileAttributesExW(modelPath.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
-				m_model = std::make_unique<Engine::Model>();
-				if (m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath)) {
-					OutputDebugStringA("Application::Initialize - FBX model loaded\n");
-				}
-				else {
-					m_model.reset();
-				}
-				break;
-			}
-		}
-		if (!m_model) {
-			OutputDebugStringA("Application::Initialize - place an FBX at Assets\\Models\\model.fbx to render it\n");
+		std::filesystem::path modelPath = assetsDir / L"Aircraft/F16/sk_Jet.fbx";
+
+		m_model = std::make_unique<Model>();
+		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath.wstring())) {
+			OutputDebugStringA("Failed to load model.fbx\n");
+			m_model.reset();
 		}
 
 		m_context->EndFrame();
