@@ -36,6 +36,31 @@ namespace Engine {
 			buffer->Unmap(0, nullptr);
 			return true;
 		}
+
+		std::filesystem::path FindTexturePath(const std::filesystem::path& modelDirectory, const std::filesystem::path& texturePath) {
+			const std::filesystem::path texturesDirectory = modelDirectory / L"Textures";
+			const std::filesystem::path candidates[] = {
+				texturePath.is_absolute() ? texturePath : modelDirectory / texturePath,
+				texturesDirectory / texturePath,
+				texturesDirectory / texturePath.filename()
+			};
+
+			for (const auto& candidate : candidates) {
+				if (std::filesystem::exists(candidate)) {
+					return candidate;
+				}
+			}
+
+			return {};
+		}
+
+		std::filesystem::path FindFallbackTexturePath(const std::filesystem::path& modelDirectory, const std::string& materialName) {
+			const std::filesystem::path texturesDirectory = modelDirectory / L"Textures";
+			const std::filesystem::path fallbackPath = materialName.find("boomb") != std::string::npos
+				? texturesDirectory / L"T_boomb_AO.png"
+				: texturesDirectory / L"T_Jet_ID.png";
+			return std::filesystem::exists(fallbackPath) ? fallbackPath : std::filesystem::path();
+		}
 	}
 
 	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice, const std::wstring& filePath) {
@@ -136,11 +161,23 @@ namespace Engine {
 
 			if (sourceMesh->mMaterialIndex < scene->mNumMaterials) {
 				const aiMaterial* material = scene->mMaterials[sourceMesh->mMaterialIndex];
+				aiString materialName;
+				material->Get(AI_MATKEY_NAME, materialName);
 				aiString texturePath;
-				if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS && texturePath.length > 0 && texturePath.C_Str()[0] != '*') {
+				aiReturn textureResult = material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath);
+				if (textureResult != AI_SUCCESS) {
+					textureResult = material->GetTexture(aiTextureType_BASE_COLOR, 0, &texturePath);
+				}
+				std::filesystem::path resolvedTexturePath;
+				if (textureResult == AI_SUCCESS && texturePath.length > 0 && texturePath.C_Str()[0] != '*') {
 					const char8_t* texturePathUtf8 = reinterpret_cast<const char8_t*>(texturePath.C_Str());
 					const std::filesystem::path relativeTexturePath(std::u8string(texturePathUtf8, texturePathUtf8 + texturePath.length));
-					const std::filesystem::path resolvedTexturePath = relativeTexturePath.is_absolute() ? relativeTexturePath : modelDirectory / relativeTexturePath;
+					resolvedTexturePath = FindTexturePath(modelDirectory, relativeTexturePath);
+				}
+				if (resolvedTexturePath.empty()) {
+					resolvedTexturePath = FindFallbackTexturePath(modelDirectory, materialName.C_Str());
+				}
+				if (!resolvedTexturePath.empty()) {
 					mesh.diffuseTexture = std::make_unique<Texture>();
 					if (mesh.diffuseTexture->LoadFromFile(device, commandList, resolvedTexturePath.wstring())) {
 						const auto textureCpuHandle = renderDevice->AllocateSrvDescriptor(&mesh.textureSrvIndex);

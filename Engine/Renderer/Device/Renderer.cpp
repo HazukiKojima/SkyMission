@@ -295,7 +295,7 @@ namespace Engine {
 
 		m_model = std::make_unique<Model>();
 		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath.wstring())) {
-			OutputDebugStringA("Failed to load model.fbx\n");
+			OutputDebugStringA("Failed to load sk_Jet.fbx\n");
 			m_model.reset();
 		}
 
