@@ -212,7 +212,6 @@ namespace Engine {
 		m_indexBufferView.SizeInBytes = sizeof(uint32_t) * indices.size();
 
 		// テクスチャ読み込みとSRV作成の準備
-		m_texture = std::make_unique<Engine::Texture>();
 		// 実行ファイルパスからアセット候補パスを構築
 		m_context->BeginFrame();
 		UINT srvIndex = 0;
@@ -224,27 +223,37 @@ namespace Engine {
 
 		// Assets 配下の候補パスを作成
 		std::filesystem::path path = assetsDir / L"Environment/Ocean/Textures/water-bg-pattern-04.jpg";
-		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path, true, true)) {
+		m_texture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), path.wstring(), true, true);
+		if (!m_texture) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
-		m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
+		else {
+			m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
+		}
 
-		m_oceanNormalTexture = std::make_unique<Engine::Texture>();
 		UINT normalSrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE normalCpuHandle = m_device->AllocateSrvDescriptor(&normalSrvIndex);
 		std::filesystem::path normalPath = assetsDir / L"Environment/Ocean/Textures/T_Ocean_Normal.jpg";
-		if (!m_oceanNormalTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), normalPath.wstring(), false, true)) {
+		m_oceanNormalTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), normalPath.wstring(), false, true);
+		if (!m_oceanNormalTexture) {
 			OutputDebugStringA("Application::Initialize - failed to load ocean normal map\n");
 		}
-		m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
+		else {
+			m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
+		}
 		m_context->EndFrame();
 		// フレーム終了後にGPU完了待ち
 		m_context->WaitForGpu();
+		if (m_texture) {
+			m_texture->ReleaseUploadResources();
+		}
+		if (m_oceanNormalTexture) {
+			m_oceanNormalTexture->ReleaseUploadResources();
+		}
 		m_textureSrvIndex = srvIndex;
 		m_oceanNormalTextureSrvIndex = normalSrvIndex;
 
 		// Sky Sphere 用の環境テクスチャ(HDR/EXR)読み込み
-		m_skyTexture = std::make_unique<Engine::Texture>();
 		m_context->BeginFrame();
 		UINT skySrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
@@ -267,7 +276,8 @@ namespace Engine {
 				OutputDebugStringA(pathBuffer);
 				OutputDebugStringA("\n");
 
-				if (m_skyTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path.wstring())) {
+				m_skyTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), path.wstring());
+				if (m_skyTexture) {
 					OutputDebugStringA("Sky texture loaded successfully!\n");
 					skyTextureLoaded = true;
 					break;
@@ -290,7 +300,9 @@ namespace Engine {
 			OutputDebugStringA("Warning: No sky texture could be loaded from any path.\n");
 		}
 
-		m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
+		if (m_skyTexture) {
+			m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
+		}
 
 		std::filesystem::path modelPath = assetsDir / L"Aircraft/F16/sk_Jet.fbx";
 
@@ -302,6 +314,18 @@ namespace Engine {
 
 		m_context->EndFrame();
 		m_context->WaitForGpu();
+		if (m_texture) {
+			m_texture->ReleaseUploadResources();
+		}
+		if (m_oceanNormalTexture) {
+			m_oceanNormalTexture->ReleaseUploadResources();
+		}
+		if (m_skyTexture) {
+			m_skyTexture->ReleaseUploadResources();
+		}
+		if (m_model) {
+			m_model->ReleaseUploadResources();
+		}
 		m_skyTextureSrvIndex = skySrvIndex;
 	}
 

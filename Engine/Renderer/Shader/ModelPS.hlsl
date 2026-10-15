@@ -47,7 +47,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 N = SafeNormalize(input.normal);
     float3 T = SafeNormalize(input.tangent.xyz - N * dot(input.tangent.xyz, N));
     float3 B = SafeNormalize(cross(N, T)) * input.tangent.w;
-    float3 tangentNormal = gNormal.Sample(gSampler, input.texcoord).xyz * 2.0f - 1.0f;
+    float2 tangentNormalXY = gNormal.Sample(gSampler, input.texcoord).rg * 2.0f - 1.0f;
+    float3 tangentNormal = float3(tangentNormalXY, sqrt(saturate(1.0f - dot(tangentNormalXY, tangentNormalXY))));
     N = SafeNormalize(T * tangentNormal.x + B * tangentNormal.y + N * tangentNormal.z);
 
     float3 L = SafeNormalize(lighting.sunDirection);

@@ -12,6 +12,7 @@ namespace Engine {
 	public:
 		bool Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice, const std::wstring& filePath);
 		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice) const;
+		void ReleaseUploadResources();
 		bool IsLoaded() const { return !m_meshes.empty(); }
 
 	private:
@@ -20,10 +21,10 @@ namespace Engine {
 			ComPtr<ID3D12Resource> indexBuffer;
 			D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
 			D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
-			std::unique_ptr<Texture> diffuseTexture;
-			std::unique_ptr<Texture> metallicTexture;
-			std::unique_ptr<Texture> roughnessTexture;
-			std::unique_ptr<Texture> normalTexture;
+			std::shared_ptr<Texture> diffuseTexture;
+			std::shared_ptr<Texture> metallicTexture;
+			std::shared_ptr<Texture> roughnessTexture;
+			std::shared_ptr<Texture> normalTexture;
 			UINT textureSrvIndex = 0;
 			UINT indexCount = 0;
 		};

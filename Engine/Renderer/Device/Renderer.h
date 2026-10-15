@@ -36,12 +36,12 @@ namespace Engine {
 		std::unique_ptr<Engine::GraphicsPipeline> m_cloudPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_modelPipeline;
 
-		std::unique_ptr<Engine::Texture> m_texture;
+		std::shared_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
-		std::unique_ptr<Engine::Texture> m_oceanNormalTexture;
+		std::shared_ptr<Engine::Texture> m_oceanNormalTexture;
 		UINT m_oceanNormalTextureSrvIndex = 0;
 
-		std::unique_ptr<Engine::Texture> m_skyTexture;
+		std::shared_ptr<Engine::Texture> m_skyTexture;
 		UINT m_skyTextureSrvIndex = 0;
 
 		// 定数バッファ

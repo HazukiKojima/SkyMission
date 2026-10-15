@@ -194,6 +194,10 @@ namespace Engine {
 
 		const std::filesystem::path modelDirectory = modelPath.parent_path();
 		m_meshes.reserve(scene->mNumMeshes);
+		uint64_t totalVertices = 0;
+		uint64_t totalIndices = 0;
+		uint64_t totalVertexBufferBytes = 0;
+		uint64_t totalIndexBufferBytes = 0;
 		for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
 			const aiMesh* sourceMesh = scene->mMeshes[meshIndex];
 			if (!sourceMesh->HasPositions() || !sourceMesh->HasFaces()) {
@@ -218,7 +222,7 @@ namespace Engine {
 					{ texcoord.x, texcoord.y },
 					{ normal.x, normal.y, normal.z },
 					{ tangent.x, tangent.y, tangent.z, tangentSign }
-				});
+					});
 			}
 
 			std::vector<uint32_t> indices;
@@ -245,6 +249,10 @@ namespace Engine {
 			mesh.indexBufferView.SizeInBytes = static_cast<UINT>(indices.size() * sizeof(uint32_t));
 			mesh.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 			mesh.indexCount = static_cast<UINT>(indices.size());
+			totalVertices += vertices.size();
+			totalIndices += indices.size();
+			totalVertexBufferBytes += vertices.size() * sizeof(ModelVertex);
+			totalIndexBufferBytes += indices.size() * sizeof(uint32_t);
 
 			if (sourceMesh->mMaterialIndex < scene->mNumMaterials) {
 				const aiMaterial* material = scene->mMaterials[sourceMesh->mMaterialIndex];
@@ -261,10 +269,7 @@ namespace Engine {
 					resolvedTexturePath = FindFallbackTexturePath(modelDirectory, materialName.C_Str());
 				}
 				if (!resolvedTexturePath.empty()) {
-					mesh.diffuseTexture = std::make_unique<Texture>();
-					if (!mesh.diffuseTexture->LoadFromFile(device, commandList, resolvedTexturePath.wstring())) {
-						mesh.diffuseTexture.reset();
-					}
+					mesh.diffuseTexture = Texture::LoadCached(device, commandList, resolvedTexturePath.wstring(), true, false, false, DXGI_FORMAT_BC3_UNORM_SRGB);
 				}
 
 				std::filesystem::path metallicPath = ResolveMaterialTexture(material, aiTextureType_METALNESS, modelDirectory);
@@ -272,10 +277,7 @@ namespace Engine {
 					metallicPath = FindNamedMaterialTexturePath(modelDirectory, materialName.C_Str(), resolvedTexturePath, L"_Metallic_1001.png");
 				}
 				if (!metallicPath.empty()) {
-					mesh.metallicTexture = std::make_unique<Texture>();
-					if (!mesh.metallicTexture->LoadFromFile(device, commandList, metallicPath.wstring(), false)) {
-						mesh.metallicTexture.reset();
-					}
+					mesh.metallicTexture = Texture::LoadCached(device, commandList, metallicPath.wstring(), false, false, false, DXGI_FORMAT_BC4_UNORM);
 				}
 
 				std::filesystem::path roughnessPath = ResolveMaterialTexture(material, aiTextureType_DIFFUSE_ROUGHNESS, modelDirectory);
@@ -283,10 +285,7 @@ namespace Engine {
 					roughnessPath = FindNamedMaterialTexturePath(modelDirectory, materialName.C_Str(), resolvedTexturePath, L"_Roughness_1001.png");
 				}
 				if (!roughnessPath.empty()) {
-					mesh.roughnessTexture = std::make_unique<Texture>();
-					if (!mesh.roughnessTexture->LoadFromFile(device, commandList, roughnessPath.wstring(), false)) {
-						mesh.roughnessTexture.reset();
-					}
+					mesh.roughnessTexture = Texture::LoadCached(device, commandList, roughnessPath.wstring(), false, false, false, DXGI_FORMAT_BC4_UNORM);
 				}
 
 				std::filesystem::path normalPath = ResolveMaterialTexture(material, aiTextureType_NORMALS, modelDirectory);
@@ -300,10 +299,7 @@ namespace Engine {
 					std::wstring normalFilename = normalPath.filename().wstring();
 					std::transform(normalFilename.begin(), normalFilename.end(), normalFilename.begin(), towlower);
 					const bool invertNormalGreen = normalFilename.find(L"_opengl_") != std::wstring::npos;
-					mesh.normalTexture = std::make_unique<Texture>();
-					if (!mesh.normalTexture->LoadFromFile(device, commandList, normalPath.wstring(), false, false, invertNormalGreen)) {
-						mesh.normalTexture.reset();
-					}
+					mesh.normalTexture = Texture::LoadCached(device, commandList, normalPath.wstring(), false, false, invertNormalGreen, DXGI_FORMAT_BC5_UNORM);
 				}
 			}
 
@@ -318,6 +314,17 @@ namespace Engine {
 			m_meshes.push_back(std::move(mesh));
 		}
 
+		char message[512];
+		sprintf_s(message, sizeof(message),
+			"[Model Memory] Meshes: %zu, Vertices: %llu, Indices: %llu, Vertex Buffers: %.2f MiB, Index Buffers: %.2f MiB, Total: %.2f MiB\n",
+			m_meshes.size(),
+			static_cast<unsigned long long>(totalVertices),
+			static_cast<unsigned long long>(totalIndices),
+			static_cast<double>(totalVertexBufferBytes) / (1024.0 * 1024.0),
+			static_cast<double>(totalIndexBufferBytes) / (1024.0 * 1024.0),
+			static_cast<double>(totalVertexBufferBytes + totalIndexBufferBytes) / (1024.0 * 1024.0));
+		OutputDebugStringA(message);
+
 		return !m_meshes.empty();
 	}
 
@@ -328,6 +335,36 @@ namespace Engine {
 			commandList->IASetIndexBuffer(&mesh.indexBufferView);
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			commandList->DrawIndexedInstanced(mesh.indexCount, 1, 0, 0, 0);
+		}
+	}
+
+	void Model::ReleaseUploadResources() {
+		if (m_fallbackTexture) {
+			m_fallbackTexture->ReleaseUploadResources();
+		}
+		if (m_fallbackMetallicTexture) {
+			m_fallbackMetallicTexture->ReleaseUploadResources();
+		}
+		if (m_fallbackRoughnessTexture) {
+			m_fallbackRoughnessTexture->ReleaseUploadResources();
+		}
+		if (m_fallbackNormalTexture) {
+			m_fallbackNormalTexture->ReleaseUploadResources();
+		}
+
+		for (Mesh& mesh : m_meshes) {
+			if (mesh.diffuseTexture) {
+				mesh.diffuseTexture->ReleaseUploadResources();
+			}
+			if (mesh.metallicTexture) {
+				mesh.metallicTexture->ReleaseUploadResources();
+			}
+			if (mesh.roughnessTexture) {
+				mesh.roughnessTexture->ReleaseUploadResources();
+			}
+			if (mesh.normalTexture) {
+				mesh.normalTexture->ReleaseUploadResources();
+			}
 		}
 	}
 }
