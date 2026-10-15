@@ -21,12 +21,17 @@ namespace Engine {
 			D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
 			D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
 			std::unique_ptr<Texture> diffuseTexture;
+			std::unique_ptr<Texture> metallicTexture;
+			std::unique_ptr<Texture> roughnessTexture;
+			std::unique_ptr<Texture> normalTexture;
 			UINT textureSrvIndex = 0;
 			UINT indexCount = 0;
 		};
 
 		std::unique_ptr<Texture> m_fallbackTexture;
-		UINT m_fallbackTextureSrvIndex = 0;
+		std::unique_ptr<Texture> m_fallbackMetallicTexture;
+		std::unique_ptr<Texture> m_fallbackRoughnessTexture;
+		std::unique_ptr<Texture> m_fallbackNormalTexture;
 		std::vector<Mesh> m_meshes;
 	};
 }

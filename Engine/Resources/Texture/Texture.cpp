@@ -5,7 +5,7 @@
 
 namespace Engine {
 
-	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb, bool generateMipmaps) {
+	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb, bool generateMipmaps, bool invertNormalGreen) {
 		// DirectXTex を使って画像ファイルを読み込む
 		std::wstring ext = filePath.substr(filePath.find_last_of(L'.'));
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
@@ -40,6 +40,18 @@ namespace Engine {
 			OutputDebugStringA(message);
 			
 			return false;
+		}
+
+		if (invertNormalGreen && (m_meta.format == DXGI_FORMAT_R8G8B8A8_UNORM || m_meta.format == DXGI_FORMAT_B8G8R8A8_UNORM)) {
+			for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
+				const DirectX::Image* image = &m_image.GetImages()[imageIndex];
+				for (size_t y = 0; y < image->height; ++y) {
+					uint8_t* row = image->pixels + y * image->rowPitch;
+					for (size_t x = 0; x < image->width; ++x) {
+						row[x * 4 + 1] = 255 - row[x * 4 + 1];
+					}
+				}
+			}
 		}
 
 		if (generateMipmaps && m_meta.mipLevels == 1 && m_meta.dimension == DirectX::TEX_DIMENSION_TEXTURE2D) {

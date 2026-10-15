@@ -134,8 +134,9 @@ namespace Engine {
 			m_device->GetDevice(),
 			L"ModelVS.cso",
 			L"ModelPS.cso",
-			1,
+			4,
 			false,
+			true,
 			true
 		);
 
