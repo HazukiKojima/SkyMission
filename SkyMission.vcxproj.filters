@@ -70,6 +70,9 @@
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp">
       <Filter>Engine\Resources\Texture</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Core\SceneLoader.cpp">
+      <Filter>Engine\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.h">
@@ -107,6 +110,9 @@
     </ClInclude>
     <ClInclude Include="Engine\Resources\Mesh\Model.h">
       <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Core\SceneLoader.h">
+      <Filter>Engine\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

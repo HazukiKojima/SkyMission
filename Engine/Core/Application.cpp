@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "Window.h"
 #include "../Renderer/Device/Renderer.h"
+#include "SceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
 
@@ -13,6 +14,7 @@ namespace Engine {
 	// アプリケーション初期化処理
 	void Application::Initialize() {
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
+		TestREDox();
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 
 		m_renderer = std::make_unique<Renderer>();
