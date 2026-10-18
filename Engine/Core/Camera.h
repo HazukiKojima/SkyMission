@@ -22,6 +22,11 @@ namespace Engine {
 		// アクセサ
 		DirectX::XMMATRIX GetView() const { return m_view; }
 		DirectX::XMMATRIX GetProjection() const { return m_proj; }
+		DirectX::XMMATRIX GetProjection(float farZ) const {
+			return farZ > m_nearZ
+				? DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, farZ)
+				: m_proj;
+		}
 		DirectX::XMMATRIX GetViewProjection() const { return m_view * m_proj; }
 		DirectX::XMFLOAT3 GetPosition() const { return m_position; }
 

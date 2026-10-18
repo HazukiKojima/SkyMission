@@ -3,6 +3,7 @@
 cbuffer MatrixBuffer : register(b0)
 {
     float4x4 mvp;
+    float4x4 world;
     float time;
     float3 padding;
     float3 cameraPos;

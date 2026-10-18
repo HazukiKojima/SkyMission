@@ -6,9 +6,10 @@
 #include "../../Resources/Texture/Texture.h"
 #include "../Device/RenderDevice.h"
 #include "../Device/CommandContext.h"
+#include <vector>
 
 namespace Engine {
-	class Camera;
+	class Scene;
 
 	class Renderer {
 	public:
@@ -16,13 +17,21 @@ namespace Engine {
 		~Renderer();
 
 		void Initialize(HWND hwnd, UINT width, UINT height);
-		void InitializeConstantBuffers(Camera* camera);
-		void Update(Camera* camera, float elapsedTime);
-		void Render(UINT width, UINT height);
+		void InitializeConstantBuffers(const Scene& scene);
+		void Update(const Scene& scene, float elapsedTime);
+		void Render(UINT width, UINT height, const Scene& scene);
 		void Resize(UINT width, UINT height);
 		float GetOceanSize() const { return m_oceanSize; }
+		std::shared_ptr<Engine::Model> GetModel() const { return m_model; }
 
 	private:
+		struct ModelConstantBuffer {
+			Microsoft::WRL::ComPtr<ID3D12Resource> resource;
+			UINT8* mappedData = nullptr;
+		};
+
+		void EnsureModelConstantBufferCapacity(size_t objectCount);
+
 		std::unique_ptr<RenderDevice> m_device;
 		std::unique_ptr<CommandContext> m_context;
 
@@ -50,12 +59,13 @@ namespace Engine {
 		// Cloud 専用定数バッファ
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_cloudConstantBuffer;
 		UINT8* m_cloudCbvDataPtr = nullptr;
+		std::vector<ModelConstantBuffer> m_modelConstantBuffers[RenderDevice::FrameCount];
 
 		UINT m_vertexCount;
 		float m_oceanSize = 10000000.0f;
 
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;
-		std::unique_ptr<Engine::Model> m_model;
+		std::shared_ptr<Engine::Model> m_model;
 	};
 }

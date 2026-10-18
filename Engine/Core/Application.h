@@ -1,6 +1,6 @@
 #pragma once
 #include "../EngineCommon.h"
-#include "Camera.h"
+#include "Scene.h"
 #include <chrono>
 
 namespace Engine {
@@ -25,8 +25,7 @@ namespace Engine {
 
 		std::unique_ptr<Renderer> m_renderer;
 
-		// Camera
-		std::unique_ptr<Engine::Camera> m_camera;
+		std::unique_ptr<Engine::Scene> m_scene;
 		// timing
 		float m_elapsedTime = 0.0f;
 		std::chrono::steady_clock::time_point m_lastTime;

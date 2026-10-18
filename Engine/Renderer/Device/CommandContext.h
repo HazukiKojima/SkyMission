@@ -19,6 +19,7 @@ namespace Engine {
 		void TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
 
 		ID3D12GraphicsCommandList* GetCommandList() const { return m_commandList.Get(); }
+		UINT GetFrameIndex() const { return m_currentFrameIndex; }
 
 	private:
 		ID3D12CommandQueue* m_targetQueue = nullptr;
