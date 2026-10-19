@@ -2,7 +2,10 @@
 #include <Windows.h>
 #include <iostream>
 
-using MyRedoxParseFn = int(__cdecl*)(const unsigned char*, int);
+using MyRedoxGetStringFn = int(__cdecl*)(
+	const unsigned char*, int,
+	const unsigned char*, int,
+	unsigned char*, int);
 
 void TestREDox()
 {
@@ -15,21 +18,34 @@ void TestREDox()
 		return;
 	}
 
-	auto parseJson = reinterpret_cast<MyRedoxParseFn>(
-		GetProcAddress(module, "MyRedoxParse"));
+	auto getString = reinterpret_cast<MyRedoxGetStringFn>(
+		GetProcAddress(module, "MyRedoxGetString"));
 
-	if (parseJson == nullptr)
+	if (getString == nullptr)
 	{
-		OutputDebugStringA("Failed to find MyRedoxParse\n");
+		OutputDebugStringA("Failed to find MyRedoxGetString\n");
 		FreeLibrary(module);
 		return;
 	}
 
 	const unsigned char json[] = R"({"name":"SkyMission"})";
-	const int result = parseJson(json, sizeof(json) - 1);
+	const unsigned char key[] = "name";
+	unsigned char output[128]{};
 
-	char message[128];
-	sprintf_s(message, "REDox parse result: %d\n", result);
+	const int result = getString(
+		json, sizeof(json) - 1,
+		key, sizeof(key) - 1,
+		output, sizeof(output));
+
+	char message[256];
+	if (result >= 0)
+	{
+		sprintf_s(message, "REDox result: %.*s\n", result, output);
+	}
+	else
+	{
+		sprintf_s(message, "REDox result: %d\n", result);
+	}
 	OutputDebugStringA(message);
 
 	FreeLibrary(module);
