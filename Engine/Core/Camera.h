@@ -22,6 +22,11 @@ namespace Engine {
 		// アクセサ
 		DirectX::XMMATRIX GetView() const { return m_view; }
 		DirectX::XMMATRIX GetProjection() const { return m_proj; }
+		DirectX::XMMATRIX GetProjection(float farZ) const {
+			return farZ > m_nearZ
+				? DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, farZ)
+				: m_proj;
+		}
 		DirectX::XMMATRIX GetViewProjection() const { return m_view * m_proj; }
 		DirectX::XMFLOAT3 GetPosition() const { return m_position; }
 
@@ -41,7 +46,7 @@ namespace Engine {
 		DirectX::XMFLOAT3 m_position = { 0.0f, 10.0f, -10.0f };
 		float m_yaw = 0.0f;   // radians
 		float m_pitch = -0.4f; // radians
-		float m_moveSpeed = 3000.0f; // units per second
+		float m_moveSpeed = 30.0f; // units per second
 		float m_mouseSensitivity = 0.0025f; // radians per pixel
 		bool m_rmbDown = false;
 		POINT m_prevCursorPos = { 0, 0 };

@@ -1,10 +1,11 @@
 #include "Renderer.h"
 #include "../Device/RenderDevice.h"
 #include "../Device/CommandContext.h"
-#include "../../Core/Camera.h"
+#include "../../Core/Scene.h"
 #include <DirectXMath.h>
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 
 namespace Engine {
 
@@ -20,6 +21,21 @@ namespace Engine {
 		constexpr float kCloudOceanFogTop = 350.0f;
 		constexpr float kCloudOceanFogDensity = 0.00000112f;
 		constexpr float kCloudOceanFogDistance = 5000000.0f;
+
+		struct ModelConstantBufferData {
+			DirectX::XMFLOAT4X4 mvp;
+			DirectX::XMFLOAT4X4 world;
+			float time;
+			float padding[3];
+			DirectX::XMFLOAT3 cameraPos;
+			float pad2;
+			DirectX::XMFLOAT3 sunDirection;
+			float sunIntensity;
+			DirectX::XMFLOAT3 sunColor;
+			float ambientIntensity;
+			DirectX::XMFLOAT3 ambientColor;
+			float pad3;
+		};
 	}
 
 	struct ConstantBufferData {
@@ -133,8 +149,9 @@ namespace Engine {
 			m_device->GetDevice(),
 			L"ModelVS.cso",
 			L"ModelPS.cso",
-			1,
+			4,
 			false,
+			true,
 			true
 		);
 
@@ -210,63 +227,56 @@ namespace Engine {
 		m_indexBufferView.SizeInBytes = sizeof(uint32_t) * indices.size();
 
 		// テクスチャ読み込みとSRV作成の準備
-		m_texture = std::make_unique<Engine::Texture>();
 		// 実行ファイルパスからアセット候補パスを構築
 		m_context->BeginFrame();
 		UINT srvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_device->AllocateSrvDescriptor(&srvIndex);
-		// 実行ファイルのパスを取得
 		wchar_t buffer[MAX_PATH];
-		GetModuleFileName(NULL, buffer, MAX_PATH);
-		std::wstring exePath = buffer;
-		std::wstring exeDir = exePath.substr(0, exePath.find_last_of(L"\\/"));
+		GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+		const std::filesystem::path exeDir = std::filesystem::path(buffer).parent_path();
+		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
 
 		// Assets 配下の候補パスを作成
-		std::wstring path = exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg";
-		if (!m_texture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path, true, true)) {
+		std::filesystem::path path = assetsDir / L"Environment/Ocean/Textures/water-bg-pattern-04.jpg";
+		m_texture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), path.wstring(), true, true);
+		if (!m_texture) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
-		m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
+		else {
+			m_texture->CreateShaderResourceView(m_device->GetDevice(), cpuHandle);
+		}
 
-		m_oceanNormalTexture = std::make_unique<Engine::Texture>();
 		UINT normalSrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE normalCpuHandle = m_device->AllocateSrvDescriptor(&normalSrvIndex);
-		std::vector<std::wstring> normalTexturePaths = {
-			exeDir + L"\\..\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\..\\..\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\..\\Assets\\Images\\T_Ocean_Normal.jpg",
-			exeDir + L"\\Assets\\Images\\T_Ocean_Normal.jpg"
-		};
-		bool normalTextureLoaded = false;
-		for (const auto& normalPath : normalTexturePaths) {
-			WIN32_FILE_ATTRIBUTE_DATA normalFileInfo;
-			if (GetFileAttributesExW(normalPath.c_str(), GetFileExInfoStandard, &normalFileInfo) != 0 &&
-				m_oceanNormalTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), normalPath, false, true)) {
-				normalTextureLoaded = true;
-				break;
-			}
-		}
-		if (!normalTextureLoaded) {
+		std::filesystem::path normalPath = assetsDir / L"Environment/Ocean/Textures/T_Ocean_Normal.jpg";
+		m_oceanNormalTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), normalPath.wstring(), false, true);
+		if (!m_oceanNormalTexture) {
 			OutputDebugStringA("Application::Initialize - failed to load ocean normal map\n");
 		}
-		m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
+		else {
+			m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
+		}
 		m_context->EndFrame();
 		// フレーム終了後にGPU完了待ち
 		m_context->WaitForGpu();
+		if (m_texture) {
+			m_texture->ReleaseUploadResources();
+		}
+		if (m_oceanNormalTexture) {
+			m_oceanNormalTexture->ReleaseUploadResources();
+		}
 		m_textureSrvIndex = srvIndex;
 		m_oceanNormalTextureSrvIndex = normalSrvIndex;
 
 		// Sky Sphere 用の環境テクスチャ(HDR/EXR)読み込み
-		m_skyTexture = std::make_unique<Engine::Texture>();
 		m_context->BeginFrame();
 		UINT skySrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
 
 		// 読み込み候補パス一覧
-		std::vector<std::wstring> skyTexturePaths = {
-			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.hdr",
-			exeDir + L"\\..\\..\\Assets\\Images\\citrus_orchard_road_puresky_4k.exr",
-			exeDir + L"\\..\\..\\Assets\\Images\\water-bg-pattern-04.jpg",
+		std::vector<std::filesystem::path> skyTexturePaths = {
+			assetsDir / L"Environment/Sky/Textures/citrus_orchard_road_puresky_4k.hdr",
+			assetsDir / L"Environment/Sky/Textures/citrus_orchard_road_puresky_4k.exr",
 		};
 
 		bool skyTextureLoaded = false;
@@ -281,7 +291,8 @@ namespace Engine {
 				OutputDebugStringA(pathBuffer);
 				OutputDebugStringA("\n");
 
-				if (m_skyTexture->LoadFromFile(m_device->GetDevice(), m_context->GetCommandList(), path)) {
+				m_skyTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), path.wstring());
+				if (m_skyTexture) {
 					OutputDebugStringA("Sky texture loaded successfully!\n");
 					skyTextureLoaded = true;
 					break;
@@ -304,37 +315,38 @@ namespace Engine {
 			OutputDebugStringA("Warning: No sky texture could be loaded from any path.\n");
 		}
 
-		m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
-
-		const std::vector<std::wstring> modelPaths = {
-			exeDir + L"\\..\\..\\Assets\\Models\\model.fbx",
-			exeDir + L"\\..\\..\\..\\Assets\\Models\\model.fbx",
-			exeDir + L"\\..\\Assets\\Models\\model.fbx",
-			exeDir + L"\\Assets\\Models\\model.fbx"
-		};
-		for (const auto& modelPath : modelPaths) {
-			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-			if (GetFileAttributesExW(modelPath.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
-				m_model = std::make_unique<Engine::Model>();
-				if (m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath)) {
-					OutputDebugStringA("Application::Initialize - FBX model loaded\n");
-				}
-				else {
-					m_model.reset();
-				}
-				break;
-			}
+		if (m_skyTexture) {
+			m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
 		}
-		if (!m_model) {
-			OutputDebugStringA("Application::Initialize - place an FBX at Assets\\Models\\model.fbx to render it\n");
+
+		std::filesystem::path modelPath = assetsDir / L"Aircraft/F16/sk_Jet.fbx";
+
+		m_model = std::make_shared<Model>();
+		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath.wstring())) {
+			OutputDebugStringA("Failed to load sk_Jet.fbx\n");
+			m_model.reset();
 		}
 
 		m_context->EndFrame();
 		m_context->WaitForGpu();
+		if (m_texture) {
+			m_texture->ReleaseUploadResources();
+		}
+		if (m_oceanNormalTexture) {
+			m_oceanNormalTexture->ReleaseUploadResources();
+		}
+		if (m_skyTexture) {
+			m_skyTexture->ReleaseUploadResources();
+		}
+		if (m_model) {
+			m_model->ReleaseUploadResources();
+		}
 		m_skyTextureSrvIndex = skySrvIndex;
 	}
 
-	void Renderer::InitializeConstantBuffers(Camera* camera) {
+	void Renderer::InitializeConstantBuffers(const Scene& scene) {
+		const Camera& camera = scene.GetCamera();
+		const SceneEnvironment& environment = scene.GetEnvironment();
 		// 定数バッファ (MVP) を作成して初期値をセット
 		{
 			using namespace DirectX;
@@ -355,8 +367,8 @@ namespace Engine {
 			ThrowIfFailed(m_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_cbvDataPtr)));
 
 			XMMATRIX world = XMMatrixIdentity();
-			XMMATRIX view = camera->GetView();
-			XMMATRIX proj = camera->GetProjection();
+			XMMATRIX view = camera.GetView();
+			XMMATRIX proj = camera.GetProjection();
 			XMMATRIX mvp = world * view * proj;
 			XMMATRIX mvpT = XMMatrixTranspose(mvp);
 
@@ -369,12 +381,12 @@ namespace Engine {
 			cbInit->oceanOffset[0] = 10.0f;
 			cbInit->oceanOffset[1] = 0.0f;
 			cbInit->oceanOffset[2] = -10.0f;
-			cbInit->cameraPos = DirectX::XMFLOAT3(10.0f, 15.0f, -10.0f);
-			cbInit->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
-			cbInit->sunIntensity = 1.8f;
-			cbInit->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
-			cbInit->ambientIntensity = 0.32f;
-			cbInit->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
+			cbInit->cameraPos = camera.GetPosition();
+			cbInit->sunDirection = environment.sunDirection;
+			cbInit->sunIntensity = environment.sunIntensity;
+			cbInit->sunColor = environment.sunColor;
+			cbInit->ambientIntensity = environment.ambientIntensity;
+			cbInit->ambientColor = environment.ambientColor;
 			cbInit->oceanSize = m_oceanSize;
 			cbInit->oceanWaveLength = kOceanWaveLength;
 			cbInit->oceanWaveSteepness = kOceanWaveSteepness;
@@ -397,20 +409,48 @@ namespace Engine {
 		ThrowIfFailed(m_cloudConstantBuffer->Map(0, &cloudReadRange, reinterpret_cast<void**>(&m_cloudCbvDataPtr)));
 	}
 
-	void Renderer::Update(Camera* camera, float elapsedTime) {
+	void Renderer::EnsureModelConstantBufferCapacity(size_t objectCount) {
+		if (objectCount <= m_modelConstantBuffers[0].size() && objectCount <= m_modelConstantBuffers[1].size()) {
+			return;
+		}
+
+		m_context->WaitForGpu();
+		const UINT64 bufferSize = (sizeof(ModelConstantBufferData) + 255) & ~255;
+		for (UINT frameIndex = 0; frameIndex < RenderDevice::FrameCount; ++frameIndex) {
+			auto& buffers = m_modelConstantBuffers[frameIndex];
+			while (buffers.size() < objectCount) {
+				ModelConstantBuffer buffer;
+				CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+				auto desc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+				ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
+					&heapProps,
+					D3D12_HEAP_FLAG_NONE,
+					&desc,
+					D3D12_RESOURCE_STATE_GENERIC_READ,
+					nullptr,
+					IID_PPV_ARGS(&buffer.resource)));
+				CD3DX12_RANGE readRange(0, 0);
+				ThrowIfFailed(buffer.resource->Map(0, &readRange, reinterpret_cast<void**>(&buffer.mappedData)));
+				buffers.push_back(std::move(buffer));
+			}
+		}
+	}
+
+	void Renderer::Update(const Scene& scene, float elapsedTime) {
 		// MVPを計算して定数バッファにセット
 		using namespace DirectX;
-		const auto camPos = camera->GetPosition();
+		const Camera& camera = scene.GetCamera();
+		const SceneEnvironment& environment = scene.GetEnvironment();
+		const auto camPos = camera.GetPosition();
 		const float cameraHeight = (camPos.y < 0.0f) ? -camPos.y : camPos.y;
 		const float oceanHalfDiagonal = m_oceanSize * 0.70710678f;
 		const float oceanCornerDistance = std::sqrt(
 			oceanHalfDiagonal * oceanHalfDiagonal + cameraHeight * cameraHeight);
-		camera->SetFarPlane(oceanCornerDistance * 1.1f);
 
 		XMMATRIX world = XMMatrixIdentity();
-		XMMATRIX view = camera->GetView();
+		XMMATRIX view = camera.GetView();
 
-		XMMATRIX proj = camera->GetProjection();
+		XMMATRIX proj = camera.GetProjection(oceanCornerDistance * 1.1f);
 		XMMATRIX mvp = world * view * proj;
 		XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, view * proj);
 		XMMATRIX mvpT = XMMatrixTranspose(mvp);
@@ -424,18 +464,15 @@ namespace Engine {
 		data->mvp = m;
 		data->time = elapsedTime;
 		// カメラ位置などの情報をセット（VS/PSで参照）
-		if (camera) {
-			data->cameraPos = camPos;
-
-			data->oceanOffset[0] = camPos.x;
-			data->oceanOffset[1] = 0.0f;
-			data->oceanOffset[2] = camPos.z;
-		}
-		data->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
-		data->sunIntensity = 1.8f;
-		data->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
-		data->ambientIntensity = 0.32f;
-		data->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
+		data->cameraPos = camPos;
+		data->oceanOffset[0] = camPos.x;
+		data->oceanOffset[1] = 0.0f;
+		data->oceanOffset[2] = camPos.z;
+		data->sunDirection = environment.sunDirection;
+		data->sunIntensity = environment.sunIntensity;
+		data->sunColor = environment.sunColor;
+		data->ambientIntensity = environment.ambientIntensity;
+		data->ambientColor = environment.ambientColor;
 		data->oceanSize = m_oceanSize;
 		data->oceanWaveLength = kOceanWaveLength;
 		data->oceanWaveSteepness = kOceanWaveSteepness;
@@ -448,11 +485,11 @@ namespace Engine {
 
 		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
 		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));
-		cloud->cameraPosition = camera->GetPosition();
+		cloud->cameraPosition = camPos;
 		cloud->time = elapsedTime;
-		cloud->sunDirection = DirectX::XMFLOAT3(0.32f, 0.88f, -0.28f);
-		cloud->sunIntensity = 1.8f;
-		cloud->sunColor = DirectX::XMFLOAT3(1.0f, 0.98f, 0.96f);
+		cloud->sunDirection = environment.sunDirection;
+		cloud->sunIntensity = environment.sunIntensity;
+		cloud->sunColor = environment.sunColor;
 		cloud->cloudDensity = 0.62f;
 		cloud->cloudBottom = 800.0f;
 		cloud->cloudTop = 2100.0f;
@@ -462,15 +499,36 @@ namespace Engine {
 		cloud->absorption = 0.010f;
 		cloud->stepSize = 120.0f;
 		cloud->stepCount = 32;
-		cloud->ambientIntensity = 0.32f;
-		cloud->ambientColor = DirectX::XMFLOAT3(0.18f, 0.32f, 0.48f);
+		cloud->ambientIntensity = environment.ambientIntensity;
+		cloud->ambientColor = environment.ambientColor;
 		cloud->oceanFogBottom = 0.0f;
 		cloud->oceanFogTop = kCloudOceanFogTop;
 		cloud->oceanFogDensity = kCloudOceanFogDensity;
 		cloud->oceanFogDistance = kCloudOceanFogDistance;
+
+		const auto& objects = scene.GetObjects();
+		EnsureModelConstantBufferCapacity(objects.size());
+		const UINT frameIndex = m_context->GetFrameIndex();
+		for (size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex) {
+			const SceneObject& object = objects[objectIndex];
+			ModelConstantBufferData* modelData = reinterpret_cast<ModelConstantBufferData*>(m_modelConstantBuffers[frameIndex][objectIndex].mappedData);
+			const XMMATRIX objectWorld = XMLoadFloat4x4(&object.worldTransform);
+			XMStoreFloat4x4(&modelData->mvp, XMMatrixTranspose(objectWorld * view * proj));
+			XMStoreFloat4x4(&modelData->world, XMMatrixTranspose(objectWorld));
+			modelData->time = elapsedTime;
+			modelData->padding[0] = modelData->padding[1] = modelData->padding[2] = 0.0f;
+			modelData->cameraPos = camPos;
+			modelData->pad2 = 0.0f;
+			modelData->sunDirection = environment.sunDirection;
+			modelData->sunIntensity = environment.sunIntensity;
+			modelData->sunColor = environment.sunColor;
+			modelData->ambientIntensity = environment.ambientIntensity;
+			modelData->ambientColor = environment.ambientColor;
+			modelData->pad3 = 0.0f;
+		}
 	}
 
-	void Renderer::Render(UINT width, UINT height) {
+	void Renderer::Render(UINT width, UINT height, const Scene& runtimeScene) {
 		m_context->BeginFrame();
 
 		auto cmd = m_context->GetCommandList();
@@ -548,13 +606,21 @@ namespace Engine {
 		// 描画コマンド発行
 		cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
 
-		if (m_model && m_model->IsLoaded()) {
+		const auto& objects = runtimeScene.GetObjects();
+		const UINT frameIndex = m_context->GetFrameIndex();
+		if (m_modelPipeline) {
 			cmd->SetGraphicsRootSignature(m_modelPipeline->GetRootSignature());
 			cmd->SetPipelineState(m_modelPipeline->GetPSO());
 			ID3D12DescriptorHeap* modelHeaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(modelHeaps), modelHeaps);
-			cmd->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
-			m_model->Draw(cmd, m_device.get());
+			for (size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex) {
+				const SceneObject& object = objects[objectIndex];
+				if (!object.model || !object.model->IsLoaded()) {
+					continue;
+				}
+				cmd->SetGraphicsRootConstantBufferView(1, m_modelConstantBuffers[frameIndex][objectIndex].resource->GetGPUVirtualAddress());
+				object.model->Draw(cmd, m_device.get());
+			}
 		}
 
 		m_context->TransitionResource(scene, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

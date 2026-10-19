@@ -2,44 +2,232 @@
 #include <DirectXTex.h>
 #include "../../../d3dx12.h"
 #include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <cmath>
+#include <filesystem>
+#include <mutex>
+#include <unordered_map>
 
 namespace Engine {
+	namespace {
+		const char* GetFormatName(DXGI_FORMAT format) {
+		switch (format) {
+		case DXGI_FORMAT_R8_UNORM: return "DXGI_FORMAT_R8_UNORM";
+		case DXGI_FORMAT_R8G8_UNORM: return "DXGI_FORMAT_R8G8_UNORM";
+		case DXGI_FORMAT_R8G8_SNORM: return "DXGI_FORMAT_R8G8_SNORM";
+		case DXGI_FORMAT_R8G8B8A8_UNORM: return "DXGI_FORMAT_R8G8B8A8_UNORM";
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB: return "DXGI_FORMAT_R8G8B8A8_UNORM_SRGB";
+		case DXGI_FORMAT_R16G16_UNORM: return "DXGI_FORMAT_R16G16_UNORM";
+		case DXGI_FORMAT_R16G16_SNORM: return "DXGI_FORMAT_R16G16_SNORM";
+		case DXGI_FORMAT_R16G16B16A16_FLOAT: return "DXGI_FORMAT_R16G16B16A16_FLOAT";
+		case DXGI_FORMAT_R32G32B32A32_FLOAT: return "DXGI_FORMAT_R32G32B32A32_FLOAT";
+		case DXGI_FORMAT_B8G8R8A8_UNORM: return "DXGI_FORMAT_B8G8R8A8_UNORM";
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB: return "DXGI_FORMAT_B8G8R8A8_UNORM_SRGB";
+		case DXGI_FORMAT_BC1_UNORM: return "DXGI_FORMAT_BC1_UNORM";
+		case DXGI_FORMAT_BC1_UNORM_SRGB: return "DXGI_FORMAT_BC1_UNORM_SRGB";
+		case DXGI_FORMAT_BC2_UNORM: return "DXGI_FORMAT_BC2_UNORM";
+		case DXGI_FORMAT_BC2_UNORM_SRGB: return "DXGI_FORMAT_BC2_UNORM_SRGB";
+		case DXGI_FORMAT_BC3_UNORM: return "DXGI_FORMAT_BC3_UNORM";
+		case DXGI_FORMAT_BC3_UNORM_SRGB: return "DXGI_FORMAT_BC3_UNORM_SRGB";
+		case DXGI_FORMAT_BC4_UNORM: return "DXGI_FORMAT_BC4_UNORM";
+		case DXGI_FORMAT_BC5_UNORM: return "DXGI_FORMAT_BC5_UNORM";
+		case DXGI_FORMAT_BC5_SNORM: return "DXGI_FORMAT_BC5_SNORM";
+		case DXGI_FORMAT_BC6H_UF16: return "DXGI_FORMAT_BC6H_UF16";
+		case DXGI_FORMAT_BC7_UNORM: return "DXGI_FORMAT_BC7_UNORM";
+		case DXGI_FORMAT_BC7_UNORM_SRGB: return "DXGI_FORMAT_BC7_UNORM_SRGB";
+		default: return nullptr;
+		}
+		}
 
-	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb, bool generateMipmaps) {
-		// DirectXTex を使って画像ファイルを読み込む
+		bool IsBlockCompressedFormat(DXGI_FORMAT format) {
+			return format >= DXGI_FORMAT_BC1_TYPELESS && format <= DXGI_FORMAT_BC7_UNORM_SRGB;
+		}
+
+		std::filesystem::path GetDiskCachePath(const std::wstring& filePath, bool useSrgb, bool generateMipmaps, bool invertNormalGreen, DXGI_FORMAT targetFormat) {
+			std::error_code error;
+			const auto fileSize = std::filesystem::file_size(filePath, error);
+			if (error) {
+				return {};
+			}
+			const auto lastWriteTime = std::filesystem::last_write_time(filePath, error);
+			if (error) {
+				return {};
+			}
+
+			std::filesystem::path normalizedPath = std::filesystem::weakly_canonical(filePath, error);
+			if (error) {
+				error.clear();
+				normalizedPath = std::filesystem::absolute(filePath, error);
+				if (error) {
+					normalizedPath = filePath;
+				}
+			}
+
+			uint64_t hash = 14695981039346656037ULL;
+			auto mix = [&hash](uint64_t value) {
+				for (int byteIndex = 0; byteIndex < 8; ++byteIndex) {
+					hash ^= value & 0xff;
+					hash *= 1099511628211ULL;
+					value >>= 8;
+				}
+			};
+			for (wchar_t character : normalizedPath.wstring()) {
+				mix(static_cast<uint64_t>(towlower(character)));
+			}
+			mix(fileSize);
+			mix(static_cast<uint64_t>(lastWriteTime.time_since_epoch().count()));
+			mix(static_cast<uint64_t>(targetFormat));
+			mix(useSrgb ? 1 : 0);
+			mix(generateMipmaps ? 1 : 0);
+			mix(invertNormalGreen ? 1 : 0);
+
+			error.clear();
+			const std::filesystem::path tempDirectory = std::filesystem::temp_directory_path(error);
+			if (error) {
+				return {};
+			}
+			return tempDirectory / L"SkyMissionTextureCache" / (std::to_wstring(hash) + L".dds");
+		}
+	}
+
+	std::shared_ptr<Texture> Texture::LoadCached(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb, bool generateMipmaps, bool invertNormalGreen, DXGI_FORMAT targetFormat) {
+		std::error_code error;
+		std::filesystem::path normalizedPath = std::filesystem::absolute(filePath, error);
+		if (error) {
+			normalizedPath = filePath;
+		}
+		std::wstring cacheKey = normalizedPath.lexically_normal().wstring();
+		std::transform(cacheKey.begin(), cacheKey.end(), cacheKey.begin(), towlower);
+		cacheKey += useSrgb ? L"|s1" : L"|s0";
+		cacheKey += generateMipmaps ? L"|m1" : L"|m0";
+		cacheKey += invertNormalGreen ? L"|n1" : L"|n0";
+		cacheKey += L"|f" + std::to_wstring(static_cast<unsigned int>(targetFormat));
+
+		static std::mutex cacheMutex;
+		static std::unordered_map<std::wstring, std::weak_ptr<Texture>> cache;
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		const auto cached = cache.find(cacheKey);
+		if (cached != cache.end()) {
+			if (std::shared_ptr<Texture> texture = cached->second.lock()) {
+				return texture;
+			}
+		}
+
+		auto texture = std::make_shared<Texture>();
+		if (!texture->LoadFromFile(device, cmdList, filePath, useSrgb, generateMipmaps, invertNormalGreen, targetFormat)) {
+			return {};
+		}
+		cache[std::move(cacheKey)] = texture;
+		return texture;
+	}
+
+	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb, bool generateMipmaps, bool invertNormalGreen, DXGI_FORMAT targetFormat) {
 		std::wstring ext = filePath.substr(filePath.find_last_of(L'.'));
 		std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
 
-		HRESULT hr;
+		HRESULT hr = E_FAIL;
+		std::filesystem::path diskCachePath;
+		bool diskCacheHit = false;
+		if (IsBlockCompressedFormat(targetFormat)) {
+			diskCachePath = GetDiskCachePath(filePath, useSrgb, generateMipmaps, invertNormalGreen, targetFormat);
+			if (!diskCachePath.empty()) {
+				std::error_code error;
+				if (std::filesystem::exists(diskCachePath, error) && !error) {
+					hr = DirectX::LoadFromDDSFile(diskCachePath.c_str(), DirectX::DDS_FLAGS_NONE, &m_meta, m_image);
+					diskCacheHit = SUCCEEDED(hr) && m_meta.format == targetFormat;
+					if (diskCacheHit) {
+						OutputDebugStringW(L"Texture cache hit: ");
+						OutputDebugStringW(filePath.c_str());
+						OutputDebugStringW(L"\n");
+					}
+					else {
+						m_image.Release();
+					}
+				}
+			}
+		}
 
-		if (ext == L".hdr")
-		{
-			hr = DirectX::LoadFromHDRFile(
-				filePath.c_str(),
-				&m_meta,
-				m_image);
+		if (!diskCacheHit) {
+			if (ext == L".hdr") {
+				hr = DirectX::LoadFromHDRFile(filePath.c_str(), &m_meta, m_image);
+			}
+			else {
+				hr = DirectX::LoadFromWICFile(filePath.c_str(),
+					useSrgb ? DirectX::WIC_FLAGS_DEFAULT_SRGB : DirectX::WIC_FLAGS_IGNORE_SRGB,
+					&m_meta, m_image);
+			}
+
+			if (FAILED(hr)) {
+				char message[64];
+				sprintf_s(message, sizeof(message), "Texture::LoadFromFile - image loader failed (HR: 0x%08X)\n", hr);
+				OutputDebugStringW(filePath.c_str());
+				OutputDebugStringA(message);
+				return false;
+			}
 		}
-		else
-		{
-			hr = DirectX::LoadFromWICFile(
-				filePath.c_str(),
-				useSrgb ? DirectX::WIC_FLAGS_DEFAULT_SRGB : DirectX::WIC_FLAGS_IGNORE_SRGB,
-				&m_meta,
-				m_image);
+
+		if (!diskCacheHit && invertNormalGreen && (m_meta.format == DXGI_FORMAT_R8G8B8A8_UNORM || m_meta.format == DXGI_FORMAT_B8G8R8A8_UNORM)) {
+			for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
+				const DirectX::Image* image = &m_image.GetImages()[imageIndex];
+				for (size_t y = 0; y < image->height; ++y) {
+					uint8_t* row = image->pixels + y * image->rowPitch;
+					for (size_t x = 0; x < image->width; ++x) {
+						row[x * 4 + 1] = 255 - row[x * 4 + 1];
+					}
+				}
+			}
 		}
-		
-		if (FAILED(hr)) {
-			// 画像の読み込みに失敗した
-			std::wstring ext = filePath.substr(filePath.find_last_of(L"."));
-			char extBuffer[32];
-			size_t converted = 0;
-			wcstombs_s(&converted, extBuffer, sizeof(extBuffer), ext.c_str(), _TRUNCATE);
-			
-			char message[256];
-			sprintf_s(message, sizeof(message), "Texture::LoadFromFile - WIC loader failed for: %s (HR: 0x%08X)\n", extBuffer, hr);
-			OutputDebugStringA(message);
-			
-			return false;
+
+		if (targetFormat != DXGI_FORMAT_UNKNOWN && m_meta.format != targetFormat) {
+			const DXGI_FORMAT sourceFormat = m_meta.format;
+			DirectX::ScratchImage convertedImage;
+			if (IsBlockCompressedFormat(targetFormat)) {
+				DirectX::TEX_COMPRESS_FLAGS compressionFlags = DirectX::TEX_COMPRESS_PARALLEL;
+				if (targetFormat == DXGI_FORMAT_BC7_UNORM || targetFormat == DXGI_FORMAT_BC7_UNORM_SRGB) {
+					compressionFlags = static_cast<DirectX::TEX_COMPRESS_FLAGS>(compressionFlags | DirectX::TEX_COMPRESS_BC7_QUICK);
+				}
+				const auto compressionStart = std::chrono::steady_clock::now();
+				hr = DirectX::Compress(m_image.GetImages(), m_image.GetImageCount(), m_meta, targetFormat,
+					compressionFlags, 0.5f, convertedImage);
+				const auto compressionMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - compressionStart).count();
+				char timingMessage[96];
+				sprintf_s(timingMessage, sizeof(timingMessage), "Texture compression: %lld ms\n", static_cast<long long>(compressionMilliseconds));
+				OutputDebugStringA(timingMessage);
+			}
+			else {
+				hr = DirectX::Convert(m_image.GetImages(), m_image.GetImageCount(), m_meta, targetFormat,
+					DirectX::TEX_FILTER_DEFAULT, 0.5f, convertedImage);
+			}
+			if (FAILED(hr)) {
+				OutputDebugStringW(L"Texture::LoadFromFile - format conversion/compression failed for: ");
+				OutputDebugStringW(filePath.c_str());
+				char message[64];
+				sprintf_s(message, sizeof(message), " (target DXGI_FORMAT %u, HR: 0x%08X)\n", static_cast<unsigned int>(targetFormat), hr);
+				OutputDebugStringA(message);
+				return false;
+			}
+			m_image = std::move(convertedImage);
+			m_meta = m_image.GetMetadata();
+			const bool reconstructNormalZ = targetFormat == DXGI_FORMAT_R8G8B8A8_UNORM &&
+				(sourceFormat == DXGI_FORMAT_R8G8_UNORM || sourceFormat == DXGI_FORMAT_R8G8_SNORM ||
+					sourceFormat == DXGI_FORMAT_R16G16_UNORM || sourceFormat == DXGI_FORMAT_R16G16_SNORM ||
+					sourceFormat == DXGI_FORMAT_BC5_UNORM || sourceFormat == DXGI_FORMAT_BC5_SNORM);
+			if (reconstructNormalZ) {
+				for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
+					const DirectX::Image* image = &m_image.GetImages()[imageIndex];
+					for (size_t y = 0; y < image->height; ++y) {
+						uint8_t* row = image->pixels + y * image->rowPitch;
+						for (size_t x = 0; x < image->width; ++x) {
+							uint8_t* pixel = row + x * 4;
+							const float normalX = pixel[0] / 127.5f - 1.0f;
+							const float normalY = pixel[1] / 127.5f - 1.0f;
+							const float normalZ = std::sqrt((std::max)(0.0f, 1.0f - normalX * normalX - normalY * normalY));
+							pixel[2] = static_cast<uint8_t>(std::lround((normalZ * 0.5f + 0.5f) * 255.0f));
+						}
+					}
+				}
+			}
 		}
 
 		if (generateMipmaps && m_meta.mipLevels == 1 && m_meta.dimension == DirectX::TEX_DIMENSION_TEXTURE2D) {
@@ -54,6 +242,20 @@ namespace Engine {
 			if (SUCCEEDED(hr)) {
 				m_image = std::move(mipmappedImage);
 				m_meta = m_image.GetMetadata();
+			}
+		}
+
+		if (!diskCacheHit && !diskCachePath.empty()) {
+			std::error_code error;
+			std::filesystem::create_directories(diskCachePath.parent_path(), error);
+			if (!error) {
+				const HRESULT saveResult = DirectX::SaveToDDSFile(m_image.GetImages(), m_image.GetImageCount(), m_meta,
+					DirectX::DDS_FLAGS_NONE, diskCachePath.c_str());
+				if (SUCCEEDED(saveResult)) {
+					OutputDebugStringW(L"Texture cache saved: ");
+					OutputDebugStringW(diskCachePath.c_str());
+					OutputDebugStringW(L"\n");
+				}
 			}
 		}
 
@@ -102,9 +304,32 @@ namespace Engine {
 		// GPUへデータを転送してピクセルシェーダ用に遷移
 		UpdateSubresources(cmdList, m_texture.Get(), m_uploadHeap.Get(), 0, 0, static_cast<UINT>(subresources.size()), subresources.data());
 
-		D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(),
+			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		cmdList->ResourceBarrier(1, &barrier);
 
+		const D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = device->GetResourceAllocationInfo(0, 1, &resDesc);
+		OutputDebugStringW(L"Texture loaded: ");
+		OutputDebugStringW(filePath.c_str());
+		char message[160];
+		const char* formatName = GetFormatName(m_meta.format);
+		if (formatName) {
+			sprintf_s(message, sizeof(message), " (%llu x %llu, %s, GPU allocation: %.2f MiB)\n",
+				static_cast<unsigned long long>(m_meta.width),
+				static_cast<unsigned long long>(m_meta.height),
+				formatName,
+				static_cast<double>(allocationInfo.SizeInBytes) / (1024.0 * 1024.0));
+		}
+		else {
+			sprintf_s(message, sizeof(message), " (%llu x %llu, DXGI_FORMAT %u, GPU allocation: %.2f MiB)\n",
+			static_cast<unsigned long long>(m_meta.width),
+			static_cast<unsigned long long>(m_meta.height),
+			static_cast<unsigned int>(m_meta.format),
+			static_cast<double>(allocationInfo.SizeInBytes) / (1024.0 * 1024.0));
+		}
+		OutputDebugStringA(message);
+
+		m_image.Release();
 		return true;
 	}
 
@@ -140,6 +365,7 @@ namespace Engine {
 		D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(),
 			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		cmdList->ResourceBarrier(1, &barrier);
+		m_image.Release();
 		return true;
 	}
 
@@ -158,4 +384,8 @@ namespace Engine {
 		device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHandle);
 	}
 
+	void Texture::ReleaseUploadResources() {
+		m_uploadHeap.Reset();
+		m_image.Release();
+	}
 }

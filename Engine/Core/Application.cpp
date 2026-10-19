@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "Window.h"
 #include "../Renderer/Device/Renderer.h"
+#include "SceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
 
@@ -13,6 +14,7 @@ namespace Engine {
 	// アプリケーション初期化処理
 	void Application::Initialize() {
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
+		TestREDox();
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 
 		m_renderer = std::make_unique<Renderer>();
@@ -22,16 +24,16 @@ namespace Engine {
 			m_window->GetHeight()
 		);
 
-		m_camera = std::make_unique<Engine::Camera>();
-		m_camera->Initialize(
+		m_scene = std::make_unique<Engine::Scene>();
+		m_scene->Initialize(
 			m_window->GetHandle(),
-			DirectX::XM_PIDIV4,
 			static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()),
 			1.0f,
 			m_renderer->GetOceanSize()
 		);
+		m_scene->AddObject(m_renderer->GetModel());
 
-		m_renderer->InitializeConstantBuffers(m_camera.get());
+		m_renderer->InitializeConstantBuffers(*m_scene);
 
 		// ウィンドウリサイズ時のコールバックを設定
 		m_window->SetOnResize([this](UINT w, UINT h) {
@@ -40,8 +42,8 @@ namespace Engine {
 
 			m_renderer->Resize(w, h);
 
-			if (m_camera) {
-				m_camera->OnResize(w, h);
+			if (m_scene) {
+				m_scene->OnResize(w, h);
 			}
 			});
 
@@ -83,17 +85,15 @@ namespace Engine {
 
 		m_elapsedTime += deltaSeconds;
 
-		// Update camera first
-		if (m_camera) {
-			m_camera->Update(deltaSeconds);
+		if (m_scene) {
+			m_scene->Update(deltaSeconds);
+			m_renderer->Update(*m_scene, m_elapsedTime);
 		}
-
-		m_renderer->Update(m_camera.get(), m_elapsedTime);
 	}
 
 	// 描画処理（レンダリングコマンド発行）
 	void Application::Render() {
-		m_renderer->Render(m_window->GetWidth(), m_window->GetHeight());
+		m_renderer->Render(m_window->GetWidth(), m_window->GetHeight(), *m_scene);
 	}
 
 }

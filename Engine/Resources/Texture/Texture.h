@@ -2,6 +2,7 @@
 #include "../../EngineCommon.h"
 #include <DirectXTex.h>
 #include "../../../d3dx12.h"
+#include <memory>
 
 namespace Engine {
 	class Texture {
@@ -9,10 +10,12 @@ namespace Engine {
 		Texture() = default;
 		~Texture() = default;
 
-		bool LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb = true, bool generateMipmaps = false);
+		static std::shared_ptr<Texture> LoadCached(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb = true, bool generateMipmaps = false, bool invertNormalGreen = false, DXGI_FORMAT targetFormat = DXGI_FORMAT_UNKNOWN);
+		bool LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& filePath, bool useSrgb = true, bool generateMipmaps = false, bool invertNormalGreen = false, DXGI_FORMAT targetFormat = DXGI_FORMAT_UNKNOWN);
 		// 作業用の単色テクスチャを作成する（ロード失敗時のフォールバック）
 		bool CreateFromSolidColor(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255);
 		void CreateShaderResourceView(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE srvHandle) const;
+		void ReleaseUploadResources();
 
 		ID3D12Resource* GetResource() const { return m_texture.Get(); }
 		bool IsLoaded() const { return m_texture != nullptr; }

@@ -81,7 +81,8 @@ namespace
 		ID3DBlob* vertexShader,
 		ID3DBlob* pixelShader,
 		bool enableAlphaBlend,
-		bool enableDepth)
+		bool enableDepth,
+		bool hasVertexNormalAndTangent)
 	{
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
@@ -102,8 +103,27 @@ namespace
 				12,
 				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
 				0
+			},
+			{
+				"NORMAL",
+				0,
+				DXGI_FORMAT_R32G32B32_FLOAT,
+				0,
+				20,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+				0
+			},
+			{
+				"TANGENT",
+				0,
+				DXGI_FORMAT_R32G32B32A32_FLOAT,
+				0,
+				32,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+				0
 			}
 		};
+		const UINT inputElementCount = hasVertexNormalAndTangent ? _countof(inputElementDescs) : _countof(inputElementDescs) - 2;
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 
@@ -124,7 +144,7 @@ namespace
 		psoDesc.InputLayout =
 		{
 			inputElementDescs,
-			_countof(inputElementDescs)
+			inputElementCount
 		};
 
 		psoDesc.PrimitiveTopologyType =
@@ -228,6 +248,7 @@ namespace Engine
 				vertexShader.Get(),
 				pixelShader.Get(),
 				false,
+				false,
 				false);
 
 		OutputDebugStringA(
@@ -240,7 +261,8 @@ namespace Engine
 		const std::wstring& psPath,
 		UINT srvCount,
 		bool enableAlphaBlend,
-		bool enableDepth)
+		bool enableDepth,
+		bool hasVertexNormalAndTangent)
 	{
 		OutputDebugStringA(
 			"DEBUG: Starting Pipeline InitializeWithShaders\n");
@@ -286,7 +308,8 @@ namespace Engine
 				vertexShader.Get(),
 				pixelShader.Get(),
 				enableAlphaBlend,
-				enableDepth);
+				enableDepth,
+				hasVertexNormalAndTangent);
 
 		OutputDebugStringA(
 			"DEBUG: PipelineStateObject created with custom shaders\n");
