@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="Engine\Core\Application.cpp" />
     <ClCompile Include="Engine\Core\Camera.cpp" />
+    <ClCompile Include="Engine\Core\JsonBenchmark.cpp" />
     <ClCompile Include="Engine\Core\Scene.cpp" />
     <ClCompile Include="Engine\Core\SceneLoader.cpp" />
     <ClCompile Include="Engine\Core\Window.cpp" />
@@ -37,6 +38,7 @@
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.h" />
     <ClInclude Include="Engine\Core\Camera.h" />
+    <ClInclude Include="Engine\Core\JsonBenchmark.h" />
     <ClInclude Include="Engine\Core\Scene.h" />
     <ClInclude Include="Engine\Core\SceneLoader.h" />
     <ClInclude Include="Engine\Core\Window.h" />
@@ -249,6 +251,7 @@
     <PostBuildEvent>
       <Command>dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
 if errorlevel 1 exit /b %errorlevel%
+dotnet --version > "$(OutDir)DotNetSdkVersion.txt"
 copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
 if errorlevel 1 exit /b %errorlevel%</Command>
     </PostBuildEvent>
@@ -275,9 +278,18 @@ if errorlevel 1 exit /b %errorlevel%</Command>
     <PostBuildEvent>
       <Command>dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
 if errorlevel 1 exit /b %errorlevel%
+dotnet --version > "$(OutDir)DotNetSdkVersion.txt"
 copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
 if errorlevel 1 exit /b %errorlevel%</Command>
     </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <PropertyGroup Condition="'$(EnableRedoxJsonBenchmark)' == ''">
+    <EnableRedoxJsonBenchmark>false</EnableRedoxJsonBenchmark>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(EnableRedoxJsonBenchmark)' == 'true'">
+    <ClCompile>
+      <PreprocessorDefinitions>REDOX_JSON_BENCHMARK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

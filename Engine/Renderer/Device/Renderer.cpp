@@ -61,7 +61,6 @@ namespace Engine {
 			static_cast<int>(key.size()),
 			output,
 			sizeof(output));
-
 		FreeLibrary(module);
 
 		if (result < 0) {
