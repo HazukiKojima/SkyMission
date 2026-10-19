@@ -386,7 +386,7 @@ namespace Engine {
 		}
 
 		const std::filesystem::path modelRelativePath =
-			LoadAssetPathFromJson(assetsDir / L"Config/f16.json", "f16Model");
+			LoadAssetPathFromJson(assetsDir / L"Aircraft/F16/f16.json", "model");
 
 		const std::filesystem::path modelPath = assetsDir / modelRelativePath;
 
