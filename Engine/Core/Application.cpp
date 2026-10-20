@@ -4,6 +4,7 @@
 #include "SceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
+#include <filesystem>
 
 namespace Engine {
 
@@ -14,14 +15,23 @@ namespace Engine {
 	// アプリケーション初期化処理
 	void Application::Initialize() {
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
-		TestREDox();
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
+
+		wchar_t buffer[MAX_PATH];
+		GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+		const std::filesystem::path exeDir = std::filesystem::path(buffer).parent_path();
+		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
+		const SceneLoader sceneLoader;
+		const SceneAssetPaths assets = sceneLoader.LoadAssets(
+			assetsDir / L"Environment/environment.json",
+			assetsDir / L"Aircraft/aircraft.json");
 
 		m_renderer = std::make_unique<Renderer>();
 		m_renderer->Initialize(
 			m_window->GetHandle(),
 			m_window->GetWidth(),
-			m_window->GetHeight()
+			m_window->GetHeight(),
+			assets
 		);
 
 		m_scene = std::make_unique<Engine::Scene>();

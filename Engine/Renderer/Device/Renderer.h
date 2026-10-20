@@ -10,13 +10,14 @@
 
 namespace Engine {
 	class Scene;
+	struct SceneAssetPaths;
 
 	class Renderer {
 	public:
 		Renderer() = default;
 		~Renderer();
 
-		void Initialize(HWND hwnd, UINT width, UINT height);
+		void Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets);
 		void InitializeConstantBuffers(const Scene& scene);
 		void Update(const Scene& scene, float elapsedTime);
 		void Render(UINT width, UINT height, const Scene& scene);

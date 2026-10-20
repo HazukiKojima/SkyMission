@@ -2,6 +2,7 @@
 #include "../Device/RenderDevice.h"
 #include "../Device/CommandContext.h"
 #include "../../Core/Scene.h"
+#include "../../Core/SceneLoader.h"
 #include <DirectXMath.h>
 #include <algorithm>
 #include <cmath>
@@ -13,74 +14,6 @@
 #include <vector>
 
 namespace Engine {
-
-	std::filesystem::path LoadAssetPathFromJson(
-		const std::filesystem::path& jsonPath,
-		const std::string& key)
-	{
-		std::ifstream file(jsonPath, std::ios::binary);
-		if (!file) {
-			throw std::runtime_error("Failed to open asset path JSON.");
-		}
-
-		std::vector<char> json(
-			(std::istreambuf_iterator<char>(file)),
-			std::istreambuf_iterator<char>());
-
-		if (json.empty()) {
-			throw std::runtime_error("Asset path JSON is empty.");
-		}
-
-		HMODULE module = LoadLibraryW(L"REDoxWrapper.dll");
-		if (!module) {
-			throw std::runtime_error("Failed to load REDoxWrapper.dll.");
-		}
-
-		using RedoxGetString = int(__cdecl*)(
-			const unsigned char*,
-			int,
-			const unsigned char*,
-			int,
-			unsigned char*,
-			int);
-
-		auto getString = reinterpret_cast<RedoxGetString>(
-			GetProcAddress(module, "MyRedoxGetString"));
-
-		if (!getString) {
-			FreeLibrary(module);
-			throw std::runtime_error("Failed to find MyRedoxGetString.");
-		}
-
-		unsigned char output[4096] = {};
-
-		const int result = getString(
-			reinterpret_cast<const unsigned char*>(json.data()),
-			static_cast<int>(json.size()),
-			reinterpret_cast<const unsigned char*>(key.data()),
-			static_cast<int>(key.size()),
-			output,
-			sizeof(output));
-
-		FreeLibrary(module);
-
-		if (result < 0) {
-			throw std::runtime_error("Failed to read asset path from JSON.");
-		}
-
-		std::u8string utf8Path(
-			reinterpret_cast<const char8_t*>(output),
-			static_cast<size_t>(result));
-
-		return std::filesystem::path(utf8Path);
-	}
-
-	std::filesystem::path ResolveAssetPathFromJson(
-		const std::filesystem::path& jsonPath,
-		const std::string& key)
-	{
-		return jsonPath.parent_path() / LoadAssetPathFromJson(jsonPath, key);
-	}
 
 	namespace {
 		constexpr float kOceanWaveLength = 40000.0f;
@@ -165,7 +98,7 @@ namespace Engine {
 		}
 	}
 
-	void Renderer::Initialize(HWND hwnd, UINT width, UINT height) {
+	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets) {
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(hwnd, width, height);
 
@@ -300,20 +233,10 @@ namespace Engine {
 		m_indexBufferView.SizeInBytes = sizeof(uint32_t) * indices.size();
 
 		// テクスチャ読み込みとSRV作成の準備
-		// 実行ファイルパスからアセット候補パスを構築
 		m_context->BeginFrame();
 		UINT srvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_device->AllocateSrvDescriptor(&srvIndex);
-		wchar_t buffer[MAX_PATH];
-		GetModuleFileNameW(nullptr, buffer, MAX_PATH);
-		const std::filesystem::path exeDir = std::filesystem::path(buffer).parent_path();
-		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
-		const std::filesystem::path environmentJsonPath = assetsDir / L"Environment/environment.json";
-		const std::filesystem::path skyJsonPath = ResolveAssetPathFromJson(environmentJsonPath, "sky");
-		const std::filesystem::path oceanJsonPath = ResolveAssetPathFromJson(environmentJsonPath, "ocean");
-
-		const std::filesystem::path oceanTexturePath = ResolveAssetPathFromJson(oceanJsonPath, "texture");
-		m_texture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), oceanTexturePath.wstring(), true, true);
+		m_texture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), assets.oceanTexture.wstring(), true, true);
 		if (!m_texture) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
@@ -323,8 +246,7 @@ namespace Engine {
 
 		UINT normalSrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE normalCpuHandle = m_device->AllocateSrvDescriptor(&normalSrvIndex);
-		const std::filesystem::path normalPath = ResolveAssetPathFromJson(oceanJsonPath, "normal");
-		m_oceanNormalTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), normalPath.wstring(), false, true);
+		m_oceanNormalTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), assets.oceanNormalTexture.wstring(), false, true);
 		if (!m_oceanNormalTexture) {
 			OutputDebugStringA("Application::Initialize - failed to load ocean normal map\n");
 		}
@@ -348,11 +270,10 @@ namespace Engine {
 		UINT skySrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
 
-		const std::filesystem::path skyTexturePath = ResolveAssetPathFromJson(skyJsonPath, "texture");
 		m_skyTexture = Engine::Texture::LoadCached(
 			m_device->GetDevice(),
 			m_context->GetCommandList(),
-			skyTexturePath.wstring());
+			assets.skyTexture.wstring());
 		if (!m_skyTexture) {
 			OutputDebugStringA("Failed to load sky texture from JSON path\n");
 		}
@@ -361,11 +282,8 @@ namespace Engine {
 			m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
 		}
 
-		const std::filesystem::path modelJsonPath = assetsDir / L"Aircraft/F16/f16.json";
-		const std::filesystem::path modelPath = ResolveAssetPathFromJson(modelJsonPath, "model");
-
 		m_model = std::make_shared<Model>();
-		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath.wstring())) {
+		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), assets.aircraftModel.wstring())) {
 			OutputDebugStringA("Failed to load F16 model\n");
 			m_model.reset();
 		}

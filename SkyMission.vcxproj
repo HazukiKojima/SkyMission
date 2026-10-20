@@ -29,6 +29,7 @@
     <ClCompile Include="Engine\Renderer\Device\Renderer.cpp" />
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
+    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp" />
     <ClCompile Include="Engine\Resources\Mesh\Model.cpp" />
     <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp" />
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp" />
@@ -45,6 +46,7 @@
     <ClInclude Include="Engine\Renderer\Device\Renderer.h" />
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h" />
+    <ClInclude Include="Engine\Resources\AssetPathResolver.h" />
     <ClInclude Include="Engine\Resources\Mesh\Model.h" />
     <ClInclude Include="Engine\Resources\Mesh\SkySphere.h" />
     <ClInclude Include="Engine\Resources\Texture\Texture.h" />
@@ -292,3 +294,4 @@ if errorlevel 1 exit /b %errorlevel%</Command>
     <Error Condition="!Exists('packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />
   </Target>
 </Project>
+
