@@ -1,3 +1,4 @@
 {
-    "texture": "Ocean/Textures/water-bg-pattern-04.jpg"
+    "texture": "Textures/water-bg-pattern-04.jpg",
+    "normal": "Textures/T_Ocean_Normal.jpg"
 }

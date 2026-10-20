@@ -75,6 +75,13 @@ namespace Engine {
 		return std::filesystem::path(utf8Path);
 	}
 
+	std::filesystem::path ResolveAssetPathFromJson(
+		const std::filesystem::path& jsonPath,
+		const std::string& key)
+	{
+		return jsonPath.parent_path() / LoadAssetPathFromJson(jsonPath, key);
+	}
+
 	namespace {
 		constexpr float kOceanWaveLength = 40000.0f;
 		constexpr float kOceanWaveSteepness = 0.0005f;
@@ -301,10 +308,12 @@ namespace Engine {
 		GetModuleFileNameW(nullptr, buffer, MAX_PATH);
 		const std::filesystem::path exeDir = std::filesystem::path(buffer).parent_path();
 		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
+		const std::filesystem::path environmentJsonPath = assetsDir / L"Environment/environment.json";
+		const std::filesystem::path skyJsonPath = ResolveAssetPathFromJson(environmentJsonPath, "sky");
+		const std::filesystem::path oceanJsonPath = ResolveAssetPathFromJson(environmentJsonPath, "ocean");
 
-		// Assets 配下の候補パスを作成
-		std::filesystem::path path = assetsDir / L"Environment/Ocean/Textures/water-bg-pattern-04.jpg";
-		m_texture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), path.wstring(), true, true);
+		const std::filesystem::path oceanTexturePath = ResolveAssetPathFromJson(oceanJsonPath, "texture");
+		m_texture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), oceanTexturePath.wstring(), true, true);
 		if (!m_texture) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
@@ -314,7 +323,7 @@ namespace Engine {
 
 		UINT normalSrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE normalCpuHandle = m_device->AllocateSrvDescriptor(&normalSrvIndex);
-		std::filesystem::path normalPath = assetsDir / L"Environment/Ocean/Textures/T_Ocean_Normal.jpg";
+		const std::filesystem::path normalPath = ResolveAssetPathFromJson(oceanJsonPath, "normal");
 		m_oceanNormalTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), normalPath.wstring(), false, true);
 		if (!m_oceanNormalTexture) {
 			OutputDebugStringA("Application::Initialize - failed to load ocean normal map\n");
@@ -339,56 +348,21 @@ namespace Engine {
 		UINT skySrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
 
-		// 読み込み候補パス一覧
-		std::vector<std::filesystem::path> skyTexturePaths = {
-			assetsDir / L"Environment/Sky/Textures/citrus_orchard_road_puresky_4k.hdr",
-			assetsDir / L"Environment/Sky/Textures/citrus_orchard_road_puresky_4k.exr",
-		};
-
-		bool skyTextureLoaded = false;
-		for (const auto& path : skyTexturePaths) {
-			// ファイル存在チェックと読み込み
-			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-			if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
-				char pathBuffer[512];
-				size_t converted = 0;
-				wcstombs_s(&converted, pathBuffer, sizeof(pathBuffer), path.c_str(), _TRUNCATE);
-				OutputDebugStringA("Trying to load sky texture from: ");
-				OutputDebugStringA(pathBuffer);
-				OutputDebugStringA("\n");
-
-				m_skyTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), path.wstring());
-				if (m_skyTexture) {
-					OutputDebugStringA("Sky texture loaded successfully!\n");
-					skyTextureLoaded = true;
-					break;
-				}
-				else {
-					OutputDebugStringA("Failed to load this file.\n");
-				}
-			}
-			else {
-				char pathBuffer[512];
-				size_t converted = 0;
-				wcstombs_s(&converted, pathBuffer, sizeof(pathBuffer), path.c_str(), _TRUNCATE);
-				OutputDebugStringA("File not found: ");
-				OutputDebugStringA(pathBuffer);
-				OutputDebugStringA("\n");
-			}
-		}
-
-		if (!skyTextureLoaded) {
-			OutputDebugStringA("Warning: No sky texture could be loaded from any path.\n");
+		const std::filesystem::path skyTexturePath = ResolveAssetPathFromJson(skyJsonPath, "texture");
+		m_skyTexture = Engine::Texture::LoadCached(
+			m_device->GetDevice(),
+			m_context->GetCommandList(),
+			skyTexturePath.wstring());
+		if (!m_skyTexture) {
+			OutputDebugStringA("Failed to load sky texture from JSON path\n");
 		}
 
 		if (m_skyTexture) {
 			m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
 		}
 
-		const std::filesystem::path modelRelativePath =
-			LoadAssetPathFromJson(assetsDir / L"Aircraft/F16/f16.json", "model");
-
-		const std::filesystem::path modelPath = assetsDir / modelRelativePath;
+		const std::filesystem::path modelJsonPath = assetsDir / L"Aircraft/F16/f16.json";
+		const std::filesystem::path modelPath = ResolveAssetPathFromJson(modelJsonPath, "model");
 
 		m_model = std::make_shared<Model>();
 		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath.wstring())) {
