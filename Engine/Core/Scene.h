@@ -40,6 +40,7 @@ namespace Engine {
 		const Camera& GetCamera() const { return m_camera; }
 		SceneEnvironment& GetEnvironment() { return m_environment; }
 		const SceneEnvironment& GetEnvironment() const { return m_environment; }
+		void SetEnvironment(const SceneEnvironment& environment) { m_environment = environment; }
 		std::vector<SceneObject>& GetObjects() { return m_objects; }
 		const std::vector<SceneObject>& GetObjects() const { return m_objects; }
 		void AddObject(std::shared_ptr<Model> model);

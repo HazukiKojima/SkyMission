@@ -1,4 +1,13 @@
 {
     "texture": "Textures/water-bg-pattern-04.jpg",
-    "normal": "Textures/T_Ocean_Normal.jpg"
+    "normal": "Textures/T_Ocean_Normal.jpg",
+    "size": 10000000.0,
+    "waveLength": 40000.0,
+    "waveSteepness": 0.0005,
+    "normalUvScale": 0.04,
+    "wavePatternUvScale": 0.04,
+    "fogStartDistance": 6500000.0,
+    "fogEndDistance": 10000000.0,
+    "edgeFadeStart": 0.98,
+    "edgeFadeWidth": 0.015
 }

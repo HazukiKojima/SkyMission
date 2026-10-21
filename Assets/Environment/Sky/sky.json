@@ -1,3 +1,9 @@
 {
-    "texture": "Textures/citrus_orchard_road_puresky_4k.hdr"
+    "texture": "Textures/citrus_orchard_road_puresky_4k.hdr",
+    "radius": 100.0,
+    "sunDirection": [0.32, 0.88, -0.28],
+    "sunIntensity": 1.8,
+    "sunColor": [1.0, 0.98, 0.96],
+    "ambientIntensity": 0.32,
+    "ambientColor": [0.18, 0.32, 0.48]
 }

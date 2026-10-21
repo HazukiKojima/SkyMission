@@ -16,14 +16,6 @@
 namespace Engine {
 
 	namespace {
-		constexpr float kOceanWaveLength = 40000.0f;
-		constexpr float kOceanWaveSteepness = 0.0005f;
-		constexpr float kOceanNormalUvScale = 0.04f;
-		constexpr float kOceanWavePatternUvScale = 0.04f;
-		constexpr float kOceanFogStartDistance = 6500000.0f;
-		constexpr float kOceanFogEndDistance = 10000000.0f;
-		constexpr float kOceanEdgeFadeStart = 0.98f;
-		constexpr float kOceanEdgeFadeWidth = 0.015f;
 		constexpr float kCloudOceanFogTop = 350.0f;
 		constexpr float kCloudOceanFogDensity = 0.00000112f;
 		constexpr float kCloudOceanFogDistance = 5000000.0f;
@@ -99,6 +91,15 @@ namespace Engine {
 	}
 
 	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets) {
+		m_oceanSize = assets.ocean.size;
+		m_oceanWaveLength = assets.ocean.waveLength;
+		m_oceanWaveSteepness = assets.ocean.waveSteepness;
+		m_oceanNormalUvScale = assets.ocean.normalUvScale;
+		m_oceanWavePatternUvScale = assets.ocean.wavePatternUvScale;
+		m_oceanFogStartDistance = assets.ocean.fogStartDistance;
+		m_oceanFogEndDistance = assets.ocean.fogEndDistance;
+		m_oceanEdgeFadeStart = assets.ocean.edgeFadeStart;
+		m_oceanEdgeFadeWidth = assets.ocean.edgeFadeWidth;
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(hwnd, width, height);
 
@@ -163,7 +164,7 @@ namespace Engine {
 
 		// Sky Sphere の生成
 		m_skySphere = std::make_unique<Engine::SkySphere>();
-		m_skySphere->Initialize(m_device->GetDevice(), 100.0f, 64, 32);
+		m_skySphere->Initialize(m_device->GetDevice(), assets.sky.radius, 64, 32);
 
 		// 頂点フォーマット定義
 		struct Vertex {
@@ -349,14 +350,14 @@ namespace Engine {
 			cbInit->ambientIntensity = environment.ambientIntensity;
 			cbInit->ambientColor = environment.ambientColor;
 			cbInit->oceanSize = m_oceanSize;
-			cbInit->oceanWaveLength = kOceanWaveLength;
-			cbInit->oceanWaveSteepness = kOceanWaveSteepness;
-			cbInit->oceanNormalUvScale = kOceanNormalUvScale;
-			cbInit->oceanWavePatternUvScale = kOceanWavePatternUvScale;
-			cbInit->oceanFogStartDistance = kOceanFogStartDistance;
-			cbInit->oceanFogEndDistance = kOceanFogEndDistance;
-			cbInit->oceanEdgeFadeStart = kOceanEdgeFadeStart;
-			cbInit->oceanEdgeFadeWidth = kOceanEdgeFadeWidth;
+			cbInit->oceanWaveLength = m_oceanWaveLength;
+			cbInit->oceanWaveSteepness = m_oceanWaveSteepness;
+			cbInit->oceanNormalUvScale = m_oceanNormalUvScale;
+			cbInit->oceanWavePatternUvScale = m_oceanWavePatternUvScale;
+			cbInit->oceanFogStartDistance = m_oceanFogStartDistance;
+			cbInit->oceanFogEndDistance = m_oceanFogEndDistance;
+			cbInit->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
+			cbInit->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
 		}
 
 		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
@@ -435,14 +436,14 @@ namespace Engine {
 		data->ambientIntensity = environment.ambientIntensity;
 		data->ambientColor = environment.ambientColor;
 		data->oceanSize = m_oceanSize;
-		data->oceanWaveLength = kOceanWaveLength;
-		data->oceanWaveSteepness = kOceanWaveSteepness;
-		data->oceanNormalUvScale = kOceanNormalUvScale;
-		data->oceanWavePatternUvScale = kOceanWavePatternUvScale;
-		data->oceanFogStartDistance = kOceanFogStartDistance;
-		data->oceanFogEndDistance = kOceanFogEndDistance;
-		data->oceanEdgeFadeStart = kOceanEdgeFadeStart;
-		data->oceanEdgeFadeWidth = kOceanEdgeFadeWidth;
+		data->oceanWaveLength = m_oceanWaveLength;
+		data->oceanWaveSteepness = m_oceanWaveSteepness;
+		data->oceanNormalUvScale = m_oceanNormalUvScale;
+		data->oceanWavePatternUvScale = m_oceanWavePatternUvScale;
+		data->oceanFogStartDistance = m_oceanFogStartDistance;
+		data->oceanFogEndDistance = m_oceanFogEndDistance;
+		data->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
+		data->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
 
 		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
 		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));

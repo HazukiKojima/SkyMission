@@ -41,6 +41,13 @@ namespace Engine {
 			1.0f,
 			m_renderer->GetOceanSize()
 		);
+		SceneEnvironment environment;
+		environment.sunDirection = assets.sky.sunDirection;
+		environment.sunIntensity = assets.sky.sunIntensity;
+		environment.sunColor = assets.sky.sunColor;
+		environment.ambientIntensity = assets.sky.ambientIntensity;
+		environment.ambientColor = assets.sky.ambientColor;
+		m_scene->SetEnvironment(environment);
 		m_scene->AddObject(m_renderer->GetModel());
 
 		m_renderer->InitializeConstantBuffers(*m_scene);
