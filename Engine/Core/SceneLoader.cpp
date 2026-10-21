@@ -1,36 +1,52 @@
 #include "SceneLoader.h"
-#include <Windows.h>
-#include <iostream>
+#include "../Resources/AssetPathResolver.h"
+#include <stdexcept>
+#include <vector>
 
-using MyRedoxParseFn = int(__cdecl*)(const unsigned char*, int);
-
-void TestREDox()
-{
-	OutputDebugStringA("TestREDox called\n");
-
-	HMODULE module = LoadLibraryW(L"REDoxWrapper.dll");
-	if (module == nullptr)
+namespace Engine {
+	SceneAssetPaths SceneLoader::LoadAssets(
+		const std::filesystem::path& environmentJsonPath,
+		const std::filesystem::path& aircraftJsonPath) const
 	{
-		OutputDebugStringA("Failed to load REDoxWrapper.dll\n");
-		return;
+		AssetPathResolver resolver;
+		const std::filesystem::path skyJsonPath = resolver.Resolve(environmentJsonPath, "sky");
+		const std::filesystem::path oceanJsonPath = resolver.Resolve(environmentJsonPath, "ocean");
+
+		const std::filesystem::path f16JsonPath = aircraftJsonPath.parent_path() / L"F16/f16.json";
+		const OceanSettings ocean = {
+			resolver.ResolveFloat(oceanJsonPath, "size"),
+			resolver.ResolveFloat(oceanJsonPath, "waveLength"),
+			resolver.ResolveFloat(oceanJsonPath, "waveSteepness"),
+			resolver.ResolveFloat(oceanJsonPath, "normalUvScale"),
+			resolver.ResolveFloat(oceanJsonPath, "wavePatternUvScale"),
+			resolver.ResolveFloat(oceanJsonPath, "fogStartDistance"),
+			resolver.ResolveFloat(oceanJsonPath, "fogEndDistance"),
+			resolver.ResolveFloat(oceanJsonPath, "edgeFadeStart"),
+			resolver.ResolveFloat(oceanJsonPath, "edgeFadeWidth")
+		};
+		const std::vector<float> sunDirection = resolver.ResolveFloatArray(skyJsonPath, "sunDirection");
+		const std::vector<float> sunColor = resolver.ResolveFloatArray(skyJsonPath, "sunColor");
+		const std::vector<float> ambientColor = resolver.ResolveFloatArray(skyJsonPath, "ambientColor");
+		if (sunDirection.size() != 3 || sunColor.size() != 3 || ambientColor.size() != 3) {
+			throw std::runtime_error("Sky environment vectors must have three elements.");
+		}
+
+		const SkySettings sky = {
+			resolver.ResolveFloat(skyJsonPath, "radius"),
+			{ sunDirection[0], sunDirection[1], sunDirection[2] },
+			resolver.ResolveFloat(skyJsonPath, "sunIntensity"),
+			{ sunColor[0], sunColor[1], sunColor[2] },
+			resolver.ResolveFloat(skyJsonPath, "ambientIntensity"),
+			{ ambientColor[0], ambientColor[1], ambientColor[2] }
+		};
+
+		return {
+			resolver.Resolve(skyJsonPath, "texture"),
+			resolver.Resolve(oceanJsonPath, "texture"),
+			resolver.Resolve(oceanJsonPath, "normal"),
+			resolver.Resolve(f16JsonPath, "model"),
+			ocean,
+			sky
+		};
 	}
-
-	auto parseJson = reinterpret_cast<MyRedoxParseFn>(
-		GetProcAddress(module, "MyRedoxParse"));
-
-	if (parseJson == nullptr)
-	{
-		OutputDebugStringA("Failed to find MyRedoxParse\n");
-		FreeLibrary(module);
-		return;
-	}
-
-	const unsigned char json[] = R"({"name":"SkyMission"})";
-	const int result = parseJson(json, sizeof(json) - 1);
-
-	char message[128];
-	sprintf_s(message, "REDox parse result: %d\n", result);
-	OutputDebugStringA(message);
-
-	FreeLibrary(module);
 }

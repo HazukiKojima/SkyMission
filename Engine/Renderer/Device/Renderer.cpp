@@ -2,22 +2,20 @@
 #include "../Device/RenderDevice.h"
 #include "../Device/CommandContext.h"
 #include "../../Core/Scene.h"
+#include "../../Core/SceneLoader.h"
 #include <DirectXMath.h>
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace Engine {
 
 	namespace {
-		constexpr float kOceanWaveLength = 40000.0f;
-		constexpr float kOceanWaveSteepness = 0.0005f;
-		constexpr float kOceanNormalUvScale = 0.04f;
-		constexpr float kOceanWavePatternUvScale = 0.04f;
-		constexpr float kOceanFogStartDistance = 6500000.0f;
-		constexpr float kOceanFogEndDistance = 10000000.0f;
-		constexpr float kOceanEdgeFadeStart = 0.98f;
-		constexpr float kOceanEdgeFadeWidth = 0.015f;
 		constexpr float kCloudOceanFogTop = 350.0f;
 		constexpr float kCloudOceanFogDensity = 0.00000112f;
 		constexpr float kCloudOceanFogDistance = 5000000.0f;
@@ -92,7 +90,16 @@ namespace Engine {
 		}
 	}
 
-	void Renderer::Initialize(HWND hwnd, UINT width, UINT height) {
+	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets) {
+		m_oceanSize = assets.ocean.size;
+		m_oceanWaveLength = assets.ocean.waveLength;
+		m_oceanWaveSteepness = assets.ocean.waveSteepness;
+		m_oceanNormalUvScale = assets.ocean.normalUvScale;
+		m_oceanWavePatternUvScale = assets.ocean.wavePatternUvScale;
+		m_oceanFogStartDistance = assets.ocean.fogStartDistance;
+		m_oceanFogEndDistance = assets.ocean.fogEndDistance;
+		m_oceanEdgeFadeStart = assets.ocean.edgeFadeStart;
+		m_oceanEdgeFadeWidth = assets.ocean.edgeFadeWidth;
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(hwnd, width, height);
 
@@ -157,7 +164,7 @@ namespace Engine {
 
 		// Sky Sphere の生成
 		m_skySphere = std::make_unique<Engine::SkySphere>();
-		m_skySphere->Initialize(m_device->GetDevice(), 100.0f, 64, 32);
+		m_skySphere->Initialize(m_device->GetDevice(), assets.sky.radius, 64, 32);
 
 		// 頂点フォーマット定義
 		struct Vertex {
@@ -227,18 +234,10 @@ namespace Engine {
 		m_indexBufferView.SizeInBytes = sizeof(uint32_t) * indices.size();
 
 		// テクスチャ読み込みとSRV作成の準備
-		// 実行ファイルパスからアセット候補パスを構築
 		m_context->BeginFrame();
 		UINT srvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_device->AllocateSrvDescriptor(&srvIndex);
-		wchar_t buffer[MAX_PATH];
-		GetModuleFileNameW(nullptr, buffer, MAX_PATH);
-		const std::filesystem::path exeDir = std::filesystem::path(buffer).parent_path();
-		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
-
-		// Assets 配下の候補パスを作成
-		std::filesystem::path path = assetsDir / L"Environment/Ocean/Textures/water-bg-pattern-04.jpg";
-		m_texture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), path.wstring(), true, true);
+		m_texture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), assets.oceanTexture.wstring(), true, true);
 		if (!m_texture) {
 			OutputDebugStringA("Application::Initialize - failed to load texture\n");
 		}
@@ -248,8 +247,7 @@ namespace Engine {
 
 		UINT normalSrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE normalCpuHandle = m_device->AllocateSrvDescriptor(&normalSrvIndex);
-		std::filesystem::path normalPath = assetsDir / L"Environment/Ocean/Textures/T_Ocean_Normal.jpg";
-		m_oceanNormalTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), normalPath.wstring(), false, true);
+		m_oceanNormalTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), assets.oceanNormalTexture.wstring(), false, true);
 		if (!m_oceanNormalTexture) {
 			OutputDebugStringA("Application::Initialize - failed to load ocean normal map\n");
 		}
@@ -273,57 +271,21 @@ namespace Engine {
 		UINT skySrvIndex = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE skyCpuHandle = m_device->AllocateSrvDescriptor(&skySrvIndex);
 
-		// 読み込み候補パス一覧
-		std::vector<std::filesystem::path> skyTexturePaths = {
-			assetsDir / L"Environment/Sky/Textures/citrus_orchard_road_puresky_4k.hdr",
-			assetsDir / L"Environment/Sky/Textures/citrus_orchard_road_puresky_4k.exr",
-		};
-
-		bool skyTextureLoaded = false;
-		for (const auto& path : skyTexturePaths) {
-			// ファイル存在チェックと読み込み
-			WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-			if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fileInfo) != 0) {
-				char pathBuffer[512];
-				size_t converted = 0;
-				wcstombs_s(&converted, pathBuffer, sizeof(pathBuffer), path.c_str(), _TRUNCATE);
-				OutputDebugStringA("Trying to load sky texture from: ");
-				OutputDebugStringA(pathBuffer);
-				OutputDebugStringA("\n");
-
-				m_skyTexture = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), path.wstring());
-				if (m_skyTexture) {
-					OutputDebugStringA("Sky texture loaded successfully!\n");
-					skyTextureLoaded = true;
-					break;
-				}
-				else {
-					OutputDebugStringA("Failed to load this file.\n");
-				}
-			}
-			else {
-				char pathBuffer[512];
-				size_t converted = 0;
-				wcstombs_s(&converted, pathBuffer, sizeof(pathBuffer), path.c_str(), _TRUNCATE);
-				OutputDebugStringA("File not found: ");
-				OutputDebugStringA(pathBuffer);
-				OutputDebugStringA("\n");
-			}
-		}
-
-		if (!skyTextureLoaded) {
-			OutputDebugStringA("Warning: No sky texture could be loaded from any path.\n");
+		m_skyTexture = Engine::Texture::LoadCached(
+			m_device->GetDevice(),
+			m_context->GetCommandList(),
+			assets.skyTexture.wstring());
+		if (!m_skyTexture) {
+			OutputDebugStringA("Failed to load sky texture from JSON path\n");
 		}
 
 		if (m_skyTexture) {
 			m_skyTexture->CreateShaderResourceView(m_device->GetDevice(), skyCpuHandle);
 		}
 
-		std::filesystem::path modelPath = assetsDir / L"Aircraft/F16/sk_Jet.fbx";
-
 		m_model = std::make_shared<Model>();
-		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), modelPath.wstring())) {
-			OutputDebugStringA("Failed to load sk_Jet.fbx\n");
+		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), assets.aircraftModel.wstring())) {
+			OutputDebugStringA("Failed to load F16 model\n");
 			m_model.reset();
 		}
 
@@ -388,14 +350,14 @@ namespace Engine {
 			cbInit->ambientIntensity = environment.ambientIntensity;
 			cbInit->ambientColor = environment.ambientColor;
 			cbInit->oceanSize = m_oceanSize;
-			cbInit->oceanWaveLength = kOceanWaveLength;
-			cbInit->oceanWaveSteepness = kOceanWaveSteepness;
-			cbInit->oceanNormalUvScale = kOceanNormalUvScale;
-			cbInit->oceanWavePatternUvScale = kOceanWavePatternUvScale;
-			cbInit->oceanFogStartDistance = kOceanFogStartDistance;
-			cbInit->oceanFogEndDistance = kOceanFogEndDistance;
-			cbInit->oceanEdgeFadeStart = kOceanEdgeFadeStart;
-			cbInit->oceanEdgeFadeWidth = kOceanEdgeFadeWidth;
+			cbInit->oceanWaveLength = m_oceanWaveLength;
+			cbInit->oceanWaveSteepness = m_oceanWaveSteepness;
+			cbInit->oceanNormalUvScale = m_oceanNormalUvScale;
+			cbInit->oceanWavePatternUvScale = m_oceanWavePatternUvScale;
+			cbInit->oceanFogStartDistance = m_oceanFogStartDistance;
+			cbInit->oceanFogEndDistance = m_oceanFogEndDistance;
+			cbInit->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
+			cbInit->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
 		}
 
 		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
@@ -474,14 +436,14 @@ namespace Engine {
 		data->ambientIntensity = environment.ambientIntensity;
 		data->ambientColor = environment.ambientColor;
 		data->oceanSize = m_oceanSize;
-		data->oceanWaveLength = kOceanWaveLength;
-		data->oceanWaveSteepness = kOceanWaveSteepness;
-		data->oceanNormalUvScale = kOceanNormalUvScale;
-		data->oceanWavePatternUvScale = kOceanWavePatternUvScale;
-		data->oceanFogStartDistance = kOceanFogStartDistance;
-		data->oceanFogEndDistance = kOceanFogEndDistance;
-		data->oceanEdgeFadeStart = kOceanEdgeFadeStart;
-		data->oceanEdgeFadeWidth = kOceanEdgeFadeWidth;
+		data->oceanWaveLength = m_oceanWaveLength;
+		data->oceanWaveSteepness = m_oceanWaveSteepness;
+		data->oceanNormalUvScale = m_oceanNormalUvScale;
+		data->oceanWavePatternUvScale = m_oceanWavePatternUvScale;
+		data->oceanFogStartDistance = m_oceanFogStartDistance;
+		data->oceanFogEndDistance = m_oceanFogEndDistance;
+		data->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
+		data->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
 
 		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
 		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));

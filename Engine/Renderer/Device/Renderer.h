@@ -10,13 +10,14 @@
 
 namespace Engine {
 	class Scene;
+	struct SceneAssetPaths;
 
 	class Renderer {
 	public:
 		Renderer() = default;
 		~Renderer();
 
-		void Initialize(HWND hwnd, UINT width, UINT height);
+		void Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets);
 		void InitializeConstantBuffers(const Scene& scene);
 		void Update(const Scene& scene, float elapsedTime);
 		void Render(UINT width, UINT height, const Scene& scene);
@@ -63,6 +64,14 @@ namespace Engine {
 
 		UINT m_vertexCount;
 		float m_oceanSize = 10000000.0f;
+		float m_oceanWaveLength = 40000.0f;
+		float m_oceanWaveSteepness = 0.0005f;
+		float m_oceanNormalUvScale = 0.04f;
+		float m_oceanWavePatternUvScale = 0.04f;
+		float m_oceanFogStartDistance = 6500000.0f;
+		float m_oceanFogEndDistance = 10000000.0f;
+		float m_oceanEdgeFadeStart = 0.98f;
+		float m_oceanEdgeFadeWidth = 0.015f;
 
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;
