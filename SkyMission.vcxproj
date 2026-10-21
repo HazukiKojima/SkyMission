@@ -248,12 +248,13 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
-    <PostBuildEvent>
-      <Command>dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
-if errorlevel 1 exit /b %errorlevel%
-copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
-if errorlevel 1 exit /b %errorlevel%</Command>
-    </PostBuildEvent>
+      <PostBuildEvent>
+        <Command>set DOTNET_CLI_UI_LANGUAGE=en
+      dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
+      if errorlevel 1 exit /b %errorlevel%
+      copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
+      if errorlevel 1 exit /b %errorlevel%</Command>
+      </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -274,12 +275,13 @@ if errorlevel 1 exit /b %errorlevel%</Command>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
-    <PostBuildEvent>
-      <Command>dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
-if errorlevel 1 exit /b %errorlevel%
-copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
-if errorlevel 1 exit /b %errorlevel%</Command>
-    </PostBuildEvent>
+      <PostBuildEvent>
+        <Command>set DOTNET_CLI_UI_LANGUAGE=en
+      dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
+      if errorlevel 1 exit /b %errorlevel%
+      copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
+      if errorlevel 1 exit /b %errorlevel%</Command>
+      </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
