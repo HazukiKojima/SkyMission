@@ -20,6 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Core\Application.cpp" />
+    <ClCompile Include="Engine\Core\AircraftController.cpp" />
+    <ClCompile Include="Engine\Core\PlayerAircraft.cpp" />
     <ClCompile Include="Engine\Core\Camera.cpp" />
     <ClCompile Include="Engine\Core\Scene.cpp" />
     <ClCompile Include="Engine\Core\SceneLoader.cpp" />
@@ -37,6 +39,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.h" />
+    <ClInclude Include="Engine\Core\AircraftController.h" />
+    <ClInclude Include="Engine\Core\PlayerAircraft.h" />
     <ClInclude Include="Engine\Core\Camera.h" />
     <ClInclude Include="Engine\Core\Scene.h" />
     <ClInclude Include="Engine\Core\SceneLoader.h" />

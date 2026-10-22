@@ -1,5 +1,6 @@
 #include "SceneLoader.h"
 #include "../Resources/AssetPathResolver.h"
+#include <cmath>
 #include <stdexcept>
 #include <vector>
 
@@ -13,6 +14,10 @@ namespace Engine {
 		const std::filesystem::path oceanJsonPath = resolver.Resolve(environmentJsonPath, "ocean");
 
 		const std::filesystem::path f16JsonPath = aircraftJsonPath.parent_path() / L"F16/f16.json";
+		const float aircraftVisualScale = resolver.ResolveFloat(f16JsonPath, "visualScale");
+		if (!std::isfinite(aircraftVisualScale) || aircraftVisualScale <= 0.0f) {
+			throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
+		}
 		const OceanSettings ocean = {
 			resolver.ResolveFloat(oceanJsonPath, "size"),
 			resolver.ResolveFloat(oceanJsonPath, "waveLength"),
@@ -46,6 +51,7 @@ namespace Engine {
 			resolver.Resolve(oceanJsonPath, "normal"),
 			resolver.Resolve(oceanJsonPath, "normal2"),
 			resolver.Resolve(f16JsonPath, "model"),
+			aircraftVisualScale,
 			ocean,
 			sky
 		};

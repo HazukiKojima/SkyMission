@@ -48,6 +48,7 @@ namespace Engine {
 		environment.ambientIntensity = assets.sky.ambientIntensity;
 		environment.ambientColor = assets.sky.ambientColor;
 		m_scene->SetEnvironment(environment);
+		m_scene->SetPlayerAircraftVisualScale(assets.aircraftVisualScale);
 		m_scene->AddObject(m_renderer->GetModel());
 
 		m_renderer->InitializeConstantBuffers(*m_scene);

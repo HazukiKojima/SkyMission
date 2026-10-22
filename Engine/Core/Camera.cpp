@@ -1,6 +1,7 @@
 #include "Camera.h"
 #include "Window.h"
 #include <Windowsx.h>
+#include <cmath>
 
 using namespace DirectX;
 
@@ -27,6 +28,12 @@ namespace Engine {
 	}
 
 	void Camera::Update(float deltaSeconds) {
+		if (m_following) {
+			UpdateFollow(deltaSeconds);
+			UpdateView();
+			return;
+		}
+
 		// 入力ポーリング: キーボードで移動、右ボタン押下でマウス視点
 		BYTE keys[256];
 		GetKeyboardState(keys);
@@ -95,12 +102,33 @@ namespace Engine {
 		UpdateView();
 	}
 
+	void Camera::SetFollowTarget(const XMFLOAT3& position, const XMFLOAT3& forward) {
+		m_following = true;
+		m_followTarget = position;
+		m_followForward = forward;
+	}
+
+	void Camera::UpdateFollow(float deltaSeconds) {
+		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
+		const XMVECTOR forward = XMVector3Normalize(XMLoadFloat3(&m_followForward));
+		const XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		const XMVECTOR desiredPosition = target - forward * m_followDistance + worldUp * m_followHeight;
+		const XMVECTOR desiredLookAt = target + forward * 12.0f + worldUp * 2.0f;
+		const float blend = 1.0f - std::exp(-m_followSmoothing * deltaSeconds);
+		XMStoreFloat3(&m_position, XMVectorLerp(XMLoadFloat3(&m_position), desiredPosition, blend));
+		XMStoreFloat3(&m_followLookAt, XMVectorLerp(XMLoadFloat3(&m_followLookAt), desiredLookAt, blend));
+	}
+
 	void Camera::UpdateProjection() {
 		m_proj = XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, m_farZ);
 	}
 
 	void Camera::UpdateView() {
 		XMVECTOR pos = XMLoadFloat3(&m_position);
+		if (m_following) {
+			m_view = XMMatrixLookAtLH(pos, XMLoadFloat3(&m_followLookAt), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+			return;
+		}
 		XMVECTOR lookDir = XMVectorSet(cosf(m_pitch) * sinf(m_yaw), sinf(m_pitch), cosf(m_pitch) * cosf(m_yaw), 0.0f);
 		XMVECTOR target = pos + XMVector3Normalize(lookDir);
 		XMVECTOR up = XMVectorSet(0, 1, 0, 0);
