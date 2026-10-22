@@ -16,9 +16,8 @@
 namespace Engine {
 
 	namespace {
-		constexpr float kCloudOceanFogTop = 350.0f;
-		constexpr float kCloudOceanFogDensity = 0.00000112f;
-		constexpr float kCloudOceanFogDistance = 5000000.0f;
+		constexpr float kOceanFogTop = 350.0f;
+		constexpr float kOceanFogDensity = 0.00000112f;
 		constexpr float kPi = 3.14159265359f;
 
 		float CalculateOceanWaveHeight(float x, float z, float time, float wavelength, float steepness) {
@@ -85,28 +84,22 @@ namespace Engine {
 		float oceanWaveHeightOffset;
 	};
 
-	struct CloudConstants {
+	struct OceanFogConstants {
 		DirectX::XMFLOAT4X4 inverseViewProjection;
 		DirectX::XMFLOAT3 cameraPosition;
-		float time;
+		float padding0;
 		DirectX::XMFLOAT3 sunDirection;
 		float sunIntensity;
 		DirectX::XMFLOAT3 sunColor;
-		float cloudDensity;
-		float cloudBottom;
-		float cloudTop;
-		float shapeScale;
-		float detailScale;
-		float detailStrength;
-		float absorption;
-		float stepSize;
-		int stepCount;
 		float ambientIntensity;
 		DirectX::XMFLOAT3 ambientColor;
 		float oceanFogBottom;
 		float oceanFogTop;
 		float oceanFogDensity;
-		float oceanFogDistance;
+		float oceanFogStartDistance;
+		float oceanFogEndDistance;
+		float oceanEdgeFadeStart;
+		float oceanEdgeFadeWidth;
 	};
 
 	Renderer::~Renderer() {
@@ -154,17 +147,14 @@ namespace Engine {
 			true
 		);
 
-		m_cloudPipeline =
-			std::make_unique<Engine::GraphicsPipeline>();
-
-		m_cloudPipeline->InitializeWithShaders(
+		m_oceanFogPipeline = std::make_unique<Engine::GraphicsPipeline>();
+		m_oceanFogPipeline->InitializeWithShaders(
 			m_device->GetDevice(),
-			L"CloudVS.cso",
-			L"CloudPS.cso",
+			L"OceanFogVS.cso",
+			L"OceanFogPS.cso",
 			2,
 			false
 		);
-
 
 		// 空描画用パイプライン
 		m_skyPipeline =
@@ -404,15 +394,19 @@ namespace Engine {
 			cbInit->oceanWaveHeightOffset = 0.0f;
 		}
 
-		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
-		CD3DX12_RESOURCE_DESC cloudCbDesc = CD3DX12_RESOURCE_DESC::Buffer(cloudCbSize);
-		CD3DX12_HEAP_PROPERTIES cloudHeapProps(D3D12_HEAP_TYPE_UPLOAD);
+		UINT64 fogCbSize = (sizeof(OceanFogConstants) + 255) & ~255;
+		CD3DX12_RESOURCE_DESC fogCbDesc = CD3DX12_RESOURCE_DESC::Buffer(fogCbSize);
+		CD3DX12_HEAP_PROPERTIES fogHeapProps(D3D12_HEAP_TYPE_UPLOAD);
 		ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
-			&cloudHeapProps, D3D12_HEAP_FLAG_NONE, &cloudCbDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-			IID_PPV_ARGS(&m_cloudConstantBuffer)));
-		CD3DX12_RANGE cloudReadRange(0, 0);
-		ThrowIfFailed(m_cloudConstantBuffer->Map(0, &cloudReadRange, reinterpret_cast<void**>(&m_cloudCbvDataPtr)));
+			&fogHeapProps,
+			D3D12_HEAP_FLAG_NONE,
+			&fogCbDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_oceanFogConstantBuffer)));
+		CD3DX12_RANGE fogReadRange(0, 0);
+		ThrowIfFailed(m_oceanFogConstantBuffer->Map(0, &fogReadRange, reinterpret_cast<void**>(&m_oceanFogCbvDataPtr)));
+
 	}
 
 	void Renderer::EnsureModelConstantBufferCapacity(size_t objectCount) {
@@ -495,28 +489,22 @@ namespace Engine {
 			m_oceanWaveLength,
 			m_oceanWaveSteepness);
 
-		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
-		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));
-		cloud->cameraPosition = camPos;
-		cloud->time = elapsedTime;
-		cloud->sunDirection = environment.sunDirection;
-		cloud->sunIntensity = environment.sunIntensity;
-		cloud->sunColor = environment.sunColor;
-		cloud->cloudDensity = 0.62f;
-		cloud->cloudBottom = 800.0f;
-		cloud->cloudTop = 2100.0f;
-		cloud->shapeScale = 0.0018f;
-		cloud->detailScale = 0.0045f;
-		cloud->detailStrength = 0.10f;
-		cloud->absorption = 0.010f;
-		cloud->stepSize = 120.0f;
-		cloud->stepCount = 32;
-		cloud->ambientIntensity = environment.ambientIntensity;
-		cloud->ambientColor = environment.ambientColor;
-		cloud->oceanFogBottom = 0.0f;
-		cloud->oceanFogTop = kCloudOceanFogTop;
-		cloud->oceanFogDensity = kCloudOceanFogDensity;
-		cloud->oceanFogDistance = kCloudOceanFogDistance;
+		OceanFogConstants* oceanFog = reinterpret_cast<OceanFogConstants*>(m_oceanFogCbvDataPtr);
+		XMStoreFloat4x4(&oceanFog->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));
+		oceanFog->cameraPosition = camPos;
+		oceanFog->padding0 = 0.0f;
+		oceanFog->sunDirection = environment.sunDirection;
+		oceanFog->sunIntensity = environment.sunIntensity;
+		oceanFog->sunColor = environment.sunColor;
+		oceanFog->ambientIntensity = environment.ambientIntensity;
+		oceanFog->ambientColor = environment.ambientColor;
+		oceanFog->oceanFogBottom = 0.0f;
+		oceanFog->oceanFogTop = kOceanFogTop;
+		oceanFog->oceanFogDensity = kOceanFogDensity;
+		oceanFog->oceanFogStartDistance = m_oceanFogStartDistance;
+		oceanFog->oceanFogEndDistance = m_oceanFogEndDistance;
+		oceanFog->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
+		oceanFog->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
 
 		const auto& objects = scene.GetObjects();
 		EnsureModelConstantBufferCapacity(objects.size());
@@ -642,14 +630,12 @@ namespace Engine {
 		cmd->ClearRenderTargetView(rtv, backBufferClear, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 
-		// Scene Colorを含む完成色をCloud Passからバックバッファへ書き込む
-		cmd->SetGraphicsRootSignature(m_cloudPipeline->GetRootSignature());
-		cmd->SetPipelineState(m_cloudPipeline->GetPSO());
-		// Scene Color SRV は常にバインドしておく（Cloud PSで参照するため）
-		ID3D12DescriptorHeap* cloudHeaps[] = { m_device->GetSrvDescriptorHeap() };
-		cmd->SetDescriptorHeaps(_countof(cloudHeaps), cloudHeaps);
+		cmd->SetGraphicsRootSignature(m_oceanFogPipeline->GetRootSignature());
+		cmd->SetPipelineState(m_oceanFogPipeline->GetPSO());
+		ID3D12DescriptorHeap* fogHeaps[] = { m_device->GetSrvDescriptorHeap() };
+		cmd->SetDescriptorHeaps(_countof(fogHeaps), fogHeaps);
 		cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_device->GetSceneColorSrvIndex()));
-		cmd->SetGraphicsRootConstantBufferView(1, m_cloudConstantBuffer->GetGPUVirtualAddress());
+		cmd->SetGraphicsRootConstantBufferView(1, m_oceanFogConstantBuffer->GetGPUVirtualAddress());
 		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		cmd->DrawInstanced(3, 1, 0, 0);
 

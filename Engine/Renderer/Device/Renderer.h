@@ -43,7 +43,7 @@ namespace Engine {
 		std::unique_ptr<Engine::GraphicsPipeline> m_pipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_oceanPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_skyPipeline;
-		std::unique_ptr<Engine::GraphicsPipeline> m_cloudPipeline;
+		std::unique_ptr<Engine::GraphicsPipeline> m_oceanFogPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_modelPipeline;
 
 		std::shared_ptr<Engine::Texture> m_texture;
@@ -59,9 +59,8 @@ namespace Engine {
 		// 定数バッファ
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
 		UINT8* m_cbvDataPtr = nullptr;
-		// Cloud 専用定数バッファ
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_cloudConstantBuffer;
-		UINT8* m_cloudCbvDataPtr = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_oceanFogConstantBuffer;
+		UINT8* m_oceanFogCbvDataPtr = nullptr;
 		std::vector<ModelConstantBuffer> m_modelConstantBuffers[RenderDevice::FrameCount];
 
 		UINT m_vertexCount;

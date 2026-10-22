@@ -65,12 +65,10 @@ namespace Engine {
 		// [FrameCount ... FrameCount*2-1]
 		//     SceneColor
 		//
-		// [FrameCount*2]
-		//     Cloud
 		// ========================================================
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount * 2 + 1;
+		rtvHeapDesc.NumDescriptors = FrameCount * 2;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
@@ -140,23 +138,8 @@ namespace Engine {
 		m_width = width;
 		m_height = height;
 
-		// --------------------------------------------------------
-		// SRV layout
-		//
-		// 0                       SceneColor frame 0
-		// 1                       SceneDepth  frame 0
-		// 2                       SceneColor frame 1
-		// 3                       SceneDepth  frame 1
-		// ...
-		//
-		// FrameCount * 2           CloudColor
-		// --------------------------------------------------------
-
-		m_cloudSrvIndex = FrameCount * 2;
-		m_srvDescriptorCount = FrameCount * 2 + 1;
-
+		m_srvDescriptorCount = FrameCount * 2;
 		CreateSceneResources();
-		CreateCloudResources();
 	}
 
 
@@ -175,20 +158,6 @@ namespace Engine {
 
 		return handle;
 	}
-
-
-	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCloudRtvHandle() const {
-		D3D12_CPU_DESCRIPTOR_HANDLE handle(
-			m_rtvHeap->GetCPUDescriptorHandleForHeapStart()
-		);
-
-		handle.ptr += static_cast<SIZE_T>(
-			FrameCount * 2
-			) * m_rtvDescriptorSize;
-
-		return handle;
-	}
-
 
 	// ============================================================
 	// Present
@@ -268,7 +237,6 @@ namespace Engine {
 		}
 
 		m_sceneDepth.Reset();
-		m_cloudRenderTarget.Reset();
 
 		// --------------------------------------------------------
 		// SwapChain
@@ -306,7 +274,6 @@ namespace Engine {
 		}
 
 		CreateSceneResources();
-		CreateCloudResources();
 	}
 
 
@@ -419,144 +386,27 @@ namespace Engine {
 			GetDsvHandle()
 		);
 
-		// ========================================================
-		// Scene SRV
-		// ========================================================
-
 		D3D12_SHADER_RESOURCE_VIEW_DESC colorSrv = {};
 		colorSrv.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		colorSrv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		colorSrv.Shader4ComponentMapping =
-			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		colorSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		colorSrv.Texture2D.MipLevels = 1;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC depthSrv = {};
 		depthSrv.Format = DXGI_FORMAT_R32_FLOAT;
 		depthSrv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		depthSrv.Shader4ComponentMapping =
-			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		depthSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		depthSrv.Texture2D.MipLevels = 1;
 
 		for (UINT i = 0; i < FrameCount; ++i) {
+			D3D12_CPU_DESCRIPTOR_HANDLE srv = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
+			srv.ptr += static_cast<SIZE_T>(i * 2) * m_srvDescriptorSize;
 
-			D3D12_CPU_DESCRIPTOR_HANDLE srv =
-				m_srvHeap->GetCPUDescriptorHandleForHeapStart();
-
-			srv.ptr += static_cast<SIZE_T>(
-				i * 2
-				) * m_srvDescriptorSize;
-
-			m_device->CreateShaderResourceView(
-				m_sceneRenderTargets[i].Get(),
-				&colorSrv,
-				srv
-			);
-
+			m_device->CreateShaderResourceView(m_sceneRenderTargets[i].Get(), &colorSrv, srv);
 			srv.ptr += m_srvDescriptorSize;
-
-			m_device->CreateShaderResourceView(
-				m_sceneDepth.Get(),
-				&depthSrv,
-				srv
-			);
+			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, srv);
 		}
-	}
 
-
-	// ============================================================
-	// Cloud Resources
-	// ============================================================
-
-	void RenderDevice::CreateCloudResources() {
-
-		CD3DX12_HEAP_PROPERTIES heapProps(
-			D3D12_HEAP_TYPE_DEFAULT
-		);
-
-		// 1/2解像度
-		const UINT cloudWidth =
-			(m_width > 1) ? (m_width / 2) : 1;
-
-		const UINT cloudHeight =
-			(m_height > 1) ? (m_height / 2) : 1;
-
-		// ========================================================
-		// Cloud Render Target
-		// ========================================================
-
-		CD3DX12_RESOURCE_DESC cloudDesc =
-			CD3DX12_RESOURCE_DESC::Tex2D(
-				DXGI_FORMAT_R16G16B16A16_FLOAT,
-				cloudWidth,
-				cloudHeight,
-				1,
-				1,
-				1,
-				0,
-				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-			);
-
-		const FLOAT cloudClear[] = {
-			0.0f,
-			0.0f,
-			0.0f,
-			0.0f
-		};
-
-		CD3DX12_CLEAR_VALUE cloudClearValue(
-			DXGI_FORMAT_R16G16B16A16_FLOAT,
-			cloudClear
-		);
-
-		ThrowIfFailed(
-			m_device->CreateCommittedResource(
-				&heapProps,
-				D3D12_HEAP_FLAG_NONE,
-				&cloudDesc,
-				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-				&cloudClearValue,
-				IID_PPV_ARGS(&m_cloudRenderTarget)
-			)
-		);
-
-		// ========================================================
-		// Cloud RTV
-		// ========================================================
-
-		m_device->CreateRenderTargetView(
-			m_cloudRenderTarget.Get(),
-			nullptr,
-			GetCloudRtvHandle()
-		);
-
-		// ========================================================
-		// Cloud SRV
-		// ========================================================
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC cloudSrv = {};
-		cloudSrv.Format =
-			DXGI_FORMAT_R16G16B16A16_FLOAT;
-
-		cloudSrv.ViewDimension =
-			D3D12_SRV_DIMENSION_TEXTURE2D;
-
-		cloudSrv.Shader4ComponentMapping =
-			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-		cloudSrv.Texture2D.MipLevels = 1;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE srv =
-			m_srvHeap->GetCPUDescriptorHandleForHeapStart();
-
-		srv.ptr += static_cast<SIZE_T>(
-			m_cloudSrvIndex
-			) * m_srvDescriptorSize;
-
-		m_device->CreateShaderResourceView(
-			m_cloudRenderTarget.Get(),
-			&cloudSrv,
-			srv
-		);
 	}
 
 }
