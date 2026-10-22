@@ -29,6 +29,7 @@ namespace Engine {
 		std::filesystem::path skyTexture;
 		std::filesystem::path oceanTexture;
 		std::filesystem::path oceanNormalTexture;
+		std::filesystem::path oceanNormalTexture2;
 		std::filesystem::path aircraftModel;
 		OceanSettings ocean;
 		SkySettings sky;

@@ -40,6 +40,7 @@ cbuffer MatrixBuffer : register(b0)
 
 Texture2D gDiffuse : register(t0);
 Texture2D gOceanNormal : register(t1);
+Texture2D gOceanNormal2 : register(t2);
 SamplerState gSampler : register(s0);
 
 // ============================================================
@@ -64,16 +65,14 @@ float3 SampleOceanNormal(float3 wavePos)
 {
     float uvScale = max(oceanNormalUvScale, 1e-6f);
 
-    float2 uv1 = (wavePos.xz * 0.010f + float2(time * 0.12f, time * -0.08f)) * uvScale;
-    float2 uv2 = (wavePos.xz * 0.035f + float2(time * -0.25f, time * 0.18f)) * uvScale;
-    float2 uv3 = (wavePos.xz * 0.090f + float2(time * 0.45f, time * 0.32f)) * uvScale;
+    float2 uv1 = (wavePos.xz * 0.018f + float2(time * 0.12f, time * -0.08f)) * uvScale;
+    float2 uv2 = (wavePos.xz * 0.045f + float2(time * -0.19f, time * 0.14f)) * uvScale;
 
     float3 n1 = gOceanNormal.Sample(gSampler, uv1).xyz * 2.0f - 1.0f;
-    float3 n2 = gOceanNormal.Sample(gSampler, uv2).xyz * 2.0f - 1.0f;
-    float3 n3 = gOceanNormal.Sample(gSampler, uv3).xyz * 2.0f - 1.0f;
+    float3 n2 = gOceanNormal2.Sample(gSampler, uv2).xyz * 2.0f - 1.0f;
 
-    float3 normal = n1 * 0.55f + n2 * 0.30f + n3 * 0.15f;
-    normal.xy *= 0.75f;
+    float3 normal = float3(n1.xy + n2.xy, n1.z * n2.z);
+    normal.xy *= 1.00f;
 
     return SafeNormalize(normal);
 }
