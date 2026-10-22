@@ -19,6 +19,31 @@ namespace Engine {
 		constexpr float kCloudOceanFogTop = 350.0f;
 		constexpr float kCloudOceanFogDensity = 0.00000112f;
 		constexpr float kCloudOceanFogDistance = 5000000.0f;
+		constexpr float kPi = 3.14159265359f;
+
+		float CalculateOceanWaveHeight(float x, float z, float time, float wavelength, float steepness) {
+			const float baseWindX = 1.0f / std::sqrt(1.0f + 0.6f * 0.6f);
+			const float baseWindZ = 0.6f / std::sqrt(1.0f + 0.6f * 0.6f);
+			float height = 0.0f;
+
+			for (int i = 0; i < 6; ++i) {
+				const float phaseOffset = static_cast<float>(i) * 21.53f;
+				const float randomAngle = std::sin(static_cast<float>(i) * 7.3f) * 1.1f;
+				const float sinAngle = std::sin(randomAngle);
+				const float cosAngle = std::cos(randomAngle);
+				const float directionX = cosAngle * baseWindX - sinAngle * baseWindZ;
+				const float directionZ = sinAngle * baseWindX + cosAngle * baseWindZ;
+				const float k = 2.0f * kPi / wavelength;
+				const float waveSpeed = std::sqrt(9.8f / k);
+				const float phase = k * (directionX * x + directionZ * z - waveSpeed * time * 3.0f) + phaseOffset;
+
+				height += (steepness / k) * std::sin(phase);
+				wavelength *= 0.82f;
+				steepness *= 0.72f;
+			}
+
+			return height;
+		}
 
 		struct ModelConstantBufferData {
 			DirectX::XMFLOAT4X4 mvp;
@@ -57,6 +82,7 @@ namespace Engine {
 		float oceanFogEndDistance;
 		float oceanEdgeFadeStart;
 		float oceanEdgeFadeWidth;
+		float oceanWaveHeightOffset;
 	};
 
 	struct CloudConstants {
@@ -123,7 +149,7 @@ namespace Engine {
 			m_device->GetDevice(),
 			L"OceanVS.cso",
 			L"OceanPS.cso",
-			2,
+			3,
 			false,
 			true
 		);
@@ -254,6 +280,16 @@ namespace Engine {
 		else {
 			m_oceanNormalTexture->CreateShaderResourceView(m_device->GetDevice(), normalCpuHandle);
 		}
+
+		UINT normal2SrvIndex = 0;
+		D3D12_CPU_DESCRIPTOR_HANDLE normal2CpuHandle = m_device->AllocateSrvDescriptor(&normal2SrvIndex);
+		m_oceanNormalTexture2 = Engine::Texture::LoadCached(m_device->GetDevice(), m_context->GetCommandList(), assets.oceanNormalTexture2.wstring(), false, true);
+		if (!m_oceanNormalTexture2) {
+			OutputDebugStringA("Application::Initialize - failed to load second ocean normal map\n");
+		}
+		else {
+			m_oceanNormalTexture2->CreateShaderResourceView(m_device->GetDevice(), normal2CpuHandle);
+		}
 		m_context->EndFrame();
 		// フレーム終了後にGPU完了待ち
 		m_context->WaitForGpu();
@@ -263,8 +299,12 @@ namespace Engine {
 		if (m_oceanNormalTexture) {
 			m_oceanNormalTexture->ReleaseUploadResources();
 		}
+		if (m_oceanNormalTexture2) {
+			m_oceanNormalTexture2->ReleaseUploadResources();
+		}
 		m_textureSrvIndex = srvIndex;
 		m_oceanNormalTextureSrvIndex = normalSrvIndex;
+		m_oceanNormalTexture2SrvIndex = normal2SrvIndex;
 
 		// Sky Sphere 用の環境テクスチャ(HDR/EXR)読み込み
 		m_context->BeginFrame();
@@ -296,6 +336,9 @@ namespace Engine {
 		}
 		if (m_oceanNormalTexture) {
 			m_oceanNormalTexture->ReleaseUploadResources();
+		}
+		if (m_oceanNormalTexture2) {
+			m_oceanNormalTexture2->ReleaseUploadResources();
 		}
 		if (m_skyTexture) {
 			m_skyTexture->ReleaseUploadResources();
@@ -358,6 +401,7 @@ namespace Engine {
 			cbInit->oceanFogEndDistance = m_oceanFogEndDistance;
 			cbInit->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
 			cbInit->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
+			cbInit->oceanWaveHeightOffset = 0.0f;
 		}
 
 		UINT64 cloudCbSize = (sizeof(CloudConstants) + 255) & ~255;
@@ -444,6 +488,12 @@ namespace Engine {
 		data->oceanFogEndDistance = m_oceanFogEndDistance;
 		data->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
 		data->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
+		data->oceanWaveHeightOffset = CalculateOceanWaveHeight(
+			camPos.x,
+			camPos.z,
+			elapsedTime,
+			m_oceanWaveLength,
+			m_oceanWaveSteepness);
 
 		CloudConstants* cloud = reinterpret_cast<CloudConstants*>(m_cloudCbvDataPtr);
 		XMStoreFloat4x4(&cloud->inverseViewProjection, XMMatrixTranspose(inverseViewProjection));
@@ -548,7 +598,7 @@ namespace Engine {
 		cmd->SetPipelineState(m_oceanPipeline->GetPSO());
 
 		// テクスチャ用と法線マップ用のSRVをセット
-		if (m_texture && m_oceanNormalTexture) {
+		if (m_texture && m_oceanNormalTexture && m_oceanNormalTexture2) {
 			ID3D12DescriptorHeap* heaps[] = { m_device->GetSrvDescriptorHeap() };
 			cmd->SetDescriptorHeaps(_countof(heaps), heaps);
 			cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_textureSrvIndex));

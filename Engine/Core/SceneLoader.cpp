@@ -44,6 +44,7 @@ namespace Engine {
 			resolver.Resolve(skyJsonPath, "texture"),
 			resolver.Resolve(oceanJsonPath, "texture"),
 			resolver.Resolve(oceanJsonPath, "normal"),
+			resolver.Resolve(oceanJsonPath, "normal2"),
 			resolver.Resolve(f16JsonPath, "model"),
 			ocean,
 			sky

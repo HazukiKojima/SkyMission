@@ -50,6 +50,8 @@ namespace Engine {
 		UINT m_textureSrvIndex = 0;
 		std::shared_ptr<Engine::Texture> m_oceanNormalTexture;
 		UINT m_oceanNormalTextureSrvIndex = 0;
+		std::shared_ptr<Engine::Texture> m_oceanNormalTexture2;
+		UINT m_oceanNormalTexture2SrvIndex = 0;
 
 		std::shared_ptr<Engine::Texture> m_skyTexture;
 		UINT m_skyTextureSrvIndex = 0;
