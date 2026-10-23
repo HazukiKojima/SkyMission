@@ -40,17 +40,31 @@ namespace Engine {
 				1.0f);
 			const float speedControl = std::clamp(speed / kStallSpeed, 0.25f, 1.0f);
 			const float controlEffectiveness = angleControl * speedControl;
+			const float turnSpeedFactor = std::clamp(
+				kLiftReferenceSpeed / (std::max)(speed, kMinimumSpeed),
+				kMinimumTurnFactor,
+				kMaximumTurnFactor);
+			const float turnIntent = std::clamp(
+				(std::max)(std::abs(m_turnControl), std::abs(m_yawControl)),
+				0.0f,
+				1.0f);
+			const float highGIntensity = input.highGTurn && turnIntent > 0.05f ? 1.0f : 0.0f;
+			const float highGTurnFactor = 1.0f + highGIntensity * (kHighGTurnMultiplier - 1.0f);
 
 			m_pitch = std::remainder(
 				m_pitch + m_pitchControl * kPitchRate * controlEffectiveness * step,
 				XM_2PI);
 
-			const float targetRoll = -m_turnControl * kMaximumBank;
+			const float targetRoll = std::clamp(
+				-m_turnControl * kMaximumBank * turnSpeedFactor,
+				-kMaximumBank,
+				kMaximumBank);
 			const float rollResponse = std::abs(m_turnControl) > 0.01f ? 1.8f : kRollLevelRate;
 			const float rollBlend = 1.0f - std::exp(-rollResponse * step);
 			m_roll += (targetRoll - m_roll) * rollBlend;
 			m_yaw = std::remainder(
-				m_yaw + (std::sin(m_roll) * kTurnRate + m_yawControl * kYawRate * controlEffectiveness) * step,
+				m_yaw + (std::sin(m_roll) * kTurnRate + m_yawControl * kYawRate) *
+				angleControl * turnSpeedFactor * highGTurnFactor * step,
 				XM_2PI);
 
 			const XMMATRIX rotation = XMMatrixRotationRollPitchYaw(m_pitch, m_yaw, m_roll);
@@ -69,14 +83,15 @@ namespace Engine {
 				kGravity * kMaximumLiftFactor);
 			const float bankLoad = std::sin(m_roll);
 			const XMVECTOR flightPathAcceleration =
-				(aircraftForward - travelDirection) * (speed * kFlightPathResponse * controlEffectiveness);
+				(aircraftForward - travelDirection) *
+				(speed * kFlightPathResponse * angleControl * turnSpeedFactor * highGTurnFactor);
 			const XMVECTOR acceleration = up * liftAcceleration +
 				XMVectorSet(0.0f, -kGravity, 0.0f, 0.0f) +
 				aircraftForward * (m_throttleControl * kAcceleration) +
 				flightPathAcceleration;
 			velocity += acceleration * step;
 
-			const float drag = kDrag + kTurnDrag * bankLoad * bankLoad;
+			const float drag = kDrag + kTurnDrag * bankLoad * bankLoad + kHighGDrag * highGIntensity * turnIntent;
 			velocity *= std::exp(-drag * step);
 
 			float updatedSpeed = XMVectorGetX(XMVector3Length(velocity));

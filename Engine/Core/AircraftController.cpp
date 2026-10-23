@@ -9,8 +9,11 @@ namespace Engine {
 		if (GetAsyncKeyState('D') & 0x8000) input.turn -= 1.0f;
 		if (GetAsyncKeyState('Q') & 0x8000) input.yaw -= 1.0f;
 		if (GetAsyncKeyState('E') & 0x8000) input.yaw += 1.0f;
-		if (GetAsyncKeyState(VK_CONTROL) & 0x8000) input.throttle += 1.0f;
-		if (GetAsyncKeyState(VK_SPACE) & 0x8000) input.throttle -= 1.0f;
+		const bool accelerating = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+		const bool decelerating = (GetAsyncKeyState(VK_SPACE) & 0x8000) != 0;
+		if (accelerating) input.throttle += 1.0f;
+		if (decelerating) input.throttle -= 1.0f;
+		input.highGTurn = accelerating && decelerating;
 		return input;
 	}
 }

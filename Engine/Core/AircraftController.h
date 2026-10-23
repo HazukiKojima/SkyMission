@@ -7,6 +7,7 @@ namespace Engine {
 		float turn = 0.0f;
 		float yaw = 0.0f;
 		float throttle = 0.0f;
+		bool highGTurn = false;
 	};
 
 	class AircraftController {
