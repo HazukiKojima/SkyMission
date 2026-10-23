@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AircraftFlightParameters.h"
 #include <filesystem>
 #include <DirectXMath.h>
 
@@ -34,6 +35,7 @@ namespace Engine {
 		float aircraftVisualScale = 1.0f;
 		OceanSettings ocean;
 		SkySettings sky;
+		AircraftFlightParameters flightParameters;
 	};
 
 	class SceneLoader {

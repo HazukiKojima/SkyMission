@@ -36,6 +36,9 @@
     <ClCompile Include="Engine\Core\Application.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Core\AircraftFlightParametersLoader.cpp">
+      <Filter>Engine\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\Core\AircraftController.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
@@ -82,6 +85,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.h">
+      <Filter>Engine\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Core\AircraftFlightParameters.h">
+      <Filter>Engine\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Core\AircraftFlightParametersLoader.h">
       <Filter>Engine\Core</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Core\AircraftController.h">
@@ -131,6 +140,7 @@
     <None Include="Engine\Renderer\Shader\Common.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
+    <None Include="Assets\Aircraft\F16\flightParameters.json" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>

@@ -43,6 +43,9 @@ namespace Engine {
 		const SceneEnvironment& GetEnvironment() const { return m_environment; }
 		void SetEnvironment(const SceneEnvironment& environment) { m_environment = environment; }
 		void SetPlayerAircraftVisualScale(float scale) { m_playerAircraftVisualScale = scale; }
+		void SetPlayerAircraftFlightParameters(const AircraftFlightParameters& parameters) {
+			m_playerAircraft.SetFlightParameters(parameters);
+		}
 		std::vector<SceneObject>& GetObjects() { return m_objects; }
 		const std::vector<SceneObject>& GetObjects() const { return m_objects; }
 		void AddObject(std::shared_ptr<Model> model);

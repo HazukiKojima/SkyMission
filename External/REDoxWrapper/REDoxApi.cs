@@ -1,13 +1,75 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using REDox.Json;
+using REDoxWrapper.Generated;
 
 namespace REDoxWrapper;
 
 public static unsafe class REDoxApi
 {
+    [UnmanagedCallersOnly(
+        EntryPoint = "MyRedoxGetAircraftFlightParameters",
+        CallConvs = new[] { typeof(CallConvCdecl) })]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(GeneratedAircraftFlightParameters))]
+    public static int MyRedoxGetAircraftFlightParameters(
+        byte* jsonUtf8,
+        int jsonLength,
+        float* output,
+        int outputCapacity)
+    {
+        if (jsonUtf8 == null || jsonLength <= 0 || output == null ||
+            outputCapacity != GeneratedAircraftFlightParameters.FieldCount)
+        {
+            return -1;
+        }
+
+        try
+        {
+            string json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                root.EnumerateObject().Count() != GeneratedAircraftFlightParameters.FieldCount)
+            {
+                return -1;
+            }
+
+            foreach (string fieldName in GeneratedAircraftFlightParameters.FieldNames)
+            {
+                if (!root.TryGetProperty(fieldName, out var value) ||
+                    value.ValueKind != JsonValueKind.Number ||
+                    !value.TryGetSingle(out var number))
+                {
+                    return -1;
+                }
+                if (!float.IsFinite(number)) return -1;
+            }
+
+            GeneratedAircraftFlightParameters? parameters =
+                JsonSerializer.Deserialize<GeneratedAircraftFlightParameters>(json);
+            if (parameters == null)
+            {
+                return -1;
+            }
+
+            float[] values = parameters.ToFloatArray();
+            if (values.Length != outputCapacity || values.Any(value => !float.IsFinite(value)))
+            {
+                return -1;
+            }
+
+            values.AsSpan().CopyTo(new Span<float>(output, outputCapacity));
+            return values.Length;
+        }
+        catch
+        {
+            return -1;
+        }
+    }
+
     [UnmanagedCallersOnly(
         EntryPoint = "MyRedoxGetFloatArray",
         CallConvs = new[] { typeof(CallConvCdecl) })]

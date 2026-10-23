@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="Engine\Core\Application.cpp" />
     <ClCompile Include="Engine\Core\AircraftController.cpp" />
+    <ClCompile Include="Engine\Core\AircraftFlightParametersLoader.cpp" />
     <ClCompile Include="Engine\Core\PlayerAircraft.cpp" />
     <ClCompile Include="Engine\Core\Camera.cpp" />
     <ClCompile Include="Engine\Core\Scene.cpp" />
@@ -40,6 +41,8 @@
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.h" />
     <ClInclude Include="Engine\Core\AircraftController.h" />
+    <ClInclude Include="Engine\Core\AircraftFlightParameters.h" />
+    <ClInclude Include="Engine\Core\AircraftFlightParametersLoader.h" />
     <ClInclude Include="Engine\Core\PlayerAircraft.h" />
     <ClInclude Include="Engine\Core\Camera.h" />
     <ClInclude Include="Engine\Core\Scene.h" />
@@ -140,6 +143,7 @@
   <ItemGroup>
     <None Include="Engine\Renderer\Shader\Common.hlsli" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli" />
+    <None Include="Assets\Aircraft\F16\flightParameters.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
@@ -236,6 +240,11 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PreBuildEvent>
+      <Command>dotnet run --project "$(SolutionDir)Tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" -- "$(SolutionDir)Engine\Core\AircraftFlightParameters.h" "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\AircraftFlightParametersLayout.h"
+      if errorlevel 1 exit /b %errorlevel%</Command>
+    </PreBuildEvent>
+
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
@@ -261,6 +270,11 @@
       </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PreBuildEvent>
+      <Command>dotnet run --project "$(SolutionDir)Tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" -- "$(SolutionDir)Engine\Core\AircraftFlightParameters.h" "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\AircraftFlightParametersLayout.h"
+      if errorlevel 1 exit /b %errorlevel%</Command>
+    </PreBuildEvent>
+
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>

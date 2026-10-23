@@ -19,7 +19,7 @@ namespace Engine {
 		while (remainingSeconds > 0.0f) {
 			const float step = (std::min)(remainingSeconds, 1.0f / 60.0f);
 			remainingSeconds -= step;
-			const float controlBlend = 1.0f - std::exp(-kControlResponse * step);
+			const float controlBlend = 1.0f - std::exp(-m_flightParameters.controlResponse * step);
 			m_pitchControl += (targetPitchControl - m_pitchControl) * controlBlend;
 			m_turnControl += (targetTurnControl - m_turnControl) * controlBlend;
 			m_yawControl += (targetYawControl - m_yawControl) * controlBlend;
@@ -35,35 +35,37 @@ namespace Engine {
 			const float alignment = std::clamp(XMVectorGetX(XMVector3Dot(forward, travelDirection)), -1.0f, 1.0f);
 			const float angleOfAttack = std::acos(alignment);
 			const float angleControl = std::clamp(
-				1.0f - (std::max)(0.0f, angleOfAttack - kStallAngle) / (kCriticalAngle - kStallAngle),
+				1.0f - (std::max)(0.0f, angleOfAttack - m_flightParameters.stallAngleRadians) / (m_flightParameters.criticalAngleRadians - m_flightParameters.stallAngleRadians),
 				0.2f,
 				1.0f);
-			const float speedControl = std::clamp(speed / kStallSpeed, 0.25f, 1.0f);
+			const float speedControl = std::clamp(speed / m_flightParameters.stallSpeed, 0.25f, 1.0f);
 			const float controlEffectiveness = angleControl * speedControl;
 			const float turnSpeedFactor = std::clamp(
-				kLiftReferenceSpeed / (std::max)(speed, kMinimumSpeed),
-				kMinimumTurnFactor,
-				kMaximumTurnFactor);
+				m_flightParameters.liftReferenceSpeed / (std::max)(speed, m_flightParameters.minimumSpeed),
+				m_flightParameters.minimumTurnFactor,
+				m_flightParameters.maximumTurnFactor);
 			const float turnIntent = std::clamp(
 				(std::max)(std::abs(m_turnControl), std::abs(m_yawControl)),
 				0.0f,
 				1.0f);
 			const float highGIntensity = input.highGTurn && turnIntent > 0.05f ? 1.0f : 0.0f;
-			const float highGTurnFactor = 1.0f + highGIntensity * (kHighGTurnMultiplier - 1.0f);
+			const float highGTurnFactor = 1.0f + highGIntensity * (m_flightParameters.highGTurnMultiplier - 1.0f);
 
 			m_pitch = std::remainder(
-				m_pitch + m_pitchControl * kPitchRate * controlEffectiveness * step,
+				m_pitch + m_pitchControl * m_flightParameters.pitchRateRadians * controlEffectiveness * step,
 				XM_2PI);
 
 			const float targetRoll = std::clamp(
-				-m_turnControl * kMaximumBank * turnSpeedFactor,
-				-kMaximumBank,
-				kMaximumBank);
-			const float rollResponse = std::abs(m_turnControl) > 0.01f ? 1.8f : kRollLevelRate;
+				-m_turnControl * m_flightParameters.maximumBankRadians * turnSpeedFactor,
+				-m_flightParameters.maximumBankRadians,
+				m_flightParameters.maximumBankRadians);
+			const float rollResponse = std::abs(m_turnControl) > 0.01f
+				? m_flightParameters.rollInputResponse
+				: m_flightParameters.rollLevelRate;
 			const float rollBlend = 1.0f - std::exp(-rollResponse * step);
 			m_roll += (targetRoll - m_roll) * rollBlend;
 			m_yaw = std::remainder(
-				m_yaw + (std::sin(m_roll) * kTurnRate + m_yawControl * kYawRate) *
+				m_yaw + (std::sin(m_roll) * m_flightParameters.turnRateRadians + m_yawControl * m_flightParameters.yawRateRadians) *
 				angleControl * turnSpeedFactor * highGTurnFactor * step,
 				XM_2PI);
 
@@ -73,33 +75,33 @@ namespace Engine {
 			const XMVECTOR up = XMVector3Normalize(XMVector3TransformNormal(
 				XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotation));
 			const float angleLift = std::clamp(
-				1.0f - (std::max)(0.0f, angleOfAttack - kStallAngle) / (kCriticalAngle - kStallAngle),
+				1.0f - (std::max)(0.0f, angleOfAttack - m_flightParameters.stallAngleRadians) / (m_flightParameters.criticalAngleRadians - m_flightParameters.stallAngleRadians),
 				0.0f,
 				1.0f);
-			const float speedRatio = speed / kLiftReferenceSpeed;
+			const float speedRatio = speed / m_flightParameters.liftReferenceSpeed;
 			const float verticalLiftAssist = 1.0f / (std::max)(XMVectorGetY(up), 0.35f);
 			const float liftAcceleration = (std::min)(
-				kGravity * speedRatio * speedRatio * angleLift * verticalLiftAssist,
-				kGravity * kMaximumLiftFactor);
+				m_flightParameters.gravity * speedRatio * speedRatio * angleLift * verticalLiftAssist,
+				m_flightParameters.gravity * m_flightParameters.maximumLiftFactor);
 			const float bankLoad = std::sin(m_roll);
 			const XMVECTOR flightPathAcceleration =
 				(aircraftForward - travelDirection) *
-				(speed * kFlightPathResponse * angleControl * turnSpeedFactor * highGTurnFactor);
+				(speed * m_flightParameters.flightPathResponse * angleControl * turnSpeedFactor * highGTurnFactor);
 			const XMVECTOR acceleration = up * liftAcceleration +
-				XMVectorSet(0.0f, -kGravity, 0.0f, 0.0f) +
-				aircraftForward * (m_throttleControl * kAcceleration) +
+				XMVectorSet(0.0f, -m_flightParameters.gravity, 0.0f, 0.0f) +
+				aircraftForward * (m_throttleControl * m_flightParameters.acceleration) +
 				flightPathAcceleration;
 			velocity += acceleration * step;
 
-			const float drag = kDrag + kTurnDrag * bankLoad * bankLoad + kHighGDrag * highGIntensity * turnIntent;
+			const float drag = m_flightParameters.drag + m_flightParameters.turnDrag * bankLoad * bankLoad + m_flightParameters.highGDrag * highGIntensity * turnIntent;
 			velocity *= std::exp(-drag * step);
 
 			float updatedSpeed = XMVectorGetX(XMVector3Length(velocity));
-			if (updatedSpeed > kMaximumSpeed) {
-				velocity = XMVector3Normalize(velocity) * kMaximumSpeed;
+			if (updatedSpeed > m_flightParameters.maximumSpeed) {
+				velocity = XMVector3Normalize(velocity) * m_flightParameters.maximumSpeed;
 			}
-			else if (updatedSpeed < kMinimumSpeed) {
-				velocity = (updatedSpeed > 0.001f ? XMVector3Normalize(velocity) : forward) * kMinimumSpeed;
+			else if (updatedSpeed < m_flightParameters.minimumSpeed) {
+				velocity = (updatedSpeed > 0.001f ? XMVector3Normalize(velocity) : forward) * m_flightParameters.minimumSpeed;
 			}
 
 			XMVECTOR position = XMLoadFloat3(&m_position);

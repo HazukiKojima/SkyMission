@@ -1,4 +1,5 @@
 #include "SceneLoader.h"
+#include "AircraftFlightParametersLoader.h"
 #include "../Resources/AssetPathResolver.h"
 #include <cmath>
 #include <stdexcept>
@@ -15,6 +16,8 @@ namespace Engine {
 
 		const std::filesystem::path f16JsonPath = aircraftJsonPath.parent_path() / L"F16/f16.json";
 		const float aircraftVisualScale = resolver.ResolveFloat(f16JsonPath, "visualScale");
+		const AircraftFlightParameters flightParameters = AircraftFlightParametersLoader().Load(
+			aircraftJsonPath.parent_path() / L"F16/flightParameters.json");
 		if (!std::isfinite(aircraftVisualScale) || aircraftVisualScale <= 0.0f) {
 			throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
 		}
@@ -53,7 +56,8 @@ namespace Engine {
 			resolver.Resolve(f16JsonPath, "model"),
 			aircraftVisualScale,
 			ocean,
-			sky
+			sky,
+			flightParameters
 		};
 	}
 }
