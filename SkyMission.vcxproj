@@ -19,14 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Core\Application.cpp" />
-    <ClCompile Include="Engine\Core\AircraftController.cpp" />
-    <ClCompile Include="Engine\Core\AircraftFlightParametersLoader.cpp" />
-    <ClCompile Include="Engine\Core\PlayerAircraft.cpp" />
-    <ClCompile Include="Engine\Core\Camera.cpp" />
-    <ClCompile Include="Engine\Core\Scene.cpp" />
-    <ClCompile Include="Engine\Core\SceneLoader.cpp" />
-    <ClCompile Include="Engine\Core\Window.cpp" />
+    <ClCompile Include="Engine\Application\Application.cpp" />
+    <ClCompile Include="Engine\Aircraft\AircraftController.cpp" />
+    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp" />
+    <ClCompile Include="Engine\Camera\Camera.cpp" />
+    <ClCompile Include="Engine\Scene\Scene.cpp" />
+    <ClCompile Include="Engine\Scene\SceneLoader.cpp" />
+    <ClCompile Include="Engine\Window\Window.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp" />
     <ClCompile Include="Engine\Renderer\Device\Renderer.cpp" />
@@ -39,18 +38,18 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Core\Application.h" />
-    <ClInclude Include="Engine\Core\AircraftController.h" />
-    <ClInclude Include="Engine\Core\AircraftFlightParameters.h" />
-    <ClInclude Include="Engine\Core\AircraftFlightParametersLoader.h" />
-    <ClInclude Include="Engine\Core\JsonParametersLoader.h" />
-    <ClInclude Include="Engine\Core\OceanParameters.h" />
-    <ClInclude Include="Engine\Core\PlayerAircraft.h" />
-    <ClInclude Include="Engine\Core\Camera.h" />
-    <ClInclude Include="Engine\Core\Scene.h" />
-    <ClInclude Include="Engine\Core\SceneLoader.h" />
-    <ClInclude Include="Engine\Core\SkyParameters.h" />
-    <ClInclude Include="Engine\Core\Window.h" />
+    <ClInclude Include="Engine\Application\Application.h" />
+    <ClInclude Include="Engine\Aircraft\AircraftController.h" />
+    <ClInclude Include="Engine\Aircraft\AircraftFlightParameters.h" />
+    <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h" />
+    <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h" />
+    <ClInclude Include="Engine\Scene\OceanParameters.h" />
+    <ClInclude Include="Engine\Aircraft\PlayerAircraft.h" />
+    <ClInclude Include="Engine\Camera\Camera.h" />
+    <ClInclude Include="Engine\Scene\Scene.h" />
+    <ClInclude Include="Engine\Scene\SceneLoader.h" />
+    <ClInclude Include="Engine\Scene\SkyParameters.h" />
+    <ClInclude Include="Engine\Window\Window.h" />
     <ClInclude Include="Engine\Renderer\Device\CommandContext.h" />
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h" />
     <ClInclude Include="Engine\Renderer\Device\Renderer.h" />
@@ -244,7 +243,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <PreBuildEvent>
-      <Command>dotnet run --project "$(SolutionDir)Tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" -- "$(SolutionDir)Engine\Core\AircraftFlightParameters.h" AircraftFlightParameters GeneratedAircraftFlightParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\AircraftFlightParametersLayout.h" "$(SolutionDir)Engine\Core\OceanParameters.h" OceanParameters GeneratedOceanParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\OceanParametersLayout.h" "$(SolutionDir)Engine\Core\SkyParameters.h" SkyParameters GeneratedSkyParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\SkyParametersLayout.h"
+      <Command>dotnet run --project "$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" -- "$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h" AircraftFlightParameters GeneratedAircraftFlightParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\AircraftFlightParametersLayout.h" "$(SolutionDir)Engine\Scene\OceanParameters.h" OceanParameters GeneratedOceanParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\OceanParametersLayout.h" "$(SolutionDir)Engine\Scene\SkyParameters.h" SkyParameters GeneratedSkyParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\SkyParametersLayout.h"
       if errorlevel 1 exit /b %errorlevel%</Command>
     </PreBuildEvent>
     <ClCompile>
@@ -273,7 +272,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <PreBuildEvent>
-      <Command>dotnet run --project "$(SolutionDir)Tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" -- "$(SolutionDir)Engine\Core\AircraftFlightParameters.h" AircraftFlightParameters GeneratedAircraftFlightParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\AircraftFlightParametersLayout.h" "$(SolutionDir)Engine\Core\OceanParameters.h" OceanParameters GeneratedOceanParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\OceanParametersLayout.h" "$(SolutionDir)Engine\Core\SkyParameters.h" SkyParameters GeneratedSkyParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\SkyParametersLayout.h"
+      <Command>dotnet run --project "$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" -- "$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h" AircraftFlightParameters GeneratedAircraftFlightParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\AircraftFlightParametersLayout.h" "$(SolutionDir)Engine\Scene\OceanParameters.h" OceanParameters GeneratedOceanParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\OceanParametersLayout.h" "$(SolutionDir)Engine\Scene\SkyParameters.h" SkyParameters GeneratedSkyParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\SkyParametersLayout.h"
       if errorlevel 1 exit /b %errorlevel%</Command>
     </PreBuildEvent>
     <ClCompile>
@@ -309,7 +308,8 @@
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
-      <ErrorText>縺薙・繝励Ο繧ｸ繧ｧ繧ｯ繝医・縲√％縺ｮ繧ｳ繝ｳ繝斐Η繝ｼ繧ｿ繝ｼ縺ｫ蟄伜惠縺励↑縺・NuGet 繝代ャ繧ｱ繝ｼ繧ｸ繧貞盾辣ｧ縺励※縺・∪縺吶・uGet 繝代ャ繧ｱ繝ｼ繧ｸ繧貞ｾｩ蜈・＠縺ｦ縺九ｉ繝薙Ν繝峨＠縺ｦ縺上□縺輔＞縲りｩｳ邏ｰ縺ｫ縺､縺・※縺ｯ縲”ttps://go.microsoft.com/fwlink/?LinkID=322105 繧貞盾辣ｧ縺励※縺上□縺輔＞縲りｦ九▽縺九ｉ縺ｪ縺・ヵ繧｡繧､繝ｫ: {0}</ErrorText>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Restore the NuGet packages before building the project. For more information, see https://go.microsoft.com/fwlink/?LinkID=322105. The missing file is: {0}
+</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets'))" />
     <Error Condition="!Exists('packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />

@@ -1,8 +1,8 @@
 #include "Renderer.h"
 #include "../Device/RenderDevice.h"
 #include "../Device/CommandContext.h"
-#include "../../Core/Scene.h"
-#include "../../Core/SceneLoader.h"
+#include "../../Scene/Scene.h"
+#include "../../Scene/SceneLoader.h"
 #include <DirectXMath.h>
 #include <algorithm>
 #include <cmath>

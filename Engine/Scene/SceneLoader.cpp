@@ -1,6 +1,5 @@
-#include "SceneLoader.h"
-#include "AircraftFlightParametersLoader.h"
-#include "JsonParametersLoader.h"
+#include "../Scene/SceneLoader.h"
+#include "../Interop/Redox/JsonParametersLoader.h"
 #include "OceanParameters.h"
 #include "SkyParameters.h"
 #include "../../External/REDoxWrapper/Generated/OceanParametersLayout.h"
@@ -21,8 +20,9 @@ namespace Engine {
 
 		const std::filesystem::path f16JsonPath = aircraftJsonPath.parent_path() / L"F16/f16.json";
 		const float aircraftVisualScale = resolver.ResolveFloat(f16JsonPath, "visualScale");
-		const AircraftFlightParameters flightParameters = AircraftFlightParametersLoader().Load(
-			aircraftJsonPath.parent_path() / L"F16/flightParameters.json");
+		const AircraftFlightParameters flightParameters = JsonParametersLoader().Load<AircraftFlightParameters>(
+			aircraftJsonPath.parent_path() / L"F16/flightParameters.json",
+			"MyRedoxGetAircraftFlightParameters");
 		if (!std::isfinite(aircraftVisualScale) || aircraftVisualScale <= 0.0f) {
 			throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
 		}

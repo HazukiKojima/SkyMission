@@ -1,7 +1,7 @@
 #include "Application.h"
-#include "Window.h"
+#include "../Window/Window.h"
 #include "../Renderer/Device/Renderer.h"
-#include "SceneLoader.h"
+#include "../Scene/SceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
 #include <filesystem>

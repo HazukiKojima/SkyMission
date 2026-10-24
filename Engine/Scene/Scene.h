@@ -1,6 +1,6 @@
 #pragma once
-#include "Camera.h"
-#include "PlayerAircraft.h"
+#include "../Camera/Camera.h"
+#include "../Aircraft/PlayerAircraft.h"
 #include "../Resources/Mesh/Model.h"
 #include <DirectXMath.h>
 #include <cstddef>

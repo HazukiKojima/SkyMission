@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Engine/Core/AircraftFlightParameters.h"
+#include "../../../Engine/Aircraft/AircraftFlightParameters.h"
 #include <cstddef>
 #include <type_traits>
 

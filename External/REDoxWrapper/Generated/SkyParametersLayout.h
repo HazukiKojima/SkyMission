@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Engine/Core/SkyParameters.h"
+#include "../../../Engine/Scene/SkyParameters.h"
 #include <cstddef>
 #include <type_traits>
 

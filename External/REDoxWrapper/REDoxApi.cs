@@ -10,6 +10,13 @@ namespace REDoxWrapper;
 
 public static unsafe class REDoxApi
 {
+    private const int InvalidArguments = -1;
+    private const int InvalidJson = -2;
+    private const int InvalidSchema = -3;
+    private const int DeserializationFailed = -4;
+    private const int InvalidValue = -5;
+    private const int UnexpectedFailure = -6;
+
     [UnmanagedCallersOnly(
         EntryPoint = "MyRedoxGetAircraftFlightParameters",
         CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -48,17 +55,35 @@ public static unsafe class REDoxApi
             outputCapacity <= 0 || fieldNames.Length != fieldLengths.Length ||
             fieldLengths.Sum() != outputCapacity)
         {
-            return -1;
+            return InvalidArguments;
         }
 
+        string json;
         try
         {
-            string json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
-            using var document = JsonDocument.Parse(json);
+            json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
+        }
+        catch
+        {
+            return InvalidJson;
+        }
+
+        JsonDocument document;
+        try
+        {
+            document = JsonDocument.Parse(json);
+        }
+        catch
+        {
+            return InvalidJson;
+        }
+
+        using (document)
+        {
             var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Count() != fieldNames.Length)
+            if (root.ValueKind != JsonValueKind.Object)
             {
-                return -1;
+                return InvalidSchema;
             }
 
             for (int index = 0; index < fieldNames.Length; index++)
@@ -66,22 +91,27 @@ public static unsafe class REDoxApi
                 if (!root.TryGetProperty(fieldNames[index], out var value) ||
                     !HasFiniteNumbers(value, fieldLengths[index]))
                 {
-                    return -1;
+                    return InvalidValue;
                 }
             }
 
-            float[]? values = deserialize(json);
+            float[]? values;
+            try
+            {
+                values = deserialize(json);
+            }
+            catch
+            {
+                return DeserializationFailed;
+            }
+
             if (values == null || values.Length != outputCapacity || values.Any(value => !float.IsFinite(value)))
             {
-                return -1;
+                return InvalidValue;
             }
 
             values.AsSpan().CopyTo(new Span<float>(output, outputCapacity));
             return values.Length;
-        }
-        catch
-        {
-            return -1;
         }
     }
 
@@ -117,47 +147,60 @@ public static unsafe class REDoxApi
             keyUtf8 == null || keyLength <= 0 ||
             output == null || outputCapacity <= 0)
         {
-            return -1;
+            return InvalidArguments;
         }
 
         try
         {
             string json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
             string key = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(keyUtf8, keyLength));
-            using var document = JsonDocument.Parse(json);
-
-            if (!document.RootElement.TryGetProperty(key, out var value))
+            JsonDocument document;
+            try
             {
-                return -1;
+                document = JsonDocument.Parse(json);
+            }
+            catch
+            {
+                return InvalidJson;
             }
 
-            if (value.ValueKind == JsonValueKind.Number)
+            using (document)
             {
-                if (outputCapacity < 1 || !value.TryGetSingle(out output[0]))
+                if (!document.RootElement.TryGetProperty(key, out var value))
                 {
-                    return -1;
+                    return InvalidSchema;
                 }
-                return 1;
-            }
 
-            if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() > outputCapacity)
-            {
-                return -1;
-            }
-
-            int index = 0;
-            foreach (var element in value.EnumerateArray())
-            {
-                if (!element.TryGetSingle(out output[index++]))
+                if (value.ValueKind == JsonValueKind.Number)
                 {
-                    return -1;
+                    if (outputCapacity < 1 || !value.TryGetSingle(out output[0]) ||
+                        !float.IsFinite(output[0]))
+                    {
+                        return InvalidValue;
+                    }
+                    return 1;
                 }
+
+                if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() > outputCapacity)
+                {
+                    return InvalidValue;
+                }
+
+                int index = 0;
+                foreach (var element in value.EnumerateArray())
+                {
+                    if (!element.TryGetSingle(out output[index]) || !float.IsFinite(output[index]))
+                    {
+                        return InvalidValue;
+                    }
+                    index++;
+                }
+                return index;
             }
-            return index;
         }
         catch
         {
-            return -1;
+            return UnexpectedFailure;
         }
     }
 
@@ -176,7 +219,7 @@ public static unsafe class REDoxApi
             keyUtf8 == null || keyLength <= 0 ||
             output == null || outputCapacity <= 0)
         {
-            return -1;
+            return InvalidArguments;
         }
 
         try
@@ -187,38 +230,49 @@ public static unsafe class REDoxApi
             string key = Encoding.UTF8.GetString(
                 new ReadOnlySpan<byte>(keyUtf8, keyLength));
 
-            using var document = JsonDocument.Parse(json);
-
-            var root = document.RootElement;
-
-            if (!root.TryGetProperty(key, out var value))
+            JsonDocument document;
+            try
             {
-                return -1;
+                document = JsonDocument.Parse(json);
+            }
+            catch
+            {
+                return InvalidJson;
             }
 
-            string? result = value.GetString();
-
-            if (result == null)
+            using (document)
             {
-                return -1;
+                var root = document.RootElement;
+
+                if (!root.TryGetProperty(key, out var value))
+                {
+                    return InvalidSchema;
+                }
+
+                string? result = value.GetString();
+
+                if (result == null)
+                {
+                    return InvalidValue;
+                }
+
+                int requiredLength = Encoding.UTF8.GetByteCount(result);
+
+                if (requiredLength > outputCapacity)
+                {
+                    return InvalidValue;
+                }
+
+                Encoding.UTF8.GetBytes(
+                    result.AsSpan(),
+                    new Span<byte>(output, outputCapacity));
+
+                return requiredLength;
             }
-
-            int requiredLength = Encoding.UTF8.GetByteCount(result);
-
-            if (requiredLength > outputCapacity)
-            {
-                return -2;
-            }
-
-            Encoding.UTF8.GetBytes(
-                result.AsSpan(),
-                new Span<byte>(output, outputCapacity));
-
-            return requiredLength;
         }
         catch
         {
-            return -1;
+            return UnexpectedFailure;
         }
     }
 }

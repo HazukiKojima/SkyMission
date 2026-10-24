@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AircraftFlightParameters.h"
+#include "../Aircraft/AircraftFlightParameters.h"
 #include <filesystem>
 #include <DirectXMath.h>
 

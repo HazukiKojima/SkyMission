@@ -1,5 +1,5 @@
-#include "Camera.h"
-#include "Window.h"
+#include "../Camera/Camera.h"
+#include "../Window/Window.h"
 #include <Windowsx.h>
 #include <cmath>
 
