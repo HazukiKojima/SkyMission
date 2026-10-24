@@ -39,6 +39,7 @@ namespace Engine {
 
 		Camera& GetCamera() { return m_camera; }
 		const Camera& GetCamera() const { return m_camera; }
+		DirectX::XMFLOAT4X4 GetPlayerAircraftWorldTransform() const;
 		SceneEnvironment& GetEnvironment() { return m_environment; }
 		const SceneEnvironment& GetEnvironment() const { return m_environment; }
 		void SetEnvironment(const SceneEnvironment& environment) { m_environment = environment; }

@@ -45,6 +45,7 @@ namespace Engine {
 		std::unique_ptr<Engine::GraphicsPipeline> m_skyPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_oceanFogPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_modelPipeline;
+		std::unique_ptr<Engine::GraphicsPipeline> m_jetFlamePipeline;
 
 		std::shared_ptr<Engine::Texture> m_texture;
 		UINT m_textureSrvIndex = 0;
@@ -62,6 +63,12 @@ namespace Engine {
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_oceanFogConstantBuffer;
 		UINT8* m_oceanFogCbvDataPtr = nullptr;
 		std::vector<ModelConstantBuffer> m_modelConstantBuffers[RenderDevice::FrameCount];
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_jetFlameConstantBuffer;
+		UINT8* m_jetFlameCbvDataPtr = nullptr;
+		std::unique_ptr<Engine::VertexBuffer> m_jetFlameVertexBuffer;
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_jetFlameIndexBuffer;
+		D3D12_INDEX_BUFFER_VIEW m_jetFlameIndexBufferView = {};
+		UINT m_jetFlameIndexCount = 0;
 
 		UINT m_vertexCount;
 		float m_oceanSize = 10000000.0f;
