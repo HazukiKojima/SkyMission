@@ -20,8 +20,33 @@ public static unsafe class REDoxApi
         float* output,
         int outputCapacity)
     {
+        return ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
+            GeneratedAircraftFlightParameters.FieldNames,
+            GeneratedAircraftFlightParameters.FieldLengths,
+            json => JsonSerializer.Deserialize<GeneratedAircraftFlightParameters>(json)?.ToFloatArray());
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetOceanParameters", CallConvs = new[] { typeof(CallConvCdecl) })]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(GeneratedOceanParameters))]
+    public static int MyRedoxGetOceanParameters(byte* jsonUtf8, int jsonLength, float* output, int outputCapacity) =>
+        ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
+            GeneratedOceanParameters.FieldNames, GeneratedOceanParameters.FieldLengths,
+            json => JsonSerializer.Deserialize<GeneratedOceanParameters>(json)?.ToFloatArray());
+
+    [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetSkyParameters", CallConvs = new[] { typeof(CallConvCdecl) })]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(GeneratedSkyParameters))]
+    public static int MyRedoxGetSkyParameters(byte* jsonUtf8, int jsonLength, float* output, int outputCapacity) =>
+        ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
+            GeneratedSkyParameters.FieldNames, GeneratedSkyParameters.FieldLengths,
+            json => JsonSerializer.Deserialize<GeneratedSkyParameters>(json)?.ToFloatArray());
+
+    private static int ReadParameters(
+        byte* jsonUtf8, int jsonLength, float* output, int outputCapacity,
+        string[] fieldNames, int[] fieldLengths, Func<string, float[]?> deserialize)
+    {
         if (jsonUtf8 == null || jsonLength <= 0 || output == null ||
-            outputCapacity != GeneratedAircraftFlightParameters.FieldCount)
+            outputCapacity <= 0 || fieldNames.Length != fieldLengths.Length ||
+            fieldLengths.Sum() != outputCapacity)
         {
             return -1;
         }
@@ -31,32 +56,22 @@ public static unsafe class REDoxApi
             string json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object ||
-                root.EnumerateObject().Count() != GeneratedAircraftFlightParameters.FieldCount)
+            if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Count() != fieldNames.Length)
             {
                 return -1;
             }
 
-            foreach (string fieldName in GeneratedAircraftFlightParameters.FieldNames)
+            for (int index = 0; index < fieldNames.Length; index++)
             {
-                if (!root.TryGetProperty(fieldName, out var value) ||
-                    value.ValueKind != JsonValueKind.Number ||
-                    !value.TryGetSingle(out var number))
+                if (!root.TryGetProperty(fieldNames[index], out var value) ||
+                    !HasFiniteNumbers(value, fieldLengths[index]))
                 {
                     return -1;
                 }
-                if (!float.IsFinite(number)) return -1;
             }
 
-            GeneratedAircraftFlightParameters? parameters =
-                JsonSerializer.Deserialize<GeneratedAircraftFlightParameters>(json);
-            if (parameters == null)
-            {
-                return -1;
-            }
-
-            float[] values = parameters.ToFloatArray();
-            if (values.Length != outputCapacity || values.Any(value => !float.IsFinite(value)))
+            float[]? values = deserialize(json);
+            if (values == null || values.Length != outputCapacity || values.Any(value => !float.IsFinite(value)))
             {
                 return -1;
             }
@@ -68,6 +83,23 @@ public static unsafe class REDoxApi
         {
             return -1;
         }
+    }
+
+    private static bool HasFiniteNumbers(REDox.DElement value, int length)
+    {
+        if (length == 1)
+        {
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetSingle(out float number)) return false;
+            return float.IsFinite(number);
+        }
+
+        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != length) return false;
+        foreach (var element in value.EnumerateArray())
+        {
+            if (element.ValueKind != JsonValueKind.Number || !element.TryGetSingle(out float number) ||
+                !float.IsFinite(number)) return false;
+        }
+        return true;
     }
 
     [UnmanagedCallersOnly(

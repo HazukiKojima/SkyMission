@@ -1,5 +1,10 @@
 #include "SceneLoader.h"
 #include "AircraftFlightParametersLoader.h"
+#include "JsonParametersLoader.h"
+#include "OceanParameters.h"
+#include "SkyParameters.h"
+#include "../../External/REDoxWrapper/Generated/OceanParametersLayout.h"
+#include "../../External/REDoxWrapper/Generated/SkyParametersLayout.h"
 #include "../Resources/AssetPathResolver.h"
 #include <cmath>
 #include <stdexcept>
@@ -21,31 +26,23 @@ namespace Engine {
 		if (!std::isfinite(aircraftVisualScale) || aircraftVisualScale <= 0.0f) {
 			throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
 		}
+		const OceanParameters oceanParameters = JsonParametersLoader().Load<OceanParameters>(
+			oceanJsonPath, "MyRedoxGetOceanParameters");
+		const SkyParameters skyParameters = JsonParametersLoader().Load<SkyParameters>(
+			skyJsonPath, "MyRedoxGetSkyParameters");
 		const OceanSettings ocean = {
-			resolver.ResolveFloat(oceanJsonPath, "size"),
-			resolver.ResolveFloat(oceanJsonPath, "waveLength"),
-			resolver.ResolveFloat(oceanJsonPath, "waveSteepness"),
-			resolver.ResolveFloat(oceanJsonPath, "normalUvScale"),
-			resolver.ResolveFloat(oceanJsonPath, "wavePatternUvScale"),
-			resolver.ResolveFloat(oceanJsonPath, "fogStartDistance"),
-			resolver.ResolveFloat(oceanJsonPath, "fogEndDistance"),
-			resolver.ResolveFloat(oceanJsonPath, "edgeFadeStart"),
-			resolver.ResolveFloat(oceanJsonPath, "edgeFadeWidth")
+			oceanParameters.size, oceanParameters.waveLength, oceanParameters.waveSteepness,
+			oceanParameters.normalUvScale, oceanParameters.wavePatternUvScale,
+			oceanParameters.fogStartDistance, oceanParameters.fogEndDistance,
+			oceanParameters.edgeFadeStart, oceanParameters.edgeFadeWidth
 		};
-		const std::vector<float> sunDirection = resolver.ResolveFloatArray(skyJsonPath, "sunDirection");
-		const std::vector<float> sunColor = resolver.ResolveFloatArray(skyJsonPath, "sunColor");
-		const std::vector<float> ambientColor = resolver.ResolveFloatArray(skyJsonPath, "ambientColor");
-		if (sunDirection.size() != 3 || sunColor.size() != 3 || ambientColor.size() != 3) {
-			throw std::runtime_error("Sky environment vectors must have three elements.");
-		}
-
 		const SkySettings sky = {
-			resolver.ResolveFloat(skyJsonPath, "radius"),
-			{ sunDirection[0], sunDirection[1], sunDirection[2] },
-			resolver.ResolveFloat(skyJsonPath, "sunIntensity"),
-			{ sunColor[0], sunColor[1], sunColor[2] },
-			resolver.ResolveFloat(skyJsonPath, "ambientIntensity"),
-			{ ambientColor[0], ambientColor[1], ambientColor[2] }
+			skyParameters.radius,
+			{ skyParameters.sunDirection[0], skyParameters.sunDirection[1], skyParameters.sunDirection[2] },
+			skyParameters.sunIntensity,
+			{ skyParameters.sunColor[0], skyParameters.sunColor[1], skyParameters.sunColor[2] },
+			skyParameters.ambientIntensity,
+			{ skyParameters.ambientColor[0], skyParameters.ambientColor[1], skyParameters.ambientColor[2] }
 		};
 
 		return {

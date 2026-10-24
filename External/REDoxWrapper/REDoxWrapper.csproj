@@ -13,8 +13,8 @@
     <PackageReference Include="CAPCOM.REDox" Version="1.0.3" />
   </ItemGroup>
 
-  <Target Name="GenerateAircraftFlightParameters" BeforeTargets="PrepareForBuild">
-    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\..\Tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\..\..\Engine\Core\AircraftFlightParameters.h&quot; &quot;$(MSBuildProjectDirectory)\Generated\GeneratedAircraftFlightParameters.cs&quot; &quot;$(MSBuildProjectDirectory)\Generated\AircraftFlightParametersLayout.h&quot;" />
+  <Target Name="GenerateJsonBindings" BeforeTargets="PrepareForBuild">
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\..\Tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\..\..\Engine\Core\AircraftFlightParameters.h&quot; AircraftFlightParameters GeneratedAircraftFlightParameters &quot;$(MSBuildProjectDirectory)\Generated\GeneratedAircraftFlightParameters.cs&quot; &quot;$(MSBuildProjectDirectory)\Generated\AircraftFlightParametersLayout.h&quot; &quot;$(MSBuildProjectDirectory)\..\..\Engine\Core\OceanParameters.h&quot; OceanParameters GeneratedOceanParameters &quot;$(MSBuildProjectDirectory)\Generated\GeneratedOceanParameters.cs&quot; &quot;$(MSBuildProjectDirectory)\Generated\OceanParametersLayout.h&quot; &quot;$(MSBuildProjectDirectory)\..\..\Engine\Core\SkyParameters.h&quot; SkyParameters GeneratedSkyParameters &quot;$(MSBuildProjectDirectory)\Generated\GeneratedSkyParameters.cs&quot; &quot;$(MSBuildProjectDirectory)\Generated\SkyParametersLayout.h&quot;" />
   </Target>
 
 </Project>

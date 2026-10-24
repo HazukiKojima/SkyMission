@@ -82,6 +82,7 @@
     <ClCompile Include="Engine\Core\SceneLoader.cpp">
       <Filter>Engine\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Core\Application.h">
@@ -135,6 +136,10 @@
     <ClInclude Include="Engine\Core\SceneLoader.h">
       <Filter>Engine\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Resources\AssetPathResolver.h" />
+    <ClInclude Include="Engine\Core\OceanParameters.h" />
+    <ClInclude Include="Engine\Core\SkyParameters.h" />
+    <ClInclude Include="Engine\Core\JsonParametersLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Engine\Renderer\Shader\Common.hlsli">

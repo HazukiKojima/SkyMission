@@ -1,17 +1,24 @@
 using System.Text;
 
-if (args.Length != 3)
+if (args.Length == 0 || args.Length % 5 != 0)
 {
-    Console.Error.WriteLine("Usage: AircraftParameterGenerator <input-header> <output-csharp> <output-cpp-header>");
+    Console.Error.WriteLine("Usage: AircraftParameterGenerator <input-header> <struct-name> <class-name> <output-csharp> <output-cpp-header> [...]");
     return 2;
 }
 
 try
 {
-    string source = File.ReadAllText(args[0]);
-    IReadOnlyList<string> fields = CppStructParser.ParseFloatFields(source, "AircraftFlightParameters");
-    WriteGeneratedFile(args[1], CSharpGenerator.Generate(fields));
-    WriteGeneratedFile(args[2], CppGenerator.GenerateLayoutAssertions(fields));
+    for (int argumentIndex = 0; argumentIndex < args.Length; argumentIndex += 5)
+    {
+        string headerPath = args[argumentIndex];
+        string structName = args[argumentIndex + 1];
+        string className = args[argumentIndex + 2];
+        string source = File.ReadAllText(headerPath);
+        IReadOnlyList<Field> fields = CppStructParser.ParseFloatFields(source, structName);
+        WriteGeneratedFile(args[argumentIndex + 3], CSharpGenerator.Generate(fields, className));
+        WriteGeneratedFile(args[argumentIndex + 4], CppGenerator.GenerateLayoutAssertions(
+            fields, structName, Path.GetRelativePath(Path.GetDirectoryName(args[argumentIndex + 4])!, headerPath)));
+    }
     return 0;
 }
 catch (Exception exception)
@@ -29,52 +36,66 @@ static void WriteGeneratedFile(string path, string content)
 
 static class CppGenerator
 {
-    public static string GenerateLayoutAssertions(IReadOnlyList<string> fields)
+    public static string GenerateLayoutAssertions(IReadOnlyList<Field> fields, string structName, string headerPath)
     {
         var source = new StringBuilder();
         source.AppendLine("#pragma once");
-        source.AppendLine("#include \"../../../Engine/Core/AircraftFlightParameters.h\"");
+        source.AppendLine($"#include \"{headerPath.Replace('\\', '/')}\"");
         source.AppendLine("#include <cstddef>");
         source.AppendLine("#include <type_traits>");
         source.AppendLine();
-        source.AppendLine("static_assert(std::is_standard_layout_v<Engine::AircraftFlightParameters>);");
+        source.AppendLine($"static_assert(std::is_standard_layout_v<Engine::{structName}>);");
         for (int index = 0; index < fields.Count; index++)
         {
-            source.AppendLine($"static_assert(offsetof(Engine::AircraftFlightParameters, {fields[index]}) == {index} * sizeof(float));");
+            source.AppendLine($"static_assert(offsetof(Engine::{structName}, {fields[index].Name}) == {fields[index].Offset} * sizeof(float));");
         }
-        source.AppendLine($"static_assert(sizeof(Engine::AircraftFlightParameters) == {fields.Count} * sizeof(float));");
+        source.AppendLine($"static_assert(sizeof(Engine::{structName}) == {fields.Sum(field => field.Length)} * sizeof(float));");
         return source.ToString();
     }
 }
 
 static class CSharpGenerator
 {
-    public static string Generate(IReadOnlyList<string> fields)
+    public static string Generate(IReadOnlyList<Field> fields, string className)
     {
         var source = new StringBuilder();
         source.AppendLine("namespace REDoxWrapper.Generated;");
         source.AppendLine();
-        source.AppendLine("public sealed class GeneratedAircraftFlightParameters");
+        source.AppendLine($"public sealed class {className}");
         source.AppendLine("{");
-        source.AppendLine($"    public const int FieldCount = {fields.Count};");
+        source.AppendLine($"    public const int FieldCount = {fields.Sum(field => field.Length)};");
         source.AppendLine("    public static readonly string[] FieldNames =");
         source.AppendLine("    {");
-        foreach (string field in fields)
+        foreach (Field field in fields)
         {
-            source.AppendLine($"        \"{field}\",");
+            source.AppendLine($"        \"{field.Name}\",");
+        }
+        source.AppendLine("    };");
+        source.AppendLine("    public static readonly int[] FieldLengths =");
+        source.AppendLine("    {");
+        foreach (Field field in fields)
+        {
+            source.AppendLine($"        {field.Length},");
         }
         source.AppendLine("    };");
         source.AppendLine();
-        foreach (string field in fields)
+        foreach (Field field in fields)
         {
-            source.AppendLine($"    public float {field} {{ get; set; }}");
+            source.AppendLine(field.Length == 1
+                ? $"    public float {field.Name} {{ get; set; }}"
+                : $"    public float[] {field.Name} {{ get; set; }} = new float[{field.Length}];");
         }
         source.AppendLine();
         source.AppendLine("    public float[] ToFloatArray() => new float[]");
         source.AppendLine("    {");
-        foreach (string field in fields)
+        foreach (Field field in fields)
         {
-            source.AppendLine($"        {field},");
+            for (int index = 0; index < field.Length; index++)
+            {
+                source.AppendLine(field.Length == 1
+                    ? $"        {field.Name},"
+                    : $"        {field.Name}[{index}],");
+            }
         }
         source.AppendLine("    };");
         source.AppendLine("}");
@@ -82,9 +103,11 @@ static class CSharpGenerator
     }
 }
 
+record Field(string Name, int Length, int Offset);
+
 static class CppStructParser
 {
-    public static IReadOnlyList<string> ParseFloatFields(string source, string structName)
+    public static IReadOnlyList<Field> ParseFloatFields(string source, string structName)
     {
         List<string> tokens = Tokenize(source);
         for (int index = 0; index < tokens.Count - 2; index++)
@@ -100,7 +123,7 @@ static class CppStructParser
                 throw new FormatException($"Expected '{{' after struct {structName}.");
             }
 
-            var fields = new List<string>();
+            var fields = new List<Field>();
             var names = new HashSet<string>(StringComparer.Ordinal);
             index++;
             while (index < tokens.Count && tokens[index] != "}")
@@ -111,6 +134,16 @@ static class CppStructParser
                     throw new FormatException($"Unexpected end of struct {structName}.");
                 }
                 string field = tokens[index++];
+                int length = 1;
+                if (index < tokens.Count && tokens[index] == "[")
+                {
+                    index++;
+                    if (index >= tokens.Count || !int.TryParse(tokens[index++], out length) || length <= 0 ||
+                        index >= tokens.Count || tokens[index++] != "]")
+                    {
+                        throw new FormatException($"Field '{field}' must use a positive fixed array length.");
+                    }
+                }
                 if (type != "float")
                 {
                     throw new FormatException($"Unsupported C++ type '{type}' for field '{field}'. Only float is supported.");
@@ -133,7 +166,7 @@ static class CppStructParser
                     throw new FormatException($"Expected ';' after field '{field}'.");
                 }
                 index++;
-                fields.Add(field);
+                fields.Add(new Field(field, length, fields.Sum(item => item.Length)));
             }
 
             if (index >= tokens.Count || tokens[index] != "}" || fields.Count == 0)

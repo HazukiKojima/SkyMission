@@ -30,6 +30,33 @@ public sealed class GeneratedAircraftFlightParameters
         "turnDrag",
         "flightPathResponse",
     };
+    public static readonly int[] FieldLengths =
+    {
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+    };
 
     public float initialSpeed { get; set; }
     public float minimumSpeed { get; set; }
