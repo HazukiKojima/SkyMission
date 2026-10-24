@@ -4,8 +4,20 @@
     <Filter Include="Engine">
       <UniqueIdentifier>{64a96883-8799-43cc-b664-da2427acad72}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Core">
-      <UniqueIdentifier>{c269e765-c4cd-4e76-85db-520046757100}</UniqueIdentifier>
+    <Filter Include="Engine\Application">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Aircraft">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Camera">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000003}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Scene">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000004}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Window">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000005}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Renderer">
       <UniqueIdentifier>{5c3f1a70-3efe-4b9f-986c-6557ff4b9194}</UniqueIdentifier>
@@ -33,11 +45,17 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Core\Application.cpp">
-      <Filter>Engine\Core</Filter>
+    <ClCompile Include="Engine\Application\Application.cpp">
+      <Filter>Engine\Application</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Core\Window.cpp">
-      <Filter>Engine\Core</Filter>
+    <ClCompile Include="Engine\Aircraft\AircraftController.cpp">
+      <Filter>Engine\Aircraft</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp">
+      <Filter>Engine\Aircraft</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Window\Window.cpp">
+      <Filter>Engine\Window</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp">
@@ -52,11 +70,11 @@
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp">
       <Filter>Engine\Renderer\Pipeline</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Core\Camera.cpp">
-      <Filter>Engine\Core</Filter>
+    <ClCompile Include="Engine\Camera\Camera.cpp">
+      <Filter>Engine\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Core\Scene.cpp">
-      <Filter>Engine\Core</Filter>
+    <ClCompile Include="Engine\Scene\Scene.cpp">
+      <Filter>Engine\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Renderer\Device\Renderer.cpp">
       <Filter>Engine\Renderer\Device</Filter>
@@ -70,16 +88,26 @@
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp">
       <Filter>Engine\Resources\Texture</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Core\SceneLoader.cpp">
-      <Filter>Engine\Core</Filter>
+    <ClCompile Include="Engine\Scene\SceneLoader.cpp">
+      <Filter>Engine\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Core\Application.h">
-      <Filter>Engine\Core</Filter>
+    <ClInclude Include="Engine\Application\Application.h">
+      <Filter>Engine\Application</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Core\Window.h">
-      <Filter>Engine\Core</Filter>
+    <ClInclude Include="Engine\Aircraft\AircraftFlightParameters.h">
+      <Filter>Engine\Aircraft</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Aircraft\AircraftController.h">
+      <Filter>Engine\Aircraft</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Aircraft\PlayerAircraft.h">
+      <Filter>Engine\Aircraft</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Window\Window.h">
+      <Filter>Engine\Window</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Renderer\Device\CommandContext.h">
       <Filter>Engine\Renderer\Device</Filter>
@@ -93,11 +121,11 @@
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h">
       <Filter>Engine\Renderer\Pipeline</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Core\Camera.h">
-      <Filter>Engine\Core</Filter>
+    <ClInclude Include="Engine\Camera\Camera.h">
+      <Filter>Engine\Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Core\Scene.h">
-      <Filter>Engine\Core</Filter>
+    <ClInclude Include="Engine\Scene\Scene.h">
+      <Filter>Engine\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Renderer\Device\Renderer.h">
       <Filter>Engine\Renderer\Device</Filter>
@@ -111,14 +139,20 @@
     <ClInclude Include="Engine\Resources\Mesh\Model.h">
       <Filter>Engine\Resources\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Core\SceneLoader.h">
-      <Filter>Engine\Core</Filter>
+    <ClInclude Include="Engine\Scene\SceneLoader.h">
+      <Filter>Engine\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Resources\AssetPathResolver.h" />
+    <ClInclude Include="Engine\Scene\OceanParameters.h" />
+    <ClInclude Include="Engine\Scene\SkyParameters.h" />
+    <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h" />
+    <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Engine\Renderer\Shader\Common.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
+    <None Include="Assets\Aircraft\F16\flightParameters.json" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Aircraft/AircraftFlightParameters.h"
 #include <filesystem>
 #include <DirectXMath.h>
 
@@ -31,8 +32,10 @@ namespace Engine {
 		std::filesystem::path oceanNormalTexture;
 		std::filesystem::path oceanNormalTexture2;
 		std::filesystem::path aircraftModel;
+		float aircraftVisualScale = 1.0f;
 		OceanSettings ocean;
 		SkySettings sky;
+		AircraftFlightParameters flightParameters;
 	};
 
 	class SceneLoader {

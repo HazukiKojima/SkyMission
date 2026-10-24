@@ -1,6 +1,6 @@
 #pragma once
 #include "../EngineCommon.h"
-#include "Scene.h"
+#include "../Scene/Scene.h"
 #include <chrono>
 
 namespace Engine {

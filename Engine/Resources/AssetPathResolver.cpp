@@ -1,7 +1,5 @@
 #include "AssetPathResolver.h"
-#include <Windows.h>
-#include <fstream>
-#include <iterator>
+#include "../Interop/Redox/RedoxBridge.h"
 #include <stdexcept>
 #include <vector>
 
@@ -27,29 +25,10 @@ namespace Engine {
 		const std::filesystem::path& jsonPath,
 		const std::string& key) const
 	{
-		std::ifstream file(jsonPath, std::ios::binary);
-		if (!file) {
-			throw std::runtime_error("Failed to open asset path JSON.");
-		}
-
-		std::vector<char> json(
-			(std::istreambuf_iterator<char>(file)),
-			std::istreambuf_iterator<char>());
-		if (json.empty()) {
-			throw std::runtime_error("Asset path JSON is empty.");
-		}
-
-		HMODULE module = LoadLibraryW(L"REDoxWrapper.dll");
-		if (!module) {
-			throw std::runtime_error("Failed to load REDoxWrapper.dll.");
-		}
+		const std::vector<char> json = ReadJsonFile(jsonPath);
 
 		auto getString = reinterpret_cast<RedoxGetString>(
-			GetProcAddress(module, "MyRedoxGetString"));
-		if (!getString) {
-			FreeLibrary(module);
-			throw std::runtime_error("Failed to find MyRedoxGetString.");
-		}
+			RedoxModule::GetFunction("MyRedoxGetString"));
 
 		unsigned char output[4096] = {};
 		const int result = getString(
@@ -59,10 +38,9 @@ namespace Engine {
 			static_cast<int>(key.size()),
 			output,
 			sizeof(output));
-		FreeLibrary(module);
-
 		if (result < 0) {
-			throw std::runtime_error("Failed to read asset path from JSON.");
+			throw std::runtime_error(
+				"Failed to read asset path from JSON. REDox error code: " + std::to_string(result));
 		}
 
 		const std::u8string relativePath(
@@ -75,29 +53,10 @@ namespace Engine {
 		const std::filesystem::path& jsonPath,
 		const std::string& key) const
 	{
-		std::ifstream file(jsonPath, std::ios::binary);
-		if (!file) {
-			throw std::runtime_error("Failed to open environment JSON.");
-		}
-
-		std::vector<char> json(
-			(std::istreambuf_iterator<char>(file)),
-			std::istreambuf_iterator<char>());
-		if (json.empty()) {
-			throw std::runtime_error("Environment JSON is empty.");
-		}
-
-		HMODULE module = LoadLibraryW(L"REDoxWrapper.dll");
-		if (!module) {
-			throw std::runtime_error("Failed to load REDoxWrapper.dll.");
-		}
+		const std::vector<char> json = ReadJsonFile(jsonPath);
 
 		auto getFloatArray = reinterpret_cast<RedoxGetFloatArray>(
-			GetProcAddress(module, "MyRedoxGetFloatArray"));
-		if (!getFloatArray) {
-			FreeLibrary(module);
-			throw std::runtime_error("Failed to find MyRedoxGetFloatArray.");
-		}
+			RedoxModule::GetFunction("MyRedoxGetFloatArray"));
 
 		std::vector<float> output(3);
 		const int result = getFloatArray(
@@ -107,10 +66,9 @@ namespace Engine {
 			static_cast<int>(key.size()),
 			output.data(),
 			static_cast<int>(output.size()));
-		FreeLibrary(module);
-
 		if (result < 0) {
-			throw std::runtime_error("Failed to read numeric value from environment JSON.");
+			throw std::runtime_error(
+				"Failed to read numeric value from environment JSON. REDox error code: " + std::to_string(result));
 		}
 
 		output.resize(static_cast<size_t>(result));

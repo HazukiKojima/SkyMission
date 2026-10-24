@@ -1,5 +1,6 @@
 #pragma once
-#include "Camera.h"
+#include "../Camera/Camera.h"
+#include "../Aircraft/PlayerAircraft.h"
 #include "../Resources/Mesh/Model.h"
 #include <DirectXMath.h>
 #include <cstddef>
@@ -41,6 +42,10 @@ namespace Engine {
 		SceneEnvironment& GetEnvironment() { return m_environment; }
 		const SceneEnvironment& GetEnvironment() const { return m_environment; }
 		void SetEnvironment(const SceneEnvironment& environment) { m_environment = environment; }
+		void SetPlayerAircraftVisualScale(float scale) { m_playerAircraftVisualScale = scale; }
+		void SetPlayerAircraftFlightParameters(const AircraftFlightParameters& parameters) {
+			m_playerAircraft.SetFlightParameters(parameters);
+		}
 		std::vector<SceneObject>& GetObjects() { return m_objects; }
 		const std::vector<SceneObject>& GetObjects() const { return m_objects; }
 		void AddObject(std::shared_ptr<Model> model);
@@ -51,5 +56,9 @@ namespace Engine {
 		Camera m_camera;
 		SceneEnvironment m_environment;
 		std::vector<SceneObject> m_objects;
+		PlayerAircraft m_playerAircraft;
+		AircraftController m_aircraftController;
+		std::size_t m_playerObjectIndex = static_cast<std::size_t>(-1);
+		float m_playerAircraftVisualScale = 1.0f;
 	};
 }
