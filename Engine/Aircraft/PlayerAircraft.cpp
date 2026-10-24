@@ -122,7 +122,7 @@ namespace Engine {
 				velocity = XMVector3Normalize(velocity) * m_flightParameters.maximumSpeed;
 			}
 			else if (updatedSpeed < m_flightParameters.minimumSpeed) {
-				velocity = (updatedSpeed > 0.001f ? XMVector3Normalize(velocity) : forward) * m_flightParameters.minimumSpeed;
+				velocity = forward * m_flightParameters.minimumSpeed;
 			}
 
 			// 更新後の速度を使って機体の位置を更新する。

@@ -3,7 +3,7 @@
 namespace Engine {
 	struct AircraftFlightParameters {
 		float initialSpeed = 60.0f;
-		float minimumSpeed = 8.0f;
+		float minimumSpeed = 120.0f;
 		float maximumSpeed = 150.0f;
 		float acceleration = 60.0f;
 		float drag = 0.035f;

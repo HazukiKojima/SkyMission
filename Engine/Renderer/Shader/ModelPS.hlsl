@@ -68,11 +68,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 diffuseWeight = (1.0f - F) * (1.0f - metallic);
     float3 diffuse = diffuseWeight * albedo.rgb / 3.14159265f;
     float3 directLighting = (diffuse + specular) * GetSunRadiance(lighting) * NdotL;
-    float3 ambientLighting = lerp(albedo.rgb, F0, metallic) * GetAmbientRadiance(lighting) * 1.5f;
-    float3 color = (directLighting + ambientLighting) * 1.35f;
+    float3 ambientLighting = lerp(albedo.rgb, F0, metallic) * GetAmbientRadiance(lighting) * 1.8f;
+    float3 color = (directLighting + ambientLighting) * 1.5f;
 
     // Lift the aircraft's dark material without changing the sky or ocean exposure.
-    color = pow(saturate(color), 0.82f);
+    color = pow(saturate(color), 0.76f);
 
     return float4(color, albedo.a);
 }
