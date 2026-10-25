@@ -18,10 +18,10 @@ namespace Engine {
 		const std::filesystem::path skyJsonPath = resolver.Resolve(environmentJsonPath, "sky");
 		const std::filesystem::path oceanJsonPath = resolver.Resolve(environmentJsonPath, "ocean");
 
-		const std::filesystem::path f16JsonPath = aircraftJsonPath.parent_path() / L"F16/f16.json";
-		const float aircraftVisualScale = resolver.ResolveFloat(f16JsonPath, "visualScale");
+		const std::filesystem::path aircraftConfigJsonPath = aircraftJsonPath.parent_path() / L"N1K2JShidenKai/N1K2JShidenKai.json";
+		const float aircraftVisualScale = resolver.ResolveFloat(aircraftConfigJsonPath, "visualScale");
 		const AircraftFlightParameters flightParameters = JsonParametersLoader().Load<AircraftFlightParameters>(
-			aircraftJsonPath.parent_path() / L"F16/flightParameters.json",
+			aircraftConfigJsonPath.parent_path() / L"flightParameters.json",
 			"MyRedoxGetAircraftFlightParameters");
 		if (!std::isfinite(aircraftVisualScale) || aircraftVisualScale <= 0.0f) {
 			throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
@@ -50,7 +50,7 @@ namespace Engine {
 			resolver.Resolve(oceanJsonPath, "texture"),
 			resolver.Resolve(oceanJsonPath, "normal"),
 			resolver.Resolve(oceanJsonPath, "normal2"),
-			resolver.Resolve(f16JsonPath, "model"),
+			resolver.Resolve(aircraftConfigJsonPath, "model"),
 			aircraftVisualScale,
 			ocean,
 			sky,

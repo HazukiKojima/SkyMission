@@ -8,18 +8,34 @@ if (args.Length == 0 || args.Length % 5 != 0)
 
 try
 {
-    for (int argumentIndex = 0; argumentIndex < args.Length; argumentIndex += 5)
+    using var generationMutex = new Mutex(false, "AircraftParameterGenerator");
+    try
     {
-        string headerPath = args[argumentIndex];
-        string structName = args[argumentIndex + 1];
-        string className = args[argumentIndex + 2];
-        string source = File.ReadAllText(headerPath);
-        IReadOnlyList<Field> fields = CppStructParser.ParseFloatFields(source, structName);
-        WriteGeneratedFile(args[argumentIndex + 3], CSharpGenerator.Generate(fields, className));
-        WriteGeneratedFile(args[argumentIndex + 4], CppGenerator.GenerateLayoutAssertions(
-            fields, structName, Path.GetRelativePath(Path.GetDirectoryName(args[argumentIndex + 4])!, headerPath)));
+        generationMutex.WaitOne();
     }
-    return 0;
+    catch (AbandonedMutexException)
+    {
+    }
+
+    try
+    {
+        for (int argumentIndex = 0; argumentIndex < args.Length; argumentIndex += 5)
+        {
+            string headerPath = args[argumentIndex];
+            string structName = args[argumentIndex + 1];
+            string className = args[argumentIndex + 2];
+            string source = File.ReadAllText(headerPath);
+            IReadOnlyList<Field> fields = CppStructParser.ParseFloatFields(source, structName);
+            WriteGeneratedFile(args[argumentIndex + 3], CSharpGenerator.Generate(fields, className));
+            WriteGeneratedFile(args[argumentIndex + 4], CppGenerator.GenerateLayoutAssertions(
+                fields, structName, Path.GetRelativePath(Path.GetDirectoryName(args[argumentIndex + 4])!, headerPath)));
+        }
+        return 0;
+    }
+    finally
+    {
+        generationMutex.ReleaseMutex();
+    }
 }
 catch (Exception exception)
 {
@@ -31,6 +47,11 @@ static void WriteGeneratedFile(string path, string content)
 {
     string outputPath = Path.GetFullPath(path);
     Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+    if (File.Exists(outputPath) && File.ReadAllText(outputPath) == content)
+    {
+        return;
+    }
+
     File.WriteAllText(outputPath, content, new UTF8Encoding(false));
 }
 

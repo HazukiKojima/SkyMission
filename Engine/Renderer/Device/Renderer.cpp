@@ -6,6 +6,7 @@
 #include <DirectXMath.h>
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -58,6 +59,7 @@ namespace Engine {
 			DirectX::XMFLOAT3 ambientColor;
 			float pad3;
 		};
+
 	}
 
 	struct ConstantBufferData {
@@ -100,7 +102,10 @@ namespace Engine {
 		float oceanFogEndDistance;
 		float oceanEdgeFadeStart;
 		float oceanEdgeFadeWidth;
+		float padding1[2];
 	};
+
+	static_assert(sizeof(OceanFogConstants) == 160);
 
 	Renderer::~Renderer() {
 		if (m_context) {
@@ -505,6 +510,7 @@ namespace Engine {
 		oceanFog->oceanFogEndDistance = m_oceanFogEndDistance;
 		oceanFog->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
 		oceanFog->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
+		oceanFog->padding1[0] = oceanFog->padding1[1] = 0.0f;
 
 		const auto& objects = scene.GetObjects();
 		EnsureModelConstantBufferCapacity(objects.size());
@@ -526,6 +532,7 @@ namespace Engine {
 			modelData->ambientColor = environment.ambientColor;
 			modelData->pad3 = 0.0f;
 		}
+
 	}
 
 	void Renderer::Render(UINT width, UINT height, const Scene& runtimeScene) {

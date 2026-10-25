@@ -58,7 +58,7 @@ namespace Engine {
 		DirectX::XMFLOAT3 m_followLookAt = { 0.0f, 0.0f, 0.0f };
 		float m_followDistance = 35.0f;
 		float m_followHeight = 12.0f;
-		float m_followSmoothing = 5.0f;
+		float m_followSmoothing = 10.0f;
 
 		float m_fovY = DirectX::XM_PIDIV4;
 		float m_aspect = 16.0f / 9.0f;

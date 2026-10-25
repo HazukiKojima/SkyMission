@@ -5,6 +5,7 @@
 using namespace DirectX;
 
 namespace Engine {
+
 	void PlayerAircraft::Update(const AircraftInput& input, float deltaSeconds) {
 		if (deltaSeconds <= 0.0f) {
 			return;
@@ -122,8 +123,9 @@ namespace Engine {
 				velocity = XMVector3Normalize(velocity) * m_flightParameters.maximumSpeed;
 			}
 			else if (updatedSpeed < m_flightParameters.minimumSpeed) {
-				velocity = (updatedSpeed > 0.001f ? XMVector3Normalize(velocity) : forward) * m_flightParameters.minimumSpeed;
+				velocity = forward * m_flightParameters.minimumSpeed;
 			}
+			updatedSpeed = XMVectorGetX(XMVector3Length(velocity));
 
 			// 更新後の速度を使って機体の位置を更新する。
 			XMVECTOR position = XMLoadFloat3(&m_position);
@@ -147,4 +149,5 @@ namespace Engine {
 			XMMatrixTranslation(m_position.x, m_position.y, m_position.z));
 		return world;
 	}
+
 }
