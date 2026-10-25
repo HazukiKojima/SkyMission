@@ -102,18 +102,37 @@ namespace Engine {
 		UpdateView();
 	}
 
-	void Camera::SetFollowTarget(const XMFLOAT3& position, const XMFLOAT3& heading) {
+	void Camera::SetFollowTarget(
+		const XMFLOAT3& position,
+		const XMFLOAT3& heading,
+		const XMFLOAT3& forward,
+		bool pitchInputActive) {
 		m_following = true;
 		m_followTarget = position;
 		m_followHeading = heading;
+		m_followForward = forward;
+		m_followPitchInputActive = pitchInputActive;
 	}
 
 	void Camera::UpdateFollow(float deltaSeconds) {
 		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
-		const XMVECTOR heading = XMVector3Normalize(XMLoadFloat3(&m_followHeading));
+		XMVECTOR followDirection = XMVector3Normalize(XMLoadFloat3(&m_followHeading));
+		if (!m_followPitchInputActive) {
+			const XMVECTOR forward = XMLoadFloat3(&m_followForward);
+			const XMVECTOR horizontalForward = XMVectorSet(XMVectorGetX(forward), 0.0f, XMVectorGetZ(forward), 0.0f);
+			if (XMVectorGetX(XMVector3LengthSq(horizontalForward)) > 0.0001f) {
+				followDirection = XMVector3Normalize(horizontalForward);
+			}
+		}
+		const float targetYaw = std::atan2(XMVectorGetX(followDirection), -XMVectorGetZ(followDirection));
+		const float yawBlend = 1.0f - std::exp(-m_followDirectionSmoothing * deltaSeconds);
+		m_followCameraYaw = std::remainder(
+			m_followCameraYaw + std::remainder(targetYaw - m_followCameraYaw, XM_2PI) * yawBlend,
+			XM_2PI);
+		const XMVECTOR smoothedDirection = XMVectorSet(std::sin(m_followCameraYaw), 0.0f, -std::cos(m_followCameraYaw), 0.0f);
 		const XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		const XMVECTOR desiredPosition = target - heading * m_followDistance + worldUp * m_followHeight;
-		const XMVECTOR desiredLookAt = target + heading * 12.0f + worldUp * 2.0f;
+		const XMVECTOR desiredPosition = target - smoothedDirection * m_followDistance + worldUp * m_followHeight;
+		const XMVECTOR desiredLookAt = target + smoothedDirection * 12.0f + worldUp * 2.0f;
 		const float blend = 1.0f - std::exp(-m_followSmoothing * deltaSeconds);
 		XMStoreFloat3(&m_position, XMVectorLerp(XMLoadFloat3(&m_position), desiredPosition, blend));
 		XMStoreFloat3(&m_followLookAt, XMVectorLerp(XMLoadFloat3(&m_followLookAt), desiredLookAt, blend));

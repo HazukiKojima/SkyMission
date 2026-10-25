@@ -63,25 +63,34 @@ namespace Engine {
 
 			// ピッチ入力に応じて機首の上下角度を更新する。
 			if (std::abs(targetPitchControl) > 0.01f) {
+				const float pitchDirection = std::cos(m_roll) < 0.0f ? -1.0f : 1.0f;
 				m_pitch = std::remainder(
-					m_pitch + m_pitchControl * m_flightParameters.pitchRateRadians * step,
+					m_pitch + m_pitchControl * pitchDirection * m_flightParameters.pitchRateRadians * step,
 					XM_2PI);
-			}
-			else {
-				const float pitchRecoveryBlend = 1.0f - std::exp(-m_flightParameters.rollLevelRate * step);
-				m_pitch += std::remainder(-m_pitch, XM_2PI) * pitchRecoveryBlend;
 			}
 
 			// 旋回入力から目標バンク角を求め、機体を滑らかに傾ける。
-			const float targetRoll = std::clamp(
-				-m_turnControl * m_flightParameters.maximumBankRadians * turnSpeedFactor,
+			const bool pitchInputActive = std::abs(targetPitchControl) > 0.01f;
+			const bool turnInputActive = std::abs(targetTurnControl) > 0.01f;
+			const float levelRoll = std::cos(m_pitch) < 0.0f ? XM_PI : 0.0f;
+			const float turnRollBase = pitchInputActive
+				? (std::cos(m_roll) < 0.0f ? XM_PI : 0.0f)
+				: levelRoll;
+			const float turnDirection = std::cos(turnRollBase) < 0.0f ? -1.0f : 1.0f;
+			const float turnBank = std::clamp(
+				-m_turnControl * turnDirection * m_flightParameters.maximumBankRadians * turnSpeedFactor,
 				-m_flightParameters.maximumBankRadians,
 				m_flightParameters.maximumBankRadians);
-			const float rollResponse = std::abs(m_turnControl) > 0.01f
+			const float targetRoll = turnInputActive
+				? turnRollBase + turnBank
+				: pitchInputActive ? m_roll : levelRoll;
+			const float rollResponse = turnInputActive
 				? m_flightParameters.rollInputResponse
 				: m_flightParameters.rollLevelRate;
 			const float rollBlend = 1.0f - std::exp(-rollResponse * step);
-			m_roll += (targetRoll - m_roll) * rollBlend;
+			m_roll = std::remainder(
+				m_roll + std::remainder(targetRoll - m_roll, XM_2PI) * rollBlend,
+				XM_2PI);
 
 			// バンク角に応じた旋回と、ヨー入力による機首方向の変更を反映する。
 			m_yaw = std::remainder(
@@ -149,6 +158,15 @@ namespace Engine {
 	}
 
 	XMFLOAT3 PlayerAircraft::GetHeading() const {
+		XMFLOAT3 forward = GetForward();
+		forward.y = 0.0f;
+		const XMVECTOR horizontalForward = XMLoadFloat3(&forward);
+		if (XMVectorGetX(XMVector3LengthSq(horizontalForward)) > 0.0001f) {
+			XMFLOAT3 heading;
+			XMStoreFloat3(&heading, XMVector3Normalize(horizontalForward));
+			return heading;
+		}
+
 		const XMMATRIX rotation = XMMatrixRotationY(m_yaw);
 		XMFLOAT3 heading;
 		XMStoreFloat3(&heading, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), rotation)));
