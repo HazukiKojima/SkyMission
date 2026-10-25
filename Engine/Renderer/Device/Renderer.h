@@ -19,7 +19,7 @@ namespace Engine {
 
 		void Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets);
 		void InitializeConstantBuffers(const Scene& scene);
-		void Update(const Scene& scene, float elapsedTime);
+		void Update(const Scene& scene, float elapsedTime, float deltaSeconds);
 		void Render(UINT width, UINT height, const Scene& scene);
 		void Resize(UINT width, UINT height);
 		float GetOceanSize() const { return m_oceanSize; }
@@ -73,6 +73,7 @@ namespace Engine {
 		float m_oceanFogEndDistance = 10000000.0f;
 		float m_oceanEdgeFadeStart = 0.98f;
 		float m_oceanEdgeFadeWidth = 0.015f;
+		float m_propellerAngle = 0.0f;
 
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;
