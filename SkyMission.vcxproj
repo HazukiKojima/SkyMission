@@ -61,6 +61,8 @@
     <ClInclude Include="Engine\Resources\Texture\Texture.h" />
   </ItemGroup>
   <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
     <FxCompile Include="Engine\Renderer\Shader\BasicPS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -99,22 +101,6 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\JetFlamePS.hlsl">
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\JetFlameVS.hlsl">
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\ModelVS.hlsl">
@@ -258,10 +244,6 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <PreBuildEvent>
-      <Command>dotnet run --project "$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" -- "$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h" AircraftFlightParameters GeneratedAircraftFlightParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\AircraftFlightParametersLayout.h" "$(SolutionDir)Engine\Scene\OceanParameters.h" OceanParameters GeneratedOceanParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\OceanParametersLayout.h" "$(SolutionDir)Engine\Scene\SkyParameters.h" SkyParameters GeneratedSkyParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\SkyParametersLayout.h"
-      if errorlevel 1 exit /b %errorlevel%</Command>
-    </PreBuildEvent>
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
@@ -278,19 +260,8 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
-    <PostBuildEvent>
-      <Command>set DOTNET_CLI_UI_LANGUAGE=en
-      dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
-      if errorlevel 1 exit /b %errorlevel%
-      copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
-      if errorlevel 1 exit /b %errorlevel%</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <PreBuildEvent>
-      <Command>dotnet run --project "$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" -- "$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h" AircraftFlightParameters GeneratedAircraftFlightParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\AircraftFlightParametersLayout.h" "$(SolutionDir)Engine\Scene\OceanParameters.h" OceanParameters GeneratedOceanParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\OceanParametersLayout.h" "$(SolutionDir)Engine\Scene\SkyParameters.h" SkyParameters GeneratedSkyParameters "$(SolutionDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" "$(SolutionDir)External\REDoxWrapper\Generated\SkyParametersLayout.h"
-      if errorlevel 1 exit /b %errorlevel%</Command>
-    </PreBuildEvent>
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -309,13 +280,6 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
-    <PostBuildEvent>
-      <Command>set DOTNET_CLI_UI_LANGUAGE=en
-      dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
-      if errorlevel 1 exit /b %errorlevel%
-      copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
-      if errorlevel 1 exit /b %errorlevel%</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -329,5 +293,35 @@
     </PropertyGroup>
     <Error Condition="!Exists('packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets'))" />
     <Error Condition="!Exists('packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />
+  </Target>
+  <ItemGroup>
+    <ProjectReference Include="External\REDoxWrapper\REDoxWrapper.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <BuildReference>true</BuildReference>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\**\*.cs"
+                              Exclude="$(SolutionDir)External\REDoxWrapper\bin\**;$(SolutionDir)External\REDoxWrapper\obj\**" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json"
+                              Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs"
+                              Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h;$(SolutionDir)Engine\Scene\OceanParameters.h;$(SolutionDir)Engine\Scene\SkyParameters.h" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.props"
+                              Condition="Exists('$(SolutionDir)Directory.Build.props')" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.targets"
+                              Condition="Exists('$(SolutionDir)Directory.Build.targets')" />
+  </ItemGroup>
+  <PropertyGroup>
+    <REDoxWrapperPublishDll>$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll</REDoxWrapperPublishDll>
+  </PropertyGroup>
+  <Target Name="PublishREDoxWrapper" AfterTargets="Build" Condition="'$(Platform)' == 'x64'"
+          Inputs="@(REDoxWrapperPublishInput)"
+          Outputs="$(REDoxWrapperPublishDll);$(OutDir)REDoxWrapper.dll">
+    <Exec Command="set DOTNET_CLI_UI_LANGUAGE=en&#xD;&#xA;dotnet publish &quot;$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj&quot; -c $(Configuration) -r win-x64" />
+    <Copy SourceFiles="$(REDoxWrapperPublishDll)" DestinationFiles="$(OutDir)REDoxWrapper.dll" />
   </Target>
 </Project>

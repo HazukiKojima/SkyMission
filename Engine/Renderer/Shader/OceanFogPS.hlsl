@@ -17,6 +17,7 @@ cbuffer OceanFogConstants : register(b0)
     float oceanFogEndDistance;
     float oceanEdgeFadeStart;
     float oceanEdgeFadeWidth;
+    float2 padding1;
 };
 
 Texture2D gSceneColor : register(t0);

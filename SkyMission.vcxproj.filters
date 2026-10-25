@@ -158,6 +158,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
     <FxCompile Include="Engine\Renderer\Shader\BasicVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>

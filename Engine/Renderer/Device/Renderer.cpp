@@ -60,16 +60,6 @@ namespace Engine {
 			float pad3;
 		};
 
-		struct JetFlameConstantBufferData {
-			DirectX::XMFLOAT4X4 mvp;
-			float time;
-			float padding[3];
-		};
-
-		struct JetFlameVertex {
-			DirectX::XMFLOAT3 position;
-			DirectX::XMFLOAT2 texcoord;
-		};
 	}
 
 	struct ConstantBufferData {
@@ -112,7 +102,10 @@ namespace Engine {
 		float oceanFogEndDistance;
 		float oceanEdgeFadeStart;
 		float oceanEdgeFadeWidth;
+		float padding1[2];
 	};
+
+	static_assert(sizeof(OceanFogConstants) == 160);
 
 	Renderer::~Renderer() {
 		if (m_context) {
@@ -158,15 +151,6 @@ namespace Engine {
 			false,
 			true
 		);
-
-		m_jetFlamePipeline = std::make_unique<Engine::GraphicsPipeline>();
-		m_jetFlamePipeline->InitializeWithShaders(
-			m_device->GetDevice(),
-			L"JetFlameVS.cso",
-			L"JetFlamePS.cso",
-			1,
-			true,
-			true);
 
 		m_oceanFogPipeline = std::make_unique<Engine::GraphicsPipeline>();
 		m_oceanFogPipeline->InitializeWithShaders(
@@ -340,60 +324,6 @@ namespace Engine {
 			m_model.reset();
 		}
 
-		{
-			constexpr int segmentCount = 12;
-			constexpr float baseZ = 4.45f;
-			constexpr float tipZ = 8.35f;
-			constexpr float baseRadius = 0.42f;
-			constexpr float verticalOffset = 1.35f;
-			constexpr float forwardOffset = 0.5f;
-			std::vector<JetFlameVertex> vertices;
-			std::vector<uint32_t> indices;
-			vertices.reserve(segmentCount + 1);
-			indices.reserve(segmentCount * 3);
-
-			for (int segment = 0; segment < segmentCount; ++segment) {
-				const float angle = 2.0f * kPi * static_cast<float>(segment) / static_cast<float>(segmentCount);
-				vertices.push_back({
-					{ std::cos(angle) * baseRadius, std::sin(angle) * baseRadius + verticalOffset, baseZ + forwardOffset },
-					{ static_cast<float>(segment) / static_cast<float>(segmentCount), 0.0f }
-				});
-			}
-			vertices.push_back({ { 0.0f, verticalOffset, tipZ + forwardOffset }, { 0.5f, 1.0f } });
-
-			for (int segment = 0; segment < segmentCount; ++segment) {
-				indices.push_back(static_cast<uint32_t>(segment));
-				indices.push_back(static_cast<uint32_t>((segment + 1) % segmentCount));
-				indices.push_back(static_cast<uint32_t>(segmentCount));
-			}
-
-			m_jetFlameVertexBuffer = std::make_unique<VertexBuffer>();
-			m_jetFlameVertexBuffer->Initialize(
-				m_device->GetDevice(),
-				vertices.data(),
-				static_cast<UINT>(vertices.size() * sizeof(JetFlameVertex)),
-				static_cast<UINT>(sizeof(JetFlameVertex)));
-
-			const UINT indexBufferSize = static_cast<UINT>(indices.size() * sizeof(uint32_t));
-			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-			auto indexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-			ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
-				&heapProps,
-				D3D12_HEAP_FLAG_NONE,
-				&indexBufferDesc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&m_jetFlameIndexBuffer)));
-			void* mappedIndices = nullptr;
-			ThrowIfFailed(m_jetFlameIndexBuffer->Map(0, nullptr, &mappedIndices));
-			std::memcpy(mappedIndices, indices.data(), indexBufferSize);
-			m_jetFlameIndexBuffer->Unmap(0, nullptr);
-			m_jetFlameIndexBufferView.BufferLocation = m_jetFlameIndexBuffer->GetGPUVirtualAddress();
-			m_jetFlameIndexBufferView.SizeInBytes = indexBufferSize;
-			m_jetFlameIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-			m_jetFlameIndexCount = static_cast<UINT>(indices.size());
-		}
-
 		m_context->EndFrame();
 		m_context->WaitForGpu();
 		if (m_texture) {
@@ -467,25 +397,6 @@ namespace Engine {
 			cbInit->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
 			cbInit->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
 			cbInit->oceanWaveHeightOffset = 0.0f;
-		}
-
-		{
-			const UINT64 cbSize = (sizeof(JetFlameConstantBufferData) + 255) & ~255;
-			CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(cbSize);
-			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-			ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
-				&heapProps,
-				D3D12_HEAP_FLAG_NONE,
-				&desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&m_jetFlameConstantBuffer)));
-			CD3DX12_RANGE readRange(0, 0);
-			ThrowIfFailed(m_jetFlameConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_jetFlameCbvDataPtr)));
-			JetFlameConstantBufferData* flameData = reinterpret_cast<JetFlameConstantBufferData*>(m_jetFlameCbvDataPtr);
-			DirectX::XMStoreFloat4x4(&flameData->mvp, DirectX::XMMatrixIdentity());
-			flameData->time = 0.0f;
-			flameData->padding[0] = flameData->padding[1] = flameData->padding[2] = 0.0f;
 		}
 
 		UINT64 fogCbSize = (sizeof(OceanFogConstants) + 255) & ~255;
@@ -599,6 +510,7 @@ namespace Engine {
 		oceanFog->oceanFogEndDistance = m_oceanFogEndDistance;
 		oceanFog->oceanEdgeFadeStart = m_oceanEdgeFadeStart;
 		oceanFog->oceanEdgeFadeWidth = m_oceanEdgeFadeWidth;
+		oceanFog->padding1[0] = oceanFog->padding1[1] = 0.0f;
 
 		const auto& objects = scene.GetObjects();
 		EnsureModelConstantBufferCapacity(objects.size());
@@ -621,13 +533,6 @@ namespace Engine {
 			modelData->pad3 = 0.0f;
 		}
 
-		if (m_jetFlameCbvDataPtr && m_jetFlameIndexCount > 0) {
-			JetFlameConstantBufferData* flameData = reinterpret_cast<JetFlameConstantBufferData*>(m_jetFlameCbvDataPtr);
-			const XMFLOAT4X4 aircraftWorldTransform = scene.GetPlayerAircraftWorldTransform();
-			const XMMATRIX aircraftWorld = XMLoadFloat4x4(&aircraftWorldTransform);
-			XMStoreFloat4x4(&flameData->mvp, XMMatrixTranspose(aircraftWorld * view * proj));
-			flameData->time = elapsedTime;
-		}
 	}
 
 	void Renderer::Render(UINT width, UINT height, const Scene& runtimeScene) {
@@ -723,17 +628,6 @@ namespace Engine {
 				cmd->SetGraphicsRootConstantBufferView(1, m_modelConstantBuffers[frameIndex][objectIndex].resource->GetGPUVirtualAddress());
 				object.model->Draw(cmd, m_device.get());
 			}
-		}
-
-		if (m_jetFlamePipeline && m_jetFlameVertexBuffer && m_jetFlameIndexBuffer && m_jetFlameIndexCount > 0) {
-			cmd->SetGraphicsRootSignature(m_jetFlamePipeline->GetRootSignature());
-			cmd->SetPipelineState(m_jetFlamePipeline->GetPSO());
-			cmd->SetGraphicsRootConstantBufferView(1, m_jetFlameConstantBuffer->GetGPUVirtualAddress());
-			const auto flameVertexView = m_jetFlameVertexBuffer->GetView();
-			cmd->IASetVertexBuffers(0, 1, &flameVertexView);
-			cmd->IASetIndexBuffer(&m_jetFlameIndexBufferView);
-			cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			cmd->DrawIndexedInstanced(m_jetFlameIndexCount, 1, 0, 0, 0);
 		}
 
 		m_context->TransitionResource(scene, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
