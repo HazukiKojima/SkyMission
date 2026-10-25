@@ -13,6 +13,7 @@ namespace Engine {
 		}
 		DirectX::XMFLOAT3 GetPosition() const { return m_position; }
 		DirectX::XMFLOAT3 GetForward() const;
+		DirectX::XMFLOAT3 GetHeading() const;
 		DirectX::XMFLOAT4X4 GetWorldTransform() const;
 
 	private:

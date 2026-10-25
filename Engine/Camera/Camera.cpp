@@ -102,18 +102,18 @@ namespace Engine {
 		UpdateView();
 	}
 
-	void Camera::SetFollowTarget(const XMFLOAT3& position, const XMFLOAT3& forward) {
+	void Camera::SetFollowTarget(const XMFLOAT3& position, const XMFLOAT3& heading) {
 		m_following = true;
 		m_followTarget = position;
-		m_followForward = forward;
+		m_followHeading = heading;
 	}
 
 	void Camera::UpdateFollow(float deltaSeconds) {
 		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
-		const XMVECTOR forward = XMVector3Normalize(XMLoadFloat3(&m_followForward));
+		const XMVECTOR heading = XMVector3Normalize(XMLoadFloat3(&m_followHeading));
 		const XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		const XMVECTOR desiredPosition = target - forward * m_followDistance + worldUp * m_followHeight;
-		const XMVECTOR desiredLookAt = target + forward * 12.0f + worldUp * 2.0f;
+		const XMVECTOR desiredPosition = target - heading * m_followDistance + worldUp * m_followHeight;
+		const XMVECTOR desiredLookAt = target + heading * 12.0f + worldUp * 2.0f;
 		const float blend = 1.0f - std::exp(-m_followSmoothing * deltaSeconds);
 		XMStoreFloat3(&m_position, XMVectorLerp(XMLoadFloat3(&m_position), desiredPosition, blend));
 		XMStoreFloat3(&m_followLookAt, XMVectorLerp(XMLoadFloat3(&m_followLookAt), desiredLookAt, blend));

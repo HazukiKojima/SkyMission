@@ -13,7 +13,7 @@ namespace Engine {
 				&m_objects[m_playerObjectIndex].worldTransform,
 				DirectX::XMMatrixScaling(m_playerAircraftVisualScale, m_playerAircraftVisualScale, m_playerAircraftVisualScale) *
 				DirectX::XMLoadFloat4x4(&aircraftTransform));
-			m_camera.SetFollowTarget(m_playerAircraft.GetPosition(), m_playerAircraft.GetForward());
+			m_camera.SetFollowTarget(m_playerAircraft.GetPosition(), m_playerAircraft.GetHeading());
 		}
 		m_camera.Update(deltaSeconds);
 	}

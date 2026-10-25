@@ -62,9 +62,15 @@ namespace Engine {
 			const float highGTurnFactor = 1.0f + highGIntensity * (m_flightParameters.highGTurnMultiplier - 1.0f);
 
 			// ピッチ入力に応じて機首の上下角度を更新する。
-			m_pitch = std::remainder(
-				m_pitch + m_pitchControl * m_flightParameters.pitchRateRadians * controlEffectiveness * step,
-				XM_2PI);
+			if (std::abs(targetPitchControl) > 0.01f) {
+				m_pitch = std::remainder(
+					m_pitch + m_pitchControl * m_flightParameters.pitchRateRadians * step,
+					XM_2PI);
+			}
+			else {
+				const float pitchRecoveryBlend = 1.0f - std::exp(-m_flightParameters.rollLevelRate * step);
+				m_pitch += std::remainder(-m_pitch, XM_2PI) * pitchRecoveryBlend;
+			}
 
 			// 旋回入力から目標バンク角を求め、機体を滑らかに傾ける。
 			const float targetRoll = std::clamp(
@@ -140,6 +146,13 @@ namespace Engine {
 		XMFLOAT3 forward;
 		XMStoreFloat3(&forward, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), rotation)));
 		return forward;
+	}
+
+	XMFLOAT3 PlayerAircraft::GetHeading() const {
+		const XMMATRIX rotation = XMMatrixRotationY(m_yaw);
+		XMFLOAT3 heading;
+		XMStoreFloat3(&heading, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), rotation)));
+		return heading;
 	}
 
 	XMFLOAT4X4 PlayerAircraft::GetWorldTransform() const {
