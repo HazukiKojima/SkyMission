@@ -25,7 +25,8 @@ namespace Engine {
 			// 操作入力を滑らかに追従させ、機体の急激な挙動変化を抑える。
 			const float controlBlend = 1.0f - std::exp(-m_flightParameters.controlResponse * step);
 			m_pitchControl += (targetPitchControl - m_pitchControl) * controlBlend;
-			m_turnControl += (targetTurnControl - m_turnControl) * controlBlend;
+			const float turnInputDirection = std::cos(m_pitch) < 0.0f ? -1.0f : 1.0f;
+			m_turnControl += (targetTurnControl * turnInputDirection - m_turnControl) * controlBlend;
 			m_yawControl += (targetYawControl - m_yawControl) * controlBlend;
 			m_throttleControl += (targetThrottleControl - m_throttleControl) * controlBlend;
 
@@ -93,8 +94,9 @@ namespace Engine {
 				XM_2PI);
 
 			// バンク角に応じた旋回と、ヨー入力による機首方向の変更を反映する。
+			const float yawTurnDirection = std::cos(m_pitch) < 0.0f ? -1.0f : 1.0f;
 			m_yaw = std::remainder(
-				m_yaw + (std::sin(m_roll) * m_flightParameters.turnRateRadians + m_yawControl * m_flightParameters.yawRateRadians) *
+				m_yaw + (std::sin(m_roll) * yawTurnDirection * m_flightParameters.turnRateRadians + m_yawControl * m_flightParameters.yawRateRadians) *
 				angleControl * turnSpeedFactor * highGTurnFactor * step,
 				XM_2PI);
 
