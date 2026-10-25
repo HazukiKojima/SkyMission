@@ -11,7 +11,7 @@ namespace Engine {
 		float pitchRateRadians = 0.872664626f;
 		float turnRateRadians = 0.95f;
 		float yawRateRadians = 0.45f;
-		float rollLevelRate = 0.5f;
+		float rollLevelRate = 2.0f;
 		float controlResponse = 80.0f;
 		float rollInputResponse = 1.8f;
 		float minimumTurnFactor = 0.55f;

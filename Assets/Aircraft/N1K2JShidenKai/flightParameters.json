@@ -8,7 +8,7 @@
   "pitchRateRadians": 1.2,
   "turnRateRadians": 0.95,
   "yawRateRadians": 0.45,
-  "rollLevelRate": 1.0,
+  "rollLevelRate": 2.0,
   "controlResponse": 80.0,
   "rollInputResponse": 1.8,
   "minimumTurnFactor": 1.00,

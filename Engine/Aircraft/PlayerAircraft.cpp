@@ -73,6 +73,7 @@ namespace Engine {
 			// 旋回入力から目標バンク角を求め、機体を滑らかに傾ける。
 			const bool pitchInputActive = std::abs(targetPitchControl) > 0.01f;
 			const bool turnInputActive = std::abs(targetTurnControl) > 0.01f;
+			const bool autoRollCorrection = !pitchInputActive && !turnInputActive;
 			const float levelRoll = std::cos(m_pitch) < 0.0f ? XM_PI : 0.0f;
 			const float turnRollBase = pitchInputActive
 				? (std::cos(m_roll) < 0.0f ? XM_PI : 0.0f)
@@ -95,16 +96,22 @@ namespace Engine {
 
 			// バンク角に応じた旋回と、ヨー入力による機首方向の変更を反映する。
 			const float yawTurnDirection = std::cos(m_pitch) < 0.0f ? -1.0f : 1.0f;
+			const float bankYawRate = autoRollCorrection
+				? 0.0f
+				: std::sin(m_roll) * yawTurnDirection * m_flightParameters.turnRateRadians;
 			m_yaw = std::remainder(
-				m_yaw + (std::sin(m_roll) * yawTurnDirection * m_flightParameters.turnRateRadians + m_yawControl * m_flightParameters.yawRateRadians) *
+				m_yaw + (bankYawRate + m_yawControl * m_flightParameters.yawRateRadians) *
 				angleControl * turnSpeedFactor * highGTurnFactor * step,
 				XM_2PI);
 
 			const XMMATRIX rotation = XMMatrixRotationRollPitchYaw(m_pitch, m_yaw, m_roll);
+			const XMMATRIX liftRotation = autoRollCorrection
+				? XMMatrixRotationRollPitchYaw(m_pitch, m_yaw, levelRoll)
+				: rotation;
 			const XMVECTOR aircraftForward = XMVector3Normalize(XMVector3TransformNormal(
 				XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), rotation));
 			const XMVECTOR up = XMVector3Normalize(XMVector3TransformNormal(
-				XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotation));
+				XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), liftRotation));
 
 			// 迎角と速度から揚力を求め、機体の上昇・降下を計算する。
 			const float angleLift = std::clamp(

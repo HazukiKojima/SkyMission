@@ -62,6 +62,7 @@ namespace Engine {
 		DirectX::XMFLOAT3 m_followForward = { 0.0f, 0.0f, -1.0f };
 		bool m_followPitchInputActive = false;
 		float m_followCameraYaw = 0.0f;
+		float m_followCameraPitch = 0.0f;
 		DirectX::XMFLOAT3 m_followLookAt = { 0.0f, 0.0f, 0.0f };
 		float m_followDistance = 35.0f;
 		float m_followHeight = 12.0f;

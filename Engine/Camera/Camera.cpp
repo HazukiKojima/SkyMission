@@ -1,6 +1,7 @@
 #include "../Camera/Camera.h"
 #include "../Window/Window.h"
 #include <Windowsx.h>
+#include <algorithm>
 #include <cmath>
 
 using namespace DirectX;
@@ -129,7 +130,22 @@ namespace Engine {
 		m_followCameraYaw = std::remainder(
 			m_followCameraYaw + std::remainder(targetYaw - m_followCameraYaw, XM_2PI) * yawBlend,
 			XM_2PI);
-		const XMVECTOR smoothedDirection = XMVectorSet(std::sin(m_followCameraYaw), 0.0f, -std::cos(m_followCameraYaw), 0.0f);
+		const XMVECTOR forward = XMLoadFloat3(&m_followForward);
+		const float horizontalForwardLength = std::sqrt(
+			XMVectorGetX(forward) * XMVectorGetX(forward) +
+			XMVectorGetZ(forward) * XMVectorGetZ(forward));
+		const float targetPitch = std::clamp(
+			std::atan2(XMVectorGetY(forward), horizontalForwardLength) * 0.4f,
+			-0.35f,
+			0.35f);
+		const float pitchBlend = 1.0f - std::exp(-m_followDirectionSmoothing * deltaSeconds);
+		m_followCameraPitch += (targetPitch - m_followCameraPitch) * pitchBlend;
+		const float pitchCosine = std::cos(m_followCameraPitch);
+		const XMVECTOR smoothedDirection = XMVectorSet(
+			std::sin(m_followCameraYaw) * pitchCosine,
+			std::sin(m_followCameraPitch),
+			-std::cos(m_followCameraYaw) * pitchCosine,
+			0.0f);
 		const XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		const XMVECTOR desiredPosition = target - smoothedDirection * m_followDistance + worldUp * m_followHeight;
 		const XMVECTOR desiredLookAt = target + smoothedDirection * 12.0f + worldUp * 2.0f;
