@@ -166,6 +166,10 @@ namespace Engine {
 		return forward;
 	}
 
+	float PlayerAircraft::GetSpeed() const {
+		return XMVectorGetX(XMVector3Length(XMLoadFloat3(&m_velocity)));
+	}
+
 	XMFLOAT3 PlayerAircraft::GetHeading() const {
 		XMFLOAT3 forward = GetForward();
 		forward.y = 0.0f;

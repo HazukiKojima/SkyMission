@@ -12,6 +12,7 @@ namespace Engine {
 			m_velocity = { 0.0f, 0.0f, -parameters.initialSpeed };
 		}
 		DirectX::XMFLOAT3 GetPosition() const { return m_position; }
+		float GetSpeed() const;
 		DirectX::XMFLOAT3 GetForward() const;
 		DirectX::XMFLOAT3 GetHeading() const;
 		DirectX::XMFLOAT4X4 GetWorldTransform() const;
