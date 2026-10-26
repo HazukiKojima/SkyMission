@@ -51,9 +51,6 @@
     <ClCompile Include="Engine\Aircraft\AircraftController.cpp">
       <Filter>Engine\Aircraft</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp">
-      <Filter>Engine\Aircraft</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\Window\Window.cpp">
       <Filter>Engine\Window</Filter>
     </ClCompile>
@@ -92,6 +89,7 @@
       <Filter>Engine\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Resources\AssetPathResolver.cpp" />
+    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Application\Application.h">
