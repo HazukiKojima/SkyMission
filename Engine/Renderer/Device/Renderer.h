@@ -25,6 +25,7 @@ namespace Engine {
 		void Resize(UINT width, UINT height);
 		float GetOceanSize() const { return m_oceanSize; }
 		std::shared_ptr<Engine::Model> GetModel() const { return m_model; }
+		std::shared_ptr<Engine::Model> GetEnemyAircraftModel() const { return m_enemyAircraftModel; }
 
 	private:
 		struct ModelConstantBuffer {
@@ -88,5 +89,6 @@ namespace Engine {
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;
 		std::shared_ptr<Engine::Model> m_model;
+		std::shared_ptr<Engine::Model> m_enemyAircraftModel;
 	};
 }

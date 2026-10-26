@@ -49,6 +49,7 @@ namespace Engine {
 		}
 		std::vector<SceneObject>& GetObjects() { return m_objects; }
 		const std::vector<SceneObject>& GetObjects() const { return m_objects; }
+		void AddPlayerObject(std::shared_ptr<Model> model);
 		void AddObject(std::shared_ptr<Model> model);
 		void AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& worldTransform);
 		void RemoveObject(std::size_t index);

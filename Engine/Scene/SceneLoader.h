@@ -33,6 +33,7 @@ namespace Engine {
 		std::filesystem::path oceanNormalTexture;
 		std::filesystem::path oceanNormalTexture2;
 		std::filesystem::path aircraftModel;
+		std::filesystem::path enemyAircraftModel;
 		float aircraftVisualScale = 1.0f;
 		OceanSettings ocean;
 		SkySettings sky;

@@ -339,8 +339,15 @@ namespace Engine {
 
 		m_model = std::make_shared<Model>();
 		if (!m_model->Load(m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), assets.aircraftModel.wstring())) {
-			OutputDebugStringA("Failed to load F16 model\n");
+			OutputDebugStringA("Failed to load player aircraft model\n");
 			m_model.reset();
+		}
+
+		m_enemyAircraftModel = std::make_shared<Model>();
+		if (!m_enemyAircraftModel->Load(
+			m_device->GetDevice(), m_context->GetCommandList(), m_device.get(), assets.enemyAircraftModel.wstring())) {
+			OutputDebugStringA("Failed to load F4U4 Corsair model\n");
+			m_enemyAircraftModel.reset();
 		}
 
 		m_context->EndFrame();
@@ -359,6 +366,9 @@ namespace Engine {
 		}
 		if (m_model) {
 			m_model->ReleaseUploadResources();
+		}
+		if (m_enemyAircraftModel) {
+			m_enemyAircraftModel->ReleaseUploadResources();
 		}
 		m_skyTextureSrvIndex = skySrvIndex;
 	}

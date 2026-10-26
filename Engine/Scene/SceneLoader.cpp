@@ -54,6 +54,7 @@ namespace Engine {
 			resolver.Resolve(oceanJsonPath, "normal"),
 			resolver.Resolve(oceanJsonPath, "normal2"),
 			resolver.Resolve(aircraftConfigJsonPath, "model"),
+			aircraftJsonPath.parent_path() / L"F4U4Corsair/F4U4Corsair.fbx",
 			aircraftVisualScale,
 			ocean,
 			sky,

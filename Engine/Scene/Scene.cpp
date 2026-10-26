@@ -27,21 +27,22 @@ namespace Engine {
 		m_camera.OnResize(width, height);
 	}
 
+	void Scene::AddPlayerObject(std::shared_ptr<Model> model) {
+		if (model) {
+			m_objects.emplace_back(std::move(model));
+			m_playerObjectIndex = m_objects.size() - 1;
+		}
+	}
+
 	void Scene::AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& worldTransform) {
 		if (model) {
 			m_objects.emplace_back(std::move(model), worldTransform);
-			if (m_playerObjectIndex == static_cast<std::size_t>(-1)) {
-				m_playerObjectIndex = m_objects.size() - 1;
-			}
 		}
 	}
 
 	void Scene::AddObject(std::shared_ptr<Model> model) {
 		if (model) {
 			m_objects.emplace_back(std::move(model));
-			if (m_playerObjectIndex == static_cast<std::size_t>(-1)) {
-				m_playerObjectIndex = m_objects.size() - 1;
-			}
 		}
 	}
 
