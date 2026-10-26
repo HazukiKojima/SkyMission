@@ -99,9 +99,14 @@ namespace Engine {
 			? m_flightParameters.rollInputResponse
 			: m_flightParameters.rollLevelRate;
 		// 旋回中は目標バンクへ追従し、入力がないときは水平姿勢へ戻す。
-		const float rollBlend = 1.0f - std::exp(-rollResponse * deltaSeconds);
+		const float rollDifference = std::remainder(targetRoll - m_roll, XM_2PI);
+		const float nearLevelingFactor = state.autoRollCorrection
+			? 1.0f - std::clamp(std::abs(rollDifference) / XM_PIDIV4, 0.0f, 1.0f)
+			: 0.0f;
+		const float adjustedRollResponse = rollResponse * (1.0f + 0.5f * nearLevelingFactor);
+		const float rollBlend = 1.0f - std::exp(-adjustedRollResponse * deltaSeconds);
 		m_roll = std::remainder(
-			m_roll + std::remainder(targetRoll - m_roll, XM_2PI) * rollBlend,
+			m_roll + rollDifference * rollBlend,
 			XM_2PI);
 
 		state.bankLoad = std::sin(m_roll);
