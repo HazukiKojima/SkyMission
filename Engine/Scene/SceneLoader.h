@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Aircraft/AircraftFlightParameters.h"
+#include "../Renderer/RetroFilmParameters.h"
 #include <filesystem>
 #include <DirectXMath.h>
 
@@ -36,6 +37,7 @@ namespace Engine {
 		OceanSettings ocean;
 		SkySettings sky;
 		AircraftFlightParameters flightParameters;
+		RetroFilmParameters retroFilm;
 	};
 
 	class SceneLoader {

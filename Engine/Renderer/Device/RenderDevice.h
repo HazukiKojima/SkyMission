@@ -31,10 +31,13 @@ namespace Engine {
 		D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRtvHandle() const;
 		ID3D12Resource* GetSceneRenderTarget() const { return m_sceneRenderTargets[GetFrameIndex()].Get(); }
 		D3D12_CPU_DESCRIPTOR_HANDLE GetSceneRtvHandle() const;
+		ID3D12Resource* GetPostProcessRenderTarget() const { return m_postProcessRenderTargets[GetFrameIndex()].Get(); }
+		D3D12_CPU_DESCRIPTOR_HANDLE GetPostProcessRtvHandle() const;
 		ID3D12Resource* GetSceneDepth() const { return m_sceneDepth.Get(); }
 		D3D12_CPU_DESCRIPTOR_HANDLE GetDsvHandle() const { return m_dsvHeap->GetCPUDescriptorHandleForHeapStart(); }
 		UINT GetSceneColorSrvIndex() const { return GetFrameIndex() * 2; }
 		UINT GetSceneDepthSrvIndex() const { return GetFrameIndex() * 2 + 1; }
+		UINT GetPostProcessSrvIndex() const { return FrameCount * 2 + GetFrameIndex(); }
 
 	private:
 		static constexpr UINT SrvDescriptorCapacity = 4096;
@@ -50,6 +53,7 @@ namespace Engine {
 		UINT                         m_srvDescriptorCount = 0; // 使用済みディスクリプタ数
 		ComPtr<ID3D12Resource>       m_renderTargets[FrameCount];
 		ComPtr<ID3D12Resource>       m_sceneRenderTargets[FrameCount];
+		ComPtr<ID3D12Resource>       m_postProcessRenderTargets[FrameCount];
 		ComPtr<ID3D12Resource>       m_sceneDepth;
 		UINT                         m_rtvDescriptorSize = 0;
 		UINT                         m_width = 0;

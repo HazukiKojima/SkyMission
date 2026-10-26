@@ -17,6 +17,7 @@ namespace Engine {
 		AssetPathResolver resolver;
 		const std::filesystem::path skyJsonPath = resolver.Resolve(environmentJsonPath, "sky");
 		const std::filesystem::path oceanJsonPath = resolver.Resolve(environmentJsonPath, "ocean");
+		const std::filesystem::path retroFilmJsonPath = environmentJsonPath.parent_path() / L"retroFilm.json";
 
 		const std::filesystem::path aircraftConfigJsonPath = aircraftJsonPath.parent_path() / L"N1K2JShidenKai/N1K2JShidenKai.json";
 		const float aircraftVisualScale = resolver.ResolveFloat(aircraftConfigJsonPath, "visualScale");
@@ -30,6 +31,8 @@ namespace Engine {
 			oceanJsonPath, "MyRedoxGetOceanParameters");
 		const SkyParameters skyParameters = JsonParametersLoader().Load<SkyParameters>(
 			skyJsonPath, "MyRedoxGetSkyParameters");
+		const RetroFilmParameters retroFilmParameters = JsonParametersLoader().Load<RetroFilmParameters>(
+			retroFilmJsonPath, "MyRedoxGetRetroFilmParameters");
 		const OceanSettings ocean = {
 			oceanParameters.size, oceanParameters.waveLength, oceanParameters.waveSteepness,
 			oceanParameters.normalUvScale, oceanParameters.wavePatternUvScale,
@@ -54,7 +57,8 @@ namespace Engine {
 			aircraftVisualScale,
 			ocean,
 			sky,
-			flightParameters
+			flightParameters,
+			retroFilmParameters
 		};
 	}
 }

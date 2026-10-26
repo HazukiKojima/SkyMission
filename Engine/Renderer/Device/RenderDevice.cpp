@@ -60,16 +60,12 @@ namespace Engine {
 		// ========================================================
 		// RTV Heap
 		//
-		// [0 ... FrameCount-1]
-		//     BackBuffer
-		//
-		// [FrameCount ... FrameCount*2-1]
-		//     SceneColor
+		// BackBuffer, SceneColor, PostProcessColor の順に各フレーム分を配置する。
 		//
 		// ========================================================
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount * 2;
+		rtvHeapDesc.NumDescriptors = FrameCount * 3;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
@@ -139,7 +135,7 @@ namespace Engine {
 		m_width = width;
 		m_height = height;
 
-		m_srvDescriptorCount = FrameCount * 2;
+		m_srvDescriptorCount = FrameCount * 3;
 		CreateSceneResources();
 	}
 
@@ -155,6 +151,18 @@ namespace Engine {
 
 		handle.ptr += static_cast<SIZE_T>(
 			FrameCount + GetFrameIndex()
+			) * m_rtvDescriptorSize;
+
+		return handle;
+	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetPostProcessRtvHandle() const {
+		D3D12_CPU_DESCRIPTOR_HANDLE handle(
+			m_rtvHeap->GetCPUDescriptorHandleForHeapStart()
+		);
+
+		handle.ptr += static_cast<SIZE_T>(
+			FrameCount * 2 + GetFrameIndex()
 			) * m_rtvDescriptorSize;
 
 		return handle;
@@ -239,6 +247,7 @@ namespace Engine {
 		for (UINT i = 0; i < FrameCount; ++i) {
 			m_renderTargets[i].Reset();
 			m_sceneRenderTargets[i].Reset();
+			m_postProcessRenderTargets[i].Reset();
 		}
 
 		m_sceneDepth.Reset();
@@ -346,6 +355,34 @@ namespace Engine {
 				nullptr,
 				rtv
 			);
+
+			CD3DX12_RESOURCE_DESC postProcessDesc =
+				CD3DX12_RESOURCE_DESC::Tex2D(
+					DXGI_FORMAT_R8G8B8A8_UNORM,
+					m_width,
+					m_height,
+					1,
+					1,
+					1,
+					0,
+					D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+				);
+			CD3DX12_CLEAR_VALUE postProcessClearValue(
+				DXGI_FORMAT_R8G8B8A8_UNORM,
+				clearColor
+			);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&heapProps,
+				D3D12_HEAP_FLAG_NONE,
+				&postProcessDesc,
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+				&postProcessClearValue,
+				IID_PPV_ARGS(&m_postProcessRenderTargets[i])));
+
+			D3D12_CPU_DESCRIPTOR_HANDLE postProcessRtv =
+				m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+			postProcessRtv.ptr += static_cast<SIZE_T>(FrameCount * 2 + i) * m_rtvDescriptorSize;
+			m_device->CreateRenderTargetView(m_postProcessRenderTargets[i].Get(), nullptr, postProcessRtv);
 		}
 
 		// ========================================================
@@ -410,6 +447,12 @@ namespace Engine {
 			m_device->CreateShaderResourceView(m_sceneRenderTargets[i].Get(), &colorSrv, srv);
 			srv.ptr += m_srvDescriptorSize;
 			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, srv);
+		}
+
+		for (UINT i = 0; i < FrameCount; ++i) {
+			D3D12_CPU_DESCRIPTOR_HANDLE srv = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
+			srv.ptr += static_cast<SIZE_T>(FrameCount * 2 + i) * m_srvDescriptorSize;
+			m_device->CreateShaderResourceView(m_postProcessRenderTargets[i].Get(), &colorSrv, srv);
 		}
 
 	}

@@ -4,6 +4,7 @@
 #include "../../Resources/Mesh/SkySphere.h"
 #include "../Pipeline/GraphicsPipeline.h"
 #include "../../Resources/Texture/Texture.h"
+#include "../RetroFilmParameters.h"
 #include "../Device/RenderDevice.h"
 #include "../Device/CommandContext.h"
 #include <vector>
@@ -31,6 +32,11 @@ namespace Engine {
 			UINT8* mappedData = nullptr;
 		};
 
+		struct FilmConstantBuffer {
+			Microsoft::WRL::ComPtr<ID3D12Resource> resource;
+			UINT8* mappedData = nullptr;
+		};
+
 		void EnsureModelConstantBufferCapacity(size_t objectCount);
 
 		std::unique_ptr<RenderDevice> m_device;
@@ -44,6 +50,7 @@ namespace Engine {
 		std::unique_ptr<Engine::GraphicsPipeline> m_oceanPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_skyPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_oceanFogPipeline;
+		std::unique_ptr<Engine::GraphicsPipeline> m_retroFilmPipeline;
 		std::unique_ptr<Engine::GraphicsPipeline> m_modelPipeline;
 
 		std::shared_ptr<Engine::Texture> m_texture;
@@ -61,6 +68,7 @@ namespace Engine {
 		UINT8* m_cbvDataPtr = nullptr;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_oceanFogConstantBuffer;
 		UINT8* m_oceanFogCbvDataPtr = nullptr;
+		FilmConstantBuffer m_filmConstantBuffers[RenderDevice::FrameCount];
 		std::vector<ModelConstantBuffer> m_modelConstantBuffers[RenderDevice::FrameCount];
 
 		UINT m_vertexCount;
@@ -74,6 +82,8 @@ namespace Engine {
 		float m_oceanEdgeFadeStart = 0.98f;
 		float m_oceanEdgeFadeWidth = 0.015f;
 		float m_propellerAngle = 0.0f;
+		float m_elapsedTime = 0.0f;
+		RetroFilmParameters m_retroFilmParameters{};
 
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;

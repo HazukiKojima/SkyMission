@@ -61,6 +61,14 @@ namespace Engine {
 			float pad3;
 		};
 
+		struct FilmConstantBufferData {
+			float time;
+			float padding[3];
+			RetroFilmParameters parameters;
+		};
+
+		static_assert(sizeof(FilmConstantBufferData) == 224);
+
 	}
 
 	struct ConstantBufferData {
@@ -125,6 +133,7 @@ namespace Engine {
 		m_oceanFogEndDistance = assets.ocean.fogEndDistance;
 		m_oceanEdgeFadeStart = assets.ocean.edgeFadeStart;
 		m_oceanEdgeFadeWidth = assets.ocean.edgeFadeWidth;
+		m_retroFilmParameters = assets.retroFilm;
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(hwnd, width, height);
 
@@ -159,6 +168,15 @@ namespace Engine {
 			L"OceanFogVS.cso",
 			L"OceanFogPS.cso",
 			2,
+			false
+		);
+
+		m_retroFilmPipeline = std::make_unique<Engine::GraphicsPipeline>();
+		m_retroFilmPipeline->InitializeWithShaders(
+			m_device->GetDevice(),
+			L"RetroFilmVS.cso",
+			L"RetroFilmPS.cso",
+			1,
 			false
 		);
 
@@ -413,6 +431,21 @@ namespace Engine {
 		CD3DX12_RANGE fogReadRange(0, 0);
 		ThrowIfFailed(m_oceanFogConstantBuffer->Map(0, &fogReadRange, reinterpret_cast<void**>(&m_oceanFogCbvDataPtr)));
 
+		const UINT64 filmCbSize = (sizeof(FilmConstantBufferData) + 255) & ~255;
+		for (auto& filmBuffer : m_filmConstantBuffers) {
+			CD3DX12_HEAP_PROPERTIES filmHeapProps(D3D12_HEAP_TYPE_UPLOAD);
+			auto filmDesc = CD3DX12_RESOURCE_DESC::Buffer(filmCbSize);
+			ThrowIfFailed(m_device->GetDevice()->CreateCommittedResource(
+				&filmHeapProps,
+				D3D12_HEAP_FLAG_NONE,
+				&filmDesc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&filmBuffer.resource)));
+			CD3DX12_RANGE filmReadRange(0, 0);
+			ThrowIfFailed(filmBuffer.resource->Map(0, &filmReadRange, reinterpret_cast<void**>(&filmBuffer.mappedData)));
+		}
+
 	}
 
 	void Renderer::EnsureModelConstantBufferCapacity(size_t objectCount) {
@@ -443,6 +476,7 @@ namespace Engine {
 	}
 
 	void Renderer::Update(const Scene& scene, float elapsedTime, float deltaSeconds) {
+		m_elapsedTime = elapsedTime;
 		if (deltaSeconds > 0.0f) {
 			m_propellerAngle = std::fmod(
 				m_propellerAngle + scene.GetPlayerAircraftSpeed() * kPropellerAngularSpeedPerSpeed * deltaSeconds,
@@ -548,11 +582,13 @@ namespace Engine {
 		auto cmd = m_context->GetCommandList();
 		auto resource = m_device->GetCurrentRenderTarget();
 		auto scene = m_device->GetSceneRenderTarget();
+		auto postProcess = m_device->GetPostProcessRenderTarget();
 		auto depth = m_device->GetSceneDepth();
 
 		// バックバッファをレンダーターゲットへ遷移
 		m_context->TransitionResource(resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_context->TransitionResource(scene, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		m_context->TransitionResource(postProcess, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_context->TransitionResource(depth, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 		D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f };
@@ -639,9 +675,9 @@ namespace Engine {
 
 		m_context->TransitionResource(scene, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		m_context->TransitionResource(depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		rtv = m_device->GetCurrentRtvHandle();
-		const float backBufferClear[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		cmd->ClearRenderTargetView(rtv, backBufferClear, 0, nullptr);
+		rtv = m_device->GetPostProcessRtvHandle();
+		const float postProcessClear[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		cmd->ClearRenderTargetView(rtv, postProcessClear, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 
 		cmd->SetGraphicsRootSignature(m_oceanFogPipeline->GetRootSignature());
@@ -650,6 +686,26 @@ namespace Engine {
 		cmd->SetDescriptorHeaps(_countof(fogHeaps), fogHeaps);
 		cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_device->GetSceneColorSrvIndex()));
 		cmd->SetGraphicsRootConstantBufferView(1, m_oceanFogConstantBuffer->GetGPUVirtualAddress());
+		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		cmd->DrawInstanced(3, 1, 0, 0);
+		m_context->TransitionResource(postProcess, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+		rtv = m_device->GetCurrentRtvHandle();
+		const float backBufferClear[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		cmd->ClearRenderTargetView(rtv, backBufferClear, 0, nullptr);
+		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+
+		cmd->SetGraphicsRootSignature(m_retroFilmPipeline->GetRootSignature());
+		cmd->SetPipelineState(m_retroFilmPipeline->GetPSO());
+		ID3D12DescriptorHeap* filmHeaps[] = { m_device->GetSrvDescriptorHeap() };
+		cmd->SetDescriptorHeaps(_countof(filmHeaps), filmHeaps);
+		cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_device->GetPostProcessSrvIndex()));
+		const UINT filmFrameIndex = m_context->GetFrameIndex();
+		FilmConstantBufferData* filmConstants = reinterpret_cast<FilmConstantBufferData*>(m_filmConstantBuffers[filmFrameIndex].mappedData);
+		filmConstants->time = std::fmod(m_elapsedTime, 3600.0f);
+		filmConstants->padding[0] = filmConstants->padding[1] = filmConstants->padding[2] = 0.0f;
+		filmConstants->parameters = m_retroFilmParameters;
+		cmd->SetGraphicsRootConstantBufferView(1, m_filmConstantBuffers[filmFrameIndex].resource->GetGPUVirtualAddress());
 		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		cmd->DrawInstanced(3, 1, 0, 0);
 

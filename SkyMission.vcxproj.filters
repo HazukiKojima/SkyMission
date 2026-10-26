@@ -125,6 +125,7 @@
     <ClInclude Include="Engine\Scene\Scene.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Renderer\RetroFilmParameters.h"><Filter>Engine\Renderer</Filter></ClInclude>
     <ClInclude Include="Engine\Renderer\Device\Renderer.h">
       <Filter>Engine\Renderer\Device</Filter>
     </ClInclude>
@@ -151,6 +152,7 @@
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
     <None Include="Assets\Aircraft\F16\flightParameters.json" />
+    <None Include="Assets\Environment\retroFilm.json" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
@@ -168,6 +170,12 @@
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\OceanFogVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\ModelPS.hlsl">
