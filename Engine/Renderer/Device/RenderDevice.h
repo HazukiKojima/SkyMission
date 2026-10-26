@@ -37,6 +37,7 @@ namespace Engine {
 		UINT GetSceneDepthSrvIndex() const { return GetFrameIndex() * 2 + 1; }
 
 	private:
+		static constexpr UINT SrvDescriptorCapacity = 4096;
 		void CreateSceneResources();
 		ComPtr<IDXGIFactory4>        m_factory;
 		ComPtr<ID3D12Device>         m_device;

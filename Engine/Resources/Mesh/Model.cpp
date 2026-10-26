@@ -229,6 +229,14 @@ namespace Engine {
 
 		const std::filesystem::path modelDirectory = modelPath.parent_path();
 		m_meshes.reserve(meshInstances.size());
+		struct TextureDescriptorSet {
+			const Texture* diffuse;
+			const Texture* metallic;
+			const Texture* roughness;
+			const Texture* normal;
+			UINT srvIndex;
+		};
+		std::vector<TextureDescriptorSet> textureDescriptorSets;
 		uint64_t totalVertices = 0;
 		uint64_t totalIndices = 0;
 		uint64_t totalVertexBufferBytes = 0;
@@ -369,14 +377,33 @@ namespace Engine {
 				}
 			}
 
-			auto descriptorHandle = renderDevice->AllocateSrvDescriptor(&mesh.textureSrvIndex);
-			(mesh.diffuseTexture ? mesh.diffuseTexture.get() : m_fallbackTexture.get())->CreateShaderResourceView(device, descriptorHandle);
-			descriptorHandle = renderDevice->AllocateSrvDescriptor();
-			(mesh.metallicTexture ? mesh.metallicTexture.get() : m_fallbackMetallicTexture.get())->CreateShaderResourceView(device, descriptorHandle);
-			descriptorHandle = renderDevice->AllocateSrvDescriptor();
-			(mesh.roughnessTexture ? mesh.roughnessTexture.get() : m_fallbackRoughnessTexture.get())->CreateShaderResourceView(device, descriptorHandle);
-			descriptorHandle = renderDevice->AllocateSrvDescriptor();
-			(mesh.normalTexture ? mesh.normalTexture.get() : m_fallbackNormalTexture.get())->CreateShaderResourceView(device, descriptorHandle);
+			const Texture* diffuseTexture = mesh.diffuseTexture ? mesh.diffuseTexture.get() : m_fallbackTexture.get();
+			const Texture* metallicTexture = mesh.metallicTexture ? mesh.metallicTexture.get() : m_fallbackMetallicTexture.get();
+			const Texture* roughnessTexture = mesh.roughnessTexture ? mesh.roughnessTexture.get() : m_fallbackRoughnessTexture.get();
+			const Texture* normalTexture = mesh.normalTexture ? mesh.normalTexture.get() : m_fallbackNormalTexture.get();
+			const auto descriptorSet = std::find_if(
+				textureDescriptorSets.begin(),
+				textureDescriptorSets.end(),
+				[&](const TextureDescriptorSet& set) {
+					return set.diffuse == diffuseTexture &&
+						set.metallic == metallicTexture &&
+						set.roughness == roughnessTexture &&
+						set.normal == normalTexture;
+				});
+			if (descriptorSet != textureDescriptorSets.end()) {
+				mesh.textureSrvIndex = descriptorSet->srvIndex;
+			}
+			else {
+				auto descriptorHandle = renderDevice->AllocateSrvDescriptor(&mesh.textureSrvIndex);
+				diffuseTexture->CreateShaderResourceView(device, descriptorHandle);
+				descriptorHandle = renderDevice->AllocateSrvDescriptor();
+				metallicTexture->CreateShaderResourceView(device, descriptorHandle);
+				descriptorHandle = renderDevice->AllocateSrvDescriptor();
+				roughnessTexture->CreateShaderResourceView(device, descriptorHandle);
+				descriptorHandle = renderDevice->AllocateSrvDescriptor();
+				normalTexture->CreateShaderResourceView(device, descriptorHandle);
+				textureDescriptorSets.push_back({ diffuseTexture, metallicTexture, roughnessTexture, normalTexture, mesh.textureSrvIndex });
+			}
 			m_meshes.push_back(std::move(mesh));
 		}
 
