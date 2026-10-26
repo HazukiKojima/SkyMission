@@ -1,5 +1,7 @@
 #pragma once
 #include "../Camera/Camera.h"
+#include "../Aircraft/AircraftAIController.h"
+#include "../Aircraft/AircraftController.h"
 #include "../Aircraft/PlayerAircraft.h"
 #include "../Resources/Mesh/Model.h"
 #include <DirectXMath.h>
@@ -50,15 +52,30 @@ namespace Engine {
 		std::vector<SceneObject>& GetObjects() { return m_objects; }
 		const std::vector<SceneObject>& GetObjects() const { return m_objects; }
 		void AddPlayerObject(std::shared_ptr<Model> model);
+		void AddEnemyAircraft(
+			std::shared_ptr<Model> model,
+			const DirectX::XMFLOAT3& position,
+			float visualScale,
+			const AircraftFlightParameters& flightParameters,
+			const AircraftAIParameters& aiParameters);
 		void AddObject(std::shared_ptr<Model> model);
 		void AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& worldTransform);
 		void RemoveObject(std::size_t index);
 
 	private:
+		struct EnemyAircraft {
+			AircraftFlightModel flightModel;
+			AircraftAIController controller;
+			AircraftAIParameters aiParameters;
+			std::size_t objectIndex;
+			float visualScale;
+		};
+
 		Camera m_camera;
 		SceneEnvironment m_environment;
 		std::vector<SceneObject> m_objects;
-		PlayerAircraft m_playerAircraft;
+		std::vector<EnemyAircraft> m_enemyAircraft;
+		AircraftFlightModel m_playerAircraft;
 		AircraftController m_aircraftController;
 		std::size_t m_playerObjectIndex = static_cast<std::size_t>(-1);
 		float m_playerAircraftVisualScale = 1.0f;

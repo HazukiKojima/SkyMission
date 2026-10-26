@@ -1,10 +1,17 @@
 #pragma once
-#include "AircraftController.h"
 #include "AircraftFlightParameters.h"
 #include <DirectXMath.h>
 
 namespace Engine {
-	class PlayerAircraft {
+	struct AircraftInput {
+		float pitch = 0.0f;
+		float turn = 0.0f;
+		float yaw = 0.0f;
+		float throttle = 0.0f;
+		bool highGTurn = false;
+	};
+
+	class AircraftFlightModel {
 	public:
 		// 入力を受け取り、制御・姿勢・飛行物理・速度・位置の順に機体を更新する。
 		void Update(const AircraftInput& input, float deltaSeconds);
@@ -14,7 +21,9 @@ namespace Engine {
 			m_velocity = { 0.0f, 0.0f, -parameters.initialSpeed };
 		}
 		DirectX::XMFLOAT3 GetPosition() const { return m_position; }
+		void SetPosition(const DirectX::XMFLOAT3& position) { m_position = position; }
 		float GetSpeed() const;
+		float GetMaximumSpeed() const { return m_flightParameters.maximumSpeed; }
 		// 機体の前方と、カメラ追従用の水平方向を返す。
 		DirectX::XMFLOAT3 GetForward() const;
 		DirectX::XMFLOAT3 GetHeading() const;

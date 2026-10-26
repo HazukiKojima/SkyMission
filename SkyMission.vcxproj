@@ -38,6 +38,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Aircraft\AircraftAIController.h" />
     <ClInclude Include="Engine\Application\Application.h" />
     <ClInclude Include="Engine\Aircraft\AircraftController.h" />
     <ClInclude Include="Engine\Aircraft\AircraftFlightParameters.h" />
@@ -162,6 +163,9 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\Aircraft\F4U4Corsair\aiParameters.json" />
+    <None Include="Assets\Aircraft\F4U4Corsair\F4U4Corsair.json" />
+    <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json" />
     <None Include="Engine\Renderer\Shader\Common.hlsli" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli" />
     <None Include="Assets\Aircraft\F16\flightParameters.json" />

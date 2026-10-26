@@ -51,12 +51,12 @@ namespace Engine {
 		m_scene->SetPlayerAircraftVisualScale(assets.aircraftVisualScale);
 		m_scene->SetPlayerAircraftFlightParameters(assets.flightParameters);
 		m_scene->AddPlayerObject(m_renderer->GetModel());
-		DirectX::XMFLOAT4X4 enemyTransform;
-		DirectX::XMStoreFloat4x4(
-			&enemyTransform,
-			DirectX::XMMatrixScaling(2.5f, 2.5f, 2.5f) *
-			DirectX::XMMatrixTranslation(30.0f, 0.0f, -100.0f));
-		m_scene->AddObject(m_renderer->GetEnemyAircraftModel(), enemyTransform);
+		m_scene->AddEnemyAircraft(
+			m_renderer->GetEnemyAircraftModel(),
+			{ 30.0f, 0.0f, -100.0f },
+			assets.enemyAircraftVisualScale,
+			assets.enemyFlightParameters,
+			assets.enemyAIParameters);
 
 		m_renderer->InitializeConstantBuffers(*m_scene);
 

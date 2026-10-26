@@ -1,4 +1,5 @@
 {
     "model": "N1K2JShidenKai.fbx",
-    "visualScale": 2.5
+    "visualScale": 25.00,
+    "flightParameters": "flightParameters.json"
 }
