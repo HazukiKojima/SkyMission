@@ -50,7 +50,13 @@ namespace Engine {
 		m_scene->SetEnvironment(environment);
 		m_scene->SetPlayerAircraftVisualScale(assets.aircraftVisualScale);
 		m_scene->SetPlayerAircraftFlightParameters(assets.flightParameters);
-		m_scene->AddObject(m_renderer->GetModel());
+		m_scene->AddPlayerObject(m_renderer->GetModel());
+		m_scene->AddEnemyAircraft(
+			m_renderer->GetEnemyAircraftModel(),
+			{ 30.0f, 0.0f, -100.0f },
+			assets.enemyAircraftVisualScale,
+			assets.enemyFlightParameters,
+			assets.enemyAIParameters);
 
 		m_renderer->InitializeConstantBuffers(*m_scene);
 

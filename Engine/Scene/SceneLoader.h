@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Aircraft/AircraftAIController.h"
 #include "../Aircraft/AircraftFlightParameters.h"
 #include "../Renderer/RetroFilmParameters.h"
 #include <filesystem>
@@ -33,10 +34,14 @@ namespace Engine {
 		std::filesystem::path oceanNormalTexture;
 		std::filesystem::path oceanNormalTexture2;
 		std::filesystem::path aircraftModel;
+		std::filesystem::path enemyAircraftModel;
 		float aircraftVisualScale = 1.0f;
+		float enemyAircraftVisualScale = 1.0f;
+		AircraftFlightParameters flightParameters;
+		AircraftFlightParameters enemyFlightParameters;
+		AircraftAIParameters enemyAIParameters;
 		OceanSettings ocean;
 		SkySettings sky;
-		AircraftFlightParameters flightParameters;
 		RetroFilmParameters retroFilm;
 	};
 

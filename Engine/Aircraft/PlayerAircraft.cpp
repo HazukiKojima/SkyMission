@@ -6,7 +6,7 @@ using namespace DirectX;
 
 namespace Engine {
 
-	void PlayerAircraft::Update(const AircraftInput& input, float deltaSeconds) {
+	void AircraftFlightModel::Update(const AircraftInput& input, float deltaSeconds) {
 		if (deltaSeconds <= 0.0f) {
 			return;
 		}
@@ -30,7 +30,7 @@ namespace Engine {
 		}
 	}
 
-	void PlayerAircraft::UpdateControls(const AircraftInput& input, float deltaSeconds) {
+	void AircraftFlightModel::UpdateControls(const AircraftInput& input, float deltaSeconds) {
 		// 外部入力の範囲を制限し、指数補間で機体操作を滑らかにする。
 		const float targetPitchControl = std::clamp(input.pitch, -1.0f, 1.0f);
 		const float targetTurnControl = std::clamp(input.turn, -1.0f, 1.0f);
@@ -45,7 +45,7 @@ namespace Engine {
 		m_throttleControl += (targetThrottleControl - m_throttleControl) * controlBlend;
 	}
 
-	void PlayerAircraft::UpdateAttitude(const AircraftInput& input, float deltaSeconds, FlightStepState& state) {
+	void AircraftFlightModel::UpdateAttitude(const AircraftInput& input, float deltaSeconds, FlightStepState& state) {
 		// 姿勢変更前の速度と機首方向から、迎角や速度依存の操縦性能を求める。
 		const XMFLOAT3 currentForward = GetForwardForAttitude();
 		state.fallbackForward = currentForward;
@@ -133,7 +133,7 @@ namespace Engine {
 		}
 	}
 
-	void PlayerAircraft::UpdateFlightPhysics(
+	void AircraftFlightModel::UpdateFlightPhysics(
 		const FlightStepState& state,
 		XMFLOAT3& acceleration,
 		float& drag) const {
@@ -165,7 +165,7 @@ namespace Engine {
 			m_flightParameters.highGDrag * state.highGIntensity * state.turnIntent;
 	}
 
-	void PlayerAircraft::UpdateVelocity(
+	void AircraftFlightModel::UpdateVelocity(
 		const XMFLOAT3& acceleration,
 		float drag,
 		const XMFLOAT3& fallbackForward,
@@ -183,13 +183,13 @@ namespace Engine {
 		XMStoreFloat3(&m_velocity, velocity);
 	}
 
-	void PlayerAircraft::UpdatePosition(float deltaSeconds) {
+	void AircraftFlightModel::UpdatePosition(float deltaSeconds) {
 		// 更新後の速度を積分してワールド位置を進める。
 		XMVECTOR position = XMLoadFloat3(&m_position) + XMLoadFloat3(&m_velocity) * deltaSeconds;
 		XMStoreFloat3(&m_position, position);
 	}
 
-	XMFLOAT3 PlayerAircraft::GetForwardForAttitude() const {
+	XMFLOAT3 AircraftFlightModel::GetForwardForAttitude() const {
 		// 機体ローカルの前方(-Z)を姿勢クォータニオンでワールド空間へ変換する。
 		XMFLOAT3 forward;
 		XMStoreFloat3(&forward, XMVector3Normalize(XMVector3Rotate(
@@ -197,29 +197,29 @@ namespace Engine {
 		return forward;
 	}
 
-	XMFLOAT3 PlayerAircraft::GetForward() const {
+	XMFLOAT3 AircraftFlightModel::GetForward() const {
 		return GetForwardForAttitude();
 	}
 
-	XMFLOAT3 PlayerAircraft::GetRight() const {
+	XMFLOAT3 AircraftFlightModel::GetRight() const {
 		XMFLOAT3 right;
 		XMStoreFloat3(&right, XMVector3Normalize(XMVector3Rotate(
 			XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), XMLoadFloat4(&m_attitude))));
 		return right;
 	}
 
-	XMFLOAT3 PlayerAircraft::GetUp() const {
+	XMFLOAT3 AircraftFlightModel::GetUp() const {
 		XMFLOAT3 up;
 		XMStoreFloat3(&up, XMVector3Normalize(XMVector3Rotate(
 			XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), XMLoadFloat4(&m_attitude))));
 		return up;
 	}
 
-	float PlayerAircraft::GetSpeed() const {
+	float AircraftFlightModel::GetSpeed() const {
 		return XMVectorGetX(XMVector3Length(XMLoadFloat3(&m_velocity)));
 	}
 
-	XMFLOAT3 PlayerAircraft::GetHeading() const {
+	XMFLOAT3 AircraftFlightModel::GetHeading() const {
 		// カメラ用に機首方向を水平面へ射影する。
 		XMFLOAT3 forward = GetForward();
 		forward.y = 0.0f;
@@ -237,7 +237,7 @@ namespace Engine {
 		return heading;
 	}
 
-	XMFLOAT4X4 PlayerAircraft::GetWorldTransform() const {
+	XMFLOAT4X4 AircraftFlightModel::GetWorldTransform() const {
 		XMFLOAT4X4 world;
 		XMStoreFloat4x4(&world,
 			XMMatrixRotationQuaternion(XMLoadFloat4(&m_attitude)) *

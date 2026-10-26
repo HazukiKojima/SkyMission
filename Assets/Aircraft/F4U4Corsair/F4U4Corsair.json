@@ -1,0 +1,6 @@
+{
+    "model": "F4U4Corsair.fbx",
+    "visualScale": 25.0,
+    "flightParameters": "flightParameters.json",
+    "aiParameters": "aiParameters.json"
+}

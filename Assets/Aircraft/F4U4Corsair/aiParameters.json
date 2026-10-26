@@ -1,0 +1,12 @@
+{
+  "directionChangeSeconds": 5.0,
+  "altitudeChangeSeconds": 12.0,
+  "lowAltitude": 100.0,
+  "highAltitude": 400.0,
+  "pitchLookAheadDistance": 800.0,
+  "turnGain": 1.5,
+  "pitchGain": 1.5,
+  "speedMatchGain": 0.015,
+  "highGManeuverIntervalSeconds": 24.0,
+  "highGManeuverDurationSeconds": 3.0
+}
