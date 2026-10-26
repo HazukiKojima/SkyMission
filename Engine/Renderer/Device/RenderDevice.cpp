@@ -1,4 +1,5 @@
 #include "RenderDevice.h"
+#include <stdexcept>
 
 namespace Engine {
 
@@ -107,7 +108,7 @@ namespace Engine {
 		// ========================================================
 
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 256;
+		srvHeapDesc.NumDescriptors = SrvDescriptorCapacity;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
@@ -187,6 +188,10 @@ namespace Engine {
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::AllocateSrvDescriptor(
 		UINT* outIndex
 	) {
+		if (m_srvDescriptorCount >= SrvDescriptorCapacity) {
+			throw std::runtime_error("SRV descriptor heap capacity exceeded");
+		}
+
 		D3D12_CPU_DESCRIPTOR_HANDLE handle =
 			m_srvHeap->GetCPUDescriptorHandleForHeapStart();
 

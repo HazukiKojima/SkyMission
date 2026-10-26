@@ -106,7 +106,7 @@ namespace Engine {
 
 		if (m_scene) {
 			m_scene->Update(deltaSeconds);
-			m_renderer->Update(*m_scene, m_elapsedTime);
+			m_renderer->Update(*m_scene, m_elapsedTime, deltaSeconds);
 		}
 	}
 

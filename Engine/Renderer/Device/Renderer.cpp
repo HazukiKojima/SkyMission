@@ -20,6 +20,7 @@ namespace Engine {
 		constexpr float kOceanFogTop = 350.0f;
 		constexpr float kOceanFogDensity = 0.00000112f;
 		constexpr float kPi = 3.14159265359f;
+		constexpr float kPropellerAngularSpeedPerSpeed = 0.06f;
 
 		float CalculateOceanWaveHeight(float x, float z, float time, float wavelength, float steepness) {
 			const float baseWindX = 1.0f / std::sqrt(1.0f + 0.6f * 0.6f);
@@ -441,7 +442,13 @@ namespace Engine {
 		}
 	}
 
-	void Renderer::Update(const Scene& scene, float elapsedTime) {
+	void Renderer::Update(const Scene& scene, float elapsedTime, float deltaSeconds) {
+		if (deltaSeconds > 0.0f) {
+			m_propellerAngle = std::fmod(
+				m_propellerAngle + scene.GetPlayerAircraftSpeed() * kPropellerAngularSpeedPerSpeed * deltaSeconds,
+				2.0f * kPi);
+		}
+
 		// MVPを計算して定数バッファにセット
 		using namespace DirectX;
 		const Camera& camera = scene.GetCamera();
@@ -626,7 +633,7 @@ namespace Engine {
 					continue;
 				}
 				cmd->SetGraphicsRootConstantBufferView(1, m_modelConstantBuffers[frameIndex][objectIndex].resource->GetGPUVirtualAddress());
-				object.model->Draw(cmd, m_device.get());
+				object.model->Draw(cmd, m_device.get(), m_propellerAngle);
 			}
 		}
 

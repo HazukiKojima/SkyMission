@@ -15,10 +15,11 @@ namespace
 			srvCount,
 			0);
 
-		// ルートパラメータを2つ用意
+		// ルートパラメータを3つ用意
 		// 0 = SRVテーブル（ピクセルシェーダ用）
 		// 1 = CBV(b0)（頂点/ピクセル両方で使用）
-		CD3DX12_ROOT_PARAMETER1 rootParams[2];
+		// 2 = プロペラ回転定数(b1)（頂点シェーダ用）
+		CD3DX12_ROOT_PARAMETER1 rootParams[3];
 
 		rootParams[0].InitAsDescriptorTable(
 			1,
@@ -31,6 +32,7 @@ namespace
 			0,
 			D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
 			D3D12_SHADER_VISIBILITY_ALL);
+		rootParams[2].InitAsConstants(8, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;

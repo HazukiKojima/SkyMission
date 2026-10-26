@@ -7,13 +7,18 @@ namespace Engine {
 
 	void Scene::Update(float deltaSeconds) {
 		if (m_playerObjectIndex < m_objects.size()) {
-			m_playerAircraft.Update(m_aircraftController.ReadInput(), deltaSeconds);
+			const AircraftInput input = m_aircraftController.ReadInput();
+			m_playerAircraft.Update(input, deltaSeconds);
 			const DirectX::XMFLOAT4X4 aircraftTransform = m_playerAircraft.GetWorldTransform();
 			DirectX::XMStoreFloat4x4(
 				&m_objects[m_playerObjectIndex].worldTransform,
 				DirectX::XMMatrixScaling(m_playerAircraftVisualScale, m_playerAircraftVisualScale, m_playerAircraftVisualScale) *
 				DirectX::XMLoadFloat4x4(&aircraftTransform));
-			m_camera.SetFollowTarget(m_playerAircraft.GetPosition(), m_playerAircraft.GetForward());
+			m_camera.SetFollowTarget(
+				m_playerAircraft.GetPosition(),
+				m_playerAircraft.GetHeading(),
+				m_playerAircraft.GetForward(),
+				input.pitch > 0.01f || input.pitch < -0.01f);
 		}
 		m_camera.Update(deltaSeconds);
 	}

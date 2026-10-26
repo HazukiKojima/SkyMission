@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp" />
     <ClCompile Include="Engine\Application\Application.cpp" />
     <ClCompile Include="Engine\Aircraft\AircraftController.cpp" />
-    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp" />
     <ClCompile Include="Engine\Camera\Camera.cpp" />
     <ClCompile Include="Engine\Scene\Scene.cpp" />
     <ClCompile Include="Engine\Scene\SceneLoader.cpp" />
@@ -301,26 +301,19 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\**\*.cs"
-                              Exclude="$(SolutionDir)External\REDoxWrapper\bin\**;$(SolutionDir)External\REDoxWrapper\obj\**" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\**\*.cs" Exclude="$(SolutionDir)External\REDoxWrapper\bin\**;$(SolutionDir)External\REDoxWrapper\obj\**" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json"
-                              Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs"
-                              Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json" Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h;$(SolutionDir)Engine\Scene\OceanParameters.h;$(SolutionDir)Engine\Scene\SkyParameters.h" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.props"
-                              Condition="Exists('$(SolutionDir)Directory.Build.props')" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.targets"
-                              Condition="Exists('$(SolutionDir)Directory.Build.targets')" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.props" Condition="Exists('$(SolutionDir)Directory.Build.props')" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.targets" Condition="Exists('$(SolutionDir)Directory.Build.targets')" />
   </ItemGroup>
   <PropertyGroup>
     <REDoxWrapperPublishDll>$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll</REDoxWrapperPublishDll>
   </PropertyGroup>
-  <Target Name="PublishREDoxWrapper" AfterTargets="Build" Condition="'$(Platform)' == 'x64'"
-          Inputs="@(REDoxWrapperPublishInput)"
-          Outputs="$(REDoxWrapperPublishDll);$(OutDir)REDoxWrapper.dll">
+  <Target Name="PublishREDoxWrapper" AfterTargets="Build" Condition="'$(Platform)' == 'x64'" Inputs="@(REDoxWrapperPublishInput)" Outputs="$(REDoxWrapperPublishDll);$(OutDir)REDoxWrapper.dll">
     <Exec Command="set DOTNET_CLI_UI_LANGUAGE=en&#xD;&#xA;dotnet publish &quot;$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj&quot; -c $(Configuration) -r win-x64" />
     <Copy SourceFiles="$(REDoxWrapperPublishDll)" DestinationFiles="$(OutDir)REDoxWrapper.dll" />
   </Target>
