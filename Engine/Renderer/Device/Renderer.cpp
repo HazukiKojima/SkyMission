@@ -61,6 +61,14 @@ namespace Engine {
 			float pad3;
 		};
 
+		struct FilmConstantBufferData {
+			float time;
+			float padding[3];
+			RetroFilmParameters parameters;
+		};
+
+		static_assert(sizeof(FilmConstantBufferData) == 224);
+
 	}
 
 	struct ConstantBufferData {
@@ -125,6 +133,7 @@ namespace Engine {
 		m_oceanFogEndDistance = assets.ocean.fogEndDistance;
 		m_oceanEdgeFadeStart = assets.ocean.edgeFadeStart;
 		m_oceanEdgeFadeWidth = assets.ocean.edgeFadeWidth;
+		m_retroFilmParameters = assets.retroFilm;
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(hwnd, width, height);
 
@@ -422,7 +431,7 @@ namespace Engine {
 		CD3DX12_RANGE fogReadRange(0, 0);
 		ThrowIfFailed(m_oceanFogConstantBuffer->Map(0, &fogReadRange, reinterpret_cast<void**>(&m_oceanFogCbvDataPtr)));
 
-		const UINT64 filmCbSize = 256;
+		const UINT64 filmCbSize = (sizeof(FilmConstantBufferData) + 255) & ~255;
 		for (auto& filmBuffer : m_filmConstantBuffers) {
 			CD3DX12_HEAP_PROPERTIES filmHeapProps(D3D12_HEAP_TYPE_UPLOAD);
 			auto filmDesc = CD3DX12_RESOURCE_DESC::Buffer(filmCbSize);
@@ -692,13 +701,10 @@ namespace Engine {
 		cmd->SetDescriptorHeaps(_countof(filmHeaps), filmHeaps);
 		cmd->SetGraphicsRootDescriptorTable(0, m_device->GetSrvGpuHandle(m_device->GetPostProcessSrvIndex()));
 		const UINT filmFrameIndex = m_context->GetFrameIndex();
-		struct FilmConstants {
-			float time;
-			float padding[3];
-		};
-		FilmConstants* filmConstants = reinterpret_cast<FilmConstants*>(m_filmConstantBuffers[filmFrameIndex].mappedData);
-		filmConstants->time = m_elapsedTime;
+		FilmConstantBufferData* filmConstants = reinterpret_cast<FilmConstantBufferData*>(m_filmConstantBuffers[filmFrameIndex].mappedData);
+		filmConstants->time = std::fmod(m_elapsedTime, 3600.0f);
 		filmConstants->padding[0] = filmConstants->padding[1] = filmConstants->padding[2] = 0.0f;
+		filmConstants->parameters = m_retroFilmParameters;
 		cmd->SetGraphicsRootConstantBufferView(1, m_filmConstantBuffers[filmFrameIndex].resource->GetGPUVirtualAddress());
 		cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		cmd->DrawInstanced(3, 1, 0, 0);

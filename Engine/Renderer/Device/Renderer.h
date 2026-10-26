@@ -4,6 +4,7 @@
 #include "../../Resources/Mesh/SkySphere.h"
 #include "../Pipeline/GraphicsPipeline.h"
 #include "../../Resources/Texture/Texture.h"
+#include "../RetroFilmParameters.h"
 #include "../Device/RenderDevice.h"
 #include "../Device/CommandContext.h"
 #include <vector>
@@ -82,6 +83,7 @@ namespace Engine {
 		float m_oceanEdgeFadeWidth = 0.015f;
 		float m_propellerAngle = 0.0f;
 		float m_elapsedTime = 0.0f;
+		RetroFilmParameters m_retroFilmParameters{};
 
 		// Sky Sphere
 		std::unique_ptr<Engine::SkySphere> m_skySphere;

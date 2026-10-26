@@ -1,0 +1,54 @@
+{
+  "colorGrading": {
+    "desaturation": 0.12,
+    "tint": [1.035, 1.015, 0.94],
+    "gain": 1.25,
+    "offset": [0.012, 0.009, 0.002],
+    "blackLift": {
+      "color": [0.018, 0.014, 0.008],
+      "amount": 0.97
+    },
+    "highlight": {
+      "start": 0.55,
+      "end": 1.0,
+      "strength": 0.08,
+      "scale": 0.92,
+      "add": [0.08, 0.075, 0.06]
+    }
+  },
+  "luminanceWeights": [0.299, 0.587, 0.114],
+  "vignette": {
+    "innerRadius": 0.25,
+    "outerRadius": 2.0,
+    "minBrightness": 0.55
+  },
+  "jitter": {
+    "amplitude": [0.00008, 0.00006],
+    "frequency": [1.7, 1.3]
+  },
+  "grain": {
+    "fps": 24.0,
+    "intensity": 0.055
+  },
+  "dust": {
+    "cellSize": 80.0,
+    "fps": 3.0,
+    "threshold": 0.88,
+    "radius": [1.0, 2.5],
+    "intensity": 0.22
+  },
+  "scratch": {
+    "columnWidth": 17.0,
+    "fps": 1.5,
+    "threshold": 0.965,
+    "width": [0.015, 0.04],
+    "edgeSoftness": 0.02,
+    "verticalFadeMin": 0.35,
+    "intensity": 0.12
+  },
+  "flicker": {
+    "fps": 24.0,
+    "amplitude": 0.018
+  },
+  "overlayColor": [0.24, 0.22, 0.18]
+}
