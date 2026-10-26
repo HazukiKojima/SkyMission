@@ -170,6 +170,12 @@
     <FxCompile Include="Engine\Renderer\Shader\OceanFogVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\ModelPS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
