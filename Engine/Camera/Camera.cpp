@@ -107,12 +107,16 @@ namespace Engine {
 		const XMFLOAT3& position,
 		const XMFLOAT3& heading,
 		const XMFLOAT3& forward,
-		bool pitchInputActive) {
+		bool pitchInputActive,
+		float speed,
+		float maximumSpeed) {
 		m_following = true;
 		m_followTarget = position;
 		m_followHeading = heading;
 		m_followForward = forward;
 		m_followPitchInputActive = pitchInputActive;
+		m_followSpeed = speed;
+		m_followMaximumSpeed = maximumSpeed;
 	}
 
 	void Camera::UpdateFollow(float deltaSeconds) {
@@ -147,7 +151,11 @@ namespace Engine {
 			-std::cos(m_followCameraYaw) * pitchCosine,
 			0.0f);
 		const XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		const XMVECTOR desiredPosition = target - smoothedDirection * m_followDistance + worldUp * m_followHeight;
+		const float speedRange = (std::max)(m_followMaximumSpeed - 60.0f, 0.001f);
+		const float speedRatio = std::clamp((m_followSpeed - 60.0f) / speedRange, 0.0f, 1.0f);
+		const float followDistance = m_followDistance +
+			(m_maxFollowDistance - m_followDistance) * speedRatio;
+		const XMVECTOR desiredPosition = target - smoothedDirection * followDistance + worldUp * m_followHeight;
 		const XMVECTOR desiredLookAt = target + smoothedDirection * 12.0f + worldUp * 2.0f;
 		const float blend = 1.0f - std::exp(-m_followSmoothing * deltaSeconds);
 		XMStoreFloat3(&m_position, XMVectorLerp(XMLoadFloat3(&m_position), desiredPosition, blend));

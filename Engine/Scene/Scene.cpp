@@ -19,7 +19,9 @@ namespace Engine {
 				m_playerAircraft.GetPosition(),
 				m_playerAircraft.GetHeading(),
 				m_playerAircraft.GetForward(),
-				input.pitch > 0.01f || input.pitch < -0.01f);
+				input.pitch > 0.01f || input.pitch < -0.01f,
+				m_playerAircraft.GetSpeed(),
+				m_playerAircraft.GetMaximumSpeed());
 		}
 		for (EnemyAircraft& enemy : m_enemyAircraft) {
 			if (enemy.objectIndex >= m_objects.size()) {
