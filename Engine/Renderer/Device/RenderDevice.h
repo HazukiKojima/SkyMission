@@ -43,6 +43,9 @@ namespace Engine {
 	private:
 		static constexpr UINT SrvDescriptorCapacity = 4096;
 		void CreateSceneResources();
+		void CreateSceneRenderTargets();
+		void CreateSceneDepth();
+		void CreateSceneShaderResourceViews();
 		ComPtr<IDXGIFactory4>        m_factory;
 		ComPtr<ID3D12Device>         m_device;
 		ComPtr<ID3D12CommandQueue>   m_commandQueue;

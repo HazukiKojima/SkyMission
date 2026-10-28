@@ -12,14 +12,14 @@
 
 namespace Engine {
 	class Scene;
-	struct SceneAssetPaths;
+	struct SceneDefinition;
 
 	class Renderer {
 	public:
 		Renderer() = default;
 		~Renderer();
 
-		void Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets);
+		void Initialize(HWND hwnd, UINT width, UINT height, const SceneDefinition& assets);
 		void InitializeConstantBuffers(const Scene& scene);
 		void Update(const Scene& scene, float elapsedTime, float deltaSeconds);
 		void Render(UINT width, UINT height, const Scene& scene);
@@ -30,6 +30,10 @@ namespace Engine {
 		std::shared_ptr<Engine::Model> GetEnemyAircraftModel() const { return m_assets.GetEnemyAircraftModel(); }
 
 	private:
+		void RecordScenePass(const Scene& scene);
+		void RecordOceanFogPass();
+		void RecordRetroFilmPass();
+
 		std::unique_ptr<RenderDevice> m_device;
 		std::unique_ptr<CommandContext> m_context;
 

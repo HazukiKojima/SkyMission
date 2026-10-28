@@ -46,6 +46,13 @@ namespace Engine {
 	}
 
 	void AircraftFlightModel::UpdateAttitude(const AircraftInput& input, float deltaSeconds, FlightStepState& state) {
+		CalculateFlightStepState(input, state);
+		const float levelRoll = UpdatePitchAndRoll(input, deltaSeconds, state);
+		UpdateYaw(deltaSeconds, state);
+		UpdateLiftDirection(levelRoll, state);
+	}
+
+	void AircraftFlightModel::CalculateFlightStepState(const AircraftInput& input, FlightStepState& state) const {
 		// 姿勢変更前の速度と機首方向から、迎角や速度依存の操縦性能を求める。
 		const XMFLOAT3 currentForward = GetForwardForAttitude();
 		state.fallbackForward = currentForward;
@@ -71,7 +78,9 @@ namespace Engine {
 		state.turnIntent = std::clamp((std::max)(std::abs(m_turnControl), std::abs(m_yawControl)), 0.0f, 1.0f);
 		state.highGIntensity = input.highGTurn && state.turnIntent > 0.05f ? 1.0f : 0.0f;
 		state.highGTurnFactor = 1.0f + state.highGIntensity * (m_flightParameters.highGTurnMultiplier - 1.0f);
+	}
 
+	float AircraftFlightModel::UpdatePitchAndRoll(const AircraftInput& input, float deltaSeconds, FlightStepState& state) {
 		// 半回転時の角度の曖昧さを避けるため、制御角は連続して更新する。
 		if (std::abs(input.pitch) > 0.01f) {
 			const float pitchDirection = std::cos(m_roll) < 0.0f ? -1.0f : 1.0f;
@@ -108,7 +117,10 @@ namespace Engine {
 		m_roll = std::remainder(
 			m_roll + rollDifference * rollBlend,
 			XM_2PI);
+		return levelRoll;
+	}
 
+	void AircraftFlightModel::UpdateYaw(float deltaSeconds, FlightStepState& state) {
 		state.bankLoad = std::sin(m_roll);
 		const float yawTurnDirection = std::cos(m_pitch) < 0.0f ? -1.0f : 1.0f;
 		const float bankYawRate = state.autoRollCorrection
@@ -121,7 +133,9 @@ namespace Engine {
 		// 制御角から正規化クォータニオンを再生成し、姿勢計算の共通表現とする。
 		XMStoreFloat4(&m_attitude, XMQuaternionNormalize(
 			XMQuaternionRotationRollPitchYaw(m_pitch, m_yaw, m_roll)));
+	}
 
+	void AircraftFlightModel::UpdateLiftDirection(float levelRoll, FlightStepState& state) const {
 		if (state.autoRollCorrection) {
 			// 自動水平化中は、実際のバンク角ではなく水平化した上方向を揚力に使う。
 			const XMMATRIX liftRotation = XMMatrixRotationRollPitchYaw(m_pitch, m_yaw, levelRoll);
