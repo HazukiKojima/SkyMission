@@ -19,7 +19,9 @@ namespace Engine {
 			const DirectX::XMFLOAT3& position,
 			const DirectX::XMFLOAT3& heading,
 			const DirectX::XMFLOAT3& forward,
-			bool pitchInputActive);
+		bool pitchInputActive,
+		float speed,
+		float maximumSpeed);
 
 		// レンダーターゲットのサイズが変わったときに通知する
 		void OnResize(UINT width, UINT height);
@@ -61,12 +63,15 @@ namespace Engine {
 		DirectX::XMFLOAT3 m_followHeading = { 0.0f, 0.0f, -1.0f };
 		DirectX::XMFLOAT3 m_followForward = { 0.0f, 0.0f, -1.0f };
 		bool m_followPitchInputActive = false;
+		float m_followSpeed = 60.0f;
+		float m_followMaximumSpeed = 800.0f;
 		float m_followCameraYaw = 0.0f;
 		float m_followCameraPitch = 0.0f;
 		DirectX::XMFLOAT3 m_followLookAt = { 0.0f, 0.0f, 0.0f };
-		float m_followDistance = 300.0f;
+		float m_followDistance = 250.0f;
+		float m_maxFollowDistance = 450.0f;
 		float m_followHeight = 120.0f;
-		float m_followSmoothing = 70.0f;
+		float m_followSmoothing = 1000.0f;
 		float m_followDirectionSmoothing = 2.0f;
 
 		float m_fovY = DirectX::XM_PIDIV4;

@@ -28,6 +28,12 @@
     <ClCompile Include="Engine\Window\Window.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererConstantBuffers.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\OceanGeometry.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererPipelines.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererAssets.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererFrameUpdater.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererPasses.cpp" />
     <ClCompile Include="Engine\Renderer\Device\Renderer.cpp" />
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
@@ -54,6 +60,12 @@
     <ClInclude Include="Engine\Window\Window.h" />
     <ClInclude Include="Engine\Renderer\Device\CommandContext.h" />
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererConstantBuffers.h" />
+    <ClInclude Include="Engine\Renderer\Device\OceanGeometry.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererPipelines.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererAssets.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererFrameUpdater.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererPasses.h" />
     <ClInclude Include="Engine\Renderer\Device\Renderer.h" />
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h" />
