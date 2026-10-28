@@ -1,4 +1,5 @@
 #include "Engine/Application/Application.h"
+#include "Engine/Core/JsonBenchmark.h"
 #include <string>
 
 namespace {
@@ -16,6 +17,9 @@ namespace {
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	_In_ LPSTR lpCmdLine, _In_ int nCmdShow) {
 	try {
+        if (GetEnvironmentVariableW(L"SKYMISSION_JSON_BENCHMARK", nullptr, 0) > 0) {
+            return Engine::RunJsonBenchmark();
+        }
 		Engine::Application app(hInstance);
 		app.Initialize();
 		return app.Run();

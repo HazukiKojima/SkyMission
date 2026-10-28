@@ -41,6 +41,7 @@
     <ClCompile Include="Engine\Resources\Mesh\Model.cpp" />
     <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp" />
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp" />
+    <ClCompile Include="Engine\Core\JsonBenchmark.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -73,6 +74,8 @@
     <ClInclude Include="Engine\Resources\Mesh\Model.h" />
     <ClInclude Include="Engine\Resources\Mesh\SkySphere.h" />
     <ClInclude Include="Engine\Resources\Texture\Texture.h" />
+    <ClInclude Include="Engine\Core\JsonBenchmark.h" />
+    <ClInclude Include="External\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
