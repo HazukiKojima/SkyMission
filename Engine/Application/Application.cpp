@@ -33,6 +33,8 @@ namespace Engine {
 			m_window->GetHeight(),
 			assets
 		);
+		m_windowTitle = L"SkyMission | GPU: " + m_renderer->GetAdapterName();
+		SetWindowTextW(m_window->GetHandle(), m_windowTitle.c_str());
 
 		m_scene = std::make_unique<Engine::Scene>();
 		m_scene->Initialize(
@@ -102,7 +104,7 @@ namespace Engine {
 		++m_fpsFrameCount;
 		if (m_fpsTimer >= 0.25f) {
 			const float fps = static_cast<float>(m_fpsFrameCount) / m_fpsTimer;
-			std::wstring title = L"SkyMission | FPS: " + std::to_wstring(static_cast<int>(fps + 0.5f));
+			std::wstring title = m_windowTitle + L" | FPS: " + std::to_wstring(static_cast<int>(fps + 0.5f));
 			SetWindowTextW(m_window->GetHandle(), title.c_str());
 			m_fpsTimer = 0.0f;
 			m_fpsFrameCount = 0;

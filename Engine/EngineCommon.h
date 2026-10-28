@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifndef UNICODE
 #define UNICODE
@@ -10,6 +10,8 @@
 #include <wrl/client.h>
 #include <stdexcept>
 #include <memory>
+#include <iomanip>
+#include <sstream>
 #include "../d3dx12.h"
 
 using Microsoft::WRL::ComPtr;
@@ -17,6 +19,9 @@ using Microsoft::WRL::ComPtr;
 // 拡張APIエラーハンドリング用マクロ
 inline void ThrowIfFailed(HRESULT hr) {
 	if (FAILED(hr)) {
-		throw std::runtime_error("DirectX12APIの実行に失敗しました。");
+		std::ostringstream message;
+		message << "DirectX 12 API call failed. HRESULT=0x"
+			<< std::uppercase << std::hex << static_cast<unsigned long>(hr);
+		throw std::runtime_error(message.str());
 	}
 }

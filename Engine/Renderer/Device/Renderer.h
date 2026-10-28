@@ -25,6 +25,7 @@ namespace Engine {
 		void Render(UINT width, UINT height, const Scene& scene);
 		void Resize(UINT width, UINT height);
 		float GetOceanSize() const { return m_frameUpdater.GetOceanSize(); }
+		const std::wstring& GetAdapterName() const { return m_device->GetAdapterName(); }
 		std::shared_ptr<Engine::Model> GetModel() const { return m_assets.GetModel(); }
 		std::shared_ptr<Engine::Model> GetEnemyAircraftModel() const { return m_assets.GetEnemyAircraftModel(); }
 
