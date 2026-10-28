@@ -17,6 +17,7 @@ namespace Engine {
 		ID3D12Device* GetDevice() const { return m_device.Get(); }
 		ID3D12CommandQueue* GetCommandQueue() const { return m_commandQueue.Get(); }
 		IDXGISwapChain3* GetSwapChain() const { return m_swapChain.Get(); }
+		const std::wstring& GetAdapterName() const { return m_adapterName; }
 
 		// SRV 用ディスクリプタヒープから CPU ハンドルを割り当てる
 		D3D12_CPU_DESCRIPTOR_HANDLE AllocateSrvDescriptor(UINT* outIndex = nullptr);
@@ -58,5 +59,6 @@ namespace Engine {
 		UINT                         m_rtvDescriptorSize = 0;
 		UINT                         m_width = 0;
 		UINT                         m_height = 0;
+		std::wstring                 m_adapterName = L"Unknown";
 	};
 }

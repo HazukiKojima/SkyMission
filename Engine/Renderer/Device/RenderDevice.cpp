@@ -16,11 +16,52 @@ namespace Engine {
 #endif
 
 		ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_factory)));
-		ThrowIfFailed(D3D12CreateDevice(
-			nullptr,
-			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&m_device)
-		));
+		HRESULT deviceResult = E_FAIL;
+		ComPtr<IDXGIFactory6> factory6;
+		const bool hasGpuPreferenceApi = SUCCEEDED(m_factory.As(&factory6));
+
+		for (UINT index = 0; ; ++index) {
+			ComPtr<IDXGIAdapter1> adapter;
+			HRESULT adapterResult = hasGpuPreferenceApi
+				? factory6->EnumAdapterByGpuPreference(
+					index,
+					DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+					IID_PPV_ARGS(&adapter))
+				: m_factory->EnumAdapters1(index, &adapter);
+			if (adapterResult == DXGI_ERROR_NOT_FOUND) {
+				break;
+			}
+			ThrowIfFailed(adapterResult);
+
+			DXGI_ADAPTER_DESC1 description = {};
+			ThrowIfFailed(adapter->GetDesc1(&description));
+			if ((description.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0) {
+				continue;
+			}
+
+			deviceResult = D3D12CreateDevice(
+				adapter.Get(),
+				D3D_FEATURE_LEVEL_11_0,
+				IID_PPV_ARGS(&m_device)
+			);
+			if (SUCCEEDED(deviceResult)) {
+				m_adapterName = description.Description;
+				break;
+			}
+		}
+
+		if (FAILED(deviceResult)) {
+			// Hardware adapter が利用できない環境でも起動できるよう WARP を試す。
+			ComPtr<IDXGIAdapter> warpAdapter;
+			ThrowIfFailed(m_factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+			deviceResult = D3D12CreateDevice(
+				warpAdapter.Get(),
+				D3D_FEATURE_LEVEL_11_0,
+				IID_PPV_ARGS(&m_device)
+			);
+			m_adapterName = L"WARP (Software Rasterizer)";
+		}
+		ThrowIfFailed(deviceResult);
 
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;

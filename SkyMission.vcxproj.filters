@@ -58,6 +58,24 @@
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp">
       <Filter>Engine\Renderer\Device</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererPasses.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererFrameUpdater.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererAssets.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererPipelines.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\OceanGeometry.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererConstantBuffers.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp">
       <Filter>Engine\Renderer\Device</Filter>
     </ClCompile>
@@ -108,6 +126,24 @@
       <Filter>Engine\Window</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Renderer\Device\CommandContext.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererPasses.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererFrameUpdater.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererAssets.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererPipelines.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\OceanGeometry.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererConstantBuffers.h">
       <Filter>Engine\Renderer\Device</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h">

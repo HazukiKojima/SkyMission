@@ -26,6 +26,7 @@ namespace Engine {
 		std::unique_ptr<Renderer> m_renderer;
 
 		std::unique_ptr<Engine::Scene> m_scene;
+		std::wstring m_windowTitle = L"SkyMission";
 		// timing
 		float m_elapsedTime = 0.0f;
 		std::chrono::steady_clock::time_point m_lastTime;
