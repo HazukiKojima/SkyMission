@@ -2,6 +2,7 @@
 #include "../Interop/Redox/JsonParametersLoader.h"
 #include "OceanParameters.h"
 #include "SkyParameters.h"
+#include "../../External/REDoxWrapper/Generated/AircraftAIParametersLayout.h"
 #include "../../External/REDoxWrapper/Generated/OceanParametersLayout.h"
 #include "../../External/REDoxWrapper/Generated/SkyParametersLayout.h"
 #include "../Resources/AssetPathResolver.h"
@@ -14,7 +15,9 @@ namespace Engine {
 		const std::filesystem::path& environmentJsonPath,
 		const std::filesystem::path& aircraftJsonPath) const
 	{
-		AssetPathResolver resolver;
+		JsonDocumentCache jsonDocuments;
+		AssetPathResolver resolver(jsonDocuments);
+		JsonParametersLoader parametersLoader(jsonDocuments);
 		const std::filesystem::path skyJsonPath = resolver.Resolve(environmentJsonPath, "sky");
 		const std::filesystem::path oceanJsonPath = resolver.Resolve(environmentJsonPath, "ocean");
 		const std::filesystem::path retroFilmJsonPath = environmentJsonPath.parent_path() / L"retroFilm.json";
@@ -24,25 +27,15 @@ namespace Engine {
 		const float aircraftVisualScale = resolver.ResolveFloat(aircraftConfigJsonPath, "visualScale");
 		const std::filesystem::path enemyAircraftModel = resolver.Resolve(enemyAircraftConfigJsonPath, "model");
 		const float enemyAircraftVisualScale = resolver.ResolveFloat(enemyAircraftConfigJsonPath, "visualScale");
-		const AircraftFlightParameters flightParameters = JsonParametersLoader().Load<AircraftFlightParameters>(
+		const AircraftFlightParameters flightParameters = parametersLoader.Load<AircraftFlightParameters>(
 			resolver.Resolve(aircraftConfigJsonPath, "flightParameters"),
 			"MyRedoxGetAircraftFlightParameters");
-		const AircraftFlightParameters enemyFlightParameters = JsonParametersLoader().Load<AircraftFlightParameters>(
+		const AircraftFlightParameters enemyFlightParameters = parametersLoader.Load<AircraftFlightParameters>(
 			resolver.Resolve(enemyAircraftConfigJsonPath, "flightParameters"),
 			"MyRedoxGetAircraftFlightParameters");
 		const std::filesystem::path enemyAIConfigPath = resolver.Resolve(enemyAircraftConfigJsonPath, "aiParameters");
-		const AircraftAIParameters enemyAIParameters = {
-			resolver.ResolveFloat(enemyAIConfigPath, "directionChangeSeconds"),
-			resolver.ResolveFloat(enemyAIConfigPath, "altitudeChangeSeconds"),
-			resolver.ResolveFloat(enemyAIConfigPath, "lowAltitude"),
-			resolver.ResolveFloat(enemyAIConfigPath, "highAltitude"),
-			resolver.ResolveFloat(enemyAIConfigPath, "pitchLookAheadDistance"),
-			resolver.ResolveFloat(enemyAIConfigPath, "turnGain"),
-			resolver.ResolveFloat(enemyAIConfigPath, "pitchGain"),
-			resolver.ResolveFloat(enemyAIConfigPath, "speedMatchGain"),
-			resolver.ResolveFloat(enemyAIConfigPath, "highGManeuverIntervalSeconds"),
-			resolver.ResolveFloat(enemyAIConfigPath, "highGManeuverDurationSeconds")
-		};
+		const AircraftAIParameters enemyAIParameters = parametersLoader.Load<AircraftAIParameters>(
+			enemyAIConfigPath, "MyRedoxGetAircraftAIParameters");
 		if (!std::isfinite(aircraftVisualScale) || aircraftVisualScale <= 0.0f) {
 			throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
 		}
@@ -62,11 +55,11 @@ namespace Engine {
 			enemyAIParameters.highGManeuverDurationSeconds > enemyAIParameters.highGManeuverIntervalSeconds) {
 			throw std::runtime_error("Enemy aircraft AI parameters are outside their valid ranges.");
 		}
-		const OceanParameters oceanParameters = JsonParametersLoader().Load<OceanParameters>(
+		const OceanParameters oceanParameters = parametersLoader.Load<OceanParameters>(
 			oceanJsonPath, "MyRedoxGetOceanParameters");
-		const SkyParameters skyParameters = JsonParametersLoader().Load<SkyParameters>(
+		const SkyParameters skyParameters = parametersLoader.Load<SkyParameters>(
 			skyJsonPath, "MyRedoxGetSkyParameters");
-		const RetroFilmParameters retroFilmParameters = JsonParametersLoader().Load<RetroFilmParameters>(
+		const RetroFilmParameters retroFilmParameters = parametersLoader.Load<RetroFilmParameters>(
 			retroFilmJsonPath, "MyRedoxGetRetroFilmParameters");
 		const OceanSettings ocean = {
 			oceanParameters.size, oceanParameters.waveLength, oceanParameters.waveSteepness,

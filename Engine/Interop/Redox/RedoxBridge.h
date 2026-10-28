@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <map>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <system_error>
@@ -38,6 +40,21 @@ namespace Engine {
 		return json;
 	}
 
+	class JsonFileCache {
+	public:
+		const std::vector<char>& Read(const std::filesystem::path& jsonPath)
+		{
+			auto found = m_files.find(jsonPath);
+			if (found == m_files.end()) {
+				found = m_files.emplace(jsonPath, ReadJsonFile(jsonPath)).first;
+			}
+			return found->second;
+		}
+
+	private:
+		std::map<std::filesystem::path, std::vector<char>> m_files;
+	};
+
 	class RedoxModule {
 	public:
 		static FARPROC GetFunction(const char* entryPoint)
@@ -63,5 +80,96 @@ namespace Engine {
 			}();
 			return module;
 		}
+	};
+
+	// NativeAOT側の文書ハンドルを所有する移動専用型。
+	// RedoxModuleはプロセス終了までDLLを保持するため、ハンドルは必ずDLLの寿命内に解放される。
+	class RedoxDocument {
+	public:
+		RedoxDocument() = default;
+		explicit RedoxDocument(const std::vector<char>& json)
+		{
+			using CreateDocument = int(__cdecl*)(const unsigned char*, int, std::intptr_t*);
+			auto createDocument = reinterpret_cast<CreateDocument>(
+				RedoxModule::GetFunction("MyRedoxCreateDocument"));
+			const int result = createDocument(
+				reinterpret_cast<const unsigned char*>(json.data()),
+				static_cast<int>(json.size()),
+				&m_handle);
+			if (result != 0 || m_handle == 0) {
+				m_handle = 0;
+				throw std::runtime_error(
+					"Failed to parse JSON document. REDox error code: " + std::to_string(result));
+			}
+		}
+
+		~RedoxDocument() { Reset(); }
+		RedoxDocument(const RedoxDocument&) = delete;
+		RedoxDocument& operator=(const RedoxDocument&) = delete;
+
+		RedoxDocument(RedoxDocument&& other) noexcept : m_handle(other.m_handle)
+		{
+			other.m_handle = 0;
+		}
+
+		RedoxDocument& operator=(RedoxDocument&& other) noexcept
+		{
+			if (this != &other) {
+				Reset();
+				m_handle = other.m_handle;
+				other.m_handle = 0;
+			}
+			return *this;
+		}
+
+		std::intptr_t GetHandle() const { return m_handle; }
+
+	private:
+		void Reset() noexcept
+		{
+			if (m_handle == 0) {
+				return;
+			}
+
+			try {
+				using ReleaseDocument = int(__cdecl*)(std::intptr_t);
+				const auto releaseDocument = reinterpret_cast<ReleaseDocument>(
+					RedoxModule::GetFunction("MyRedoxReleaseDocument"));
+				releaseDocument(m_handle);
+			}
+			catch (...) {
+				// デストラクタから例外を送出しない。DLLはプロセス終了まで保持される。
+			}
+			m_handle = 0;
+		}
+
+		std::intptr_t m_handle = 0;
+	};
+
+	// SceneLoader::Loadごとに作成するキャッシュ。キーは絶対・字句正規化済みパスで、
+	// 読み込み中のファイル変更は反映せず、キャッシュ破棄時に全ハンドルを解放する。
+	class JsonDocumentCache {
+	public:
+		const RedoxDocument& Get(const std::filesystem::path& jsonPath)
+		{
+			const std::filesystem::path key = Normalize(jsonPath);
+			auto found = m_documents.find(key);
+			if (found == m_documents.end()) {
+				const std::vector<char>& json = m_files.Read(key);
+				found = m_documents.emplace(key, RedoxDocument(json)).first;
+			}
+			return found->second;
+		}
+
+	private:
+		static std::filesystem::path Normalize(const std::filesystem::path& path)
+		{
+			std::error_code error;
+			const std::filesystem::path absolute = std::filesystem::absolute(path, error);
+			return (error ? path : absolute).lexically_normal();
+		}
+
+		JsonFileCache m_files;
+		std::map<std::filesystem::path, RedoxDocument> m_documents;
 	};
 }
