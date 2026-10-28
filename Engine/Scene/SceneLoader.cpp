@@ -13,14 +13,15 @@
 namespace Engine {
 	SceneDefinition SceneLoader::Load(const SceneSourcePaths& paths) const
 	{
-		JsonFileCache jsonFiles;
-		AssetPathResolver resolver(jsonFiles);
-		JsonParametersLoader parametersLoader(jsonFiles);
+		JsonDocumentCache jsonDocuments;
+		AssetPathResolver resolver(jsonDocuments);
+		JsonParametersLoader parametersLoader(jsonDocuments);
 		const std::filesystem::path skyJsonPath = resolver.Resolve(paths.environment, "sky");
 		const std::filesystem::path oceanJsonPath = resolver.Resolve(paths.environment, "ocean");
+		const std::filesystem::path retroFilmJsonPath = paths.retroFilm;
 
-		const std::filesystem::path& aircraftConfigJsonPath = paths.playerAircraft;
-		const std::filesystem::path& enemyAircraftConfigJsonPath = paths.enemyAircraft;
+		const std::filesystem::path aircraftConfigJsonPath = paths.playerAircraft;
+		const std::filesystem::path enemyAircraftConfigJsonPath = paths.enemyAircraft;
 		const float aircraftVisualScale = resolver.ResolveFloat(aircraftConfigJsonPath, "visualScale");
 		const std::filesystem::path enemyAircraftModel = resolver.Resolve(enemyAircraftConfigJsonPath, "model");
 		const float enemyAircraftVisualScale = resolver.ResolveFloat(enemyAircraftConfigJsonPath, "visualScale");
@@ -57,7 +58,7 @@ namespace Engine {
 		const SkyParameters skyParameters = parametersLoader.Load<SkyParameters>(
 			skyJsonPath, "MyRedoxGetSkyParameters");
 		const RetroFilmParameters retroFilmParameters = parametersLoader.Load<RetroFilmParameters>(
-			paths.retroFilm, "MyRedoxGetRetroFilmParameters");
+			retroFilmJsonPath, "MyRedoxGetRetroFilmParameters");
 		const OceanSettings ocean = {
 			oceanParameters.size, oceanParameters.waveLength, oceanParameters.waveSteepness,
 			oceanParameters.normalUvScale, oceanParameters.wavePatternUvScale,
@@ -73,17 +74,17 @@ namespace Engine {
 			{ skyParameters.ambientColor[0], skyParameters.ambientColor[1], skyParameters.ambientColor[2] }
 		};
 
-		SceneDefinition scene;
-		scene.skyTexture = resolver.Resolve(skyJsonPath, "texture");
-		scene.oceanTexture = resolver.Resolve(oceanJsonPath, "texture");
-		scene.oceanNormalTexture = resolver.Resolve(oceanJsonPath, "normal");
-		scene.oceanNormalTexture2 = resolver.Resolve(oceanJsonPath, "normal2");
-		scene.playerAircraft = { resolver.Resolve(aircraftConfigJsonPath, "model"), aircraftVisualScale, flightParameters };
-		scene.enemyAircraft = { enemyAircraftModel, enemyAircraftVisualScale, enemyFlightParameters };
-		scene.enemyAIParameters = enemyAIParameters;
-		scene.ocean = ocean;
-		scene.sky = sky;
-		scene.retroFilm = retroFilmParameters;
-		return scene;
+		return {
+			resolver.Resolve(skyJsonPath, "texture"),
+			resolver.Resolve(oceanJsonPath, "texture"),
+			resolver.Resolve(oceanJsonPath, "normal"),
+			resolver.Resolve(oceanJsonPath, "normal2"),
+			{ resolver.Resolve(aircraftConfigJsonPath, "model"), aircraftVisualScale, flightParameters },
+			{ enemyAircraftModel, enemyAircraftVisualScale, enemyFlightParameters },
+			enemyAIParameters,
+			ocean,
+			sky,
+			retroFilmParameters
+		};
 	}
 }

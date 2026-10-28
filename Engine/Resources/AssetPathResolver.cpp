@@ -6,15 +6,13 @@
 namespace Engine {
 	namespace {
 		using RedoxGetString = int(__cdecl*)(
-			const unsigned char*,
-			int,
+			std::intptr_t,
 			const unsigned char*,
 			int,
 			unsigned char*,
 			int);
 		using RedoxGetFloatArray = int(__cdecl*)(
-			const unsigned char*,
-			int,
+			std::intptr_t,
 			const unsigned char*,
 			int,
 			float*,
@@ -25,16 +23,17 @@ namespace Engine {
 		const std::filesystem::path& jsonPath,
 		const std::string& key) const
 	{
-		const std::vector<char> jsonStorage = m_files ? std::vector<char>() : ReadJsonFile(jsonPath);
-		const std::vector<char>& json = m_files ? m_files->Read(jsonPath) : jsonStorage;
+		const std::vector<char> jsonStorage = m_files || m_documents ? std::vector<char>() : ReadJsonFile(jsonPath);
+		const RedoxDocument transientDocument = m_documents
+			? RedoxDocument()
+			: RedoxDocument(m_files ? m_files->Read(jsonPath) : jsonStorage);
+		const RedoxDocument& document = m_documents ? m_documents->Get(jsonPath) : transientDocument;
 
 		auto getString = reinterpret_cast<RedoxGetString>(
-			RedoxModule::GetFunction("MyRedoxGetString"));
+			RedoxModule::GetFunction("MyRedoxGetStringFromDocument"));
 
 		unsigned char output[4096] = {};
-		const int result = getString(
-			reinterpret_cast<const unsigned char*>(json.data()),
-			static_cast<int>(json.size()),
+		const int result = getString(document.GetHandle(),
 			reinterpret_cast<const unsigned char*>(key.data()),
 			static_cast<int>(key.size()),
 			output,
@@ -54,16 +53,17 @@ namespace Engine {
 		const std::filesystem::path& jsonPath,
 		const std::string& key) const
 	{
-		const std::vector<char> jsonStorage = m_files ? std::vector<char>() : ReadJsonFile(jsonPath);
-		const std::vector<char>& json = m_files ? m_files->Read(jsonPath) : jsonStorage;
+		const std::vector<char> jsonStorage = m_files || m_documents ? std::vector<char>() : ReadJsonFile(jsonPath);
+		const RedoxDocument transientDocument = m_documents
+			? RedoxDocument()
+			: RedoxDocument(m_files ? m_files->Read(jsonPath) : jsonStorage);
+		const RedoxDocument& document = m_documents ? m_documents->Get(jsonPath) : transientDocument;
 
 		auto getFloatArray = reinterpret_cast<RedoxGetFloatArray>(
-			RedoxModule::GetFunction("MyRedoxGetFloatArray"));
+			RedoxModule::GetFunction("MyRedoxGetFloatArrayFromDocument"));
 
 		std::vector<float> output(3);
-		const int result = getFloatArray(
-			reinterpret_cast<const unsigned char*>(json.data()),
-			static_cast<int>(json.size()),
+		const int result = getFloatArray(document.GetHandle(),
 			reinterpret_cast<const unsigned char*>(key.data()),
 			static_cast<int>(key.size()),
 			output.data(),

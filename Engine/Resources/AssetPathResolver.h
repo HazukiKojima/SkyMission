@@ -6,11 +6,13 @@
 
 namespace Engine {
 	class JsonFileCache;
+	class JsonDocumentCache;
 
 	class AssetPathResolver {
 	public:
 		AssetPathResolver() = default;
 		explicit AssetPathResolver(JsonFileCache& files) : m_files(&files) {}
+		explicit AssetPathResolver(JsonDocumentCache& documents) : m_documents(&documents) {}
 
 		std::filesystem::path Resolve(
 			const std::filesystem::path& jsonPath,
@@ -24,5 +26,6 @@ namespace Engine {
 
 	private:
 		JsonFileCache* m_files = nullptr;
+		JsonDocumentCache* m_documents = nullptr;
 	};
 }
