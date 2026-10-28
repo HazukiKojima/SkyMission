@@ -1,7 +1,6 @@
 #pragma once
 #include "../Camera/Camera.h"
 #include "../Aircraft/AircraftAIController.h"
-#include "../Aircraft/AircraftController.h"
 #include "../Aircraft/PlayerAircraft.h"
 #include "../Resources/Mesh/Model.h"
 #include <DirectXMath.h>
@@ -36,20 +35,17 @@ namespace Engine {
 	class Scene {
 	public:
 		void Initialize(HWND hwnd, float aspect, float nearZ, float farZ);
-		void Update(float deltaSeconds);
+		void Update(const AircraftInput& input, float deltaSeconds);
 		void OnResize(UINT width, UINT height);
 
-		Camera& GetCamera() { return m_camera; }
 		const Camera& GetCamera() const { return m_camera; }
 		float GetPlayerAircraftSpeed() const { return m_playerAircraft.GetSpeed(); }
-		SceneEnvironment& GetEnvironment() { return m_environment; }
 		const SceneEnvironment& GetEnvironment() const { return m_environment; }
 		void SetEnvironment(const SceneEnvironment& environment) { m_environment = environment; }
 		void SetPlayerAircraftVisualScale(float scale) { m_playerAircraftVisualScale = scale; }
 		void SetPlayerAircraftFlightParameters(const AircraftFlightParameters& parameters) {
 			m_playerAircraft.SetFlightParameters(parameters);
 		}
-		std::vector<SceneObject>& GetObjects() { return m_objects; }
 		const std::vector<SceneObject>& GetObjects() const { return m_objects; }
 		void AddPlayerObject(std::shared_ptr<Model> model);
 		void AddEnemyAircraft(
@@ -76,7 +72,6 @@ namespace Engine {
 		std::vector<SceneObject> m_objects;
 		std::vector<EnemyAircraft> m_enemyAircraft;
 		AircraftFlightModel m_playerAircraft;
-		AircraftController m_aircraftController;
 		std::size_t m_playerObjectIndex = static_cast<std::size_t>(-1);
 		float m_playerAircraftVisualScale = 1.0f;
 	};

@@ -337,7 +337,12 @@ namespace Engine {
 	// ============================================================
 
 	void RenderDevice::CreateSceneResources() {
+		CreateSceneRenderTargets();
+		CreateSceneDepth();
+		CreateSceneShaderResourceViews();
+	}
 
+	void RenderDevice::CreateSceneRenderTargets() {
 		CD3DX12_HEAP_PROPERTIES heapProps(
 			D3D12_HEAP_TYPE_DEFAULT
 		);
@@ -425,7 +430,10 @@ namespace Engine {
 			postProcessRtv.ptr += static_cast<SIZE_T>(FrameCount * 2 + i) * m_rtvDescriptorSize;
 			m_device->CreateRenderTargetView(m_postProcessRenderTargets[i].Get(), nullptr, postProcessRtv);
 		}
+	}
 
+	void RenderDevice::CreateSceneDepth() {
+		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		// ========================================================
 		// Scene Depth
 		// ========================================================
@@ -468,7 +476,9 @@ namespace Engine {
 			&dsv,
 			GetDsvHandle()
 		);
+	}
 
+	void RenderDevice::CreateSceneShaderResourceViews() {
 		D3D12_SHADER_RESOURCE_VIEW_DESC colorSrv = {};
 		colorSrv.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		colorSrv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;

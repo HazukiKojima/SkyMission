@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <system_error>
@@ -37,6 +38,21 @@ namespace Engine {
 		}
 		return json;
 	}
+
+	class JsonFileCache {
+	public:
+		const std::vector<char>& Read(const std::filesystem::path& jsonPath)
+		{
+			auto found = m_files.find(jsonPath);
+			if (found == m_files.end()) {
+				found = m_files.emplace(jsonPath, ReadJsonFile(jsonPath)).first;
+			}
+			return found->second;
+		}
+
+	private:
+		std::map<std::filesystem::path, std::vector<char>> m_files;
+	};
 
 	class RedoxModule {
 	public:

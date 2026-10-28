@@ -2,6 +2,7 @@
 #include "../Interop/Redox/JsonParametersLoader.h"
 #include "OceanParameters.h"
 #include "SkyParameters.h"
+#include "../../External/REDoxWrapper/Generated/AircraftAIParametersLayout.h"
 #include "../../External/REDoxWrapper/Generated/OceanParametersLayout.h"
 #include "../../External/REDoxWrapper/Generated/SkyParametersLayout.h"
 #include "../Resources/AssetPathResolver.h"
@@ -10,39 +11,28 @@
 #include <vector>
 
 namespace Engine {
-	SceneAssetPaths SceneLoader::LoadAssets(
-		const std::filesystem::path& environmentJsonPath,
-		const std::filesystem::path& aircraftJsonPath) const
+	SceneDefinition SceneLoader::Load(const SceneSourcePaths& paths) const
 	{
-		AssetPathResolver resolver;
-		const std::filesystem::path skyJsonPath = resolver.Resolve(environmentJsonPath, "sky");
-		const std::filesystem::path oceanJsonPath = resolver.Resolve(environmentJsonPath, "ocean");
-		const std::filesystem::path retroFilmJsonPath = environmentJsonPath.parent_path() / L"retroFilm.json";
+		JsonFileCache jsonFiles;
+		AssetPathResolver resolver(jsonFiles);
+		JsonParametersLoader parametersLoader(jsonFiles);
+		const std::filesystem::path skyJsonPath = resolver.Resolve(paths.environment, "sky");
+		const std::filesystem::path oceanJsonPath = resolver.Resolve(paths.environment, "ocean");
 
-		const std::filesystem::path aircraftConfigJsonPath = aircraftJsonPath.parent_path() / L"N1K2JShidenKai/N1K2JShidenKai.json";
-		const std::filesystem::path enemyAircraftConfigJsonPath = aircraftJsonPath.parent_path() / L"F4U4Corsair/F4U4Corsair.json";
+		const std::filesystem::path& aircraftConfigJsonPath = paths.playerAircraft;
+		const std::filesystem::path& enemyAircraftConfigJsonPath = paths.enemyAircraft;
 		const float aircraftVisualScale = resolver.ResolveFloat(aircraftConfigJsonPath, "visualScale");
 		const std::filesystem::path enemyAircraftModel = resolver.Resolve(enemyAircraftConfigJsonPath, "model");
 		const float enemyAircraftVisualScale = resolver.ResolveFloat(enemyAircraftConfigJsonPath, "visualScale");
-		const AircraftFlightParameters flightParameters = JsonParametersLoader().Load<AircraftFlightParameters>(
+		const AircraftFlightParameters flightParameters = parametersLoader.Load<AircraftFlightParameters>(
 			resolver.Resolve(aircraftConfigJsonPath, "flightParameters"),
 			"MyRedoxGetAircraftFlightParameters");
-		const AircraftFlightParameters enemyFlightParameters = JsonParametersLoader().Load<AircraftFlightParameters>(
+		const AircraftFlightParameters enemyFlightParameters = parametersLoader.Load<AircraftFlightParameters>(
 			resolver.Resolve(enemyAircraftConfigJsonPath, "flightParameters"),
 			"MyRedoxGetAircraftFlightParameters");
 		const std::filesystem::path enemyAIConfigPath = resolver.Resolve(enemyAircraftConfigJsonPath, "aiParameters");
-		const AircraftAIParameters enemyAIParameters = {
-			resolver.ResolveFloat(enemyAIConfigPath, "directionChangeSeconds"),
-			resolver.ResolveFloat(enemyAIConfigPath, "altitudeChangeSeconds"),
-			resolver.ResolveFloat(enemyAIConfigPath, "lowAltitude"),
-			resolver.ResolveFloat(enemyAIConfigPath, "highAltitude"),
-			resolver.ResolveFloat(enemyAIConfigPath, "pitchLookAheadDistance"),
-			resolver.ResolveFloat(enemyAIConfigPath, "turnGain"),
-			resolver.ResolveFloat(enemyAIConfigPath, "pitchGain"),
-			resolver.ResolveFloat(enemyAIConfigPath, "speedMatchGain"),
-			resolver.ResolveFloat(enemyAIConfigPath, "highGManeuverIntervalSeconds"),
-			resolver.ResolveFloat(enemyAIConfigPath, "highGManeuverDurationSeconds")
-		};
+		const AircraftAIParameters enemyAIParameters = parametersLoader.Load<AircraftAIParameters>(
+			enemyAIConfigPath, "MyRedoxGetAircraftAIParameters");
 		if (!std::isfinite(aircraftVisualScale) || aircraftVisualScale <= 0.0f) {
 			throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
 		}
@@ -62,12 +52,12 @@ namespace Engine {
 			enemyAIParameters.highGManeuverDurationSeconds > enemyAIParameters.highGManeuverIntervalSeconds) {
 			throw std::runtime_error("Enemy aircraft AI parameters are outside their valid ranges.");
 		}
-		const OceanParameters oceanParameters = JsonParametersLoader().Load<OceanParameters>(
+		const OceanParameters oceanParameters = parametersLoader.Load<OceanParameters>(
 			oceanJsonPath, "MyRedoxGetOceanParameters");
-		const SkyParameters skyParameters = JsonParametersLoader().Load<SkyParameters>(
+		const SkyParameters skyParameters = parametersLoader.Load<SkyParameters>(
 			skyJsonPath, "MyRedoxGetSkyParameters");
-		const RetroFilmParameters retroFilmParameters = JsonParametersLoader().Load<RetroFilmParameters>(
-			retroFilmJsonPath, "MyRedoxGetRetroFilmParameters");
+		const RetroFilmParameters retroFilmParameters = parametersLoader.Load<RetroFilmParameters>(
+			paths.retroFilm, "MyRedoxGetRetroFilmParameters");
 		const OceanSettings ocean = {
 			oceanParameters.size, oceanParameters.waveLength, oceanParameters.waveSteepness,
 			oceanParameters.normalUvScale, oceanParameters.wavePatternUvScale,
@@ -83,21 +73,17 @@ namespace Engine {
 			{ skyParameters.ambientColor[0], skyParameters.ambientColor[1], skyParameters.ambientColor[2] }
 		};
 
-		return {
-			resolver.Resolve(skyJsonPath, "texture"),
-			resolver.Resolve(oceanJsonPath, "texture"),
-			resolver.Resolve(oceanJsonPath, "normal"),
-			resolver.Resolve(oceanJsonPath, "normal2"),
-			resolver.Resolve(aircraftConfigJsonPath, "model"),
-			enemyAircraftModel,
-			aircraftVisualScale,
-			enemyAircraftVisualScale,
-			flightParameters,
-			enemyFlightParameters,
-			enemyAIParameters,
-			ocean,
-			sky,
-			retroFilmParameters
-		};
+		SceneDefinition scene;
+		scene.skyTexture = resolver.Resolve(skyJsonPath, "texture");
+		scene.oceanTexture = resolver.Resolve(oceanJsonPath, "texture");
+		scene.oceanNormalTexture = resolver.Resolve(oceanJsonPath, "normal");
+		scene.oceanNormalTexture2 = resolver.Resolve(oceanJsonPath, "normal2");
+		scene.playerAircraft = { resolver.Resolve(aircraftConfigJsonPath, "model"), aircraftVisualScale, flightParameters };
+		scene.enemyAircraft = { enemyAircraftModel, enemyAircraftVisualScale, enemyFlightParameters };
+		scene.enemyAIParameters = enemyAIParameters;
+		scene.ocean = ocean;
+		scene.sky = sky;
+		scene.retroFilm = retroFilmParameters;
+		return scene;
 	}
 }

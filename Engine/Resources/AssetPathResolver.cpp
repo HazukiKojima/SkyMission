@@ -25,7 +25,8 @@ namespace Engine {
 		const std::filesystem::path& jsonPath,
 		const std::string& key) const
 	{
-		const std::vector<char> json = ReadJsonFile(jsonPath);
+		const std::vector<char> jsonStorage = m_files ? std::vector<char>() : ReadJsonFile(jsonPath);
+		const std::vector<char>& json = m_files ? m_files->Read(jsonPath) : jsonStorage;
 
 		auto getString = reinterpret_cast<RedoxGetString>(
 			RedoxModule::GetFunction("MyRedoxGetString"));
@@ -53,7 +54,8 @@ namespace Engine {
 		const std::filesystem::path& jsonPath,
 		const std::string& key) const
 	{
-		const std::vector<char> json = ReadJsonFile(jsonPath);
+		const std::vector<char> jsonStorage = m_files ? std::vector<char>() : ReadJsonFile(jsonPath);
+		const std::vector<char>& json = m_files ? m_files->Read(jsonPath) : jsonStorage;
 
 		auto getFloatArray = reinterpret_cast<RedoxGetFloatArray>(
 			RedoxModule::GetFunction("MyRedoxGetFloatArray"));
@@ -68,7 +70,7 @@ namespace Engine {
 			static_cast<int>(output.size()));
 		if (result < 0) {
 			throw std::runtime_error(
-				"Failed to read numeric value from environment JSON. REDox error code: " + std::to_string(result));
+				"Failed to read numeric value from JSON. REDox error code: " + std::to_string(result));
 		}
 
 		output.resize(static_cast<size_t>(result));
@@ -81,7 +83,7 @@ namespace Engine {
 	{
 		const std::vector<float> values = ResolveFloatArray(jsonPath, key);
 		if (values.size() != 1) {
-			throw std::runtime_error("Environment JSON value is not a number.");
+			throw std::runtime_error("JSON value is not a number.");
 		}
 		return values.front();
 	}

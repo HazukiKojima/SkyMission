@@ -43,6 +43,18 @@
     <Filter Include="Engine\Resources\Texture">
       <UniqueIdentifier>{34ae2c3c-d26a-4887-b6c8-36809e90687f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Interop">
+      <UniqueIdentifier>{7dc9c04a-fd60-4ed7-a4e0-b677d007da6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Interop\REDox">
+      <UniqueIdentifier>{83083dbb-fd2f-452f-be81-c13e971f15a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Asset">
+      <UniqueIdentifier>{ab5cea78-7a10-4063-b05c-db0756d388bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Asset\Json">
+      <UniqueIdentifier>{8605be24-9328-477c-b36d-eb33331310ca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Application\Application.cpp">
@@ -106,8 +118,12 @@
     <ClCompile Include="Engine\Scene\SceneLoader.cpp">
       <Filter>Engine\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp" />
-    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp" />
+    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp">
+      <Filter>Engine\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp">
+      <Filter>Engine\Aircraft</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Application\Application.h">
@@ -179,25 +195,65 @@
     <ClInclude Include="Engine\Scene\SceneLoader.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Resources\AssetPathResolver.h" />
-    <ClInclude Include="Engine\Scene\OceanParameters.h" />
-    <ClInclude Include="Engine\Scene\SkyParameters.h" />
-    <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h" />
-    <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h" />
-    <ClInclude Include="Engine\Aircraft\AircraftAIController.h" />
+    <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h">
+      <Filter>Engine\Interop\REDox</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h">
+      <Filter>Engine\Interop\REDox</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\AssetPathResolver.h">
+      <Filter>Engine\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Aircraft\AircraftAIController.h">
+      <Filter>Engine\Aircraft</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Scene\OceanParameters.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Scene\SkyParameters.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Engine\Renderer\Shader\Common.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
-    <None Include="Assets\Aircraft\F16\flightParameters.json" />
-    <None Include="Assets\Environment\retroFilm.json" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
-    <None Include="Assets\Aircraft\F4U4Corsair\F4U4Corsair.json" />
-    <None Include="Assets\Aircraft\F4U4Corsair\aiParameters.json" />
-    <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json" />
+    <None Include="Assets\Aircraft\F4U4Corsair\aiParameters.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Aircraft\F16\flightParameters.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Environment\retroFilm.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Aircraft\F4U4Corsair\F4U4Corsair.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Aircraft\N1K2JShidenKai\N1K2JShidenKai.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Environment\Sky\sky.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Aircraft\N1K2JShidenKai\flightParameters.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Environment\environment.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Environment\Ocean\Ocean.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
+    <None Include="Assets\Aircraft\aircraft.json">
+      <Filter>Engine\Asset\Json</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

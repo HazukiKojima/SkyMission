@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -13,14 +12,12 @@ public static unsafe class REDoxApi
     private const int InvalidArguments = -1;
     private const int InvalidJson = -2;
     private const int InvalidSchema = -3;
-    private const int DeserializationFailed = -4;
     private const int InvalidValue = -5;
     private const int UnexpectedFailure = -6;
 
     [UnmanagedCallersOnly(
         EntryPoint = "MyRedoxGetAircraftFlightParameters",
         CallConvs = new[] { typeof(CallConvCdecl) })]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(GeneratedAircraftFlightParameters))]
     public static int MyRedoxGetAircraftFlightParameters(
         byte* jsonUtf8,
         int jsonLength,
@@ -29,23 +26,23 @@ public static unsafe class REDoxApi
     {
         return ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
             GeneratedAircraftFlightParameters.FieldNames,
-            GeneratedAircraftFlightParameters.FieldLengths,
-            json => JsonSerializer.Deserialize<GeneratedAircraftFlightParameters>(json)?.ToFloatArray());
+            GeneratedAircraftFlightParameters.FieldLengths);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetAircraftAIParameters", CallConvs = new[] { typeof(CallConvCdecl) })]
+    public static int MyRedoxGetAircraftAIParameters(byte* jsonUtf8, int jsonLength, float* output, int outputCapacity) =>
+        ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
+            GeneratedAircraftAIParameters.FieldNames, GeneratedAircraftAIParameters.FieldLengths);
+
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetOceanParameters", CallConvs = new[] { typeof(CallConvCdecl) })]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(GeneratedOceanParameters))]
     public static int MyRedoxGetOceanParameters(byte* jsonUtf8, int jsonLength, float* output, int outputCapacity) =>
         ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
-            GeneratedOceanParameters.FieldNames, GeneratedOceanParameters.FieldLengths,
-            json => JsonSerializer.Deserialize<GeneratedOceanParameters>(json)?.ToFloatArray());
+            GeneratedOceanParameters.FieldNames, GeneratedOceanParameters.FieldLengths);
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetSkyParameters", CallConvs = new[] { typeof(CallConvCdecl) })]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(GeneratedSkyParameters))]
     public static int MyRedoxGetSkyParameters(byte* jsonUtf8, int jsonLength, float* output, int outputCapacity) =>
         ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
-            GeneratedSkyParameters.FieldNames, GeneratedSkyParameters.FieldLengths,
-            json => JsonSerializer.Deserialize<GeneratedSkyParameters>(json)?.ToFloatArray());
+            GeneratedSkyParameters.FieldNames, GeneratedSkyParameters.FieldLengths);
 
     [UnmanagedCallersOnly(
         EntryPoint = "MyRedoxGetRetroFilmParameters",
@@ -182,7 +179,7 @@ public static unsafe class REDoxApi
 
     private static int ReadParameters(
         byte* jsonUtf8, int jsonLength, float* output, int outputCapacity,
-        string[] fieldNames, int[] fieldLengths, Func<string, float[]?> deserialize)
+        string[] fieldNames, int[] fieldLengths)
     {
         if (jsonUtf8 == null || jsonLength <= 0 || output == null ||
             outputCapacity <= 0 || fieldNames.Length != fieldLengths.Length ||
@@ -219,41 +216,45 @@ public static unsafe class REDoxApi
                 return InvalidSchema;
             }
 
+            // RE:Doxのパース結果を検証しながら直接float列へ展開する。
+            // JsonSerializerによる二度目の解析と中間オブジェクトの生成を避ける。
+            Span<float> values = outputCapacity <= 256
+                ? stackalloc float[outputCapacity]
+                : new float[outputCapacity];
+            int valueIndex = 0;
             for (int index = 0; index < fieldNames.Length; index++)
             {
                 if (!root.TryGetProperty(fieldNames[index], out var value) ||
-                    !HasFiniteNumbers(value, fieldLengths[index]))
+                    !AppendFiniteNumbers(value, fieldLengths[index], values, ref valueIndex))
                 {
                     return InvalidValue;
                 }
             }
 
-            float[]? values;
-            try
-            {
-                values = deserialize(json);
-            }
-            catch
-            {
-                return DeserializationFailed;
-            }
-
-            if (values == null || values.Length != outputCapacity || values.Any(value => !float.IsFinite(value)))
+            if (valueIndex != outputCapacity)
             {
                 return InvalidValue;
             }
 
-            values.AsSpan().CopyTo(new Span<float>(output, outputCapacity));
-            return values.Length;
+            values.CopyTo(new Span<float>(output, outputCapacity));
+            return valueIndex;
         }
     }
 
-    private static bool HasFiniteNumbers(REDox.DElement value, int length)
+    private static bool AppendFiniteNumbers(
+        REDox.DElement value, int length, Span<float> values, ref int valueIndex)
     {
         if (length == 1)
         {
-            if (value.ValueKind != JsonValueKind.Number || !value.TryGetSingle(out float number)) return false;
-            return float.IsFinite(number);
+            if (value.ValueKind != JsonValueKind.Number ||
+                !value.TryGetSingle(out float number) ||
+                !float.IsFinite(number))
+            {
+                return false;
+            }
+
+            values[valueIndex++] = number;
+            return true;
         }
 
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != length) return false;
@@ -261,6 +262,8 @@ public static unsafe class REDoxApi
         {
             if (element.ValueKind != JsonValueKind.Number || !element.TryGetSingle(out float number) ||
                 !float.IsFinite(number)) return false;
+
+            values[valueIndex++] = number;
         }
         return true;
     }

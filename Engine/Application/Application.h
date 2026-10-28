@@ -1,5 +1,6 @@
 #pragma once
 #include "../EngineCommon.h"
+#include "../Aircraft/AircraftController.h"
 #include "../Scene/Scene.h"
 #include <chrono>
 
@@ -26,6 +27,7 @@ namespace Engine {
 		std::unique_ptr<Renderer> m_renderer;
 
 		std::unique_ptr<Engine::Scene> m_scene;
+		AircraftController m_aircraftController;
 		std::wstring m_windowTitle = L"SkyMission";
 		// timing
 		float m_elapsedTime = 0.0f;

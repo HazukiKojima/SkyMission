@@ -28,17 +28,26 @@ namespace Engine {
 		DirectX::XMFLOAT3 ambientColor;
 	};
 
-	struct SceneAssetPaths {
+	struct SceneSourcePaths {
+		std::filesystem::path environment;
+		std::filesystem::path playerAircraft;
+		std::filesystem::path enemyAircraft;
+		std::filesystem::path retroFilm;
+	};
+
+	struct AircraftDefinition {
+		std::filesystem::path model;
+		float visualScale = 1.0f;
+		AircraftFlightParameters flightParameters;
+	};
+
+	struct SceneDefinition {
 		std::filesystem::path skyTexture;
 		std::filesystem::path oceanTexture;
 		std::filesystem::path oceanNormalTexture;
 		std::filesystem::path oceanNormalTexture2;
-		std::filesystem::path aircraftModel;
-		std::filesystem::path enemyAircraftModel;
-		float aircraftVisualScale = 1.0f;
-		float enemyAircraftVisualScale = 1.0f;
-		AircraftFlightParameters flightParameters;
-		AircraftFlightParameters enemyFlightParameters;
+		AircraftDefinition playerAircraft;
+		AircraftDefinition enemyAircraft;
 		AircraftAIParameters enemyAIParameters;
 		OceanSettings ocean;
 		SkySettings sky;
@@ -47,8 +56,6 @@ namespace Engine {
 
 	class SceneLoader {
 	public:
-		SceneAssetPaths LoadAssets(
-			const std::filesystem::path& environmentJsonPath,
-			const std::filesystem::path& aircraftJsonPath) const;
+		SceneDefinition Load(const SceneSourcePaths& paths) const;
 	};
 }

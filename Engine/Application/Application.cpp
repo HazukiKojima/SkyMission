@@ -22,9 +22,13 @@ namespace Engine {
 		const std::filesystem::path exeDir = std::filesystem::path(buffer).parent_path();
 		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
 		const SceneLoader sceneLoader;
-		const SceneAssetPaths assets = sceneLoader.LoadAssets(
-			assetsDir / L"Environment/environment.json",
-			assetsDir / L"Aircraft/aircraft.json");
+		const SceneSourcePaths scenePaths = {
+			.environment = assetsDir / L"Environment/environment.json",
+			.playerAircraft = assetsDir / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
+			.enemyAircraft = assetsDir / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
+			.retroFilm = assetsDir / L"Environment/retroFilm.json"
+		};
+		const SceneDefinition assets = sceneLoader.Load(scenePaths);
 
 		m_renderer = std::make_unique<Renderer>();
 		m_renderer->Initialize(
@@ -50,14 +54,14 @@ namespace Engine {
 		environment.ambientIntensity = assets.sky.ambientIntensity;
 		environment.ambientColor = assets.sky.ambientColor;
 		m_scene->SetEnvironment(environment);
-		m_scene->SetPlayerAircraftVisualScale(assets.aircraftVisualScale);
-		m_scene->SetPlayerAircraftFlightParameters(assets.flightParameters);
+		m_scene->SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
+		m_scene->SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
 		m_scene->AddPlayerObject(m_renderer->GetModel());
 		m_scene->AddEnemyAircraft(
 			m_renderer->GetEnemyAircraftModel(),
 			{ 30.0f, 0.0f, -100.0f },
-			assets.enemyAircraftVisualScale,
-			assets.enemyFlightParameters,
+			assets.enemyAircraft.visualScale,
+			assets.enemyAircraft.flightParameters,
 			assets.enemyAIParameters);
 
 		m_renderer->InitializeConstantBuffers(*m_scene);
@@ -113,7 +117,7 @@ namespace Engine {
 		m_elapsedTime += deltaSeconds;
 
 		if (m_scene) {
-			m_scene->Update(deltaSeconds);
+			m_scene->Update(m_aircraftController.ReadInput(), deltaSeconds);
 			m_renderer->Update(*m_scene, m_elapsedTime, deltaSeconds);
 		}
 	}
