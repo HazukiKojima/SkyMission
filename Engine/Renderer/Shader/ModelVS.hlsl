@@ -8,6 +8,14 @@ cbuffer MatrixBuffer : register(b0)
     float pad2;
 };
 
+cbuffer PropellerBuffer : register(b1)
+{
+    float propellerAngle;
+    float3 propellerPivot;
+    float3 propellerAxis;
+    uint propellerEnabled;
+};
+
 struct VS_INPUT
 {
     float3 position : POSITION;
@@ -25,13 +33,31 @@ struct PS_INPUT
     float4 tangent : TANGENT;
 };
 
+float3 RotatePropellerVector(float3 value)
+{
+    float sine = sin(propellerAngle);
+    float cosine = cos(propellerAngle);
+    return value * cosine + cross(propellerAxis, value) * sine +
+        propellerAxis * dot(propellerAxis, value) * (1.0f - cosine);
+}
+
 PS_INPUT VS(VS_INPUT input)
 {
     PS_INPUT output;
-    output.position = mul(float4(input.position, 1.0f), mvp);
+    float3 localPosition = input.position;
+    float3 localNormal = input.normal;
+    float3 localTangent = input.tangent.xyz;
+    if (propellerEnabled != 0)
+    {
+        localPosition = propellerPivot + RotatePropellerVector(input.position - propellerPivot);
+        localNormal = RotatePropellerVector(input.normal);
+        localTangent = RotatePropellerVector(input.tangent.xyz);
+    }
+
+    output.position = mul(float4(localPosition, 1.0f), mvp);
     output.texcoord = input.texcoord;
-    output.worldPos = mul(float4(input.position, 1.0f), world).xyz;
-    output.normal = normalize(mul(float4(input.normal, 0.0f), world).xyz);
-    output.tangent = float4(normalize(mul(float4(input.tangent.xyz, 0.0f), world).xyz), input.tangent.w);
+    output.worldPos = mul(float4(localPosition, 1.0f), world).xyz;
+    output.normal = normalize(mul(float4(localNormal, 0.0f), world).xyz);
+    output.tangent = float4(normalize(mul(float4(localTangent, 0.0f), world).xyz), input.tangent.w);
     return output;
 }

@@ -1,1 +1,133 @@
 # SkyMission
+
+**C++ / DirectX 12 を使用した、航空機と自然環境のリアルタイム3Dレンダリングプロジェクト**
+
+SkyMissionは、C++とDirectX 12を使用して開発している3Dグラフィックスプロジェクトです。
+
+戦闘機 F-16 と、空・雲・海洋からなる自然環境の描画を通じて、リアルタイムレンダリング、シェーダープログラミング、GPUリソース管理などのグラフィックス技術を実践的に学びながら開発しています。
+
+また、レンダリング処理とアセット管理の責務を分離し、JSONによる設定管理や外部ライブラリとの連携を取り入れることで、拡張性と保守性を意識した設計を進めています。
+
+## Features
+
+### Real-Time 3D Rendering
+
+* C++ / DirectX 12 による3Dグラフィックスの描画
+* 頂点シェーダー（VS）とピクセルシェーダー（PS）を使用した描画処理
+* 3Dモデルの読み込みと描画
+* テクスチャを利用したマテリアル表現
+* ライティングによるモデルの陰影表現
+
+### Environment Rendering
+
+* スカイスフィアによる空の描画
+* ボリュメトリッククラウドによる雲の表現
+* 法線マップを利用した海洋表面の表現
+* 太陽光と環境光を考慮したライティング
+* 広大な海洋環境を対象とした描画処理の調整
+
+### Asset Management
+
+* JSONによるアセット設定の管理
+* 空・海洋・航空機の設定を用途ごとに整理
+* アセットパスの解決処理をレンダラーから分離
+* 専用のクラスを通じたシーンアセット情報の受け渡し
+
+### REDox Integration
+
+* RE:Doxを利用したJSON処理のC++プロジェクトへの統合
+* C++と.NET Native AOTでビルドしたDLLとの連携
+* JSONを利用したアセット設定の読み込み処理の実装
+
+※ 一部の機能は現在も開発・改善を進めています。
+
+## Technology Stack
+
+| Category                   | Technology            |
+| -------------------------- | --------------------- |
+| Programming Language       | C++                   |
+| Graphics API               | DirectX 12            |
+| Shader Language            | HLSL                  |
+| Development Environment    | Visual Studio 2022    |
+| Configuration Format       | JSON                  |
+| JSON Processing            | RE:Dox / REDoxWrapper |
+| Native Library Integration | .NET Native AOT       |
+
+## Architecture
+
+レンダリング処理、デバイス管理、シーンアセットの読み込みなどの責務を分離し、各機能を独立して管理できる構成を目指しています。
+
+主なコンポーネントは以下のとおりです。
+
+| Component         | Responsibility       |
+| ----------------- | -------------------- |
+| Application       | アプリケーション全体の初期化と処理の管理 |
+| Renderer          | 描画処理全体の管理            |
+| RenderDevice      | DirectX 12のデバイス関連処理  |
+| CommandContext    | コマンドリストなど、描画コマンドの管理  |
+| SceneLoader       | シーンに必要なアセット情報の読み込み   |
+| AssetPathResolver | JSON設定を利用したアセットパスの解決 |
+| SkySphere         | 空の描画                 |
+| Model             | 3Dモデルの読み込みと描画        |
+
+※ クラス構成は開発状況に応じて変更される場合があります。
+
+## Development Focus
+
+### 1. Real-Time Graphics Programming
+
+DirectX 12を使用し、GPUによる描画処理やシェーダーの実装を通じて、3Dグラフィックスの仕組みを理解しながら開発しています。
+
+特に、航空機のマテリアル表現、ライティング、海洋表面の描画など、シーン全体の視覚的な品質向上に取り組んでいます。
+
+### 2. Environment Rendering
+
+空・雲・海洋を組み合わせた広大な自然環境の描画に取り組んでいます。
+
+海洋では法線マップやライティングを利用した表面表現を、雲ではボリュメトリックな手法による立体的な表現を試行し、描画品質とパフォーマンスの両立を目指しています。
+
+### 3. Resource Management and Performance
+
+DirectX 12のリソース管理を意識し、テクスチャや3Dモデルの読み込み、GPUリソースの使用量、描画処理の負荷などを調査・改善しています。
+
+### 4. Extensible Asset Pipeline
+
+アセットのパスや設定値をJSONで管理し、アセットの読み込み処理とレンダリング処理の分離を進めています。
+
+また、RE:Doxを利用したJSON処理をC++側へ統合し、外部ライブラリとの連携や処理性能の検証にも取り組んでいます。
+
+## Build Environment
+
+* Windows 10 / Windows 11
+* Visual Studio 2022
+* C++対応のVisual Studioワークロード
+* DirectX 12に対応したGPUおよびドライバー
+* Windows SDK
+* プロジェクトで使用するNuGetパッケージ
+
+## Build Instructions
+
+1. リポジトリをクローンします。
+
+   ```bash
+   git clone https://github.com/HazukiKojima/SkyMission.git
+   ```
+
+2. Visual Studio 2022でソリューションファイルを開きます。
+
+3. 必要なNuGetパッケージを復元します。
+
+4. ビルド構成を選択します。
+
+   * Configuration: `Debug` または `Release`
+   * Platform: `x64`
+
+5. プロジェクトをビルドして実行します。
+
+※ REDoxWrapperなどの外部DLLや各種アセットが必要な構成では、それらの配置・ビルドも必要です。リポジトリの最新の構成に従ってください。
+
+## Project Status
+
+SkyMissionは現在開発中です。
+
+レンダリング機能の拡張、描画品質の改善、GPUリソース管理の見直し、アセット管理の整理などを継続して進めています。

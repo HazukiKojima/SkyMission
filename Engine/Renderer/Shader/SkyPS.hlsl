@@ -69,7 +69,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // Exposure
     // ========================================================
 
-    const float exposure = 0.9f;
+    const float exposure = 1.1f;
 
     float3 color = hdrColor * exposure;
 
@@ -92,6 +92,15 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 atmosphericColor = GetSkyColor(
         skyDirection,
         lighting
+    );
+
+    // HDRテクスチャと大気色を合成し、空の明暗差を抑える
+    const float hdrBlend = 0.65f;
+
+    color = lerp(
+        atmosphericColor,
+        color,
+        hdrBlend
     );
 
     color = lerp(

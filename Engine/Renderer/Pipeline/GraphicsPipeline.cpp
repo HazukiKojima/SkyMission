@@ -15,10 +15,11 @@ namespace
 			srvCount,
 			0);
 
-		// ルートパラメータを2つ用意
+		// ルートパラメータを3つ用意
 		// 0 = SRVテーブル（ピクセルシェーダ用）
 		// 1 = CBV(b0)（頂点/ピクセル両方で使用）
-		CD3DX12_ROOT_PARAMETER1 rootParams[2];
+		// 2 = プロペラ回転定数(b1)（頂点シェーダ用）
+		CD3DX12_ROOT_PARAMETER1 rootParams[3];
 
 		rootParams[0].InitAsDescriptorTable(
 			1,
@@ -31,6 +32,7 @@ namespace
 			0,
 			D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
 			D3D12_SHADER_VISIBILITY_ALL);
+		rootParams[2].InitAsConstants(8, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -82,7 +84,9 @@ namespace
 		ID3DBlob* pixelShader,
 		bool enableAlphaBlend,
 		bool enableDepth,
-		bool hasVertexNormalAndTangent)
+		bool hasVertexNormalAndTangent,
+		bool enableDepthWrite,
+		bool enableAdditiveBlend)
 	{
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
@@ -163,7 +167,7 @@ namespace
 		if (enableAlphaBlend) {
 			blendDesc.RenderTarget[0].BlendEnable = TRUE;
 			blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-			blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+			blendDesc.RenderTarget[0].DestBlend = enableAdditiveBlend ? D3D12_BLEND_ONE : D3D12_BLEND_INV_SRC_ALPHA;
 			blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
 			blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
 			blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
@@ -182,7 +186,7 @@ namespace
 
 		CD3DX12_DEPTH_STENCIL_DESC depthDesc(D3D12_DEFAULT);
 		depthDesc.DepthEnable = enableDepth;
-		depthDesc.DepthWriteMask = enableDepth ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+		depthDesc.DepthWriteMask = enableDepth && enableDepthWrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
 		depthDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 		psoDesc.DepthStencilState = depthDesc;
 		psoDesc.DSVFormat = enableDepth ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_UNKNOWN;
@@ -249,6 +253,8 @@ namespace Engine
 				pixelShader.Get(),
 				false,
 				false,
+				false,
+				true,
 				false);
 
 		OutputDebugStringA(
@@ -262,7 +268,9 @@ namespace Engine
 		UINT srvCount,
 		bool enableAlphaBlend,
 		bool enableDepth,
-		bool hasVertexNormalAndTangent)
+		bool hasVertexNormalAndTangent,
+		bool enableDepthWrite,
+		bool enableAdditiveBlend)
 	{
 		OutputDebugStringA(
 			"DEBUG: Starting Pipeline InitializeWithShaders\n");
@@ -309,7 +317,9 @@ namespace Engine
 				pixelShader.Get(),
 				enableAlphaBlend,
 				enableDepth,
-				hasVertexNormalAndTangent);
+				hasVertexNormalAndTangent,
+				enableDepthWrite,
+				enableAdditiveBlend);
 
 		OutputDebugStringA(
 			"DEBUG: PipelineStateObject created with custom shaders\n");

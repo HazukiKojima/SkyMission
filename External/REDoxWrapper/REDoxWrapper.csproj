@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -12,5 +12,17 @@
   <ItemGroup>
     <PackageReference Include="CAPCOM.REDox" Version="1.0.3" />
   </ItemGroup>
+
+  <Target Name="InvalidateJsonBindingsStamp" BeforeTargets="GenerateJsonBindings">
+    <Delete Files="$(IntermediateOutputPath)GenerateJsonBindings.stamp"
+            Condition="!Exists('$(MSBuildProjectDirectory)\Generated\GeneratedAircraftFlightParameters.cs') Or !Exists('$(MSBuildProjectDirectory)\Generated\AircraftFlightParametersLayout.h') Or !Exists('$(MSBuildProjectDirectory)\Generated\GeneratedOceanParameters.cs') Or !Exists('$(MSBuildProjectDirectory)\Generated\OceanParametersLayout.h') Or !Exists('$(MSBuildProjectDirectory)\Generated\GeneratedSkyParameters.cs') Or !Exists('$(MSBuildProjectDirectory)\Generated\SkyParametersLayout.h')" />
+  </Target>
+  <Target Name="GenerateJsonBindings" BeforeTargets="PrepareForBuild"
+          Inputs="$(MSBuildProjectDirectory)\..\..\tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj;$(MSBuildProjectDirectory)\..\..\tools\AircraftParameterGenerator\Program.cs;$(MSBuildProjectDirectory)\..\..\Engine\Aircraft\AircraftFlightParameters.h;$(MSBuildProjectDirectory)\..\..\Engine\Scene\OceanParameters.h;$(MSBuildProjectDirectory)\..\..\Engine\Scene\SkyParameters.h"
+          Outputs="$(IntermediateOutputPath)GenerateJsonBindings.stamp">
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\..\tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\..\..\Engine\Aircraft\AircraftFlightParameters.h&quot; AircraftFlightParameters GeneratedAircraftFlightParameters &quot;$(MSBuildProjectDirectory)\Generated\GeneratedAircraftFlightParameters.cs&quot; &quot;$(MSBuildProjectDirectory)\Generated\AircraftFlightParametersLayout.h&quot; &quot;$(MSBuildProjectDirectory)\..\..\Engine\Scene\OceanParameters.h&quot; OceanParameters GeneratedOceanParameters &quot;$(MSBuildProjectDirectory)\Generated\GeneratedOceanParameters.cs&quot; &quot;$(MSBuildProjectDirectory)\Generated\OceanParametersLayout.h&quot; &quot;$(MSBuildProjectDirectory)\..\..\Engine\Scene\SkyParameters.h&quot; SkyParameters GeneratedSkyParameters &quot;$(MSBuildProjectDirectory)\Generated\GeneratedSkyParameters.cs&quot; &quot;$(MSBuildProjectDirectory)\Generated\SkyParametersLayout.h&quot;" />
+    <Touch Files="$(IntermediateOutputPath)GenerateJsonBindings.stamp" AlwaysCreate="true" />
+  </Target>
 
 </Project>

@@ -19,6 +19,7 @@ cbuffer MatrixBuffer : register(b0)
     float oceanFogEndDistance;
     float oceanEdgeFadeStart;
     float oceanEdgeFadeWidth;
+    float oceanWaveHeightOffset;
 };
 
 struct VS_INPUT
@@ -134,6 +135,8 @@ PS_INPUT VS(VS_INPUT input)
         wavelength *= 0.82f;
         steepness *= 0.72f;
     }
+
+    pos.y -= oceanWaveHeightOffset;
 
     // --------------------------------------------------------
     // Normal

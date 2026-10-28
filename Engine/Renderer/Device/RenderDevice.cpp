@@ -1,4 +1,5 @@
 #include "RenderDevice.h"
+#include <stdexcept>
 
 namespace Engine {
 
@@ -15,11 +16,52 @@ namespace Engine {
 #endif
 
 		ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_factory)));
-		ThrowIfFailed(D3D12CreateDevice(
-			nullptr,
-			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&m_device)
-		));
+		HRESULT deviceResult = E_FAIL;
+		ComPtr<IDXGIFactory6> factory6;
+		const bool hasGpuPreferenceApi = SUCCEEDED(m_factory.As(&factory6));
+
+		for (UINT index = 0; ; ++index) {
+			ComPtr<IDXGIAdapter1> adapter;
+			HRESULT adapterResult = hasGpuPreferenceApi
+				? factory6->EnumAdapterByGpuPreference(
+					index,
+					DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+					IID_PPV_ARGS(&adapter))
+				: m_factory->EnumAdapters1(index, &adapter);
+			if (adapterResult == DXGI_ERROR_NOT_FOUND) {
+				break;
+			}
+			ThrowIfFailed(adapterResult);
+
+			DXGI_ADAPTER_DESC1 description = {};
+			ThrowIfFailed(adapter->GetDesc1(&description));
+			if ((description.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0) {
+				continue;
+			}
+
+			deviceResult = D3D12CreateDevice(
+				adapter.Get(),
+				D3D_FEATURE_LEVEL_11_0,
+				IID_PPV_ARGS(&m_device)
+			);
+			if (SUCCEEDED(deviceResult)) {
+				m_adapterName = description.Description;
+				break;
+			}
+		}
+
+		if (FAILED(deviceResult)) {
+			// Hardware adapter が利用できない環境でも起動できるよう WARP を試す。
+			ComPtr<IDXGIAdapter> warpAdapter;
+			ThrowIfFailed(m_factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+			deviceResult = D3D12CreateDevice(
+				warpAdapter.Get(),
+				D3D_FEATURE_LEVEL_11_0,
+				IID_PPV_ARGS(&m_device)
+			);
+			m_adapterName = L"WARP (Software Rasterizer)";
+		}
+		ThrowIfFailed(deviceResult);
 
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -59,18 +101,12 @@ namespace Engine {
 		// ========================================================
 		// RTV Heap
 		//
-		// [0 ... FrameCount-1]
-		//     BackBuffer
+		// BackBuffer, SceneColor, PostProcessColor の順に各フレーム分を配置する。
 		//
-		// [FrameCount ... FrameCount*2-1]
-		//     SceneColor
-		//
-		// [FrameCount*2]
-		//     Cloud
 		// ========================================================
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount * 2 + 1;
+		rtvHeapDesc.NumDescriptors = FrameCount * 3;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
@@ -109,7 +145,7 @@ namespace Engine {
 		// ========================================================
 
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 256;
+		srvHeapDesc.NumDescriptors = SrvDescriptorCapacity;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
@@ -140,23 +176,8 @@ namespace Engine {
 		m_width = width;
 		m_height = height;
 
-		// --------------------------------------------------------
-		// SRV layout
-		//
-		// 0                       SceneColor frame 0
-		// 1                       SceneDepth  frame 0
-		// 2                       SceneColor frame 1
-		// 3                       SceneDepth  frame 1
-		// ...
-		//
-		// FrameCount * 2           CloudColor
-		// --------------------------------------------------------
-
-		m_cloudSrvIndex = FrameCount * 2;
-		m_srvDescriptorCount = FrameCount * 2 + 1;
-
+		m_srvDescriptorCount = FrameCount * 3;
 		CreateSceneResources();
-		CreateCloudResources();
 	}
 
 
@@ -176,19 +197,17 @@ namespace Engine {
 		return handle;
 	}
 
-
-	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCloudRtvHandle() const {
+	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetPostProcessRtvHandle() const {
 		D3D12_CPU_DESCRIPTOR_HANDLE handle(
 			m_rtvHeap->GetCPUDescriptorHandleForHeapStart()
 		);
 
 		handle.ptr += static_cast<SIZE_T>(
-			FrameCount * 2
+			FrameCount * 2 + GetFrameIndex()
 			) * m_rtvDescriptorSize;
 
 		return handle;
 	}
-
 
 	// ============================================================
 	// Present
@@ -218,6 +237,10 @@ namespace Engine {
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::AllocateSrvDescriptor(
 		UINT* outIndex
 	) {
+		if (m_srvDescriptorCount >= SrvDescriptorCapacity) {
+			throw std::runtime_error("SRV descriptor heap capacity exceeded");
+		}
+
 		D3D12_CPU_DESCRIPTOR_HANDLE handle =
 			m_srvHeap->GetCPUDescriptorHandleForHeapStart();
 
@@ -265,10 +288,10 @@ namespace Engine {
 		for (UINT i = 0; i < FrameCount; ++i) {
 			m_renderTargets[i].Reset();
 			m_sceneRenderTargets[i].Reset();
+			m_postProcessRenderTargets[i].Reset();
 		}
 
 		m_sceneDepth.Reset();
-		m_cloudRenderTarget.Reset();
 
 		// --------------------------------------------------------
 		// SwapChain
@@ -306,7 +329,6 @@ namespace Engine {
 		}
 
 		CreateSceneResources();
-		CreateCloudResources();
 	}
 
 
@@ -374,6 +396,34 @@ namespace Engine {
 				nullptr,
 				rtv
 			);
+
+			CD3DX12_RESOURCE_DESC postProcessDesc =
+				CD3DX12_RESOURCE_DESC::Tex2D(
+					DXGI_FORMAT_R8G8B8A8_UNORM,
+					m_width,
+					m_height,
+					1,
+					1,
+					1,
+					0,
+					D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+				);
+			CD3DX12_CLEAR_VALUE postProcessClearValue(
+				DXGI_FORMAT_R8G8B8A8_UNORM,
+				clearColor
+			);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&heapProps,
+				D3D12_HEAP_FLAG_NONE,
+				&postProcessDesc,
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+				&postProcessClearValue,
+				IID_PPV_ARGS(&m_postProcessRenderTargets[i])));
+
+			D3D12_CPU_DESCRIPTOR_HANDLE postProcessRtv =
+				m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+			postProcessRtv.ptr += static_cast<SIZE_T>(FrameCount * 2 + i) * m_rtvDescriptorSize;
+			m_device->CreateRenderTargetView(m_postProcessRenderTargets[i].Get(), nullptr, postProcessRtv);
 		}
 
 		// ========================================================
@@ -419,144 +469,33 @@ namespace Engine {
 			GetDsvHandle()
 		);
 
-		// ========================================================
-		// Scene SRV
-		// ========================================================
-
 		D3D12_SHADER_RESOURCE_VIEW_DESC colorSrv = {};
 		colorSrv.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		colorSrv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		colorSrv.Shader4ComponentMapping =
-			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		colorSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		colorSrv.Texture2D.MipLevels = 1;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC depthSrv = {};
 		depthSrv.Format = DXGI_FORMAT_R32_FLOAT;
 		depthSrv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		depthSrv.Shader4ComponentMapping =
-			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		depthSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		depthSrv.Texture2D.MipLevels = 1;
 
 		for (UINT i = 0; i < FrameCount; ++i) {
+			D3D12_CPU_DESCRIPTOR_HANDLE srv = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
+			srv.ptr += static_cast<SIZE_T>(i * 2) * m_srvDescriptorSize;
 
-			D3D12_CPU_DESCRIPTOR_HANDLE srv =
-				m_srvHeap->GetCPUDescriptorHandleForHeapStart();
-
-			srv.ptr += static_cast<SIZE_T>(
-				i * 2
-				) * m_srvDescriptorSize;
-
-			m_device->CreateShaderResourceView(
-				m_sceneRenderTargets[i].Get(),
-				&colorSrv,
-				srv
-			);
-
+			m_device->CreateShaderResourceView(m_sceneRenderTargets[i].Get(), &colorSrv, srv);
 			srv.ptr += m_srvDescriptorSize;
-
-			m_device->CreateShaderResourceView(
-				m_sceneDepth.Get(),
-				&depthSrv,
-				srv
-			);
+			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, srv);
 		}
-	}
 
+		for (UINT i = 0; i < FrameCount; ++i) {
+			D3D12_CPU_DESCRIPTOR_HANDLE srv = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
+			srv.ptr += static_cast<SIZE_T>(FrameCount * 2 + i) * m_srvDescriptorSize;
+			m_device->CreateShaderResourceView(m_postProcessRenderTargets[i].Get(), &colorSrv, srv);
+		}
 
-	// ============================================================
-	// Cloud Resources
-	// ============================================================
-
-	void RenderDevice::CreateCloudResources() {
-
-		CD3DX12_HEAP_PROPERTIES heapProps(
-			D3D12_HEAP_TYPE_DEFAULT
-		);
-
-		// 1/2解像度
-		const UINT cloudWidth =
-			(m_width > 1) ? (m_width / 2) : 1;
-
-		const UINT cloudHeight =
-			(m_height > 1) ? (m_height / 2) : 1;
-
-		// ========================================================
-		// Cloud Render Target
-		// ========================================================
-
-		CD3DX12_RESOURCE_DESC cloudDesc =
-			CD3DX12_RESOURCE_DESC::Tex2D(
-				DXGI_FORMAT_R16G16B16A16_FLOAT,
-				cloudWidth,
-				cloudHeight,
-				1,
-				1,
-				1,
-				0,
-				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-			);
-
-		const FLOAT cloudClear[] = {
-			0.0f,
-			0.0f,
-			0.0f,
-			0.0f
-		};
-
-		CD3DX12_CLEAR_VALUE cloudClearValue(
-			DXGI_FORMAT_R16G16B16A16_FLOAT,
-			cloudClear
-		);
-
-		ThrowIfFailed(
-			m_device->CreateCommittedResource(
-				&heapProps,
-				D3D12_HEAP_FLAG_NONE,
-				&cloudDesc,
-				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-				&cloudClearValue,
-				IID_PPV_ARGS(&m_cloudRenderTarget)
-			)
-		);
-
-		// ========================================================
-		// Cloud RTV
-		// ========================================================
-
-		m_device->CreateRenderTargetView(
-			m_cloudRenderTarget.Get(),
-			nullptr,
-			GetCloudRtvHandle()
-		);
-
-		// ========================================================
-		// Cloud SRV
-		// ========================================================
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC cloudSrv = {};
-		cloudSrv.Format =
-			DXGI_FORMAT_R16G16B16A16_FLOAT;
-
-		cloudSrv.ViewDimension =
-			D3D12_SRV_DIMENSION_TEXTURE2D;
-
-		cloudSrv.Shader4ComponentMapping =
-			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-		cloudSrv.Texture2D.MipLevels = 1;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE srv =
-			m_srvHeap->GetCPUDescriptorHandleForHeapStart();
-
-		srv.ptr += static_cast<SIZE_T>(
-			m_cloudSrvIndex
-			) * m_srvDescriptorSize;
-
-		m_device->CreateShaderResourceView(
-			m_cloudRenderTarget.Get(),
-			&cloudSrv,
-			srv
-		);
 	}
 
 }

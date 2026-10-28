@@ -11,7 +11,7 @@ namespace Engine {
 	class Model {
 	public:
 		bool Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice, const std::wstring& filePath);
-		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice) const;
+		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice, float propellerAngle = 0.0f) const;
 		void ReleaseUploadResources();
 		bool IsLoaded() const { return !m_meshes.empty(); }
 
@@ -27,6 +27,9 @@ namespace Engine {
 			std::shared_ptr<Texture> normalTexture;
 			UINT textureSrvIndex = 0;
 			UINT indexCount = 0;
+			bool isPropeller = false;
+			DirectX::XMFLOAT3 propellerPivot = {};
+			DirectX::XMFLOAT3 propellerAxis = { 0.0f, 0.0f, 1.0f };
 		};
 
 		std::unique_ptr<Texture> m_fallbackTexture;

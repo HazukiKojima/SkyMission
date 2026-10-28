@@ -19,37 +19,62 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Core\Application.cpp" />
-    <ClCompile Include="Engine\Core\Camera.cpp" />
-    <ClCompile Include="Engine\Core\JsonBenchmark.cpp" />
-    <ClCompile Include="Engine\Core\Scene.cpp" />
-    <ClCompile Include="Engine\Core\SceneLoader.cpp" />
-    <ClCompile Include="Engine\Core\Window.cpp" />
+    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp" />
+    <ClCompile Include="Engine\Application\Application.cpp" />
+    <ClCompile Include="Engine\Aircraft\AircraftController.cpp" />
+    <ClCompile Include="Engine\Camera\Camera.cpp" />
+    <ClCompile Include="Engine\Scene\Scene.cpp" />
+    <ClCompile Include="Engine\Scene\SceneLoader.cpp" />
+    <ClCompile Include="Engine\Window\Window.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererConstantBuffers.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\OceanGeometry.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererPipelines.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererAssets.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererFrameUpdater.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererPasses.cpp" />
     <ClCompile Include="Engine\Renderer\Device\Renderer.cpp" />
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
+    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp" />
     <ClCompile Include="Engine\Resources\Mesh\Model.cpp" />
     <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp" />
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Core\Application.h" />
-    <ClInclude Include="Engine\Core\Camera.h" />
-    <ClInclude Include="Engine\Core\JsonBenchmark.h" />
-    <ClInclude Include="Engine\Core\Scene.h" />
-    <ClInclude Include="Engine\Core\SceneLoader.h" />
-    <ClInclude Include="Engine\Core\Window.h" />
+    <ClInclude Include="Engine\Aircraft\AircraftAIController.h" />
+    <ClInclude Include="Engine\Application\Application.h" />
+    <ClInclude Include="Engine\Aircraft\AircraftController.h" />
+    <ClInclude Include="Engine\Aircraft\AircraftFlightParameters.h" />
+    <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h" />
+    <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h" />
+    <ClInclude Include="Engine\Scene\OceanParameters.h" />
+    <ClInclude Include="Engine\Aircraft\PlayerAircraft.h" />
+    <ClInclude Include="Engine\Camera\Camera.h" />
+    <ClInclude Include="Engine\Scene\Scene.h" />
+    <ClInclude Include="Engine\Scene\SceneLoader.h" />
+    <ClInclude Include="Engine\Scene\SkyParameters.h" />
+    <ClInclude Include="Engine\Renderer\RetroFilmParameters.h" />
+    <ClInclude Include="Engine\Window\Window.h" />
     <ClInclude Include="Engine\Renderer\Device\CommandContext.h" />
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererConstantBuffers.h" />
+    <ClInclude Include="Engine\Renderer\Device\OceanGeometry.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererPipelines.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererAssets.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererFrameUpdater.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererPasses.h" />
     <ClInclude Include="Engine\Renderer\Device\Renderer.h" />
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h" />
+    <ClInclude Include="Engine\Resources\AssetPathResolver.h" />
     <ClInclude Include="Engine\Resources\Mesh\Model.h" />
     <ClInclude Include="Engine\Resources\Mesh\SkySphere.h" />
     <ClInclude Include="Engine\Resources\Texture\Texture.h" />
+  </ItemGroup>
+  <ItemGroup>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Engine\Renderer\Shader\BasicPS.hlsl">
@@ -68,7 +93,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\CloudPS.hlsl">
+    <FxCompile Include="Engine\Renderer\Shader\OceanFogPS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -76,7 +101,23 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\CloudVS.hlsl">
+    <FxCompile Include="Engine\Renderer\Shader\OceanFogVS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmPS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmVS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -134,8 +175,13 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\Aircraft\F4U4Corsair\aiParameters.json" />
+    <None Include="Assets\Aircraft\F4U4Corsair\F4U4Corsair.json" />
+    <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json" />
     <None Include="Engine\Renderer\Shader\Common.hlsli" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli" />
+    <None Include="Assets\Aircraft\F16\flightParameters.json" />
+    <None Include="Assets\Environment\retroFilm.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
@@ -248,13 +294,6 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
-    <PostBuildEvent>
-      <Command>dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
-if errorlevel 1 exit /b %errorlevel%
-dotnet --version > "$(OutDir)DotNetSdkVersion.txt"
-copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
-if errorlevel 1 exit /b %errorlevel%</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -275,21 +314,6 @@ if errorlevel 1 exit /b %errorlevel%</Command>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
-    <PostBuildEvent>
-      <Command>dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
-if errorlevel 1 exit /b %errorlevel%
-dotnet --version > "$(OutDir)DotNetSdkVersion.txt"
-copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
-if errorlevel 1 exit /b %errorlevel%</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
-  <PropertyGroup Condition="'$(EnableRedoxJsonBenchmark)' == ''">
-    <EnableRedoxJsonBenchmark>false</EnableRedoxJsonBenchmark>
-  </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(EnableRedoxJsonBenchmark)' == 'true'">
-    <ClCompile>
-      <PreprocessorDefinitions>REDOX_JSON_BENCHMARK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -298,9 +322,33 @@ if errorlevel 1 exit /b %errorlevel%</Command>
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
-      <ErrorText>このプロジェクトは、このコンピューターに存在しない NuGet パッケージを参照しています。NuGet パッケージを復元してからビルドしてください。詳細については、https://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイル: {0}</ErrorText>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Restore the NuGet packages before building the project. For more information, see https://go.microsoft.com/fwlink/?LinkID=322105. The missing file is: {0}
+</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets'))" />
     <Error Condition="!Exists('packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />
+  </Target>
+  <ItemGroup>
+    <ProjectReference Include="External\REDoxWrapper\REDoxWrapper.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <BuildReference>true</BuildReference>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\**\*.cs" Exclude="$(SolutionDir)External\REDoxWrapper\bin\**;$(SolutionDir)External\REDoxWrapper\obj\**" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json" Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h;$(SolutionDir)Engine\Scene\OceanParameters.h;$(SolutionDir)Engine\Scene\SkyParameters.h" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.props" Condition="Exists('$(SolutionDir)Directory.Build.props')" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.targets" Condition="Exists('$(SolutionDir)Directory.Build.targets')" />
+  </ItemGroup>
+  <PropertyGroup>
+    <REDoxWrapperPublishDll>$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll</REDoxWrapperPublishDll>
+  </PropertyGroup>
+  <Target Name="PublishREDoxWrapper" AfterTargets="Build" Condition="'$(Platform)' == 'x64'" Inputs="@(REDoxWrapperPublishInput)" Outputs="$(REDoxWrapperPublishDll);$(OutDir)REDoxWrapper.dll">
+    <Exec Command="set DOTNET_CLI_UI_LANGUAGE=en&#xD;&#xA;dotnet publish &quot;$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj&quot; -c $(Configuration) -r win-x64" />
+    <Copy SourceFiles="$(REDoxWrapperPublishDll)" DestinationFiles="$(OutDir)REDoxWrapper.dll" />
   </Target>
 </Project>
