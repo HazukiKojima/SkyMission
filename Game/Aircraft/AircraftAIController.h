@@ -18,6 +18,7 @@ namespace Game {
 		float speedMatchGain = 0.015f;
 		float highGManeuverIntervalSeconds = 24.0f;
 		float highGManeuverDurationSeconds = 3.0f;
+	};
 
 	class AircraftAIController {
 	  public:
