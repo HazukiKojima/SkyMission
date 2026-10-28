@@ -22,7 +22,7 @@ namespace Engine {
 		return resource;
 	}
 
-	// Keep upload alive until the command queue has completed this copy.
+	// このコピーのGPU完了まで、転送元のuploadリソースを保持する
 	inline ComPtr<ID3D12Resource> CreateStaticBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commands,
 													 const void* data, UINT64 size, D3D12_RESOURCE_STATES finalState,
 													 ComPtr<ID3D12Resource>& upload) {

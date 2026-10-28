@@ -4,8 +4,7 @@
 #include "Engine/Input/RawInputState.h"
 
 namespace Game {
-	// UEエディタ風のフライカメラ: WASDで移動、右ボタン押下でマウス視点移動。
-	// フライカメラは Raw Input のフレームスナップショットを使用する。
+	// 追従先の位置・向き・速度（ワールド単位/秒）
 	struct AircraftCameraTarget {
 		DirectX::XMFLOAT3 position, heading, forward;
 		bool pitchInputActive;
@@ -17,11 +16,11 @@ namespace Game {
 		AircraftCameraController() = default;
 		~AircraftCameraController() = default;
 
-		// 操作・追従状態をビュー計算へ反映する。角度はラジアン、速度はワールド単位/秒。
+		// 射影と初期視点を設定する（fovYはラジアン、nearZ・farZはワールド単位）
 		void Initialize(float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,
 			float farZ = 1000.0f);
 
-		// 毎フレーム、経過秒を渡して呼び出す
+		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
 		void SetFollowTarget(const AircraftCameraTarget& target);
 
@@ -47,7 +46,7 @@ namespace Game {
 		float m_pitch = -0.4f;		// radians
 		float m_moveSpeed = 100.0f; // units per second
 		float m_mouseSensitivity =
-			0.0025f; // radians per raw mouse count (absolute devices provide pixel deltas)
+			0.0025f; // マウス入力1カウント当たりのラジアン（絶対位置入力ではピクセル差分）
 		bool m_following = false;
 		DirectX::XMFLOAT3 m_followTarget = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followHeading = {0.0f, 0.0f, -1.0f};

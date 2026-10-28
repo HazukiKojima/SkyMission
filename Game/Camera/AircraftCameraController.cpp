@@ -25,12 +25,11 @@ namespace Game {
 		if (!input.active)
 			return;
 
-		// ローカル空間での前方/右方向ベクトルを計算
 		XMFLOAT3 forward;
 		XMFLOAT3 right;
 		XMFLOAT3 up = {0.0f, 1.0f, 0.0f};
 
-		// yaw/pitch から進行方向を算出
+		// ヨー・ピッチから自由移動の基準方向を求める
 		XMVECTOR dir =
 			XMVectorSet(cosf(m_pitch) * sinf(m_yaw), sinf(m_pitch), cosf(m_pitch) * cosf(m_yaw), 0.0f);
 		XMVECTOR f = XMVector3Normalize(dir);
@@ -63,7 +62,7 @@ namespace Game {
 			m_position.z += right.z * moveSpeed;
 		}
 
-		// Deltas include a drag released earlier in this frame, so short drags are not lost.
+		// フレーム途中で終了したドラッグの移動量も反映する
 		m_yaw += static_cast<float>(input.mouseDeltaX) * m_mouseSensitivity;
 		m_pitch -= static_cast<float>(input.mouseDeltaY) * m_mouseSensitivity;
 		const float pitchLimit = XM_PIDIV2 - 0.01f;

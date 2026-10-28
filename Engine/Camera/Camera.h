@@ -3,7 +3,7 @@
 #include <DirectXMath.h>
 
 namespace Engine {
-	// View/projection data only. Input and follow behavior belong to game controllers.
+	// ビュー・射影行列を管理し、入力・追従制御はゲーム側で行う
 	class Camera {
 	  public:
 		void Initialize(float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,

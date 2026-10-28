@@ -15,7 +15,7 @@ namespace Engine {
 		void EndFrame();
 		void MoveToNextFrame(RenderDevice* renderDevice);
 		void WaitForGpu();
-		// Call only after WaitForGpu; resize can reset the swapchain index to zero.
+		// リサイズ後のインデックスに合わせるため、WaitForGpu後に呼ぶ
 		void SynchronizeFrameIndex(const RenderDevice& device) {
 			const UINT64 nextFenceValue = m_fenceValues[m_currentFrameIndex];
 			for (auto& value : m_fenceValues)

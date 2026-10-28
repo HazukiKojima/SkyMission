@@ -52,8 +52,7 @@ namespace Engine {
 		const std::vector<SceneObject>& GetObjects() const {
 			return m_objects;
 		}
-		// Returned pointer is valid until the object collection is modified; callers retain IDs, not
-		// pointers.
+		// ポインタは集合の変更まで有効、継続参照にはIDを使う
 		SceneObject* FindObject(ObjectId id);
 		ObjectId AddObject(std::shared_ptr<Model> model);
 		ObjectId AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& transform);

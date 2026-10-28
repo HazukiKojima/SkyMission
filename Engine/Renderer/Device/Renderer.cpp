@@ -30,7 +30,7 @@ namespace Engine {
 		m_assets.Load(m_device.get(), m_context.get(), assets);
 		m_context->EndFrame();
 		m_context->WaitForGpu();
-		// All initialization copies are complete; only DEFAULT resources remain for drawing.
+		// 初期転送のGPU完了後に転送用リソースを解放する
 		m_assets.ReleaseUploadResources();
 		m_oceanGeometry.ReleaseUploadResources();
 	}

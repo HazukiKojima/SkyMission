@@ -77,8 +77,8 @@ namespace Engine {
 		}
 	};
 
-	// NativeAOT側の文書ハンドルを所有する移動専用型。
-	// RedoxModuleはプロセス終了までDLLを保持するため、ハンドルは必ずDLLの寿命内に解放される。
+	// NativeAOT側の文書ハンドルを所有する移動専用型
+	// DLLはプロセス終了まで保持され、ハンドルが先に解放される
 	class RedoxDocument {
 	  public:
 		RedoxDocument() = default;
@@ -130,7 +130,7 @@ namespace Engine {
 					reinterpret_cast<ReleaseDocument>(RedoxModule::GetFunction("MyRedoxReleaseDocument"));
 				releaseDocument(m_handle);
 			} catch (...) {
-				// デストラクタから例外を送出しない。DLLはプロセス終了まで保持される。
+				// デストラクタでは例外を送出せず、DLLを保持する
 			}
 			m_handle = 0;
 		}
@@ -138,8 +138,8 @@ namespace Engine {
 		std::intptr_t m_handle = 0;
 	};
 
-	// 1回の設定読み込みごとに作成するキャッシュ。キーは絶対・字句正規化済みパスで、
-	// 読み込み中のファイル変更は反映せず、キャッシュ破棄時に全ハンドルを解放する。
+	// 設定読み込み単位のキャッシュ（キーは絶対・字句正規化済みパス）
+	// 途中のファイル変更は反映せず、破棄時に全ハンドルを解放する
 	class JsonDocumentCache {
 	  public:
 		const RedoxDocument& Get(const std::filesystem::path& jsonPath) {

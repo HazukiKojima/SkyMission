@@ -35,7 +35,7 @@ namespace Engine {
 			bool isRotatingNode;
 		};
 
-		// Center X/Z and place the lowest Y at the configured ground offset.
+		// X・Zを中心に寄せ、Yの最下点を地面オフセットに合わせる
 		struct ModelNormalization {
 			aiVector3D minimum, maximum;
 			float scale, groundOffset;

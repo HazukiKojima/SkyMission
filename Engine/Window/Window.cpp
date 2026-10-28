@@ -19,7 +19,7 @@ namespace Engine {
 		if (!m_hwnd)
 			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 
-		// Foreground only. Retain legacy messages for normal window controls and Alt+F4.
+		// 前面時のみ受信し、ウィンドウ操作やAlt+F4用の従来メッセージは残す
 		const RAWINPUTDEVICE devices[] = {{0x01, 0x06, RIDEV_DEVNOTIFY, m_hwnd}, {0x01, 0x02, RIDEV_DEVNOTIFY, m_hwnd}};
 		if (!RegisterRawInputDevices(devices, _countof(devices), sizeof(RAWINPUTDEVICE))) {
 			const HRESULT error = HRESULT_FROM_WIN32(GetLastError());
@@ -48,7 +48,7 @@ namespace Engine {
 	}
 
 	void Window::UnregisterRawInput() {
-		// Registration is per process; do not remove another Window's newer registration.
+		// プロセス共通の入力登録を、別のWindowから解除しない
 		UINT count = 0;
 		if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
 			return;
@@ -75,7 +75,7 @@ namespace Engine {
 			return;
 		if (size < sizeof(RAWINPUTHEADER))
 			return;
-		// GetRawInputData requires DWORD-aligned storage.
+		// GetRawInputDataの受信領域をDWORD境界にそろえる
 		std::vector<DWORD> storage((size + sizeof(DWORD) - 1) / sizeof(DWORD));
 		const UINT bytes = GetRawInputData(handle, RID_INPUT, storage.data(), &size, sizeof(RAWINPUTHEADER));
 		if (bytes == UINT(-1) || bytes < sizeof(RAWINPUTHEADER)) {
@@ -110,7 +110,7 @@ namespace Engine {
 			case WM_INPUT:
 				if (GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT)
 					self->ProcessRawInput(reinterpret_cast<HRAWINPUT>(lParam));
-				// Foreground WM_INPUT requires DefWindowProc for system cleanup.
+				// 前面のWM_INPUTは後始末のためDefWindowProcへ渡す
 				return DefWindowProcW(hwnd, message, wParam, lParam);
 			case WM_SETFOCUS:
 				self->m_input.SetActive(true);

@@ -20,7 +20,7 @@ namespace Engine {
 		const Scene& scene, float elapsedTime) const {
 		using namespace DirectX;
 
-		constexpr float kProjectionMargin = 1.1f; // Keep the ocean corners inside the far plane.
+		constexpr float kProjectionMargin = 1.1f; // 海の四隅を遠クリップ面に収める余裕
 		const Camera& camera = scene.GetCamera();
 
 		const auto camPos = camera.GetPosition();
@@ -84,7 +84,7 @@ namespace Engine {
 	void RendererFrameUpdater::UpdateFogConstants(const FrameViewData& frame,
 		const SceneEnvironment& environment, OceanFogConstantBufferData* oceanFog) const {
 		using namespace DirectX;
-		// CPU uses row-vector matrices; transpose once at the HLSL constant-buffer boundary.
+		// CPUの行ベクトル用行列をHLSLへの転送時に転置する
 
 		XMStoreFloat4x4(&oceanFog->inverseViewProjection, XMMatrixTranspose(frame.inverseViewProjection));
 		oceanFog->cameraPosition = frame.cameraPosition;

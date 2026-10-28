@@ -40,12 +40,10 @@ namespace Engine {
 				uint32_t c = (i + 1) * (slices + 1) + j;
 				uint32_t d = c + 1;
 
-				// 最初の三角形
 				indices.push_back(a);
 				indices.push_back(c);
 				indices.push_back(b);
 
-				// 2番目の三角形
 				indices.push_back(b);
 				indices.push_back(c);
 				indices.push_back(d);

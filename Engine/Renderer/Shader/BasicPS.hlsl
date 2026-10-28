@@ -30,9 +30,7 @@ struct PS_INPUT
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    // ========================================================
     // Common Lighting
-    // ========================================================
 
     CommonLightingParameters lighting;
 
@@ -43,16 +41,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
     lighting.ambientColor = ambientColor;
     lighting.padding = 0.0f;
 
-    // ========================================================
     // View / Light Direction
-    // ========================================================
 
     float3 V = SafeNormalize(cameraPos - input.worldPos);
     float3 L = SafeNormalize(lighting.sunDirection);
 
-    // ========================================================
     // Normal
-    // ========================================================
 
     float3 N;
     float3 T;
@@ -68,9 +62,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float NdotL = saturate(dot(N, L));
 
-    // ========================================================
     // Diffuse
-    // ========================================================
 
     float3 albedo = gDiffuse.Sample(
         gSampler,
@@ -79,15 +71,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float3 diffuse = albedo * NdotL;
 
-    // ========================================================
     // Ambient
-    // ========================================================
 
     float3 ambient = albedo * GetAmbientRadiance(lighting);
 
-    // ========================================================
     // Sun Specular
-    // ========================================================
 
     float3 sunSpecular = CalculateSunSpecular(
         N,
@@ -97,15 +85,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
         lighting
     );
 
-    // ========================================================
     // Final Lighting
-    // ========================================================
 
     float3 color = diffuse + ambient + sunSpecular;
 
-    // ========================================================
     // Atmospheric Fog
-    // ========================================================
 
     float distanceToCamera = length(cameraPos - input.worldPos);
     float fogStart = 1500.0f;
@@ -124,9 +108,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         fogFactor
     );
 
-    // ========================================================
-    // Tonemapping
-    // ========================================================
+    // Tone Mapping
 
     color = ToneMapReinhard(color);
 

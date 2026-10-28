@@ -6,7 +6,7 @@ namespace Game {
 		constexpr float kPropellerAngularSpeedPerSpeed = 0.06f;
 		constexpr float kMaximumAnimationFrameSeconds = 0.25f;
 		float AdvancePropeller(float angle, float speed, float dt) {
-			// Match the flight integrator's maximum catch-up time; units are radians and seconds.
+			// 飛行モデルと同じ時間上限を使う（角度はラジアン、時間は秒）
 			return std::fmod(
 				angle + speed * kPropellerAngularSpeedPerSpeed * std::min(dt, kMaximumAnimationFrameSeconds),
 				DirectX::XM_2PI);
@@ -28,6 +28,7 @@ namespace Game {
 	void FlightScene::Update(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput) {
 		if (!std::isfinite(dt) || dt <= 0)
 			return;
+		// 更新後の機体位置・姿勢をカメラと描画状態へ反映する
 		UpdatePlayer(input, dt);
 		UpdateEnemies(dt);
 		UpdateCamera(input, dt, cameraInput);

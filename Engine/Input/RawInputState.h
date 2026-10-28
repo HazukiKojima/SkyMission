@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 namespace Engine {
-	// One immutable snapshot is shared by all consumers in the same update.
+	// 同じ更新内で入力スナップショットを共有する
 	struct InputSnapshot {
 		bool active = false;
 		std::array<bool, 256> keys{};
@@ -26,7 +26,7 @@ namespace Engine {
 		}
 	};
 
-	// Decodes packets without polling OS key/cursor state; usable directly in regression tests.
+	// OSの状態を照会せず、受信パケットから入力状態を復元する
 	class RawInputState {
 	  public:
 		void SetActive(bool active) {
@@ -48,11 +48,11 @@ namespace Engine {
 				m_deltaX = m_deltaY = 0;
 		}
 		void ProcessKeyboard(HANDLE device, const RAWKEYBOARD& keyboard) {
-			// 0xff is a fake/overrun key, not a virtual key to retain.
+			// 疑似キー・入力超過通知の0xffは押下状態に含めない
 			constexpr USHORT kKeyboardOverrunMakeCode = 0xff;
 			if (!m_active || keyboard.VKey >= 0xff || keyboard.MakeCode == kKeyboardOverrunMakeCode)
 				return;
-			// Pause may contain an E1-prefixed synthetic Ctrl make without a matching break.
+			// Pauseに含まれる、解放通知のないE1付き疑似Ctrl押下を除外する
 			if (keyboard.VKey == VK_CONTROL && (keyboard.Flags & RI_KEY_E1))
 				return;
 			UINT key = keyboard.VKey;
@@ -75,7 +75,7 @@ namespace Engine {
 				state.rightDown = false;
 			std::int64_t dx = mouse.lLastX, dy = mouse.lLastY;
 			if (mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
-				// Absolute devices (e.g. remote desktop/tablets) use normalized 0..65535 coordinates.
+				// 絶対位置入力は0〜65535の正規化座標から変換する
 				const LONG x = static_cast<LONG>(std::int64_t(mouse.lLastX) * (desktopWidth - 1) / 65535);
 				const LONG y = static_cast<LONG>(std::int64_t(mouse.lLastY) * (desktopHeight - 1) / 65535);
 				const bool virtualDesktop = (mouse.usFlags & MOUSE_VIRTUAL_DESKTOP) != 0;
@@ -84,7 +84,7 @@ namespace Engine {
 					dx = std::int64_t(x) - state.absolute.x;
 					dy = std::int64_t(y) - state.absolute.y;
 				} else
-					dx = dy = 0; // First packet establishes an origin; never jump on focus/device changes.
+					dx = dy = 0; // 初回は基準位置だけを設定し、視点の飛びを防ぐ
 				state.absolute = {x, y};
 				state.hasAbsolute = true;
 				state.virtualDesktop = virtualDesktop;

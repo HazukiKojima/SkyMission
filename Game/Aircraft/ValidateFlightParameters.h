@@ -35,7 +35,7 @@ namespace Game {
 		finiteNonnegative(p.criticalAngleRadians, "criticalAngleRadians");
 		finiteNonnegative(p.turnDrag, "turnDrag");
 		finiteNonnegative(p.flightPathResponse, "flightPathResponse");
-		// Initial speed may be below minimumSpeed (takeoff), but cannot exceed maximumSpeed.
+		// 離陸用にminimumSpeed未満の初速を許し、maximumSpeed超過は拒否する
 		if (p.minimumSpeed <= 0.0f || p.maximumSpeed <= p.minimumSpeed || p.initialSpeed > p.maximumSpeed ||
 			p.liftReferenceSpeed <= 0.0f || p.stallSpeed > p.maximumSpeed ||
 			p.criticalAngleRadians <= p.stallAngleRadians ||

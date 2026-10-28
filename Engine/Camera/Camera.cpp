@@ -17,7 +17,7 @@ namespace Engine {
 
 	void Camera::LookAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target) {
 		m_position = position;
-		// Left-handed view, +Y up; game controllers choose the position and target.
+		// 左手座標系・上方向+Yで、ゲーム側が指定した位置と注視点を使う
 		m_view = DirectX::XMMatrixLookAtLH(DirectX::XMLoadFloat3(&position), DirectX::XMLoadFloat3(&target),
 			DirectX::XMVectorSet(0, 1, 0, 0));
 	}

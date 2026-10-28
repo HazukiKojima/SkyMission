@@ -54,7 +54,7 @@ namespace Engine {
 				mix(static_cast<uint64_t>(towlower(character)));
 			}
 
-			mix(kTextureProcessingVersion); // Processing version: mip generation precedes compression.
+			mix(kTextureProcessingVersion); // ミップ生成後に圧縮する処理方式をキャッシュキーに反映する
 			mix(fileSize);
 			mix(static_cast<uint64_t>(lastWriteTime.time_since_epoch().count()));
 			mix(static_cast<uint64_t>(targetFormat));
@@ -126,7 +126,7 @@ namespace Engine {
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options))
 			return false;
 		CorrectNormalGreen(options.invertNormalGreen);
-		// Keep the established processing order and output formats: mips precede BC compression.
+		// BC圧縮形式はミップ生成に非対応のため、生成後に圧縮する
 		if (!GenerateMipChain(options.generateMipmaps) || !ConvertFormat(options.targetFormat, filePath))
 			return false;
 		TrySaveDiskCache(cachePath);

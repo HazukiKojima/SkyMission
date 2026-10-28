@@ -128,7 +128,7 @@ void TestRawInput() {
 	Require(!state.ConsumeFrame().IsKeyDown('W'), "Inactive raw keyboard packet was accepted");
 	state.SetActive(true);
 	key(keyboard1, 'W');
-	key(keyboard1, 'W'); // Repeated make packets keep a single held state.
+	key(keyboard1, 'W'); // 押下通知が重複しても状態は一つだけ保持する
 	Require(AircraftController{}.ReadInput(state.ConsumeFrame()).pitch == -1.0f, "Raw W make was not mapped");
 	Require(state.ConsumeFrame().IsKeyDown('W'), "Held key disappeared at next frame");
 	key(keyboard2, 'W');
@@ -211,7 +211,7 @@ void TestRawInput() {
 	auto first = std::make_unique<Window>(64, 64, L"Raw Input test (hidden)", GetModuleHandleW(nullptr));
 	{
 		Window second(64, 64, L"Raw Input test 2 (hidden)", GetModuleHandleW(nullptr));
-		first.reset(); // Destruction must not unregister the second window's input.
+		first.reset(); // 一つ目の破棄後も二つ目の入力登録を維持する
 		UINT matching = 0;
 		for (const auto& device : registrations())
 			if (device.hwndTarget == second.GetHandle()) {
@@ -400,7 +400,7 @@ void TestGpuTextures(const fs::path& fixture) {
 		D3D12_RESOURCE_STATE_INDEX_BUFFER, oceanIndices, sizeof(oceanIndices), submit);
 	std::cout << "PASS: DEFAULT heap vertex/ocean/sky buffers, GPU readback after upload release\n";
 
-	// A missing ocean must return before accessing pipeline/device state or issuing draw calls.
+	// Ocean欠落時はパイプライン・デバイスの参照や描画を行わない
 	RendererAssets assets;
 	RendererPipelines pipelines;
 	RendererConstantBuffers constants;
@@ -408,7 +408,7 @@ void TestGpuTextures(const fs::path& fixture) {
 	OceanRenderPass{}.Record({nullptr, nullptr, pipelines, constants, 0}, assets, ocean);
 	RenderDevice{}.Resize(0, 100);
 
-	// Real PSO creation after changing CWD proves shaders resolve beside the executable.
+	// 作業ディレクトリに依存せず、実行ファイルの隣からシェーダーを読み込む
 	const auto executable = ExecutableDirectory();
 	const char* vs = "float4 main(float3 p:POSITION,float2 uv:TEXCOORD):SV_POSITION{return float4(p,1);}";
 	const char* ps = "float4 main():SV_TARGET{return float4(1,1,1,1);}";

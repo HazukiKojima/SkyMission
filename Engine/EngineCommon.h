@@ -20,7 +20,7 @@
 
 using Microsoft::WRL::ComPtr;
 
-// 拡張APIエラーハンドリング用マクロ
+// 失敗したHRESULTを含む例外を送出する
 inline void ThrowIfFailed(HRESULT hr) {
 	if (FAILED(hr)) {
 		std::ostringstream message;

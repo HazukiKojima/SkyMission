@@ -47,7 +47,7 @@ namespace Engine {
 
 	void RendererAssets::Load(
 		RenderDevice* device, CommandContext* context, const RendererDefinition& assets) {
-		// Ocean shader t0..t2 is one contiguous descriptor table; do not allocate between these loads.
+		// Oceanのt0〜t2を連続させるため、途中で別のディスクリプタを割り当てない
 		m_oceanTexture = LoadTexture(
 			*device, *context, assets.environment.oceanTexture, {.useSrgb = true}, m_oceanTextureSrvIndex);
 		m_oceanNormalTexture = LoadTexture(*device, *context, assets.environment.oceanNormalTexture,

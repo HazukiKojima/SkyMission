@@ -6,7 +6,7 @@
 namespace Game {
 	class AircraftController {
 	  public:
-		// フレームの入力スナップショットを機体制御用の入力値へ変換する。
+		// フレームの入力スナップショットを機体制御用の入力値へ変換する
 		struct KeyboardState {
 			bool pitchUp = false, pitchDown = false, turnLeft = false, turnRight = false;
 			bool yawLeft = false, yawRight = false, accelerate = false, decelerate = false;

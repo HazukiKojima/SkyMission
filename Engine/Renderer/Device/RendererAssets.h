@@ -12,7 +12,7 @@ namespace Engine {
 	class RendererAssets {
 	  public:
 		void InitializeSkySphere(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius);
-		// Record into the caller's open command list; submission and GPU wait belong to Renderer.
+		// 転送を記録し、実行とGPU完了待機はRendererに任せる
 		void Load(RenderDevice* device, CommandContext* context, const RendererDefinition& assets);
 		void ReleaseUploadResources();
 

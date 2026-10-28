@@ -3,9 +3,6 @@
 
 namespace Engine {
 
-	// ============================================================
-	// Initialize
-	// ============================================================
 
 	void RenderDevice::Initialize(HWND hwnd, UINT width, UINT height) {
 		CreateDevice();
@@ -63,7 +60,7 @@ namespace Engine {
 		HRESULT deviceResult = TryCreateHardwareDevice() ? S_OK : E_FAIL;
 
 		if (FAILED(deviceResult)) {
-			// Hardware adapter が利用できない環境でも起動できるよう WARP を試す。
+			// ハードウェアアダプターが利用できない環境でも起動できるようWARPを試す
 			ComPtr<IDXGIAdapter> warpAdapter;
 			ThrowIfFailed(m_factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
 			deviceResult =
@@ -101,7 +98,7 @@ namespace Engine {
 	}
 
 	void RenderDevice::CreateDescriptorHeaps() {
-		// RTV: back buffer, scene color, postprocess color per frame. SRV indices are named in RenderDevice.
+		// RTVはバックバッファ・シーンカラー・後処理カラーの順に各フレーム分を配置する
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
 		rtvHeapDesc.NumDescriptors = FrameCount * 3;
@@ -142,9 +139,6 @@ namespace Engine {
 		}
 	}
 
-	// ============================================================
-	// RTV
-	// ============================================================
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetSceneRtvHandle() const {
 		D3D12_CPU_DESCRIPTOR_HANDLE handle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
@@ -162,9 +156,6 @@ namespace Engine {
 		return handle;
 	}
 
-	// ============================================================
-	// Present
-	// ============================================================
 
 	void RenderDevice::Present() {
 		ThrowIfFailed(m_swapChain->Present(1, 0));
@@ -178,9 +169,6 @@ namespace Engine {
 		return rtvHandle;
 	}
 
-	// ============================================================
-	// SRV
-	// ============================================================
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::AllocateSrvDescriptor(UINT* outIndex) {
 		if (m_srvDescriptorCount >= SrvDescriptorCapacity) {
@@ -208,9 +196,6 @@ namespace Engine {
 		return handle;
 	}
 
-	// ============================================================
-	// Resize
-	// ============================================================
 
 	void RenderDevice::Resize(UINT width, UINT height) {
 		if (width == 0 || height == 0 || (width == m_width && height == m_height)) {
@@ -220,7 +205,7 @@ namespace Engine {
 		m_width = width;
 		m_height = height;
 
-		// Caller (Renderer::Resize) must wait for the GPU before releasing these resources.
+		// 解放前に呼び出し元のRenderer::ResizeでGPU完了を待つ
 		for (UINT i = 0; i < FrameCount; ++i) {
 			m_renderTargets[i].Reset();
 			m_sceneRenderTargets[i].Reset();
@@ -229,24 +214,17 @@ namespace Engine {
 
 		m_sceneDepth.Reset();
 
-		// --------------------------------------------------------
-		// SwapChain
-		// --------------------------------------------------------
 
 		ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
 
-		// --------------------------------------------------------
 		// BackBuffer RTV
-		// --------------------------------------------------------
 
 		CreateBackBufferViews();
 
 		CreateSceneResources();
 	}
 
-	// ============================================================
 	// Scene Resources
-	// ============================================================
 
 	void RenderDevice::CreateSceneResources() {
 		CreateSceneRenderTargets();
@@ -257,9 +235,7 @@ namespace Engine {
 	void RenderDevice::CreateSceneRenderTargets() {
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 
-		// ========================================================
 		// Scene Color
-		// ========================================================
 
 		for (UINT i = 0; i < FrameCount; ++i) {
 			CD3DX12_RESOURCE_DESC colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -295,9 +271,7 @@ namespace Engine {
 
 	void RenderDevice::CreateSceneDepth() {
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-		// ========================================================
 		// Scene Depth
-		// ========================================================
 
 		CD3DX12_RESOURCE_DESC depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 			DXGI_FORMAT_R32_TYPELESS, m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);

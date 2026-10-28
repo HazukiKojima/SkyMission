@@ -60,7 +60,7 @@ namespace Engine {
 		D3D12_CPU_DESCRIPTOR_HANDLE GetDsvHandle() const {
 			return m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
 		}
-		// SRVs: [scene color, depth] per frame, then postprocess color per frame.
+		// SRVはフレーム別の［シーンカラー、深度］、続いてフレーム別の後処理カラーを配置する
 		static constexpr UINT SceneColorSrvIndex(UINT frame) {
 			return frame * 2;
 		}

@@ -3,7 +3,7 @@
 #include <string>
 
 namespace Engine {
-	// Asset naming conventions are supplied by the game configuration, not the importer.
+	// アセットの命名規則はゲーム側の設定から渡す
 	struct ModelLoadOptions {
 		std::string rotatingNodeName;
 		std::filesystem::path textureDirectory = L"Textures";

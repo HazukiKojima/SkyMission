@@ -1,3 +1,4 @@
+// CPUと配置を共有し、定数バッファの成分を用途別の名前で参照する
 cbuffer RetroFilmConstants : register(b0)
 {
     float time;
@@ -33,7 +34,6 @@ float Hash(float2 value)
 
 float FilmGrain(float2 pixel, float time)
 {
-    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
     const float grainFrameRate = jitterYGrain.y;
     const float grainStrength = jitterYGrain.z;
 
@@ -44,7 +44,6 @@ float FilmGrain(float2 pixel, float time)
 
 float FilmDust(float2 pixel, float time)
 {
-    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
     const float dustFrameRate = dust.x;
     const float dustThreshold = dust.y;
     const float minimumDustRadius = dust.z;
@@ -71,7 +70,6 @@ float FilmDust(float2 pixel, float time)
 
 float FilmScratch(float2 pixel, float time)
 {
-    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
     const float scratchFrameRate = dustScratch.z;
     const float scratchSpacing = dustScratch.y;
     const float scratchThreshold = dustScratch.w;
@@ -98,7 +96,6 @@ float FilmScratch(float2 pixel, float time)
 
 float FilmFlicker(float time)
 {
-    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
     const float flickerFrameRate = scratchFlicker.y;
     const float flickerStrength = scratchFlicker.z;
 
@@ -109,7 +106,6 @@ float FilmFlicker(float time)
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
     const float desaturation = colorDesaturationTint.x;
     const float3 colorTint = colorDesaturationTint.yzw;
     const float colorGain = colorGainOffset.x;

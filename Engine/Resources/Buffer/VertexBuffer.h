@@ -10,13 +10,11 @@ namespace Engine {
 		~VertexBuffer() = default;
 
 		// 頂点バッファの生成とGPUメモリへのデータ転送
-		// @param device: GPUデバイス
-		// @param data: 頂点データの配列ポインタ
-		// @param size: バッファ全体のサイズ（バイト）
-		// @param stride: 1頂点あたりのサイズ（バイト）
+		// sizeは総バイト数、strideは1頂点のバイト数
+		// commandsへコピーを記録し、実行とGPU完了待機は呼び出し元が行う
 		void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, const void* data, UINT size,
 						UINT stride);
-		// 呼び出し元が転送コマンドの GPU 完了を待機した後に呼ぶ。
+		// 呼び出し元が転送コマンドの GPU 完了を待機した後に呼ぶ
 		void ReleaseUploadResources() {
 			m_upload.Reset();
 		}

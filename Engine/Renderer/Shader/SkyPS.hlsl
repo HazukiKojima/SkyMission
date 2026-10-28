@@ -1,8 +1,6 @@
 #include "CommonLighting.hlsli"
 
-// ============================================================
 // Constant Buffer
-// ============================================================
 
 cbuffer MatrixBuffer : register(b0)
 {
@@ -19,16 +17,12 @@ cbuffer MatrixBuffer : register(b0)
     float pad3;
 };
 
-// ============================================================
 // Resources
-// ============================================================
 
 Texture2D gSkyTexture : register(t0);
 SamplerState gSampler : register(s0);
 
-// ============================================================
 // Input
-// ============================================================
 
 struct PS_INPUT
 {
@@ -37,15 +31,11 @@ struct PS_INPUT
     float3 worldPos : TEXCOORD1;
 };
 
-// ============================================================
 // Pixel Shader
-// ============================================================
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    // ========================================================
     // Lighting
-    // ========================================================
 
     CommonLightingParameters lighting;
 
@@ -56,26 +46,20 @@ float4 PS(PS_INPUT input) : SV_TARGET
     lighting.ambientColor = ambientColor;
     lighting.padding = 0.0f;
 
-    // ========================================================
     // HDR Sky
-    // ========================================================
 
     float3 hdrColor = gSkyTexture.Sample(
         gSampler,
         input.texcoord
     ).rgb;
 
-    // ========================================================
     // Exposure
-    // ========================================================
 
     const float exposure = 1.1f;
 
     float3 color = hdrColor * exposure;
 
-    // ========================================================
     // Atmospheric Horizon
-    // ========================================================
 
     float3 skyDirection = SafeNormalize(
         input.worldPos - cameraPos
@@ -109,9 +93,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         horizonFactor
     );
 
-    // ========================================================
     // Horizon Brightening
-    // ========================================================
 
     float horizonGlow = pow(
         saturate(
@@ -126,9 +108,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         0.045f
     ) * horizonGlow;
 
-    // ========================================================
     // Sun Disk
-    // ========================================================
 
     float sunDot = saturate(
         dot(
@@ -155,15 +135,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
             sunGlow * 0.035f
         );
 
-    // ========================================================
     // Tone Mapping
-    // ========================================================
 
     color = ToneMapReinhard(color);
 
-    // ========================================================
     // Gamma / Final
-    // ========================================================
 
     return float4(
         max(color, 0.0f),

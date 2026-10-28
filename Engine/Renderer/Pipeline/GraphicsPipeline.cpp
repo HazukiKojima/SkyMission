@@ -1,7 +1,7 @@
 #include "GraphicsPipeline.h"
 #include "../../ExecutablePath.h"
 #include "../../Log.h"
-#include <d3dcompiler.h> // コンパイル用
+#include <d3dcompiler.h> // シェーダーバイナリの読み込みに使用する
 
 namespace {
 	namespace Binding = Engine::RootBinding;
@@ -16,6 +16,7 @@ namespace {
 		rootParams[Binding::TextureTable].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 		rootParams[Binding::FrameConstants].InitAsConstantBufferView(
 			0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		// ノード回転を使うモデルのみ、頂点シェーダーのb1に回転定数を追加する
 		const bool nodeRotation = layout == Engine::RootSignatureLayout::NodeRotation;
 		if (nodeRotation)
 			rootParams[Binding::NodeRotation].InitAsConstants(
@@ -87,7 +88,7 @@ namespace {
 		// ラスタライザ設定
 		CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
 
-		// Imported model winding is converted to left-handed coordinates by Assimp.
+		// Assimpでモデルの座標系と巻き順を左手座標系へ変換済み
 		rasterizerDesc.CullMode = options.cullMode;
 
 		psoDesc.RasterizerState = rasterizerDesc;

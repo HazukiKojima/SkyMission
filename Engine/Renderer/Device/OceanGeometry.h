@@ -6,7 +6,7 @@ namespace Engine {
 	class OceanGeometry {
 	  public:
 		void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize);
-		// 転送コマンドの GPU 完了後に呼ぶ。
+		// 転送コマンドの GPU 完了後に呼ぶ
 		void ReleaseUploadResources();
 		ID3D12Resource* GetVertexBufferResource() const {
 			return m_vertexBuffer->GetResource();

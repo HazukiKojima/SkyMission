@@ -71,7 +71,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 ambientLighting = lerp(albedo.rgb, F0, metallic) * GetAmbientRadiance(lighting) * 1.8f;
     float3 color = (directLighting + ambientLighting) * 1.5f;
 
-    // Lift the aircraft's dark material without changing the sky or ocean exposure.
+    // 空や海の露出を変えずに、機体マテリアルの暗部を持ち上げる
     color = pow(saturate(color), 0.76f);
 
     return float4(color, albedo.a);
