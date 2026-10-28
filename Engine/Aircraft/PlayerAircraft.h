@@ -51,6 +51,10 @@ namespace Engine {
 
 		void UpdateControls(const AircraftInput& input, float deltaSeconds);
 		void UpdateAttitude(const AircraftInput& input, float deltaSeconds, FlightStepState& state);
+		void CalculateFlightStepState(const AircraftInput& input, FlightStepState& state) const;
+		float UpdatePitchAndRoll(const AircraftInput& input, float deltaSeconds, FlightStepState& state);
+		void UpdateYaw(float deltaSeconds, FlightStepState& state);
+		void UpdateLiftDirection(float levelRoll, FlightStepState& state) const;
 		void UpdateFlightPhysics(const FlightStepState& state, DirectX::XMFLOAT3& acceleration, float& drag) const;
 		void UpdateVelocity(const DirectX::XMFLOAT3& acceleration, float drag, const DirectX::XMFLOAT3& fallbackForward, float deltaSeconds);
 		void UpdatePosition(float deltaSeconds);

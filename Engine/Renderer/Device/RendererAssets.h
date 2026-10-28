@@ -10,7 +10,7 @@ namespace Engine {
 	class RendererAssets {
 	public:
 		void InitializeSkySphere(ID3D12Device* device, float radius);
-		void Load(RenderDevice* device, CommandContext* context, const SceneAssetPaths& assets);
+		void Load(RenderDevice* device, CommandContext* context, const SceneDefinition& assets);
 
 		SkySphere* GetSkySphere() const { return m_skySphere.get(); }
 		const std::shared_ptr<Texture>& GetOceanTexture() const { return m_oceanTexture; }

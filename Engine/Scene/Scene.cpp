@@ -6,9 +6,8 @@ namespace Engine {
 		m_camera.Initialize(hwnd, DirectX::XM_PIDIV4, aspect, nearZ, farZ);
 	}
 
-	void Scene::Update(float deltaSeconds) {
+	void Scene::Update(const AircraftInput& input, float deltaSeconds) {
 		if (m_playerObjectIndex < m_objects.size()) {
-			const AircraftInput input = m_aircraftController.ReadInput();
 			m_playerAircraft.Update(input, deltaSeconds);
 			const DirectX::XMFLOAT4X4 aircraftTransform = m_playerAircraft.GetWorldTransform();
 			DirectX::XMStoreFloat4x4(

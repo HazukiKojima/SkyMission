@@ -6,7 +6,7 @@ namespace Engine {
 		m_skySphere->Initialize(device, radius, 64, 32);
 	}
 
-	void RendererAssets::Load(RenderDevice* device, CommandContext* context, const SceneAssetPaths& assets) {
+	void RendererAssets::Load(RenderDevice* device, CommandContext* context, const SceneDefinition& assets) {
 		context->BeginFrame();
 		UINT oceanTextureSrvIndex = 0;
 		const D3D12_CPU_DESCRIPTOR_HANDLE oceanTextureCpuHandle = device->AllocateSrvDescriptor(&oceanTextureSrvIndex);
@@ -68,13 +68,13 @@ namespace Engine {
 		}
 
 		m_model = std::make_shared<Model>();
-		if (!m_model->Load(device->GetDevice(), context->GetCommandList(), device, assets.aircraftModel.wstring())) {
+		if (!m_model->Load(device->GetDevice(), context->GetCommandList(), device, assets.playerAircraft.model.wstring())) {
 			OutputDebugStringA("Failed to load player aircraft model\n");
 			m_model.reset();
 		}
 
 		m_enemyAircraftModel = std::make_shared<Model>();
-		if (!m_enemyAircraftModel->Load(device->GetDevice(), context->GetCommandList(), device, assets.enemyAircraftModel.wstring())) {
+		if (!m_enemyAircraftModel->Load(device->GetDevice(), context->GetCommandList(), device, assets.enemyAircraft.model.wstring())) {
 			OutputDebugStringA("Failed to load F4U4 Corsair model\n");
 			m_enemyAircraftModel.reset();
 		}
