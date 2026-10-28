@@ -378,4 +378,7 @@
     <None Include="Tests\RegressionTests.cpp" />
     <None Include="Tests\RunRegressionTests.ps1" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Input\RawInputState.h" />
+  </ItemGroup>
 </Project>

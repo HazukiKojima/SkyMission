@@ -1,8 +1,9 @@
 #include "SkySphere.h"
-#include "d3dx12.h"
+#include "../Buffer/BufferUtilities.h"
 
 namespace Engine {
-	void SkySphere::Initialize(ID3D12Device* device, float radius, UINT slices, UINT stacks) {
+	void SkySphere::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius, UINT slices,
+							   UINT stacks) {
 		using namespace DirectX;
 
 		std::vector<Vertex> vertices;
@@ -53,42 +54,19 @@ namespace Engine {
 
 		m_indexCount = static_cast<UINT>(indices.size());
 
-		// 頂点バッファを作成
-		{
-			UINT64 vertexBufferSize = vertices.size() * sizeof(Vertex);
-			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-			auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-			ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc,
-														  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-														  IID_PPV_ARGS(&m_vertexBuffer)));
+		const UINT64 vertexBytes = vertices.size() * sizeof(Vertex);
+		const UINT64 indexBytes = indices.size() * sizeof(uint32_t);
+		m_vertexBuffer = CreateStaticBuffer(device, commands, vertices.data(), vertexBytes,
+											D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_vertexUpload);
+		m_indexBuffer = CreateStaticBuffer(device, commands, indices.data(), indexBytes,
+										   D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
+		m_vertexBufferView = {m_vertexBuffer->GetGPUVirtualAddress(), static_cast<UINT>(vertexBytes), sizeof(Vertex)};
+		m_indexBufferView = {m_indexBuffer->GetGPUVirtualAddress(), static_cast<UINT>(indexBytes),
+							 DXGI_FORMAT_R32_UINT};
+	}
 
-			void* pData;
-			m_vertexBuffer->Map(0, nullptr, &pData);
-			memcpy(pData, vertices.data(), vertexBufferSize);
-			m_vertexBuffer->Unmap(0, nullptr);
-
-			m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-			m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-			m_vertexBufferView.SizeInBytes = static_cast<UINT>(vertexBufferSize);
-		}
-
-		// インデックスバッファを作成
-		{
-			UINT64 indexBufferSize = indices.size() * sizeof(uint32_t);
-			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-			auto desc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-			ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc,
-														  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-														  IID_PPV_ARGS(&m_indexBuffer)));
-
-			void* pData;
-			m_indexBuffer->Map(0, nullptr, &pData);
-			memcpy(pData, indices.data(), indexBufferSize);
-			m_indexBuffer->Unmap(0, nullptr);
-
-			m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-			m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-			m_indexBufferView.SizeInBytes = static_cast<UINT>(indexBufferSize);
-		}
+	void SkySphere::ReleaseUploadResources() {
+		m_vertexUpload.Reset();
+		m_indexUpload.Reset();
 	}
 } // namespace Engine

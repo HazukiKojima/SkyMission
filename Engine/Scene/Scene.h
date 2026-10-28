@@ -40,7 +40,7 @@ namespace Engine {
 	class Scene {
 	  public:
 		void Initialize(HWND hwnd, float aspect, float nearZ, float farZ);
-		void Update(const AircraftInput& input, float deltaSeconds);
+		void Update(const AircraftInput& input, float deltaSeconds, const InputSnapshot& cameraInput = {});
 		void OnResize(UINT width, UINT height);
 
 		const Camera& GetCamera() const {

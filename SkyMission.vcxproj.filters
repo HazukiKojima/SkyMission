@@ -308,4 +308,8 @@
     <None Include="Tests\RegressionTests.cpp"><Filter>Tests</Filter></None>
     <None Include="Tests\RunRegressionTests.ps1"><Filter>Tests</Filter></None>
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Engine\Input"><UniqueIdentifier>{ddaf6ba8-0ae7-4e26-b6ef-c6a73c315195}</UniqueIdentifier></Filter>
+    <ClInclude Include="Engine\Input\RawInputState.h"><Filter>Engine\Input</Filter></ClInclude>
+  </ItemGroup>
 </Project>

@@ -1,21 +1,22 @@
 #pragma once
 #include "../EngineCommon.h"
 #include <DirectXMath.h>
+#include "../Input/RawInputState.h"
 
 namespace Engine {
 	// UEエディタ風のフライカメラ: WASDで移動、右ボタン押下でマウス視点移動。
-	// フライカメラ入力は、このウィンドウがアクティブな間だけ読み取る。
+	// フライカメラは Raw Input のフレームスナップショットを使用する。
 	class Camera {
 	  public:
 		Camera() = default;
 		~Camera() = default;
 
-		// ウィンドウハンドルで初期化（マウスキャプチャや射影パラメータ用）
+		// 射影・ビュー行列を初期化（hwnd は既存呼び出し元との互換性のため保持）。
 		void Initialize(HWND hwnd, float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,
 						float farZ = 1000.0f);
 
 		// 毎フレーム、経過秒を渡して呼び出す
-		void Update(float deltaSeconds);
+		void Update(float deltaSeconds, const InputSnapshot& input = {});
 		void SetFollowTarget(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& heading,
 							 const DirectX::XMFLOAT3& forward, bool pitchInputActive, float speed, float maximumSpeed);
 
@@ -54,14 +55,11 @@ namespace Engine {
 		void UpdateView();
 		void UpdateFollow(float deltaSeconds);
 
-		HWND m_hwnd = nullptr;
 		DirectX::XMFLOAT3 m_position = {0.0f, 10.0f, -10.0f};
 		float m_yaw = 0.0f;					// radians
 		float m_pitch = -0.4f;				// radians
 		float m_moveSpeed = 100.0f;			// units per second
 		float m_mouseSensitivity = 0.0025f; // radians per pixel
-		bool m_rmbDown = false;
-		POINT m_prevCursorPos = {0, 0};
 		bool m_following = false;
 		DirectX::XMFLOAT3 m_followTarget = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followHeading = {0.0f, 0.0f, -1.0f};

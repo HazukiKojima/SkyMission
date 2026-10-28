@@ -23,10 +23,16 @@ namespace Engine {
 
 		m_pipelines.Initialize(m_device->GetDevice());
 
-		m_assets.InitializeSkySphere(m_device->GetDevice(), assets.sky.radius);
-
-		m_oceanGeometry.Initialize(m_device->GetDevice(), m_frameUpdater.GetOceanSize());
+		m_context->BeginFrame();
+		auto* commands = m_context->GetCommandList();
+		m_assets.InitializeSkySphere(m_device->GetDevice(), commands, assets.sky.radius);
+		m_oceanGeometry.Initialize(m_device->GetDevice(), commands, m_frameUpdater.GetOceanSize());
 		m_assets.Load(m_device.get(), m_context.get(), assets);
+		m_context->EndFrame();
+		m_context->WaitForGpu();
+		// All initialization copies are complete; only DEFAULT resources remain for drawing.
+		m_assets.ReleaseUploadResources();
+		m_oceanGeometry.ReleaseUploadResources();
 	}
 
 	void Renderer::InitializeConstantBuffers(const Scene& scene) {

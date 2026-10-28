@@ -9,6 +9,7 @@
 #include "Engine/Renderer/Device/RendererPasses.h"
 #include "Engine/ExecutablePath.h"
 #include "Engine/Renderer/Device/Renderer.h"
+#include "Engine/Window/Window.h"
 #include <d3d12sdklayers.h>
 #include <d3dcompiler.h>
 #include <wincodec.h>
@@ -69,7 +70,7 @@ void TestFlightAndScene() {
 		AircraftController::MapInput({.pitchUp = true, .turnLeft = true, .accelerate = true, .decelerate = true});
 	Require(input.pitch == -1.0f && input.turn == 1.0f && input.throttle == 0.0f && input.highGTurn,
 			"Key mapping/high-G combination changed");
-	Require(AircraftController{}.ReadInput(nullptr).pitch == 0.0f, "Inactive input was not zero");
+	Require(AircraftController{}.ReadInput({}).pitch == 0.0f, "Inactive input was not zero");
 
 	Scene scene;
 	auto mesh = std::make_shared<Model>();
@@ -91,6 +92,126 @@ void TestFlightAndScene() {
 	const auto added = scene.AddObject(mesh);
 	Require(added > enemy && scene.GetObjects()[0].id == enemy, "Stale object handle was reused");
 	std::cout << "PASS: flight validation, integration, input, stable IDs, independent propellers\n";
+}
+
+void TestRawInput() {
+	RawInputState state;
+	const auto keyboard1 = reinterpret_cast<HANDLE>(std::uintptr_t(1));
+	const auto keyboard2 = reinterpret_cast<HANDLE>(std::uintptr_t(2));
+	const auto mouse1 = reinterpret_cast<HANDLE>(std::uintptr_t(3));
+	const auto mouse2 = reinterpret_cast<HANDLE>(std::uintptr_t(4));
+	const auto key = [&](HANDLE device, USHORT vkey, USHORT flags = RI_KEY_MAKE, USHORT code = 0x11) {
+		RAWKEYBOARD packet{};
+		packet.VKey = vkey;
+		packet.Flags = flags;
+		packet.MakeCode = code;
+		state.ProcessKeyboard(device, packet);
+	};
+	const auto mouse = [&](HANDLE device, USHORT buttons, LONG dx, LONG dy, USHORT flags = MOUSE_MOVE_RELATIVE) {
+		RAWMOUSE packet{};
+		packet.usFlags = flags;
+		packet.usButtonFlags = buttons;
+		packet.lLastX = dx;
+		packet.lLastY = dy;
+		state.ProcessMouse(device, packet, 1920, 1080);
+	};
+	key(keyboard1, 'W');
+	Require(!state.ConsumeFrame().IsKeyDown('W'), "Inactive raw keyboard packet was accepted");
+	state.SetActive(true);
+	key(keyboard1, 'W');
+	key(keyboard1, 'W'); // Repeated make packets keep a single held state.
+	Require(AircraftController{}.ReadInput(state.ConsumeFrame()).pitch == -1.0f, "Raw W make was not mapped");
+	Require(state.ConsumeFrame().IsKeyDown('W'), "Held key disappeared at next frame");
+	key(keyboard2, 'W');
+	key(keyboard1, 'W', RI_KEY_BREAK);
+	Require(state.ConsumeFrame().IsKeyDown('W'), "One keyboard's break cleared another keyboard's held key");
+	state.ForgetDevice(keyboard2);
+	Require(!state.ConsumeFrame().IsKeyDown('W'), "Unplugged keyboard left a stuck key");
+	key(keyboard1, VK_CONTROL);
+	key(keyboard1, VK_CONTROL, RI_KEY_E0);
+	key(keyboard1, VK_CONTROL, RI_KEY_BREAK);
+	key(keyboard1, VK_SPACE);
+	auto snapshot = state.ConsumeFrame();
+	Require(!snapshot.IsKeyDown(VK_LCONTROL) && snapshot.IsKeyDown(VK_RCONTROL) && snapshot.IsKeyDown(VK_CONTROL),
+			"Left/right Ctrl state is not independent");
+	Require(AircraftController{}.ReadInput(snapshot).highGTurn, "Raw Ctrl+Space did not activate high-G input");
+	key(keyboard1, VK_CONTROL, RI_KEY_E0 | RI_KEY_BREAK);
+	key(keyboard1, VK_SPACE, RI_KEY_BREAK);
+	key(keyboard1, VK_CONTROL, RI_KEY_E1, 0x1d);
+	Require(!state.ConsumeFrame().IsKeyDown(VK_CONTROL), "Pause's synthetic Ctrl became stuck");
+	key(keyboard1, 0xff);
+	key(keyboard1, 'W', RI_KEY_MAKE, 0xff);
+	Require(!state.ConsumeFrame().IsKeyDown('W'), "Keyboard overrun packet was retained");
+
+	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 3, -2);
+	mouse(mouse1, 0, 4, 5);
+	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_UP, 2, 0);
+	snapshot = state.ConsumeFrame();
+	Require(!snapshot.rightMouseDown && snapshot.mouseDeltaX == 9 && snapshot.mouseDeltaY == 3,
+			"Short right-button drag or accumulated motion was lost");
+	const auto next = state.ConsumeFrame();
+	Require(next.mouseDeltaX == 0 && next.mouseDeltaY == 0, "Raw mouse movement was replayed next frame");
+	Camera camera;
+	camera.Initialize(nullptr);
+	DirectX::XMFLOAT4X4 before, after;
+	DirectX::XMStoreFloat4x4(&before, camera.GetView());
+	camera.Update(0.0f, snapshot);
+	DirectX::XMStoreFloat4x4(&after, camera.GetView());
+	Require(std::abs(after._13 - before._13) > 0.001f, "Camera did not consume released-in-frame drag motion");
+	mouse(mouse1, 0, 100, 100);
+	Require(state.ConsumeFrame().mouseDeltaX == 0, "Mouse movement without right drag rotated the camera");
+
+	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 0, 0, MOUSE_MOVE_ABSOLUTE);
+	mouse(mouse1, 0, 65535, 65535, MOUSE_MOVE_ABSOLUTE);
+	snapshot = state.ConsumeFrame();
+	Require(snapshot.mouseDeltaX == 1919 && snapshot.mouseDeltaY == 1079,
+			"Absolute mouse coordinates were not converted");
+	mouse(mouse2, 0, 32767, 32767, MOUSE_MOVE_ABSOLUTE);
+	Require(state.ConsumeFrame().mouseDeltaX == 0, "New absolute mouse device caused a camera jump");
+	key(keyboard1, 'W');
+	state.SetActive(false);
+	snapshot = state.ConsumeFrame();
+	Require(!snapshot.active && !snapshot.IsKeyDown('W') && !snapshot.rightMouseDown && snapshot.mouseDeltaX == 0,
+			"Focus loss did not clear keys, mouse buttons and motion");
+	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 100, 100);
+	key(keyboard1, 'W');
+	state.SetActive(true);
+	snapshot = state.ConsumeFrame();
+	Require(!snapshot.IsKeyDown('W') && !snapshot.rightMouseDown, "Background input returned on focus regain");
+	const auto position = camera.GetPosition();
+	key(keyboard1, 'W');
+	camera.Update(0.1f, state.ConsumeFrame());
+	Require(std::abs(camera.GetPosition().z - position.z) > 1.0f, "Free camera did not consume raw keyboard state");
+
+	const auto registrations = [] {
+		UINT count = 0;
+		Require(GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) != UINT(-1),
+				"Raw registration query failed");
+		std::vector<RAWINPUTDEVICE> devices(count);
+		if (count)
+			Require(GetRegisteredRawInputDevices(devices.data(), &count, sizeof(RAWINPUTDEVICE)) != UINT(-1),
+					"Raw registration retrieval failed");
+		return devices;
+	};
+	auto first = std::make_unique<Window>(64, 64, L"Raw Input test (hidden)", GetModuleHandleW(nullptr));
+	{
+		Window second(64, 64, L"Raw Input test 2 (hidden)", GetModuleHandleW(nullptr));
+		first.reset(); // Destruction must not unregister the second window's input.
+		UINT matching = 0;
+		for (const auto& device : registrations())
+			if (device.hwndTarget == second.GetHandle()) {
+				Require((device.dwFlags & RIDEV_INPUTSINK) == 0, "Raw input is receiving background events");
+				++matching;
+			}
+		Require(matching == 2, "Window did not register foreground keyboard and mouse input");
+		Require(!second.ConsumeInput().active, "Hidden unfocused window exposes active input");
+	}
+	for (const auto& device : registrations())
+		Require(device.hwndTarget == nullptr, "Destroyed window retained raw input registration");
+	MSG message{};
+	while (PeekMessageW(&message, nullptr, WM_QUIT, WM_QUIT, PM_REMOVE)) {
+	}
+	std::cout << "PASS: Raw Input make/break, modifiers, multiple devices, drag, focus loss, registration lifetime\n";
 }
 
 void TestPathsAndJson(const fs::path& repository, const fs::path& fixture) {
@@ -118,6 +239,31 @@ void TestPathsAndJson(const fs::path& repository, const fs::path& fixture) {
 	Require(reader.ResolveFloat(json, "value") == 2.5f, "Transient JSON acquisition failed");
 	Require(reader.Resolve(json, "texture").filename() == L"機体.png", "UTF-8 JSON asset path was damaged");
 	std::cout << "PASS: Japanese material paths, JSON acquisition, model/fog configuration\n";
+}
+
+void RequireDefaultBufferContent(ID3D12Device* device, ID3D12GraphicsCommandList* commands, ID3D12Resource* source,
+								 D3D12_RESOURCE_STATES state, const void* expected, size_t bytes, const auto& submit) {
+	D3D12_HEAP_PROPERTIES properties{};
+	ThrowIfFailed(source->GetHeapProperties(&properties, nullptr));
+	Require(properties.Type == D3D12_HEAP_TYPE_DEFAULT, "Procedural geometry remained in UPLOAD memory");
+	ComPtr<ID3D12Resource> readback;
+	const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_READBACK);
+	const auto desc = CD3DX12_RESOURCE_DESC::Buffer(bytes);
+	ThrowIfFailed(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST,
+												  nullptr, IID_PPV_ARGS(&readback)));
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(source, state, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	commands->ResourceBarrier(1, &barrier);
+	commands->CopyBufferRegion(readback.Get(), 0, source, 0, bytes);
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(source, D3D12_RESOURCE_STATE_COPY_SOURCE, state);
+	commands->ResourceBarrier(1, &barrier);
+	submit();
+	void* data = nullptr;
+	const CD3DX12_RANGE range(0, bytes);
+	ThrowIfFailed(readback->Map(0, &range, &data));
+	const bool equal = std::memcmp(data, expected, bytes) == 0;
+	const CD3DX12_RANGE noWrites(0, 0);
+	readback->Unmap(0, &noWrites);
+	Require(equal, "Procedural geometry copy did not preserve vertex/index data");
 }
 
 void TestGpuTextures(const fs::path& fixture) {
@@ -200,6 +346,37 @@ void TestGpuTextures(const fs::path& fixture) {
 	auto singleMip = Texture::LoadCached(device.Get(), commands.Get(), png.wstring(), {.generateMipmaps = false});
 	Require(singleMip != shared && singleMip->GetResource()->GetDesc().MipLevels == 1, "Cache ignored mip options");
 	submit();
+
+	VertexBuffer proceduralVertices;
+	const float vertexData[]{1, 2, 3, 4, 5, 6};
+	proceduralVertices.Initialize(device.Get(), commands.Get(), vertexData, sizeof(vertexData), 3 * sizeof(float));
+	SkySphere sky;
+	sky.Initialize(device.Get(), commands.Get(), 10.0f, 8, 4);
+	OceanGeometry proceduralOcean;
+	proceduralOcean.Initialize(device.Get(), commands.Get(), 2000.0f);
+	submit();
+	proceduralVertices.ReleaseUploadResources();
+	sky.ReleaseUploadResources();
+	proceduralOcean.ReleaseUploadResources();
+	RequireDefaultBufferContent(device.Get(), commands.Get(), proceduralVertices.GetResource(),
+								D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, vertexData, sizeof(vertexData),
+								submit);
+	const SkySphere::Vertex skyVertex{{0, 10, 0}, {0, 0}};
+	const std::uint32_t skyIndices[]{0, 9, 1, 1, 9, 10};
+	Require(sky.GetIndexCount() == 8 * 4 * 6, "Sky sphere index count changed");
+	RequireDefaultBufferContent(device.Get(), commands.Get(), sky.GetVertexBufferResource(),
+								D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &skyVertex, sizeof(skyVertex), submit);
+	RequireDefaultBufferContent(device.Get(), commands.Get(), sky.GetIndexBufferResource(),
+								D3D12_RESOURCE_STATE_INDEX_BUFFER, skyIndices, sizeof(skyIndices), submit);
+	const float oceanVertex[]{-1000, 0, -1000, 0, 0};
+	const std::uint32_t oceanIndices[]{0, 1, 1000, 1, 1001, 1000};
+	Require(proceduralOcean.GetIndexCount() == 999 * 999 * 6, "Ocean index count changed");
+	RequireDefaultBufferContent(device.Get(), commands.Get(), proceduralOcean.GetVertexBufferResource(),
+								D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, oceanVertex, sizeof(oceanVertex),
+								submit);
+	RequireDefaultBufferContent(device.Get(), commands.Get(), proceduralOcean.GetIndexBufferResource(),
+								D3D12_RESOURCE_STATE_INDEX_BUFFER, oceanIndices, sizeof(oceanIndices), submit);
+	std::cout << "PASS: DEFAULT heap vertex/ocean/sky buffers, GPU readback after upload release\n";
 
 	// A missing ocean must return before accessing pipeline/device state or issuing draw calls.
 	RendererAssets assets;
@@ -291,6 +468,7 @@ int wmain(int argc, wchar_t** argv) {
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
 		TestFlightAndScene();
+		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestRendererSmoke(argv[1], fixture);

@@ -22,7 +22,7 @@ namespace Engine {
 		m_camera.Initialize(hwnd, DirectX::XM_PIDIV4, aspect, nearZ, farZ);
 	}
 
-	void Scene::Update(const AircraftInput& input, float deltaSeconds) {
+	void Scene::Update(const AircraftInput& input, float deltaSeconds, const InputSnapshot& cameraInput) {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0.0f)
 			return;
 		const float animationSeconds = std::min(deltaSeconds, 0.25f); // Match the flight integrator's catch-up limit.
@@ -52,7 +52,7 @@ namespace Engine {
 									 DirectX::XMMatrixScaling(enemy.visualScale, enemy.visualScale, enemy.visualScale) *
 										 DirectX::XMLoadFloat4x4(&enemyTransform));
 		}
-		m_camera.Update(deltaSeconds);
+		m_camera.Update(deltaSeconds, cameraInput);
 	}
 
 	ObjectId Scene::AddEnemyAircraft(std::shared_ptr<Model> model, const DirectX::XMFLOAT3& position, float visualScale,

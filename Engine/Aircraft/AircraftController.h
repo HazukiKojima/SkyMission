@@ -1,16 +1,17 @@
 #pragma once
 #include "../EngineCommon.h"
 #include "AircraftFlightModel.h"
+#include "../Input/RawInputState.h"
 
 namespace Engine {
 	class AircraftController {
 	  public:
-		// キーボード状態を読み取り、機体制御用の入力値へ変換する。
+		// フレームの入力スナップショットを機体制御用の入力値へ変換する。
 		struct KeyboardState {
 			bool pitchUp = false, pitchDown = false, turnLeft = false, turnRight = false;
 			bool yawLeft = false, yawRight = false, accelerate = false, decelerate = false;
 		};
 		static AircraftInput MapInput(const KeyboardState& keys);
-		AircraftInput ReadInput(HWND window) const;
+		AircraftInput ReadInput(const InputSnapshot& input) const;
 	};
 } // namespace Engine

@@ -1,4 +1,5 @@
 #include "OceanGeometry.h"
+#include "../../Resources/Buffer/BufferUtilities.h"
 #include <cmath>
 #include <numbers>
 #include <cstdint>
@@ -16,7 +17,7 @@ namespace Engine {
 		};
 	} // namespace
 
-	void OceanGeometry::Initialize(ID3D12Device* device, float oceanSize) {
+	void OceanGeometry::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize) {
 		std::vector<OceanVertex> vertices;
 		std::vector<uint32_t> indices;
 
@@ -51,23 +52,21 @@ namespace Engine {
 
 		m_indexCount = static_cast<UINT>(indices.size());
 		m_vertexBuffer = std::make_unique<VertexBuffer>();
-		m_vertexBuffer->Initialize(device, vertices.data(), static_cast<UINT>(sizeof(OceanVertex) * vertices.size()),
-								   sizeof(OceanVertex));
+		m_vertexBuffer->Initialize(device, commands, vertices.data(),
+								   static_cast<UINT>(sizeof(OceanVertex) * vertices.size()), sizeof(OceanVertex));
 
-		const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_UPLOAD);
-		const auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t) * indices.size());
-		ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &desc,
-													  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-													  IID_PPV_ARGS(&m_indexBuffer)));
-
-		void* mappedData = nullptr;
-		ThrowIfFailed(m_indexBuffer->Map(0, nullptr, &mappedData));
-		std::memcpy(mappedData, indices.data(), sizeof(uint32_t) * indices.size());
-		m_indexBuffer->Unmap(0, nullptr);
+		m_indexBuffer = CreateStaticBuffer(device, commands, indices.data(), sizeof(uint32_t) * indices.size(),
+										   D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
 
 		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
 		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 		m_indexBufferView.SizeInBytes = static_cast<UINT>(sizeof(uint32_t) * indices.size());
+	}
+
+	void OceanGeometry::ReleaseUploadResources() {
+		if (m_vertexBuffer)
+			m_vertexBuffer->ReleaseUploadResources();
+		m_indexUpload.Reset();
 	}
 
 	float OceanGeometry::CalculateWaveHeight(float x, float z, float time, float wavelength, float steepness) {

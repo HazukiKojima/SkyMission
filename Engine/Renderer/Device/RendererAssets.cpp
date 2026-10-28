@@ -39,13 +39,12 @@ namespace Engine {
 		}
 	} // namespace
 
-	void RendererAssets::InitializeSkySphere(ID3D12Device* device, float radius) {
+	void RendererAssets::InitializeSkySphere(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius) {
 		m_skySphere = std::make_unique<SkySphere>();
-		m_skySphere->Initialize(device, radius, 64, 32);
+		m_skySphere->Initialize(device, commands, radius, 64, 32);
 	}
 
 	void RendererAssets::Load(RenderDevice* device, CommandContext* context, const SceneDefinition& assets) {
-		context->BeginFrame();
 		// Ocean shader t0..t2 is one contiguous descriptor table; do not allocate between these loads.
 		m_oceanTexture = LoadTexture(*device, *context, assets.oceanTexture, {.useSrgb = true}, m_oceanTextureSrvIndex);
 		m_oceanNormalTexture =
@@ -57,8 +56,11 @@ namespace Engine {
 		m_skyTexture = LoadTexture(*device, *context, assets.skyTexture, {}, m_skyTextureSrvIndex);
 		m_model = LoadModel(*device, *context, assets.playerAircraft);
 		m_enemyAircraftModel = LoadModel(*device, *context, assets.enemyAircraft);
-		context->EndFrame();
-		context->WaitForGpu();
+	}
+
+	void RendererAssets::ReleaseUploadResources() {
+		if (m_skySphere)
+			m_skySphere->ReleaseUploadResources();
 		for (const auto& texture : {m_oceanTexture, m_oceanNormalTexture, m_oceanNormalTexture2, m_skyTexture})
 			if (texture)
 				texture->ReleaseUploadResources();

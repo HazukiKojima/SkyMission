@@ -131,3 +131,12 @@ DirectX 12のリソース管理を意識し、テクスチャや3Dモデルの�
 SkyMissionは現在開発中です。
 
 レンダリング機能の拡張、描画品質の改善、GPUリソース管理の見直し、アセット管理の整理などを継続して進めています。
+
+## 入力と静的メッシュの転送
+
+- メインウィンドウがキーボードとマウスの Raw Input を登録し、`WM_INPUT` の make/break と移動パケットから入力状態を更新します。バックグラウンド入力は登録せず、フォーカス喪失時に押下状態とマウス移動量を解除します。デバイスを外した場合も押下が残らないようにします。
+- `Window::ConsumeInput` はフレームのスナップショットを返し、Application が機体とカメラへ同じ状態を渡します。押下状態は維持し、右ドラッグ中の移動量は1フレームだけ消費します。フライカメラを含め、キー・カーソル状態のポーリングは行いません。
+- モデル・海・スカイスフィアの頂点とインデックスは DEFAULT ヒープに保持します。初期化時の UPLOAD バッファは Renderer がまとめて送信し、GPU 完了を待ってから解放します。定数バッファなど、CPU が更新するデータは引き続き UPLOAD ヒープを使用します。
+- `Tests/RunRegressionTests.ps1` には、Raw Input の押下・解放、左右 Ctrl、複数デバイス、フォーカス喪失、入力登録の寿命、および海・空の DEFAULT ヒープと GPU 読み戻しの確認を含みます。
+
+Raw Input の登録とメッセージ後処理は Microsoft の [RegisterRawInputDevices](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerrawinputdevices) と [WM_INPUT](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-input) の仕様に従います。

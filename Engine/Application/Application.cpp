@@ -106,7 +106,8 @@ namespace Engine {
 		m_elapsedTime += deltaSeconds;
 
 		if (m_scene) {
-			m_scene->Update(m_aircraftController.ReadInput(m_window->GetHandle()), deltaSeconds);
+			const InputSnapshot input = m_window->ConsumeInput();
+			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input);
 			m_renderer->UpdateFrameConstants(*m_scene, m_elapsedTime);
 		}
 	}

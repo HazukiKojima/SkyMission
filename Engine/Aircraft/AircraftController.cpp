@@ -9,10 +9,8 @@ namespace Engine {
 				.highGTurn = keys.accelerate && keys.decelerate};
 	}
 
-	AircraftInput AircraftController::ReadInput(HWND window) const {
-		if (!window || GetForegroundWindow() != window)
-			return {};
-		const auto down = [](int key) { return (GetAsyncKeyState(key) & 0x8000) != 0; };
+	AircraftInput AircraftController::ReadInput(const InputSnapshot& input) const {
+		const auto down = [&](UINT key) { return input.IsKeyDown(key); };
 		return MapInput(
 			{down('W'), down('S'), down('A'), down('D'), down('Q'), down('E'), down(VK_CONTROL), down(VK_SPACE)});
 	}

@@ -8,21 +8,41 @@
 
 namespace Engine {
 	class RendererAssets {
-	public:
-		void InitializeSkySphere(ID3D12Device* device, float radius);
+	  public:
+		void InitializeSkySphere(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius);
+		// Record into the caller's open command list; submission and GPU wait belong to Renderer.
 		void Load(RenderDevice* device, CommandContext* context, const SceneDefinition& assets);
+		void ReleaseUploadResources();
 
-		SkySphere* GetSkySphere() const { return m_skySphere.get(); }
-		const std::shared_ptr<Texture>& GetOceanTexture() const { return m_oceanTexture; }
-		const std::shared_ptr<Texture>& GetOceanNormalTexture() const { return m_oceanNormalTexture; }
-		const std::shared_ptr<Texture>& GetOceanNormalTexture2() const { return m_oceanNormalTexture2; }
-		const std::shared_ptr<Texture>& GetSkyTexture() const { return m_skyTexture; }
-		UINT GetOceanTextureSrvIndex() const { return m_oceanTextureSrvIndex; }
-		UINT GetSkyTextureSrvIndex() const { return m_skyTextureSrvIndex; }
-		std::shared_ptr<Model> GetModel() const { return m_model; }
-		std::shared_ptr<Model> GetEnemyAircraftModel() const { return m_enemyAircraftModel; }
+		SkySphere* GetSkySphere() const {
+			return m_skySphere.get();
+		}
+		const std::shared_ptr<Texture>& GetOceanTexture() const {
+			return m_oceanTexture;
+		}
+		const std::shared_ptr<Texture>& GetOceanNormalTexture() const {
+			return m_oceanNormalTexture;
+		}
+		const std::shared_ptr<Texture>& GetOceanNormalTexture2() const {
+			return m_oceanNormalTexture2;
+		}
+		const std::shared_ptr<Texture>& GetSkyTexture() const {
+			return m_skyTexture;
+		}
+		UINT GetOceanTextureSrvIndex() const {
+			return m_oceanTextureSrvIndex;
+		}
+		UINT GetSkyTextureSrvIndex() const {
+			return m_skyTextureSrvIndex;
+		}
+		std::shared_ptr<Model> GetModel() const {
+			return m_model;
+		}
+		std::shared_ptr<Model> GetEnemyAircraftModel() const {
+			return m_enemyAircraftModel;
+		}
 
-	private:
+	  private:
 		std::unique_ptr<SkySphere> m_skySphere;
 		std::shared_ptr<Texture> m_oceanTexture;
 		UINT m_oceanTextureSrvIndex = 0;
@@ -35,4 +55,4 @@ namespace Engine {
 		std::shared_ptr<Model> m_model;
 		std::shared_ptr<Model> m_enemyAircraftModel;
 	};
-}
+} // namespace Engine

@@ -1,6 +1,4 @@
 #include "../Camera/Camera.h"
-#include "../Window/Window.h"
-#include <Windowsx.h>
 #include <algorithm>
 #include <cmath>
 
@@ -8,20 +6,13 @@ using namespace DirectX;
 
 namespace Engine {
 
-	void Camera::Initialize(HWND hwnd, float fovY, float aspect, float nearZ, float farZ) {
-		m_hwnd = hwnd;
+	void Camera::Initialize(HWND, float fovY, float aspect, float nearZ, float farZ) {
 		m_fovY = fovY;
 		m_aspect = aspect;
 		m_nearZ = nearZ;
 		m_farZ = farZ;
 		UpdateProjection();
 		UpdateView();
-
-		// カーソル位置を初期化
-		POINT p;
-		GetCursorPos(&p);
-		ScreenToClient(m_hwnd, &p);
-		m_prevCursorPos = p;
 	}
 
 	void Camera::OnResize(UINT width, UINT height) {
@@ -31,24 +22,15 @@ namespace Engine {
 		UpdateProjection();
 	}
 
-	void Camera::Update(float deltaSeconds) {
+	void Camera::Update(float deltaSeconds, const InputSnapshot& input) {
 		if (m_following) {
 			UpdateFollow(deltaSeconds);
 			UpdateView();
 			return;
 		}
 
-		if (GetForegroundWindow() != m_hwnd) {
-			if (m_rmbDown) {
-				if (GetCapture() == m_hwnd)
-					ReleaseCapture();
-				m_rmbDown = false;
-			}
+		if (!input.active)
 			return;
-		}
-		// 入力ポーリング: キーボードで移動、右ボタン押下でマウス視点
-		BYTE keys[256];
-		GetKeyboardState(keys);
 
 		// ローカル空間での前方/右方向ベクトルを計算
 		XMFLOAT3 forward;
@@ -63,60 +45,32 @@ namespace Engine {
 		XMStoreFloat3(&right, r);
 
 		float moveSpeed = m_moveSpeed * deltaSeconds;
-		if (keys['W'] & 0x80) {
+		if (input.IsKeyDown('W')) {
 			m_position.x += forward.x * moveSpeed;
 			m_position.y += forward.y * moveSpeed;
 			m_position.z += forward.z * moveSpeed;
 		}
-		if (keys['S'] & 0x80) {
+		if (input.IsKeyDown('S')) {
 			m_position.x -= forward.x * moveSpeed;
 			m_position.y -= forward.y * moveSpeed;
 			m_position.z -= forward.z * moveSpeed;
 		}
-		if (keys['A'] & 0x80) {
+		if (input.IsKeyDown('A')) {
 			m_position.x -= right.x * moveSpeed;
 			m_position.y -= right.y * moveSpeed;
 			m_position.z -= right.z * moveSpeed;
 		}
-		if (keys['D'] & 0x80) {
+		if (input.IsKeyDown('D')) {
 			m_position.x += right.x * moveSpeed;
 			m_position.y += right.y * moveSpeed;
 			m_position.z += right.z * moveSpeed;
 		}
 
-		// マウス: 右ボタン押下時のみキャプチャして視点回転
-		bool rmb = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
-		if (rmb) {
-			if (!m_rmbDown) {
-				// 押下直後: カーソルをキャプチャ
-				SetCapture(m_hwnd);
-				m_rmbDown = true;
-				POINT p;
-				GetCursorPos(&p);
-				ScreenToClient(m_hwnd, &p);
-				m_prevCursorPos = p;
-			}
-
-			POINT cur;
-			GetCursorPos(&cur);
-			ScreenToClient(m_hwnd, &cur);
-			int dx = cur.x - m_prevCursorPos.x;
-			int dy = cur.y - m_prevCursorPos.y;
-			m_prevCursorPos = cur;
-
-			m_yaw += dx * m_mouseSensitivity;	 // X軸回転
-			m_pitch += -dy * m_mouseSensitivity; // Y軸回転（マウス上下は反転）
-			// ピッチをクランプして反転を防止
-			const float pitchLimit = XM_PIDIV2 - 0.01f;
-			if (m_pitch > pitchLimit)
-				m_pitch = pitchLimit;
-			if (m_pitch < -pitchLimit)
-				m_pitch = -pitchLimit;
-		} else if (m_rmbDown) {
-			// 押下解除時: キャプチャ解除
-			m_rmbDown = false;
-			ReleaseCapture();
-		}
+		// Deltas include a drag released earlier in this frame, so short drags are not lost.
+		m_yaw += static_cast<float>(input.mouseDeltaX) * m_mouseSensitivity;
+		m_pitch -= static_cast<float>(input.mouseDeltaY) * m_mouseSensitivity;
+		const float pitchLimit = XM_PIDIV2 - 0.01f;
+		m_pitch = std::clamp(m_pitch, -pitchLimit, pitchLimit);
 
 		UpdateView();
 	}
