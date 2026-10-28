@@ -33,19 +33,30 @@ float Hash(float2 value)
 
 float FilmGrain(float2 pixel, float time)
 {
-    float frame = floor(time * jitterYGrain.y);
+    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
+    const float grainFrameRate = jitterYGrain.y;
+    const float grainStrength = jitterYGrain.z;
+
+    float frame = floor(time * grainFrameRate);
     float noise = Hash(pixel + frame * 17.0f);
-    return (noise - 0.5f) * jitterYGrain.z;
+    return (noise - 0.5f) * grainStrength;
 }
 
 float FilmDust(float2 pixel, float time)
 {
+    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
+    const float dustFrameRate = dust.x;
+    const float dustThreshold = dust.y;
+    const float minimumDustRadius = dust.z;
+    const float maximumDustRadius = dust.w;
+    const float dustOpacity = dustScratch.x;
+
     float cellSize = jitterYGrain.w;
     float2 cell = floor(pixel / cellSize);
-    float frame = floor(time * dust.x);
+    float frame = floor(time * dustFrameRate);
     float chance = Hash(cell + frame * 13.7f + float2(17.1f, 9.2f));
 
-    if (chance < dust.y)
+    if (chance < dustThreshold)
         return 0.0f;
 
     float2 localPixel = frac(pixel / cellSize);
@@ -54,41 +65,68 @@ float FilmDust(float2 pixel, float time)
         Hash(cell + frame * 23.1f + float2(5.2f, 4.6f)));
 
     float distanceToDust = length((localPixel - center) * cellSize);
-    float radius = lerp(dust.z, dust.w, Hash(cell + frame * 29.7f));
-    return (1.0f - smoothstep(radius * 0.5f, radius, distanceToDust)) * dustScratch.x;
+    float radius = lerp(minimumDustRadius, maximumDustRadius, Hash(cell + frame * 29.7f));
+    return (1.0f - smoothstep(radius * 0.5f, radius, distanceToDust)) * dustOpacity;
 }
 
 float FilmScratch(float2 pixel, float time)
 {
-    float frame = floor(time * dustScratch.z);
-    float column = floor(pixel.x / dustScratch.y);
+    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
+    const float scratchFrameRate = dustScratch.z;
+    const float scratchSpacing = dustScratch.y;
+    const float scratchThreshold = dustScratch.w;
+    const float minimumScratchWidth = scratch.x;
+    const float maximumScratchWidth = scratch.y;
+    const float scratchSoftness = scratch.z;
+    const float minimumVerticalFade = scratch.w;
+    const float scratchOpacity = scratchFlicker.x;
+
+    float frame = floor(time * scratchFrameRate);
+    float column = floor(pixel.x / scratchSpacing);
     float chance = Hash(float2(column, frame));
 
-    if (chance < dustScratch.w)
+    if (chance < scratchThreshold)
         return 0.0f;
 
-    float position = frac(pixel.x / dustScratch.y);
-    float width = lerp(scratch.x, scratch.y, Hash(float2(column, frame + 7.3f)));
-    float scratchAmount = 1.0f - smoothstep(width, width + scratch.z, position);
-    float verticalFade = lerp(scratch.w, 1.0f, Hash(float2(column, frame + 13.1f)));
+    float position = frac(pixel.x / scratchSpacing);
+    float width = lerp(minimumScratchWidth, maximumScratchWidth, Hash(float2(column, frame + 7.3f)));
+    float scratchAmount = 1.0f - smoothstep(width, width + scratchSoftness, position);
+    float verticalFade = lerp(minimumVerticalFade, 1.0f, Hash(float2(column, frame + 13.1f)));
 
-    return scratchAmount * verticalFade * scratchFlicker.x;
+    return scratchAmount * verticalFade * scratchOpacity;
 }
 
 float FilmFlicker(float time)
 {
-    float frame = floor(time * scratchFlicker.y);
+    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
+    const float flickerFrameRate = scratchFlicker.y;
+    const float flickerStrength = scratchFlicker.z;
+
+    float frame = floor(time * flickerFrameRate);
     float randomValue = Hash(float2(frame, 47.2f));
-    return 1.0f + (randomValue - 0.5f) * scratchFlicker.z;
+    return 1.0f + (randomValue - 0.5f) * flickerStrength;
 }
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
+    // Named view of the packed CPU/HLSL constant-buffer layout; offsets stay unchanged.
+    const float desaturation = colorDesaturationTint.x;
+    const float3 colorTint = colorDesaturationTint.yzw;
+    const float colorGain = colorGainOffset.x;
+    const float3 colorOffset = colorGainOffset.yzw;
+    const float horizontalJitterFrequency = vignetteJitterX.w;
+    const float horizontalJitterAmount = vignetteJitterX.y;
+    const float verticalJitterAmount = vignetteJitterX.z;
+    const float verticalJitterFrequency = jitterYGrain.x;
+    const float vignetteInnerRadius = luminanceGBVignette.z;
+    const float vignetteOuterRadius = luminanceGBVignette.w;
+    const float vignetteMinimumBrightness = vignetteJitterX.x;
+
     float2 pixel = input.position.xy;
 
     float2 jitter = float2(
-        sin(time * vignetteJitterX.w) * vignetteJitterX.y,
-        cos(time * jitterYGrain.x) * vignetteJitterX.z);
+        sin(time * horizontalJitterFrequency) * horizontalJitterAmount,
+        cos(time * verticalJitterFrequency) * verticalJitterAmount);
 
     float2 uv = saturate(input.texcoord + jitter);
     float3 color = gSceneColor.SampleLevel(gSampler, uv, 0).rgb;
@@ -98,9 +136,9 @@ float4 PS(PS_INPUT input) : SV_TARGET
         highlightAddLuminanceR.w,
         luminanceGBVignette.x,
         luminanceGBVignette.y));
-    color = lerp(color, luminance.xxx, colorDesaturationTint.x);
-    color *= colorDesaturationTint.yzw;
-    color = color * colorGainOffset.x + colorGainOffset.yzw;
+    color = lerp(color, luminance.xxx, desaturation);
+    color *= colorTint;
+    color = color * colorGain + colorOffset;
 
     // 暗部をわずかに浮かせ、ハイライトを柔らかくする
     color = lerp(blackLift.rgb, color, blackLift.w);
@@ -109,8 +147,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     // 画面端のビネット
     float2 centered = (uv - 0.5f) * 2.0f;
-    float vignette = 1.0f - smoothstep(luminanceGBVignette.z, luminanceGBVignette.w, dot(centered, centered));
-    color *= lerp(vignetteJitterX.x, 1.0f, vignette);
+    float vignette = 1.0f - smoothstep(vignetteInnerRadius, vignetteOuterRadius, dot(centered, centered));
+    color *= lerp(vignetteMinimumBrightness, 1.0f, vignette);
 
     // 映写機の微弱な明滅
     color *= FilmFlicker(time);

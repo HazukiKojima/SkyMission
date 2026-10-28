@@ -19,12 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Aircraft\AircraftFlightModel.cpp" />
-    <ClCompile Include="Engine\Application\Application.cpp" />
-    <ClCompile Include="Engine\Aircraft\AircraftController.cpp" />
+    <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
+    <ClCompile Include="Game\Application\Application.cpp" />
+    <ClCompile Include="Game\Aircraft\AircraftController.cpp" />
     <ClCompile Include="Engine\Camera\Camera.cpp" />
     <ClCompile Include="Engine\Scene\Scene.cpp" />
-    <ClCompile Include="Engine\Scene\SceneLoader.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneLoader.cpp" />
     <ClCompile Include="Engine\Window\Window.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp" />
@@ -44,17 +44,17 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Aircraft\AircraftAIController.h" />
-    <ClInclude Include="Engine\Application\Application.h" />
-    <ClInclude Include="Engine\Aircraft\AircraftController.h" />
-    <ClInclude Include="Engine\Aircraft\AircraftFlightParameters.h" />
+    <ClInclude Include="Game\Aircraft\AircraftAIController.h" />
+    <ClInclude Include="Game\Application\Application.h" />
+    <ClInclude Include="Game\Aircraft\AircraftController.h" />
+    <ClInclude Include="Game\Aircraft\AircraftFlightParameters.h" />
     <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h" />
     <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h" />
     <ClInclude Include="Engine\Scene\OceanParameters.h" />
-    <ClInclude Include="Engine\Aircraft\AircraftFlightModel.h" />
+    <ClInclude Include="Game\Aircraft\AircraftFlightModel.h" />
     <ClInclude Include="Engine\Camera\Camera.h" />
     <ClInclude Include="Engine\Scene\Scene.h" />
-    <ClInclude Include="Engine\Scene\SceneLoader.h" />
+    <ClInclude Include="Game\Scene\FlightSceneLoader.h" />
     <ClInclude Include="Engine\Scene\SkyParameters.h" />
     <ClInclude Include="Engine\Renderer\RetroFilmParameters.h" />
     <ClInclude Include="Engine\Window\Window.h" />
@@ -349,7 +349,7 @@
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json" Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h;$(SolutionDir)Engine\Scene\OceanParameters.h;$(SolutionDir)Engine\Scene\SkyParameters.h" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Game\Aircraft\AircraftFlightParameters.h;$(SolutionDir)Game\Aircraft\AircraftAIController.h;$(SolutionDir)Engine\Scene\OceanParameters.h;$(SolutionDir)Engine\Scene\SkyParameters.h" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.props" Condition="Exists('$(SolutionDir)Directory.Build.props')" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.targets" Condition="Exists('$(SolutionDir)Directory.Build.targets')" />
   </ItemGroup>
@@ -364,7 +364,7 @@
   <ItemGroup>
     <ClInclude Include="Engine\Log.h" />
     <ClInclude Include="Engine\ExecutablePath.h" />
-    <ClInclude Include="Engine\Aircraft\ValidateFlightParameters.h" />
+    <ClInclude Include="Game\Aircraft\ValidateFlightParameters.h" />
     <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h" />
     <ClInclude Include="Engine\Resources\Mesh\ModelLoadOptions.h" />
   </ItemGroup>
@@ -380,5 +380,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Input\RawInputState.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="Game\Scene\FlightScene.h" />
+    <ClCompile Include="Game\Scene\FlightScene.cpp" />
+    <ClInclude Include="Game\Camera\AircraftCameraController.h" />
+    <ClCompile Include="Game\Camera\AircraftCameraController.cpp" />
+    <ClInclude Include="Engine\Renderer\RendererDefinition.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Renderer\RootBindings.h" />
   </ItemGroup>
 </Project>

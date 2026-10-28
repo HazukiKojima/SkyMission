@@ -8,27 +8,32 @@ namespace Engine {
 	// ============================================================
 
 	void RenderDevice::Initialize(HWND hwnd, UINT width, UINT height) {
-#if defined(_DEBUG)
-		ComPtr<ID3D12Debug> debugController;
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-			debugController->EnableDebugLayer();
-		}
-#endif
+		CreateDevice();
+		CreateCommandQueue();
+		CreateSwapChain(hwnd, width, height);
+		CreateDescriptorHeaps();
+		CreateBackBufferViews();
+		m_width = width;
+		m_height = height;
+		m_srvDescriptorCount = ReservedSrvCount;
+		CreateSceneResources();
+	}
 
-		ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_factory)));
+	bool RenderDevice::TryCreateHardwareDevice() {
 		HRESULT deviceResult = E_FAIL;
 		ComPtr<IDXGIFactory6> factory6;
 		const bool hasGpuPreferenceApi = SUCCEEDED(m_factory.As(&factory6));
 
 		for (UINT index = 0;; ++index) {
 			ComPtr<IDXGIAdapter1> adapter;
-			HRESULT adapterResult =
-				hasGpuPreferenceApi ? factory6->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-																		   IID_PPV_ARGS(&adapter))
-									: m_factory->EnumAdapters1(index, &adapter);
+			HRESULT adapterResult = hasGpuPreferenceApi
+				? factory6->EnumAdapterByGpuPreference(
+					  index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter))
+				: m_factory->EnumAdapters1(index, &adapter);
 			if (adapterResult == DXGI_ERROR_NOT_FOUND) {
 				break;
 			}
+
 			ThrowIfFailed(adapterResult);
 
 			DXGI_ADAPTER_DESC1 description = {};
@@ -44,25 +49,40 @@ namespace Engine {
 			}
 		}
 
+		return SUCCEEDED(deviceResult);
+	}
+
+	void RenderDevice::CreateDevice() {
+#if defined(_DEBUG)
+		ComPtr<ID3D12Debug> debugController;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+			debugController->EnableDebugLayer();
+		}
+#endif
+		ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_factory)));
+		HRESULT deviceResult = TryCreateHardwareDevice() ? S_OK : E_FAIL;
+
 		if (FAILED(deviceResult)) {
 			// Hardware adapter が利用できない環境でも起動できるよう WARP を試す。
 			ComPtr<IDXGIAdapter> warpAdapter;
 			ThrowIfFailed(m_factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
-			deviceResult = D3D12CreateDevice(warpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+			deviceResult =
+				D3D12CreateDevice(warpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
 			m_adapterName = L"WARP (Software Rasterizer)";
 		}
-		ThrowIfFailed(deviceResult);
 
+		ThrowIfFailed(deviceResult);
+	}
+
+	void RenderDevice::CreateCommandQueue() {
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
 		ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
+	}
 
-		// ========================================================
-		// SwapChain
-		// ========================================================
-
+	void RenderDevice::CreateSwapChain(HWND hwnd, UINT width, UINT height) {
 		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 		swapChainDesc.BufferCount = FrameCount;
 		swapChainDesc.Width = width;
@@ -74,17 +94,14 @@ namespace Engine {
 
 		ComPtr<IDXGISwapChain1> swapChain;
 
-		ThrowIfFailed(m_factory->CreateSwapChainForHwnd(m_commandQueue.Get(), hwnd, &swapChainDesc, nullptr, nullptr,
-														&swapChain));
+		ThrowIfFailed(m_factory->CreateSwapChainForHwnd(
+			m_commandQueue.Get(), hwnd, &swapChainDesc, nullptr, nullptr, &swapChain));
 
 		ThrowIfFailed(swapChain.As(&m_swapChain));
+	}
 
-		// ========================================================
-		// RTV Heap
-		//
-		// BackBuffer, SceneColor, PostProcessColor の順に各フレーム分を配置する。
-		//
-		// ========================================================
+	void RenderDevice::CreateDescriptorHeaps() {
+		// RTV: back buffer, scene color, postprocess color per frame. SRV indices are named in RenderDevice.
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
 		rtvHeapDesc.NumDescriptors = FrameCount * 3;
@@ -95,7 +112,25 @@ namespace Engine {
 
 		m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-		// BackBuffer RTV
+		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+		srvHeapDesc.NumDescriptors = SrvDescriptorCapacity;
+		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
+
+		m_srvDescriptorSize =
+			m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+		dsvHeapDesc.NumDescriptors = 1;
+		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
+	}
+
+	void RenderDevice::CreateBackBufferViews() {
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
 		for (UINT i = 0; i < FrameCount; ++i) {
@@ -105,36 +140,6 @@ namespace Engine {
 
 			rtvHandle.ptr += m_rtvDescriptorSize;
 		}
-
-		// ========================================================
-		// SRV Heap
-		// ========================================================
-
-		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = SrvDescriptorCapacity;
-		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
-
-		m_srvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-		// ========================================================
-		// DSV Heap
-		// ========================================================
-
-		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-		dsvHeapDesc.NumDescriptors = 1;
-		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
-
-		m_width = width;
-		m_height = height;
-
-		m_srvDescriptorCount = ReservedSrvCount;
-		CreateSceneResources();
 	}
 
 	// ============================================================
@@ -234,15 +239,7 @@ namespace Engine {
 		// BackBuffer RTV
 		// --------------------------------------------------------
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-
-		for (UINT i = 0; i < FrameCount; ++i) {
-			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i])));
-
-			m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, rtvHandle);
-
-			rtvHandle.ptr += m_rtvDescriptorSize;
-		}
+		CreateBackBufferViews();
 
 		CreateSceneResources();
 	}
@@ -265,17 +262,16 @@ namespace Engine {
 		// ========================================================
 
 		for (UINT i = 0; i < FrameCount; ++i) {
-
-			CD3DX12_RESOURCE_DESC colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-				DXGI_FORMAT_R8G8B8A8_UNORM, m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+			CD3DX12_RESOURCE_DESC colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,
+				m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
 			const FLOAT clearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
 
 			CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_R8G8B8A8_UNORM, clearColor);
 
 			ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &colorDesc,
-															D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clearValue,
-															IID_PPV_ARGS(&m_sceneRenderTargets[i])));
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clearValue,
+				IID_PPV_ARGS(&m_sceneRenderTargets[i])));
 
 			// Scene RTV
 			D3D12_CPU_DESCRIPTOR_HANDLE rtv = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
@@ -284,12 +280,12 @@ namespace Engine {
 
 			m_device->CreateRenderTargetView(m_sceneRenderTargets[i].Get(), nullptr, rtv);
 
-			CD3DX12_RESOURCE_DESC postProcessDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-				DXGI_FORMAT_R8G8B8A8_UNORM, m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+			CD3DX12_RESOURCE_DESC postProcessDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,
+				m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 			CD3DX12_CLEAR_VALUE postProcessClearValue(DXGI_FORMAT_R8G8B8A8_UNORM, clearColor);
-			ThrowIfFailed(m_device->CreateCommittedResource(
-				&heapProps, D3D12_HEAP_FLAG_NONE, &postProcessDesc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-				&postProcessClearValue, IID_PPV_ARGS(&m_postProcessRenderTargets[i])));
+			ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE,
+				&postProcessDesc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &postProcessClearValue,
+				IID_PPV_ARGS(&m_postProcessRenderTargets[i])));
 
 			D3D12_CPU_DESCRIPTOR_HANDLE postProcessRtv = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
 			postProcessRtv.ptr += static_cast<SIZE_T>(FrameCount * 2 + i) * m_rtvDescriptorSize;
@@ -309,8 +305,7 @@ namespace Engine {
 		CD3DX12_CLEAR_VALUE depthClear(DXGI_FORMAT_D32_FLOAT, 1.0f, 0);
 
 		ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &depthDesc,
-														D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &depthClear,
-														IID_PPV_ARGS(&m_sceneDepth)));
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &depthClear, IID_PPV_ARGS(&m_sceneDepth)));
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
 		dsv.Format = DXGI_FORMAT_D32_FLOAT;

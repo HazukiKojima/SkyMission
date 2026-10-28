@@ -12,7 +12,7 @@ namespace Engine {
 
 		void Initialize(HWND hwnd, UINT width, UINT height);
 		void Present();
-		void Resize(UINT width, UINT height); // add resize
+		void Resize(UINT width, UINT height);
 
 		ID3D12Device* GetDevice() const {
 			return m_device.Get();
@@ -83,6 +83,13 @@ namespace Engine {
 
 	  private:
 		static constexpr UINT SrvDescriptorCapacity = 4096;
+		bool TryCreateHardwareDevice();
+		void CreateDevice();
+		void CreateCommandQueue();
+		void CreateSwapChain(HWND hwnd, UINT width, UINT height);
+		void CreateDescriptorHeaps();
+		void CreateBackBufferViews();
+
 		void CreateSceneResources();
 		void CreateSceneRenderTargets();
 		void CreateSceneDepth();

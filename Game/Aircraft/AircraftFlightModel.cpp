@@ -4,17 +4,19 @@
 
 using namespace DirectX;
 
-namespace Engine {
+namespace Game {
 	namespace {
 		constexpr float kMaximumFrameSeconds = 0.25f;
 		constexpr float kPhysicsStepSeconds = 1.0f / 60.0f;
 		float OrientationSign(float angle) {
 			return std::cos(angle) < 0.0f ? -1.0f : 1.0f;
 		}
+
 		float AngleResponse(float angle, const AircraftFlightParameters& p, float minimum) {
-			return std::clamp(1.0f - std::max(0.0f, angle - p.stallAngleRadians) /
-										 (p.criticalAngleRadians - p.stallAngleRadians),
-							  minimum, 1.0f);
+			return std::clamp(1.0f -
+					std::max(0.0f, angle - p.stallAngleRadians) /
+						(p.criticalAngleRadians - p.stallAngleRadians),
+				minimum, 1.0f);
 		}
 	} // namespace
 
@@ -57,14 +59,16 @@ namespace Engine {
 		m_throttleControl += (targetThrottleControl - m_throttleControl) * controlBlend;
 	}
 
-	void AircraftFlightModel::UpdateAttitude(const AircraftInput& input, float deltaSeconds, FlightStepState& state) {
+	void AircraftFlightModel::UpdateAttitude(
+		const AircraftInput& input, float deltaSeconds, FlightStepState& state) {
 		CalculateFlightStepState(input, state);
 		const float levelRoll = UpdatePitchAndRoll(input, deltaSeconds, state);
 		UpdateYaw(deltaSeconds, state);
 		UpdateLiftDirection(levelRoll, state);
 	}
 
-	void AircraftFlightModel::CalculateFlightStepState(const AircraftInput& input, FlightStepState& state) const {
+	void AircraftFlightModel::CalculateFlightStepState(
+		const AircraftInput& input, FlightStepState& state) const {
 		// 姿勢変更前の速度と機首方向から、迎角や速度依存の操縦性能を求める。
 		const XMFLOAT3 currentForward = GetForwardForAttitude();
 		state.fallbackForward = currentForward;
@@ -77,39 +81,48 @@ namespace Engine {
 		const float alignment = std::clamp(XMVectorGetX(XMVector3Dot(forward, travelDirection)), -1.0f, 1.0f);
 		state.angleOfAttack = std::acos(alignment);
 		state.angleControl = AngleResponse(state.angleOfAttack, m_flightParameters, 0.2f);
-		state.turnSpeedFactor =
-			std::clamp(m_flightParameters.liftReferenceSpeed / std::max(state.speed, m_flightParameters.minimumSpeed),
-					   m_flightParameters.minimumTurnFactor, m_flightParameters.maximumTurnFactor);
+		state.turnSpeedFactor = std::clamp(
+			m_flightParameters.liftReferenceSpeed / std::max(state.speed, m_flightParameters.minimumSpeed),
+			m_flightParameters.minimumTurnFactor, m_flightParameters.maximumTurnFactor);
 		state.turnIntent = std::clamp(std::max(std::abs(m_turnControl), std::abs(m_yawControl)), 0.0f, 1.0f);
 		state.highGIntensity = input.highGTurn && state.turnIntent > 0.05f ? 1.0f : 0.0f;
 		state.highGTurnFactor = 1.0f + state.highGIntensity * (m_flightParameters.highGTurnMultiplier - 1.0f);
 	}
 
-	float AircraftFlightModel::UpdatePitchAndRoll(const AircraftInput& input, float deltaSeconds,
-												  FlightStepState& state) {
+	float AircraftFlightModel::UpdatePitchAndRoll(
+		const AircraftInput& input, float deltaSeconds, FlightStepState& state) {
 		// 半回転時の角度の曖昧さを避けるため、制御角は連続して更新する。
 		if (std::abs(input.pitch) > 0.01f) {
 			const float pitchDirection = OrientationSign(m_roll);
-			m_pitch = std::remainder(
-				m_pitch + m_pitchControl * pitchDirection * m_flightParameters.pitchRateRadians * deltaSeconds, XM_2PI);
+			m_pitch = std::remainder(m_pitch +
+					m_pitchControl * pitchDirection * m_flightParameters.pitchRateRadians * deltaSeconds,
+				XM_2PI);
 		}
+
 		const bool pitchInputActive = std::abs(input.pitch) > 0.01f;
 		const bool turnInputActive = std::abs(input.turn) > 0.01f;
 		state.autoRollCorrection = !pitchInputActive && !turnInputActive;
 		const float levelRoll = std::cos(m_pitch) < 0.0f ? XM_PI : 0.0f;
 		const float currentRoll = m_roll;
-		const float turnRollBase = pitchInputActive ? (std::cos(currentRoll) < 0.0f ? XM_PI : 0.0f) : levelRoll;
+		float turnRollBase = levelRoll;
+		if (pitchInputActive)
+			turnRollBase = std::cos(currentRoll) < 0.0f ? XM_PI : 0.0f;
 		const float turnDirection = OrientationSign(turnRollBase);
-		const float turnBank =
-			std::clamp(-m_turnControl * turnDirection * m_flightParameters.maximumBankRadians * state.turnSpeedFactor,
-					   -m_flightParameters.maximumBankRadians, m_flightParameters.maximumBankRadians);
-		const float targetRoll = turnInputActive ? turnRollBase + turnBank : pitchInputActive ? currentRoll : levelRoll;
+		const float turnBank = std::clamp(
+			-m_turnControl * turnDirection * m_flightParameters.maximumBankRadians * state.turnSpeedFactor,
+			-m_flightParameters.maximumBankRadians, m_flightParameters.maximumBankRadians);
+		float targetRoll = levelRoll;
+		if (turnInputActive)
+			targetRoll = turnRollBase + turnBank;
+		else if (pitchInputActive)
+			targetRoll = currentRoll;
 		const float rollResponse =
 			turnInputActive ? m_flightParameters.rollInputResponse : m_flightParameters.rollLevelRate;
 		// 旋回中は目標バンクへ追従し、入力がないときは水平姿勢へ戻す。
 		const float rollDifference = std::remainder(targetRoll - m_roll, XM_2PI);
-		const float nearLevelingFactor =
-			state.autoRollCorrection ? 1.0f - std::clamp(std::abs(rollDifference) / XM_PIDIV4, 0.0f, 1.0f) : 0.0f;
+		const float nearLevelingFactor = state.autoRollCorrection
+			? 1.0f - std::clamp(std::abs(rollDifference) / XM_PIDIV4, 0.0f, 1.0f)
+			: 0.0f;
 		const float adjustedRollResponse = rollResponse * (1.0f + 0.5f * nearLevelingFactor);
 		const float rollBlend = 1.0f - std::exp(-adjustedRollResponse * deltaSeconds);
 		m_roll = std::remainder(m_roll + rollDifference * rollBlend, XM_2PI);
@@ -119,29 +132,32 @@ namespace Engine {
 	void AircraftFlightModel::UpdateYaw(float deltaSeconds, FlightStepState& state) {
 		state.bankLoad = std::sin(m_roll);
 		const float yawTurnDirection = OrientationSign(m_pitch);
-		const float bankYawRate =
-			state.autoRollCorrection ? 0.0f : state.bankLoad * yawTurnDirection * m_flightParameters.turnRateRadians;
-		m_yaw = std::remainder(m_yaw + (bankYawRate + m_yawControl * m_flightParameters.yawRateRadians) *
-										   state.angleControl * state.turnSpeedFactor * state.highGTurnFactor *
-										   deltaSeconds,
-							   XM_2PI);
+		const float bankYawRate = state.autoRollCorrection
+			? 0.0f
+			: state.bankLoad * yawTurnDirection * m_flightParameters.turnRateRadians;
+		m_yaw = std::remainder(m_yaw +
+				(bankYawRate + m_yawControl * m_flightParameters.yawRateRadians) * state.angleControl *
+					state.turnSpeedFactor * state.highGTurnFactor * deltaSeconds,
+			XM_2PI);
 		// 制御角から正規化クォータニオンを再生成し、姿勢計算の共通表現とする。
-		XMStoreFloat4(&m_attitude, XMQuaternionNormalize(XMQuaternionRotationRollPitchYaw(m_pitch, m_yaw, m_roll)));
+		XMStoreFloat4(
+			&m_attitude, XMQuaternionNormalize(XMQuaternionRotationRollPitchYaw(m_pitch, m_yaw, m_roll)));
 	}
 
 	void AircraftFlightModel::UpdateLiftDirection(float levelRoll, FlightStepState& state) const {
 		if (state.autoRollCorrection) {
 			// 自動水平化中は、実際のバンク角ではなく水平化した上方向を揚力に使う。
 			const XMMATRIX liftRotation = XMMatrixRotationRollPitchYaw(m_pitch, m_yaw, levelRoll);
-			XMStoreFloat3(&state.liftUp, XMVector3Normalize(XMVector3TransformNormal(
-											 XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), liftRotation)));
+			XMStoreFloat3(&state.liftUp,
+				XMVector3Normalize(
+					XMVector3TransformNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), liftRotation)));
 		} else {
 			state.liftUp = GetUp();
 		}
 	}
 
-	void AircraftFlightModel::UpdateFlightPhysics(const FlightStepState& state, XMFLOAT3& acceleration,
-												  float& drag) const {
+	void AircraftFlightModel::UpdateFlightPhysics(
+		const FlightStepState& state, XMFLOAT3& acceleration, float& drag) const {
 		const XMFLOAT3 forwardValue = GetForwardForAttitude();
 		const XMVECTOR aircraftForward = XMLoadFloat3(&forwardValue);
 		const XMVECTOR up = XMLoadFloat3(&state.liftUp);
@@ -151,21 +167,21 @@ namespace Engine {
 		const float verticalLiftAssist = 1.0f / std::max(XMVectorGetY(up), 0.35f);
 		const float liftAcceleration =
 			std::min(m_flightParameters.gravity * speedRatio * speedRatio * angleLift * verticalLiftAssist,
-					 m_flightParameters.gravity * m_flightParameters.maximumLiftFactor);
+				m_flightParameters.gravity * m_flightParameters.maximumLiftFactor);
 		const XMVECTOR flightPathAcceleration = (aircraftForward - XMLoadFloat3(&state.travelDirection)) *
-												(state.speed * m_flightParameters.flightPathResponse *
-												 state.angleControl * state.turnSpeedFactor * state.highGTurnFactor);
-		const XMVECTOR totalAcceleration =
-			up * liftAcceleration + XMVectorSet(0.0f, -m_flightParameters.gravity, 0.0f, 0.0f) +
+			(state.speed * m_flightParameters.flightPathResponse * state.angleControl *
+				state.turnSpeedFactor * state.highGTurnFactor);
+		const XMVECTOR totalAcceleration = up * liftAcceleration +
+			XMVectorSet(0.0f, -m_flightParameters.gravity, 0.0f, 0.0f) +
 			aircraftForward * (m_throttleControl * m_flightParameters.acceleration) + flightPathAcceleration;
 		XMStoreFloat3(&acceleration, totalAcceleration);
 		// バンク旋回とハイG入力は抗力を増加させる。
 		drag = m_flightParameters.drag + m_flightParameters.turnDrag * state.bankLoad * state.bankLoad +
-			   m_flightParameters.highGDrag * state.highGIntensity * state.turnIntent;
+			m_flightParameters.highGDrag * state.highGIntensity * state.turnIntent;
 	}
 
-	void AircraftFlightModel::UpdateVelocity(const XMFLOAT3& acceleration, float drag, const XMFLOAT3& fallbackForward,
-											 float deltaSeconds) {
+	void AircraftFlightModel::UpdateVelocity(
+		const XMFLOAT3& acceleration, float drag, const XMFLOAT3& fallbackForward, float deltaSeconds) {
 		XMVECTOR velocity = XMLoadFloat3(&m_velocity) + XMLoadFloat3(&acceleration) * deltaSeconds;
 		velocity *= std::exp(-drag * deltaSeconds);
 		const float updatedSpeed = XMVectorGetX(XMVector3Length(velocity));
@@ -175,6 +191,7 @@ namespace Engine {
 		} else if (updatedSpeed < m_flightParameters.minimumSpeed) {
 			velocity = XMVector3Normalize(XMLoadFloat3(&fallbackForward)) * m_flightParameters.minimumSpeed;
 		}
+
 		XMStoreFloat3(&m_velocity, velocity);
 	}
 
@@ -187,8 +204,9 @@ namespace Engine {
 	XMFLOAT3 AircraftFlightModel::GetForwardForAttitude() const {
 		// 機体ローカルの前方(-Z)を姿勢クォータニオンでワールド空間へ変換する。
 		XMFLOAT3 forward;
-		XMStoreFloat3(&forward, XMVector3Normalize(
-									XMVector3Rotate(XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMLoadFloat4(&m_attitude))));
+		XMStoreFloat3(&forward,
+			XMVector3Normalize(
+				XMVector3Rotate(XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMLoadFloat4(&m_attitude))));
 		return forward;
 	}
 
@@ -198,15 +216,17 @@ namespace Engine {
 
 	XMFLOAT3 AircraftFlightModel::GetRight() const {
 		XMFLOAT3 right;
-		XMStoreFloat3(&right, XMVector3Normalize(
-								  XMVector3Rotate(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), XMLoadFloat4(&m_attitude))));
+		XMStoreFloat3(&right,
+			XMVector3Normalize(
+				XMVector3Rotate(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), XMLoadFloat4(&m_attitude))));
 		return right;
 	}
 
 	XMFLOAT3 AircraftFlightModel::GetUp() const {
 		XMFLOAT3 up;
-		XMStoreFloat3(
-			&up, XMVector3Normalize(XMVector3Rotate(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), XMLoadFloat4(&m_attitude))));
+		XMStoreFloat3(&up,
+			XMVector3Normalize(
+				XMVector3Rotate(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), XMLoadFloat4(&m_attitude))));
 		return up;
 	}
 
@@ -234,9 +254,10 @@ namespace Engine {
 
 	XMFLOAT4X4 AircraftFlightModel::GetWorldTransform() const {
 		XMFLOAT4X4 world;
-		XMStoreFloat4x4(&world, XMMatrixRotationQuaternion(XMLoadFloat4(&m_attitude)) *
-									XMMatrixTranslation(m_position.x, m_position.y, m_position.z));
+		XMStoreFloat4x4(&world,
+			XMMatrixRotationQuaternion(XMLoadFloat4(&m_attitude)) *
+				XMMatrixTranslation(m_position.x, m_position.y, m_position.z));
 		return world;
 	}
 
-} // namespace Engine
+} // namespace Game

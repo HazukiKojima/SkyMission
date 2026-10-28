@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Engine {
+namespace Game {
 	struct AircraftFlightParameters {
 		// 速度はワールド単位毎秒、加速度はワールド単位毎秒二乗。
 		float initialSpeed = 60.0f;
@@ -32,4 +32,4 @@ namespace Engine {
 		float turnDrag = 0.32f;
 		float flightPathResponse = 1.8f;
 	};
-}
+} // namespace Game

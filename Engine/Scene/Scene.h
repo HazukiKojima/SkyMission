@@ -1,7 +1,5 @@
 #pragma once
 #include "../Camera/Camera.h"
-#include "../Aircraft/AircraftAIController.h"
-#include "../Aircraft/AircraftFlightModel.h"
 #include "../Resources/Mesh/Model.h"
 #include <DirectXMath.h>
 #include <cstddef>
@@ -16,15 +14,15 @@ namespace Engine {
 
 	struct SceneObject {
 		explicit SceneObject(std::shared_ptr<Model> model)
-			: model(std::move(model)), worldTransform(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-													  0.0f, 0.0f, 0.0f, 0.0f, 1.0f) {
+			: model(std::move(model)), worldTransform(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+										   0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f) {
 		}
 		SceneObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& worldTransform)
 			: model(std::move(model)), worldTransform(worldTransform) {
 		}
 
 		ObjectId id = InvalidObjectId;
-		float propellerAngle = 0.0f;
+		float nodeRotationRadians = 0.0f;
 		std::shared_ptr<Model> model;
 		DirectX::XMFLOAT4X4 worldTransform;
 	};
@@ -39,15 +37,11 @@ namespace Engine {
 
 	class Scene {
 	  public:
-		void Initialize(HWND hwnd, float aspect, float nearZ, float farZ);
-		void Update(const AircraftInput& input, float deltaSeconds, const InputSnapshot& cameraInput = {});
-		void OnResize(UINT width, UINT height);
-
 		const Camera& GetCamera() const {
 			return m_camera;
 		}
-		float GetPlayerAircraftSpeed() const {
-			return m_playerAircraft.GetSpeed();
+		void SetCamera(const Camera& camera) {
+			m_camera = camera;
 		}
 		const SceneEnvironment& GetEnvironment() const {
 			return m_environment;
@@ -55,40 +49,20 @@ namespace Engine {
 		void SetEnvironment(const SceneEnvironment& environment) {
 			m_environment = environment;
 		}
-		void SetPlayerAircraftVisualScale(float scale) {
-			m_playerAircraftVisualScale = scale;
-		}
-		void SetPlayerAircraftFlightParameters(const AircraftFlightParameters& parameters) {
-			m_playerAircraft.SetFlightParameters(parameters);
-		}
 		const std::vector<SceneObject>& GetObjects() const {
 			return m_objects;
 		}
-		ObjectId AddPlayerObject(std::shared_ptr<Model> model);
-		ObjectId AddEnemyAircraft(std::shared_ptr<Model> model, const DirectX::XMFLOAT3& position, float visualScale,
-								  const AircraftFlightParameters& flightParameters,
-								  const AircraftAIParameters& aiParameters);
+		// Returned pointer is valid until the object collection is modified; callers retain IDs, not
+		// pointers.
+		SceneObject* FindObject(ObjectId id);
 		ObjectId AddObject(std::shared_ptr<Model> model);
-		ObjectId AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& worldTransform);
+		ObjectId AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& transform);
 		void RemoveObject(ObjectId id);
 
 	  private:
-		struct EnemyAircraft {
-			AircraftFlightModel flightModel;
-			AircraftAIController controller;
-			AircraftAIParameters aiParameters;
-			ObjectId objectId = InvalidObjectId;
-			float visualScale;
-		};
-
 		Camera m_camera;
 		SceneEnvironment m_environment;
 		std::vector<SceneObject> m_objects;
-		std::vector<EnemyAircraft> m_enemyAircraft;
-		AircraftFlightModel m_playerAircraft;
-		ObjectId m_playerObjectId = InvalidObjectId;
 		ObjectId m_nextObjectId = 1;
-		SceneObject* FindObject(ObjectId id);
-		float m_playerAircraftVisualScale = 1.0f;
 	};
 } // namespace Engine

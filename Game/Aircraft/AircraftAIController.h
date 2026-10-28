@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <iterator>
 
-namespace Engine {
+namespace Game {
 	struct AircraftAIParameters {
 		float directionChangeSeconds = 5.0f;
 		float altitudeChangeSeconds = 12.0f;
@@ -18,12 +18,11 @@ namespace Engine {
 		float speedMatchGain = 0.015f;
 		float highGManeuverIntervalSeconds = 24.0f;
 		float highGManeuverDurationSeconds = 3.0f;
-	};
 
 	class AircraftAIController {
 	  public:
 		AircraftInput ReadInput(const AircraftFlightModel& aircraft, float targetSpeed, float deltaSeconds,
-								const AircraftAIParameters& parameters) {
+			const AircraftAIParameters& parameters) {
 			AircraftInput input;
 			if (deltaSeconds <= 0.0f) {
 				return input;
@@ -41,34 +40,37 @@ namespace Engine {
 				m_initialized = true;
 			}
 
-			static constexpr float directionChanges[] = {DirectX::XM_PIDIV2,  -DirectX::XM_PIDIV2, DirectX::XM_PI,
-														 -DirectX::XM_PIDIV4, DirectX::XM_PIDIV2,  DirectX::XM_PIDIV4,
-														 -DirectX::XM_PI,	  -DirectX::XM_PIDIV2};
+			static constexpr float directionChanges[] = {DirectX::XM_PIDIV2, -DirectX::XM_PIDIV2,
+				DirectX::XM_PI, -DirectX::XM_PIDIV4, DirectX::XM_PIDIV2, DirectX::XM_PIDIV4, -DirectX::XM_PI,
+				-DirectX::XM_PIDIV2};
 			if (m_elapsedSeconds >= m_nextDirectionChange) {
-				m_targetYaw =
-					std::remainder(currentYaw + directionChanges[m_directionChangeIndex % std::size(directionChanges)],
-								   DirectX::XM_2PI);
+				m_targetYaw = std::remainder(
+					currentYaw + directionChanges[m_directionChangeIndex % std::size(directionChanges)],
+					DirectX::XM_2PI);
 				++m_directionChangeIndex;
 				m_nextDirectionChange += parameters.directionChangeSeconds;
 			}
 			if (m_elapsedSeconds >= m_nextAltitudeChange) {
-				m_targetAltitude =
-					m_targetAltitude == parameters.highAltitude ? parameters.lowAltitude : parameters.highAltitude;
+				m_targetAltitude = m_targetAltitude == parameters.highAltitude ? parameters.lowAltitude
+																			   : parameters.highAltitude;
 				m_nextAltitudeChange += parameters.altitudeChangeSeconds;
 			}
 
 			const float yawError = std::remainder(m_targetYaw - currentYaw, DirectX::XM_2PI);
 			input.turn = std::clamp(yawError * parameters.turnGain, -1.0f, 1.0f);
 			const DirectX::XMFLOAT3 forward = aircraft.GetForward();
-			const float currentPitch = std::atan2(forward.y, std::sqrt(forward.x * forward.x + forward.z * forward.z));
+			const float currentPitch =
+				std::atan2(forward.y, std::sqrt(forward.x * forward.x + forward.z * forward.z));
 			const float altitudeError = m_targetAltitude - position.y;
 			const float targetPitch =
 				std::clamp(std::atan2(altitudeError, parameters.pitchLookAheadDistance), -0.45f, 0.45f);
 			input.pitch = std::clamp((targetPitch - currentPitch) * parameters.pitchGain, -1.0f, 1.0f);
-			input.throttle = std::clamp((targetSpeed - aircraft.GetSpeed()) * parameters.speedMatchGain, -1.0f, 1.0f);
+			input.throttle =
+				std::clamp((targetSpeed - aircraft.GetSpeed()) * parameters.speedMatchGain, -1.0f, 1.0f);
 
 			const float maneuverPhase = std::fmod(m_elapsedSeconds, parameters.highGManeuverIntervalSeconds);
-			input.highGTurn = maneuverPhase < parameters.highGManeuverDurationSeconds && std::abs(input.turn) > 0.3f;
+			input.highGTurn =
+				maneuverPhase < parameters.highGManeuverDurationSeconds && std::abs(input.turn) > 0.3f;
 			if (input.highGTurn) {
 				input.turn = std::copysign(std::max(std::abs(input.turn), 0.85f), input.turn);
 			}
@@ -84,4 +86,4 @@ namespace Engine {
 		std::size_t m_directionChangeIndex = 0;
 		bool m_initialized = false;
 	};
-} // namespace Engine
+} // namespace Game

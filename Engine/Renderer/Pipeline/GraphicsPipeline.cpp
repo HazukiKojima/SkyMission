@@ -4,24 +4,24 @@
 #include <d3dcompiler.h> // コンパイル用
 
 namespace {
+	namespace Binding = Engine::RootBinding;
 	// ルートシグネチャを生成するヘルパー
 	// srvCount: ルートテーブル内のSRV数
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRootSignatureWithSrvCount(
-		ID3D12Device* device, UINT srvCount, D3D12_TEXTURE_ADDRESS_MODE addressMode) {
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRootSignatureWithSrvCount(ID3D12Device* device,
+		UINT srvCount, D3D12_TEXTURE_ADDRESS_MODE addressMode, Engine::RootSignatureLayout layout) {
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, srvCount, 0);
 
-		// ルートパラメータを3つ用意
-		// 0 = SRVテーブル（ピクセルシェーダ用）
-		// 1 = CBV(b0)（頂点/ピクセル両方で使用）
-		// 2 = プロペラ回転定数(b1)（頂点シェーダ用）
-		CD3DX12_ROOT_PARAMETER1 rootParams[3];
-
-		rootParams[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-
-		CD3DX12_ROOT_PARAMETER1::InitAsConstantBufferView(rootParams[1], 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
-														  D3D12_SHADER_VISIBILITY_ALL);
-		rootParams[2].InitAsConstants(8, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+		CD3DX12_ROOT_PARAMETER1 rootParams[Binding::NodeRotationParameterCount];
+		rootParams[Binding::TextureTable].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+		rootParams[Binding::FrameConstants].InitAsConstantBufferView(
+			0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		const bool nodeRotation = layout == Engine::RootSignatureLayout::NodeRotation;
+		if (nodeRotation)
+			rootParams[Binding::NodeRotation].InitAsConstants(
+				Binding::NodeRotationDwords, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+		const UINT parameterCount =
+			nodeRotation ? Binding::NodeRotationParameterCount : Binding::TexturedParameterCount;
 
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -37,8 +37,8 @@ namespace {
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSigDesc;
 
-		rootSigDesc.Init_1_1(_countof(rootParams), rootParams, 1, &samplerDesc,
-							 D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		rootSigDesc.Init_1_1(parameterCount, rootParams, 1, &samplerDesc,
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		Microsoft::WRL::ComPtr<ID3DBlob> signature;
 		Microsoft::WRL::ComPtr<ID3DBlob> error;
@@ -46,28 +46,29 @@ namespace {
 		const HRESULT result = D3D12SerializeVersionedRootSignature(&rootSigDesc, &signature, &error);
 		if (FAILED(result) && error) {
 			Engine::Log("Root signature serialization: {}\n",
-						std::string(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize()));
+				std::string(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize()));
 		}
+
 		ThrowIfFailed(result);
 
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
 
-		ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
-												  IID_PPV_ARGS(&rootSignature)));
+		ThrowIfFailed(device->CreateRootSignature(
+			0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
 
 		return rootSignature;
 	}
 
 	// グラフィックスパイプラインステートを生成するヘルパー
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device* device,
-																	ID3D12RootSignature* rootSignature,
-																	ID3DBlob* vertexShader, ID3DBlob* pixelShader,
-																	const Engine::PipelineOptions& options) {
+		ID3D12RootSignature* rootSignature, ID3DBlob* vertexShader, ID3DBlob* pixelShader,
+		const Engine::PipelineOptions& options) {
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+			{"TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+				0}};
 		const UINT inputElementCount =
 			options.vertexNormalTangent ? _countof(inputElementDescs) : _countof(inputElementDescs) - 2;
 
@@ -96,7 +97,8 @@ namespace {
 		if (options.alphaBlend) {
 			blendDesc.RenderTarget[0].BlendEnable = TRUE;
 			blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-			blendDesc.RenderTarget[0].DestBlend = options.additiveBlend ? D3D12_BLEND_ONE : D3D12_BLEND_INV_SRC_ALPHA;
+			blendDesc.RenderTarget[0].DestBlend =
+				options.additiveBlend ? D3D12_BLEND_ONE : D3D12_BLEND_INV_SRC_ALPHA;
 			blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
 			blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
 			blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
@@ -131,7 +133,8 @@ namespace {
 
 namespace Engine {
 	void GraphicsPipeline::Initialize(ID3D12Device* device, const PipelineOptions& options) {
-		m_rootSignature = CreateRootSignatureWithSrvCount(device, options.srvCount, options.addressMode);
+		m_rootSignature = CreateRootSignatureWithSrvCount(
+			device, options.srvCount, options.addressMode, options.rootLayout);
 		const auto directory = ExecutableDirectory();
 		ComPtr<ID3DBlob> vertexShader, pixelShader;
 		const auto loadShader = [&](const std::wstring& path, ID3DBlob** blob) {
@@ -143,10 +146,12 @@ namespace Engine {
 					std::string(reinterpret_cast<const char*>(utf8.data()), utf8.size()),
 					static_cast<unsigned long>(result));
 			}
+
 			ThrowIfFailed(result);
 		};
 		loadShader(options.vs, &vertexShader);
 		loadShader(options.ps, &pixelShader);
-		m_pso = CreatePipelineState(device, m_rootSignature.Get(), vertexShader.Get(), pixelShader.Get(), options);
+		m_pso = CreatePipelineState(
+			device, m_rootSignature.Get(), vertexShader.Get(), pixelShader.Get(), options);
 	}
 } // namespace Engine

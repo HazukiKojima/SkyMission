@@ -5,7 +5,7 @@
 #include <string>
 #include <numbers>
 
-namespace Engine {
+namespace Game {
 	inline void ValidateFlightParameters(const AircraftFlightParameters& p) {
 		const auto finiteNonnegative = [](float value, const char* name) {
 			if (!std::isfinite(value) || value < 0.0f)
@@ -38,10 +38,11 @@ namespace Engine {
 		// Initial speed may be below minimumSpeed (takeoff), but cannot exceed maximumSpeed.
 		if (p.minimumSpeed <= 0.0f || p.maximumSpeed <= p.minimumSpeed || p.initialSpeed > p.maximumSpeed ||
 			p.liftReferenceSpeed <= 0.0f || p.stallSpeed > p.maximumSpeed ||
-			p.criticalAngleRadians <= p.stallAngleRadians || p.criticalAngleRadians > std::numbers::pi_v<float> ||
+			p.criticalAngleRadians <= p.stallAngleRadians ||
+			p.criticalAngleRadians > std::numbers::pi_v<float> ||
 			p.maximumBankRadians > std::numbers::pi_v<float> || p.maximumTurnFactor < p.minimumTurnFactor ||
 			p.minimumTurnFactor <= 0.0f || p.highGTurnMultiplier < 1.0f || p.maximumLiftFactor <= 0.0f) {
 			throw std::invalid_argument("Flight parameter ranges are inconsistent.");
 		}
 	}
-} // namespace Engine
+} // namespace Game

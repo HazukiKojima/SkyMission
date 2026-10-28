@@ -8,12 +8,12 @@ cbuffer MatrixBuffer : register(b0)
     float pad2;
 };
 
-cbuffer PropellerBuffer : register(b1)
+cbuffer NodeRotationBuffer : register(b1)
 {
-    float propellerAngle;
-    float3 propellerPivot;
-    float3 propellerAxis;
-    uint propellerEnabled;
+    float nodeRotationAngle;
+    float3 nodeRotationPivot;
+    float3 nodeRotationAxis;
+    uint nodeRotationEnabled;
 };
 
 struct VS_INPUT
@@ -33,12 +33,12 @@ struct PS_INPUT
     float4 tangent : TANGENT;
 };
 
-float3 RotatePropellerVector(float3 value)
+float3 RotateNodeVector(float3 value)
 {
-    float sine = sin(propellerAngle);
-    float cosine = cos(propellerAngle);
-    return value * cosine + cross(propellerAxis, value) * sine +
-        propellerAxis * dot(propellerAxis, value) * (1.0f - cosine);
+    float sine = sin(nodeRotationAngle);
+    float cosine = cos(nodeRotationAngle);
+    return value * cosine + cross(nodeRotationAxis, value) * sine +
+        nodeRotationAxis * dot(nodeRotationAxis, value) * (1.0f - cosine);
 }
 
 PS_INPUT VS(VS_INPUT input)
@@ -47,11 +47,11 @@ PS_INPUT VS(VS_INPUT input)
     float3 localPosition = input.position;
     float3 localNormal = input.normal;
     float3 localTangent = input.tangent.xyz;
-    if (propellerEnabled != 0)
+    if (nodeRotationEnabled != 0)
     {
-        localPosition = propellerPivot + RotatePropellerVector(input.position - propellerPivot);
-        localNormal = RotatePropellerVector(input.normal);
-        localTangent = RotatePropellerVector(input.tangent.xyz);
+        localPosition = nodeRotationPivot + RotateNodeVector(input.position - nodeRotationPivot);
+        localNormal = RotateNodeVector(input.normal);
+        localTangent = RotateNodeVector(input.tangent.xyz);
     }
 
     output.position = mul(float4(localPosition, 1.0f), mvp);

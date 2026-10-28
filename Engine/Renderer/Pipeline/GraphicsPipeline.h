@@ -1,5 +1,6 @@
 #pragma once
 #include "../../EngineCommon.h"
+#include "../RootBindings.h"
 
 namespace Engine {
 	struct PipelineOptions {
@@ -13,6 +14,7 @@ namespace Engine {
 		bool additiveBlend = false;
 		D3D12_CULL_MODE cullMode = D3D12_CULL_MODE_NONE;
 		D3D12_TEXTURE_ADDRESS_MODE addressMode = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		RootSignatureLayout rootLayout = RootSignatureLayout::Textured;
 	};
 
 	class GraphicsPipeline {

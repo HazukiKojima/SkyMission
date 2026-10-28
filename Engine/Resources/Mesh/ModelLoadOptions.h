@@ -5,7 +5,7 @@
 namespace Engine {
 	// Asset naming conventions are supplied by the game configuration, not the importer.
 	struct ModelLoadOptions {
-		std::string propellerName;
+		std::string rotatingNodeName;
 		std::filesystem::path textureDirectory = L"Textures";
 		std::wstring baseColorStemSuffix;
 		std::wstring baseColorSuffix;

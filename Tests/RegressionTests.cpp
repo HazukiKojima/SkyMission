@@ -1,7 +1,7 @@
-#include "Engine/Aircraft/AircraftController.h"
-#include "Engine/Aircraft/AircraftFlightModel.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneLoader.h"
+#include "Game/Aircraft/AircraftController.h"
+#include "Game/Aircraft/AircraftFlightModel.h"
+#include "Game/Scene/FlightScene.h"
+#include "Game/Scene/FlightSceneLoader.h"
 #include "Engine/Resources/Mesh/MaterialTexturePaths.h"
 #include "Engine/Resources/JsonAssetReader.h"
 #include "Engine/Resources/Texture/Texture.h"
@@ -19,6 +19,7 @@
 #include <limits>
 
 using namespace Engine;
+using namespace Game;
 namespace fs = std::filesystem;
 
 void Require(bool condition, const char* description) {
@@ -29,7 +30,8 @@ void Require(bool condition, const char* description) {
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
 	ValidateFlightParameters(parameters);
-	for (const auto member : {&AircraftFlightParameters::liftReferenceSpeed, &AircraftFlightParameters::minimumSpeed}) {
+	for (const auto member :
+		{&AircraftFlightParameters::liftReferenceSpeed, &AircraftFlightParameters::minimumSpeed}) {
 		auto invalid = parameters;
 		invalid.*member = 0.0f;
 		bool rejected = false;
@@ -39,9 +41,12 @@ void TestFlightAndScene() {
 		} catch (const std::invalid_argument&) {
 			rejected = true;
 		}
+
 		Require(rejected, "Zero flight divisor was accepted");
 	}
-	for (float bad : {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(), -1.0f}) {
+
+	for (float bad :
+		{std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(), -1.0f}) {
 		auto invalid = parameters;
 		invalid.drag = bad;
 		bool rejected = false;
@@ -50,6 +55,7 @@ void TestFlightAndScene() {
 		} catch (const std::invalid_argument&) {
 			rejected = true;
 		}
+
 		Require(rejected, "Nonfinite/negative flight parameter was accepted");
 	}
 	auto invalid = parameters;
@@ -60,19 +66,20 @@ void TestFlightAndScene() {
 	} catch (const std::invalid_argument&) {
 		rejected = true;
 	}
+
 	Require(rejected, "Equal stall/critical angles were accepted");
 	AircraftFlightModel flight;
 	flight.SetFlightParameters(parameters);
 	for (int i = 0; i < 180; ++i)
 		flight.Update({.pitch = 0.3f, .turn = 0.5f}, 1.0f / 60.0f);
 	Require(std::isfinite(flight.GetSpeed()), "Flight integration produced NaN");
-	const auto input =
-		AircraftController::MapInput({.pitchUp = true, .turnLeft = true, .accelerate = true, .decelerate = true});
+	const auto input = AircraftController::MapInput(
+		{.pitchUp = true, .turnLeft = true, .accelerate = true, .decelerate = true});
 	Require(input.pitch == -1.0f && input.turn == 1.0f && input.throttle == 0.0f && input.highGTurn,
-			"Key mapping/high-G combination changed");
+		"Key mapping/high-G combination changed");
 	Require(AircraftController{}.ReadInput({}).pitch == 0.0f, "Inactive input was not zero");
 
-	Scene scene;
+	FlightScene scene;
 	auto mesh = std::make_shared<Model>();
 	const auto removed = scene.AddObject(mesh);
 	parameters.minimumSpeed = 1.0f;
@@ -83,11 +90,12 @@ void TestFlightAndScene() {
 	parameters.initialSpeed = 180.0f;
 	const auto enemy = scene.AddEnemyAircraft(mesh, {0, 200, 0}, 1.0f, parameters, {});
 	scene.RemoveObject(removed);
-	Require(scene.GetObjects().size() == 2 && scene.GetObjects()[0].id == player && scene.GetObjects()[1].id == enemy,
-			"Object IDs changed after deletion");
+	Require(scene.GetObjects().size() == 2 && scene.GetObjects()[0].id == player &&
+			scene.GetObjects()[1].id == enemy,
+		"Object IDs changed after deletion");
 	scene.Update({}, 1.0f / 60.0f);
-	Require(scene.GetObjects()[1].propellerAngle > scene.GetObjects()[0].propellerAngle * 2.0f,
-			"Enemy propeller is still driven by player speed");
+	Require(scene.GetObjects()[1].nodeRotationRadians > scene.GetObjects()[0].nodeRotationRadians * 2.0f,
+		"Enemy propeller is still driven by player speed");
 	scene.RemoveObject(player);
 	const auto added = scene.AddObject(mesh);
 	Require(added > enemy && scene.GetObjects()[0].id == enemy, "Stale object handle was reused");
@@ -107,7 +115,8 @@ void TestRawInput() {
 		packet.MakeCode = code;
 		state.ProcessKeyboard(device, packet);
 	};
-	const auto mouse = [&](HANDLE device, USHORT buttons, LONG dx, LONG dy, USHORT flags = MOUSE_MOVE_RELATIVE) {
+	const auto mouse = [&](HANDLE device, USHORT buttons, LONG dx, LONG dy,
+						   USHORT flags = MOUSE_MOVE_RELATIVE) {
 		RAWMOUSE packet{};
 		packet.usFlags = flags;
 		packet.usButtonFlags = buttons;
@@ -132,9 +141,11 @@ void TestRawInput() {
 	key(keyboard1, VK_CONTROL, RI_KEY_BREAK);
 	key(keyboard1, VK_SPACE);
 	auto snapshot = state.ConsumeFrame();
-	Require(!snapshot.IsKeyDown(VK_LCONTROL) && snapshot.IsKeyDown(VK_RCONTROL) && snapshot.IsKeyDown(VK_CONTROL),
-			"Left/right Ctrl state is not independent");
-	Require(AircraftController{}.ReadInput(snapshot).highGTurn, "Raw Ctrl+Space did not activate high-G input");
+	Require(
+		!snapshot.IsKeyDown(VK_LCONTROL) && snapshot.IsKeyDown(VK_RCONTROL) && snapshot.IsKeyDown(VK_CONTROL),
+		"Left/right Ctrl state is not independent");
+	Require(
+		AircraftController{}.ReadInput(snapshot).highGTurn, "Raw Ctrl+Space did not activate high-G input");
 	key(keyboard1, VK_CONTROL, RI_KEY_E0 | RI_KEY_BREAK);
 	key(keyboard1, VK_SPACE, RI_KEY_BREAK);
 	key(keyboard1, VK_CONTROL, RI_KEY_E1, 0x1d);
@@ -148,16 +159,17 @@ void TestRawInput() {
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_UP, 2, 0);
 	snapshot = state.ConsumeFrame();
 	Require(!snapshot.rightMouseDown && snapshot.mouseDeltaX == 9 && snapshot.mouseDeltaY == 3,
-			"Short right-button drag or accumulated motion was lost");
+		"Short right-button drag or accumulated motion was lost");
 	const auto next = state.ConsumeFrame();
 	Require(next.mouseDeltaX == 0 && next.mouseDeltaY == 0, "Raw mouse movement was replayed next frame");
-	Camera camera;
-	camera.Initialize(nullptr);
+	AircraftCameraController camera;
+	camera.Initialize();
 	DirectX::XMFLOAT4X4 before, after;
 	DirectX::XMStoreFloat4x4(&before, camera.GetView());
 	camera.Update(0.0f, snapshot);
 	DirectX::XMStoreFloat4x4(&after, camera.GetView());
-	Require(std::abs(after._13 - before._13) > 0.001f, "Camera did not consume released-in-frame drag motion");
+	Require(
+		std::abs(after._13 - before._13) > 0.001f, "Camera did not consume released-in-frame drag motion");
 	mouse(mouse1, 0, 100, 100);
 	Require(state.ConsumeFrame().mouseDeltaX == 0, "Mouse movement without right drag rotated the camera");
 
@@ -165,32 +177,35 @@ void TestRawInput() {
 	mouse(mouse1, 0, 65535, 65535, MOUSE_MOVE_ABSOLUTE);
 	snapshot = state.ConsumeFrame();
 	Require(snapshot.mouseDeltaX == 1919 && snapshot.mouseDeltaY == 1079,
-			"Absolute mouse coordinates were not converted");
+		"Absolute mouse coordinates were not converted");
 	mouse(mouse2, 0, 32767, 32767, MOUSE_MOVE_ABSOLUTE);
 	Require(state.ConsumeFrame().mouseDeltaX == 0, "New absolute mouse device caused a camera jump");
 	key(keyboard1, 'W');
 	state.SetActive(false);
 	snapshot = state.ConsumeFrame();
-	Require(!snapshot.active && !snapshot.IsKeyDown('W') && !snapshot.rightMouseDown && snapshot.mouseDeltaX == 0,
-			"Focus loss did not clear keys, mouse buttons and motion");
+	Require(
+		!snapshot.active && !snapshot.IsKeyDown('W') && !snapshot.rightMouseDown && snapshot.mouseDeltaX == 0,
+		"Focus loss did not clear keys, mouse buttons and motion");
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 100, 100);
 	key(keyboard1, 'W');
 	state.SetActive(true);
 	snapshot = state.ConsumeFrame();
-	Require(!snapshot.IsKeyDown('W') && !snapshot.rightMouseDown, "Background input returned on focus regain");
+	Require(
+		!snapshot.IsKeyDown('W') && !snapshot.rightMouseDown, "Background input returned on focus regain");
 	const auto position = camera.GetPosition();
 	key(keyboard1, 'W');
 	camera.Update(0.1f, state.ConsumeFrame());
-	Require(std::abs(camera.GetPosition().z - position.z) > 1.0f, "Free camera did not consume raw keyboard state");
+	Require(std::abs(camera.GetPosition().z - position.z) > 1.0f,
+		"Free camera did not consume raw keyboard state");
 
 	const auto registrations = [] {
 		UINT count = 0;
 		Require(GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) != UINT(-1),
-				"Raw registration query failed");
+			"Raw registration query failed");
 		std::vector<RAWINPUTDEVICE> devices(count);
 		if (count)
 			Require(GetRegisteredRawInputDevices(devices.data(), &count, sizeof(RAWINPUTDEVICE)) != UINT(-1),
-					"Raw registration retrieval failed");
+				"Raw registration retrieval failed");
 		return devices;
 	};
 	auto first = std::make_unique<Window>(64, 64, L"Raw Input test (hidden)", GetModuleHandleW(nullptr));
@@ -206,12 +221,14 @@ void TestRawInput() {
 		Require(matching == 2, "Window did not register foreground keyboard and mouse input");
 		Require(!second.ConsumeInput().active, "Hidden unfocused window exposes active input");
 	}
+
 	for (const auto& device : registrations())
 		Require(device.hwndTarget == nullptr, "Destroyed window retained raw input registration");
 	MSG message{};
 	while (PeekMessageW(&message, nullptr, WM_QUIT, WM_QUIT, PM_REMOVE)) {
 	}
-	std::cout << "PASS: Raw Input make/break, modifiers, multiple devices, drag, focus loss, registration lifetime\n";
+	std::cout << "PASS: Raw Input make/break, modifiers, multiple devices, drag, focus loss, registration "
+				 "lifetime\n";
 }
 
 void TestPathsAndJson(const fs::path& repository, const fs::path& fixture) {
@@ -220,19 +237,20 @@ void TestPathsAndJson(const fs::path& repository, const fs::path& fixture) {
 	const auto japanese = textures / L"機体_金属.png";
 	std::ofstream(japanese) << "fixture";
 	const std::u8string material = u8"機体";
-	const auto found = MaterialTexturePaths::FindNamedMaterialTexturePath(
-		fixture, std::string(reinterpret_cast<const char*>(material.data()), material.size()), {}, L"_金属.png", {});
+	const auto found = MaterialTexturePaths::FindNamedMaterialTexturePath(fixture,
+		std::string(reinterpret_cast<const char*>(material.data()), material.size()), {}, L"_金属.png", {});
 	Require(found == japanese, "Japanese material name did not match UTF-8 filename");
-	Require(MaterialTexturePaths::FindNamedMaterialTexturePath(fixture, "missing", {}, L"_金属.png", {}).empty(),
-			"Missing material unexpectedly matched");
+	Require(
+		MaterialTexturePaths::FindNamedMaterialTexturePath(fixture, "missing", {}, L"_金属.png", {}).empty(),
+		"Missing material unexpectedly matched");
 	const auto config = repository / L"Assets";
-	const auto definition =
-		SceneLoader{}.Load({.environment = config / L"Environment/environment.json",
-							.playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
-							.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-							.retroFilm = config / L"Environment/retroFilm.json"});
-	Require(definition.playerAircraft.modelImport.propellerName == "Propeller" && definition.ocean.fogTop == 350.0f,
-			"Model/fog JSON settings were not loaded");
+	const auto definition = FlightSceneLoader{}.Load({.environment = config / L"Environment/environment.json",
+		.playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
+		.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
+		.retroFilm = config / L"Environment/retroFilm.json"});
+	Require(definition.playerAircraft.modelImport.rotatingNodeName == "Propeller" &&
+			definition.environment.ocean.fogTop == 350.0f,
+		"Model/fog JSON settings were not loaded");
 	const auto json = fixture / L"reader.json";
 	std::ofstream(json) << R"({"texture":"機体.png", "value":2.5})";
 	JsonAssetReader reader;
@@ -241,16 +259,17 @@ void TestPathsAndJson(const fs::path& repository, const fs::path& fixture) {
 	std::cout << "PASS: Japanese material paths, JSON acquisition, model/fog configuration\n";
 }
 
-void RequireDefaultBufferContent(ID3D12Device* device, ID3D12GraphicsCommandList* commands, ID3D12Resource* source,
-								 D3D12_RESOURCE_STATES state, const void* expected, size_t bytes, const auto& submit) {
+void RequireDefaultBufferContent(ID3D12Device* device, ID3D12GraphicsCommandList* commands,
+	ID3D12Resource* source, D3D12_RESOURCE_STATES state, const void* expected, size_t bytes,
+	const auto& submit) {
 	D3D12_HEAP_PROPERTIES properties{};
 	ThrowIfFailed(source->GetHeapProperties(&properties, nullptr));
 	Require(properties.Type == D3D12_HEAP_TYPE_DEFAULT, "Procedural geometry remained in UPLOAD memory");
 	ComPtr<ID3D12Resource> readback;
 	const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_READBACK);
 	const auto desc = CD3DX12_RESOURCE_DESC::Buffer(bytes);
-	ThrowIfFailed(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST,
-												  nullptr, IID_PPV_ARGS(&readback)));
+	ThrowIfFailed(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
+		D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readback)));
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(source, state, D3D12_RESOURCE_STATE_COPY_SOURCE);
 	commands->ResourceBarrier(1, &barrier);
 	commands->CopyBufferRegion(readback.Get(), 0, source, 0, bytes);
@@ -279,8 +298,8 @@ void TestGpuTextures(const fs::path& fixture) {
 	ComPtr<ID3D12CommandAllocator> allocator;
 	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator)));
 	ComPtr<ID3D12GraphicsCommandList> commands;
-	ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator.Get(), nullptr,
-											IID_PPV_ARGS(&commands)));
+	ThrowIfFailed(device->CreateCommandList(
+		0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator.Get(), nullptr, IID_PPV_ARGS(&commands)));
 	ComPtr<ID3D12CommandQueue> queue;
 	D3D12_COMMAND_QUEUE_DESC queueDesc{};
 	ThrowIfFailed(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&queue)));
@@ -306,7 +325,8 @@ void TestGpuTextures(const fs::path& fixture) {
 	const auto* pixels = image.GetImage(0, 0, 0);
 	std::memset(pixels->pixels, 128, pixels->slicePitch);
 	const auto png = fixture / L"機体.png";
-	ThrowIfFailed(DirectX::SaveToWICFile(*pixels, DirectX::WIC_FLAGS_NONE, GUID_ContainerFormatPng, png.c_str()));
+	ThrowIfFailed(
+		DirectX::SaveToWICFile(*pixels, DirectX::WIC_FLAGS_NONE, GUID_ContainerFormatPng, png.c_str()));
 	const auto extensionless = fixture / L"拡張子なし";
 	fs::copy_file(png, extensionless, fs::copy_options::overwrite_existing);
 	for (const auto format : {DXGI_FORMAT_BC3_UNORM_SRGB, DXGI_FORMAT_BC4_UNORM, DXGI_FORMAT_BC5_UNORM}) {
@@ -315,41 +335,45 @@ void TestGpuTextures(const fs::path& fixture) {
 		{
 			Texture texture;
 			Require(texture.LoadFromFile(device.Get(), commands.Get(), png.wstring(), options),
-					"BC texture load failed");
+				"BC texture load failed");
 			const auto desc = texture.GetResource()->GetDesc();
-			Require(desc.MipLevels == 5 && desc.Format == format, "Mip generation/compression order is broken");
+			Require(
+				desc.MipLevels == 5 && desc.Format == format, "Mip generation/compression order is broken");
 			submit();
 		}
 		{
 			Texture cached;
 			Require(cached.LoadFromFile(device.Get(), commands.Get(), png.wstring(), options),
-					"Disk cache reload failed");
+				"Disk cache reload failed");
 			Require(cached.GetResource()->GetDesc().MipLevels == 5, "Disk cache lost mip levels");
 			submit();
 		}
 	}
 	Texture noExtension;
 	Require(noExtension.LoadFromFile(device.Get(), commands.Get(), extensionless.wstring()),
-			"Extensionless WIC image failed");
+		"Extensionless WIC image failed");
 	Require(noExtension.GetResource()->GetDesc().MipLevels == 5, "Extensionless image lost mip levels");
 	Texture missing;
 	Require(!missing.LoadFromFile(device.Get(), commands.Get(), (fixture / L"missing").wstring()),
-			"Missing extensionless image was accepted");
+		"Missing extensionless image was accepted");
 	const auto dotted = fixture / L"folder.with.dot";
 	fs::create_directories(dotted);
 	Require(!missing.LoadFromFile(device.Get(), commands.Get(), (dotted / L"missing").wstring()),
-			"Dot in parent directory was treated as an extension");
+		"Dot in parent directory was treated as an extension");
 
 	auto shared = Texture::LoadCached(device.Get(), commands.Get(), png.wstring());
 	Require(shared == Texture::LoadCached(device.Get(), commands.Get(), png.wstring()),
-			"Memory cache missed identical request");
-	auto singleMip = Texture::LoadCached(device.Get(), commands.Get(), png.wstring(), {.generateMipmaps = false});
-	Require(singleMip != shared && singleMip->GetResource()->GetDesc().MipLevels == 1, "Cache ignored mip options");
+		"Memory cache missed identical request");
+	auto singleMip =
+		Texture::LoadCached(device.Get(), commands.Get(), png.wstring(), {.generateMipmaps = false});
+	Require(singleMip != shared && singleMip->GetResource()->GetDesc().MipLevels == 1,
+		"Cache ignored mip options");
 	submit();
 
 	VertexBuffer proceduralVertices;
 	const float vertexData[]{1, 2, 3, 4, 5, 6};
-	proceduralVertices.Initialize(device.Get(), commands.Get(), vertexData, sizeof(vertexData), 3 * sizeof(float));
+	proceduralVertices.Initialize(
+		device.Get(), commands.Get(), vertexData, sizeof(vertexData), 3 * sizeof(float));
 	SkySphere sky;
 	sky.Initialize(device.Get(), commands.Get(), 10.0f, 8, 4);
 	OceanGeometry proceduralOcean;
@@ -359,23 +383,21 @@ void TestGpuTextures(const fs::path& fixture) {
 	sky.ReleaseUploadResources();
 	proceduralOcean.ReleaseUploadResources();
 	RequireDefaultBufferContent(device.Get(), commands.Get(), proceduralVertices.GetResource(),
-								D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, vertexData, sizeof(vertexData),
-								submit);
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, vertexData, sizeof(vertexData), submit);
 	const SkySphere::Vertex skyVertex{{0, 10, 0}, {0, 0}};
 	const std::uint32_t skyIndices[]{0, 9, 1, 1, 9, 10};
 	Require(sky.GetIndexCount() == 8 * 4 * 6, "Sky sphere index count changed");
 	RequireDefaultBufferContent(device.Get(), commands.Get(), sky.GetVertexBufferResource(),
-								D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &skyVertex, sizeof(skyVertex), submit);
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &skyVertex, sizeof(skyVertex), submit);
 	RequireDefaultBufferContent(device.Get(), commands.Get(), sky.GetIndexBufferResource(),
-								D3D12_RESOURCE_STATE_INDEX_BUFFER, skyIndices, sizeof(skyIndices), submit);
+		D3D12_RESOURCE_STATE_INDEX_BUFFER, skyIndices, sizeof(skyIndices), submit);
 	const float oceanVertex[]{-1000, 0, -1000, 0, 0};
 	const std::uint32_t oceanIndices[]{0, 1, 1000, 1, 1001, 1000};
 	Require(proceduralOcean.GetIndexCount() == 999 * 999 * 6, "Ocean index count changed");
 	RequireDefaultBufferContent(device.Get(), commands.Get(), proceduralOcean.GetVertexBufferResource(),
-								D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, oceanVertex, sizeof(oceanVertex),
-								submit);
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, oceanVertex, sizeof(oceanVertex), submit);
 	RequireDefaultBufferContent(device.Get(), commands.Get(), proceduralOcean.GetIndexBufferResource(),
-								D3D12_RESOURCE_STATE_INDEX_BUFFER, oceanIndices, sizeof(oceanIndices), submit);
+		D3D12_RESOURCE_STATE_INDEX_BUFFER, oceanIndices, sizeof(oceanIndices), submit);
 	std::cout << "PASS: DEFAULT heap vertex/ocean/sky buffers, GPU readback after upload release\n";
 
 	// A missing ocean must return before accessing pipeline/device state or issuing draw calls.
@@ -393,10 +415,10 @@ void TestGpuTextures(const fs::path& fixture) {
 	for (const auto& stage : {std::pair{vs, L"BasicVS.cso"}, std::pair{ps, L"BasicPS.cso"}}) {
 		ComPtr<ID3DBlob> blob;
 		ThrowIfFailed(D3DCompile(stage.first, std::strlen(stage.first), nullptr, nullptr, nullptr, "main",
-								 stage.second == std::wstring(L"BasicVS.cso") ? "vs_5_0" : "ps_5_0", 0, 0, &blob,
-								 nullptr));
+			stage.second == std::wstring(L"BasicVS.cso") ? "vs_5_0" : "ps_5_0", 0, 0, &blob, nullptr));
 		ThrowIfFailed(D3DWriteBlobToFile(blob.Get(), (executable / stage.second).c_str(), TRUE));
 	}
+
 	const auto previous = fs::current_path();
 	fs::current_path(fixture);
 	GraphicsPipeline pipeline;
@@ -416,49 +438,54 @@ void TestGpuTextures(const fs::path& fixture) {
 				throw std::runtime_error(message->pDescription);
 		}
 	}
+
 	ThrowIfFailed(commands->Close());
-	std::cout
-		<< "PASS: WARP BC3/BC4/BC5 mip chains, cache reload, extensionless/Unicode paths, ocean guard, shader CWD\n";
+	std::cout << "PASS: WARP BC3/BC4/BC5 mip chains, cache reload, extensionless/Unicode paths, ocean guard, "
+				 "shader CWD\n";
 }
 
 void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	const auto config = repository / L"Assets";
-	auto definition = SceneLoader{}.Load({.environment = config / L"Environment/environment.json",
-										  .playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
-										  .enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-										  .retroFilm = config / L"Environment/retroFilm.json"});
+	auto definition = FlightSceneLoader{}.Load({.environment = config / L"Environment/environment.json",
+		.playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
+		.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
+		.retroFilm = config / L"Environment/retroFilm.json"});
 	const auto model = fixture / L"triangles.obj";
 	std::ofstream(model) << "o Body\nv -1 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"
 							"o Propeller\nv -1 0 -1\nv 1 0 -1\nv 0 1 -1\nf 4 5 6\n";
 	definition.playerAircraft.model = definition.enemyAircraft.model = model;
-	definition.skyTexture = definition.oceanTexture = definition.oceanNormalTexture = definition.oceanNormalTexture2 =
-		fixture / L"機体.png";
-	const HWND window = CreateWindowW(L"STATIC", L"SkyMission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0, 256, 256,
-									  nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+	definition.environment.skyTexture = definition.environment.oceanTexture =
+		definition.environment.oceanNormalTexture = definition.environment.oceanNormalTexture2 =
+			fixture / L"機体.png";
+	const HWND window = CreateWindowW(L"STATIC", L"SkyMission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0,
+		256, 256, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 	Require(window != nullptr, "Hidden test window could not be created");
 	{
 		Renderer renderer;
-		renderer.Initialize(window, 64, 64, definition);
-		Scene scene;
-		scene.Initialize(window, 1.0f, 1.0f, definition.ocean.size);
+		renderer.Initialize(window, 64, 64, definition.BuildRendererDefinition());
+		FlightScene scene;
+		scene.Initialize(1.0f, 1.0f, definition.environment.ocean.size);
 		scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
-		scene.AddPlayerObject(renderer.GetModel());
-		scene.AddEnemyAircraft(renderer.GetEnemyAircraftModel(), {30, 100, 0}, 1.0f,
-							   definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
-		renderer.InitializeConstantBuffers(scene);
+		scene.AddPlayerObject(renderer.GetModel(PlayerModelId));
+		scene.AddEnemyAircraft(renderer.GetModel(EnemyModelId), {30, 100, 0}, 1.0f,
+			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
+		renderer.InitializeConstantBuffers(scene.GetRenderScene());
 		for (int i = 0; i < 3; ++i) {
 			scene.Update({}, 1.0f / 60.0f);
-			renderer.UpdateFrameConstants(scene, i / 60.0f);
-			renderer.Render(64, 64, scene);
+			renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
+			renderer.Render(64, 64, scene.GetRenderScene());
 		}
+
 		renderer.Resize(0, 0);
-		renderer.Render(0, 0, scene);
+		renderer.Render(0, 0, scene.GetRenderScene());
 		renderer.Resize(96, 96);
-		renderer.UpdateFrameConstants(scene, 1.0f);
-		renderer.Render(96, 96, scene);
+		renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
+		renderer.Render(96, 96, scene.GetRenderScene());
 	}
+
 	DestroyWindow(window);
-	std::cout << "PASS: hidden renderer, combined static model buffers, all passes, zero-size and restored resize\n";
+	std::cout << "PASS: hidden renderer, combined static model buffers, all passes, zero-size and restored "
+				 "resize\n";
 }
 
 int wmain(int argc, wchar_t** argv) {

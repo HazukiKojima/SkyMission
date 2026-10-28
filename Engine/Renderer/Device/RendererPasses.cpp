@@ -1,3 +1,4 @@
+#include "../RootBindings.h"
 #include "RendererPasses.h"
 #include "CommandContext.h"
 #include "../../Scene/Scene.h"
@@ -15,11 +16,12 @@ namespace Engine {
 
 			ID3D12DescriptorHeap* heaps[] = {device->GetSrvDescriptorHeap()};
 			commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-			commandList->SetGraphicsRootDescriptorTable(0, device->GetSrvGpuHandle(assets.GetSkyTextureSrvIndex()));
+			commandList->SetGraphicsRootDescriptorTable(
+				RootBinding::TextureTable, device->GetSrvGpuHandle(assets.GetSkyTextureSrvIndex()));
 
 			if (constantBuffers.GetOceanResource(frame.frameIndex)) {
-				commandList->SetGraphicsRootConstantBufferView(
-					1, constantBuffers.GetOceanResource(frame.frameIndex)->GetGPUVirtualAddress());
+				commandList->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
+					constantBuffers.GetOceanResource(frame.frameIndex)->GetGPUVirtualAddress());
 			}
 
 			auto skyView = assets.GetSkySphere()->GetVertexBufferView();
@@ -31,14 +33,16 @@ namespace Engine {
 		}
 	}
 
-	void OceanRenderPass::Record(const FrameContext& frame, RendererAssets& assets, OceanGeometry& geometry) const {
+	void OceanRenderPass::Record(
+		const FrameContext& frame, RendererAssets& assets, OceanGeometry& geometry) const {
 		auto* commandList = frame.commandList;
 		auto* device = frame.device;
 		auto& pipelines = frame.pipelines;
 		auto& constantBuffers = frame.constantBuffers;
-		if (!assets.GetOceanTexture() || !assets.GetOceanTexture()->IsLoaded() || !assets.GetOceanNormalTexture() ||
-			!assets.GetOceanNormalTexture()->IsLoaded() || !assets.GetOceanNormalTexture2() ||
-			!assets.GetOceanNormalTexture2()->IsLoaded() || !constantBuffers.GetOceanResource(frame.frameIndex))
+		if (!assets.GetOceanTexture() || !assets.GetOceanTexture()->IsLoaded() ||
+			!assets.GetOceanNormalTexture() || !assets.GetOceanNormalTexture()->IsLoaded() ||
+			!assets.GetOceanNormalTexture2() || !assets.GetOceanNormalTexture2()->IsLoaded() ||
+			!constantBuffers.GetOceanResource(frame.frameIndex))
 			return;
 
 		commandList->SetGraphicsRootSignature(pipelines.GetOcean()->GetRootSignature());
@@ -47,12 +51,13 @@ namespace Engine {
 		if (assets.GetOceanTexture() && assets.GetOceanNormalTexture() && assets.GetOceanNormalTexture2()) {
 			ID3D12DescriptorHeap* heaps[] = {device->GetSrvDescriptorHeap()};
 			commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-			commandList->SetGraphicsRootDescriptorTable(0, device->GetSrvGpuHandle(assets.GetOceanTextureSrvIndex()));
+			commandList->SetGraphicsRootDescriptorTable(
+				RootBinding::TextureTable, device->GetSrvGpuHandle(assets.GetOceanTextureSrvIndex()));
 		}
 
 		if (constantBuffers.GetOceanResource(frame.frameIndex)) {
-			commandList->SetGraphicsRootConstantBufferView(
-				1, constantBuffers.GetOceanResource(frame.frameIndex)->GetGPUVirtualAddress());
+			commandList->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
+				constantBuffers.GetOceanResource(frame.frameIndex)->GetGPUVirtualAddress());
 		}
 
 		auto view = geometry.GetVertexView();
@@ -79,9 +84,10 @@ namespace Engine {
 				if (!object.model || !object.model->IsLoaded()) {
 					continue;
 				}
-				commandList->SetGraphicsRootConstantBufferView(
-					1, constantBuffers.GetModelResource(frameIndex, objectIndex)->GetGPUVirtualAddress());
-				object.model->Draw(commandList, device, object.propellerAngle);
+
+				commandList->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
+					constantBuffers.GetModelResource(frameIndex, objectIndex)->GetGPUVirtualAddress());
+				object.model->Draw(commandList, device, object.nodeRotationRadians);
 			}
 		}
 	}
@@ -95,9 +101,10 @@ namespace Engine {
 		commandList->SetPipelineState(pipelines.GetOceanFog()->GetPSO());
 		ID3D12DescriptorHeap* heaps[] = {device->GetSrvDescriptorHeap()};
 		commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-		commandList->SetGraphicsRootDescriptorTable(0, device->GetSrvGpuHandle(device->GetSceneColorSrvIndex()));
-		commandList->SetGraphicsRootConstantBufferView(
-			1, constantBuffers.GetOceanFogResource(frame.frameIndex)->GetGPUVirtualAddress());
+		commandList->SetGraphicsRootDescriptorTable(
+			RootBinding::TextureTable, device->GetSrvGpuHandle(device->GetSceneColorSrvIndex()));
+		commandList->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
+			constantBuffers.GetOceanFogResource(frame.frameIndex)->GetGPUVirtualAddress());
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->DrawInstanced(3, 1, 0, 0);
 	}
@@ -111,10 +118,11 @@ namespace Engine {
 		commandList->SetPipelineState(pipelines.GetRetroFilm()->GetPSO());
 		ID3D12DescriptorHeap* heaps[] = {device->GetSrvDescriptorHeap()};
 		commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-		commandList->SetGraphicsRootDescriptorTable(0, device->GetSrvGpuHandle(device->GetPostProcessSrvIndex()));
+		commandList->SetGraphicsRootDescriptorTable(
+			RootBinding::TextureTable, device->GetSrvGpuHandle(device->GetPostProcessSrvIndex()));
 		const UINT frameIndex = frame.frameIndex;
 		commandList->SetGraphicsRootConstantBufferView(
-			1, constantBuffers.GetFilmResource(frameIndex)->GetGPUVirtualAddress());
+			RootBinding::FrameConstants, constantBuffers.GetFilmResource(frameIndex)->GetGPUVirtualAddress());
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->DrawInstanced(3, 1, 0, 0);
 	}

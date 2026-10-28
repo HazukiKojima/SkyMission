@@ -12,14 +12,14 @@
 
 namespace Engine {
 	class Scene;
-	struct SceneDefinition;
+	struct RendererDefinition;
 
 	class Renderer {
 	  public:
 		Renderer() = default;
 		~Renderer();
 
-		void Initialize(HWND hwnd, UINT width, UINT height, const SceneDefinition& assets);
+		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
 		void InitializeConstantBuffers(const Scene& scene);
 		void UpdateFrameConstants(const Scene& scene, float elapsedTime);
 		void Render(UINT width, UINT height, const Scene& scene);
@@ -30,11 +30,8 @@ namespace Engine {
 		const std::wstring& GetAdapterName() const {
 			return m_device->GetAdapterName();
 		}
-		std::shared_ptr<Engine::Model> GetModel() const {
-			return m_assets.GetModel();
-		}
-		std::shared_ptr<Engine::Model> GetEnemyAircraftModel() const {
-			return m_assets.GetEnemyAircraftModel();
+		std::shared_ptr<Model> GetModel(std::string_view id) const {
+			return m_assets.GetModel(id);
 		}
 
 	  private:

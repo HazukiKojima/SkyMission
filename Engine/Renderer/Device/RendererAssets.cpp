@@ -5,10 +5,10 @@
 namespace Engine {
 	namespace {
 		std::shared_ptr<Texture> LoadTexture(RenderDevice& device, CommandContext& context,
-											 const std::filesystem::path& path, const TextureLoadOptions& options,
-											 UINT& srvIndex) {
+			const std::filesystem::path& path, const TextureLoadOptions& options, UINT& srvIndex) {
 			const auto handle = device.AllocateSrvDescriptor(&srvIndex);
-			auto texture = Texture::LoadCached(device.GetDevice(), context.GetCommandList(), path.wstring(), options);
+			auto texture =
+				Texture::LoadCached(device.GetDevice(), context.GetCommandList(), path.wstring(), options);
 			if (texture)
 				texture->CreateShaderResourceView(device.GetDevice(), handle);
 			else {
@@ -25,12 +25,12 @@ namespace Engine {
 			return texture;
 		}
 
-		std::shared_ptr<Model> LoadModel(RenderDevice& device, CommandContext& context,
-										 const AircraftDefinition& definition) {
+		std::shared_ptr<Model> LoadModel(
+			RenderDevice& device, CommandContext& context, const ModelAssetDefinition& definition) {
 			auto model = std::make_shared<Model>();
-			if (!model->Load(device.GetDevice(), context.GetCommandList(), &device, definition.model.wstring(),
-							 definition.modelImport)) {
-				const auto path = definition.model.u8string();
+			if (!model->Load(device.GetDevice(), context.GetCommandList(), &device, definition.file.wstring(),
+					definition.options)) {
+				const auto path = definition.file.u8string();
 				Log("RendererAssets: skipping missing model {}\n",
 					std::string(reinterpret_cast<const char*>(path.data()), path.size()));
 				return {};
@@ -39,32 +39,40 @@ namespace Engine {
 		}
 	} // namespace
 
-	void RendererAssets::InitializeSkySphere(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius) {
+	void RendererAssets::InitializeSkySphere(
+		ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius) {
 		m_skySphere = std::make_unique<SkySphere>();
 		m_skySphere->Initialize(device, commands, radius, 64, 32);
 	}
 
-	void RendererAssets::Load(RenderDevice* device, CommandContext* context, const SceneDefinition& assets) {
+	void RendererAssets::Load(
+		RenderDevice* device, CommandContext* context, const RendererDefinition& assets) {
 		// Ocean shader t0..t2 is one contiguous descriptor table; do not allocate between these loads.
-		m_oceanTexture = LoadTexture(*device, *context, assets.oceanTexture, {.useSrgb = true}, m_oceanTextureSrvIndex);
-		m_oceanNormalTexture =
-			LoadTexture(*device, *context, assets.oceanNormalTexture, {.useSrgb = false}, m_oceanNormalTextureSrvIndex);
-		m_oceanNormalTexture2 = LoadTexture(*device, *context, assets.oceanNormalTexture2, {.useSrgb = false},
-											m_oceanNormalTexture2SrvIndex);
+		m_oceanTexture = LoadTexture(
+			*device, *context, assets.environment.oceanTexture, {.useSrgb = true}, m_oceanTextureSrvIndex);
+		m_oceanNormalTexture = LoadTexture(*device, *context, assets.environment.oceanNormalTexture,
+			{.useSrgb = false}, m_oceanNormalTextureSrvIndex);
+		m_oceanNormalTexture2 = LoadTexture(*device, *context, assets.environment.oceanNormalTexture2,
+			{.useSrgb = false}, m_oceanNormalTexture2SrvIndex);
 		assert(m_oceanNormalTextureSrvIndex == m_oceanTextureSrvIndex + 1);
 		assert(m_oceanNormalTexture2SrvIndex == m_oceanTextureSrvIndex + 2);
-		m_skyTexture = LoadTexture(*device, *context, assets.skyTexture, {}, m_skyTextureSrvIndex);
-		m_model = LoadModel(*device, *context, assets.playerAircraft);
-		m_enemyAircraftModel = LoadModel(*device, *context, assets.enemyAircraft);
+		m_skyTexture =
+			LoadTexture(*device, *context, assets.environment.skyTexture, {}, m_skyTextureSrvIndex);
+		for (const auto& asset : assets.models) {
+			if (asset.id.empty() || m_models.contains(asset.id))
+				throw std::invalid_argument("Model asset IDs must be unique and nonempty.");
+			m_models.emplace(asset.id, LoadModel(*device, *context, asset));
+		}
 	}
 
 	void RendererAssets::ReleaseUploadResources() {
 		if (m_skySphere)
 			m_skySphere->ReleaseUploadResources();
-		for (const auto& texture : {m_oceanTexture, m_oceanNormalTexture, m_oceanNormalTexture2, m_skyTexture})
+		for (const auto& texture :
+			{m_oceanTexture, m_oceanNormalTexture, m_oceanNormalTexture2, m_skyTexture})
 			if (texture)
 				texture->ReleaseUploadResources();
-		for (const auto& model : {m_model, m_enemyAircraftModel})
+		for (const auto& [id, model] : m_models)
 			if (model)
 				model->ReleaseUploadResources();
 	}

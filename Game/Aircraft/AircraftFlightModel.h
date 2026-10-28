@@ -3,7 +3,7 @@
 #include "ValidateFlightParameters.h"
 #include <DirectXMath.h>
 
-namespace Engine {
+namespace Game {
 	struct AircraftInput {
 		float pitch = 0.0f;
 		float turn = 0.0f;
@@ -63,9 +63,10 @@ namespace Engine {
 		float UpdatePitchAndRoll(const AircraftInput& input, float deltaSeconds, FlightStepState& state);
 		void UpdateYaw(float deltaSeconds, FlightStepState& state);
 		void UpdateLiftDirection(float levelRoll, FlightStepState& state) const;
-		void UpdateFlightPhysics(const FlightStepState& state, DirectX::XMFLOAT3& acceleration, float& drag) const;
-		void UpdateVelocity(const DirectX::XMFLOAT3& acceleration, float drag, const DirectX::XMFLOAT3& fallbackForward,
-							float deltaSeconds);
+		void UpdateFlightPhysics(
+			const FlightStepState& state, DirectX::XMFLOAT3& acceleration, float& drag) const;
+		void UpdateVelocity(const DirectX::XMFLOAT3& acceleration, float drag,
+			const DirectX::XMFLOAT3& fallbackForward, float deltaSeconds);
 		void UpdatePosition(float deltaSeconds);
 		DirectX::XMFLOAT3 GetRight() const;
 		DirectX::XMFLOAT3 GetUp() const;
@@ -86,4 +87,4 @@ namespace Engine {
 		float m_throttleControl = 0.0f;
 		AircraftFlightParameters m_flightParameters;
 	};
-} // namespace Engine
+} // namespace Game

@@ -1,14 +1,14 @@
 #pragma once
 #include "RendererConstantBuffers.h"
 #include "../../Scene/Scene.h"
-#include "../../Scene/SceneLoader.h"
+#include "../RendererDefinition.h"
 
 namespace Engine {
 	class RendererFrameUpdater {
 	  public:
 		void Configure(const OceanSettings& settings);
 		void Update(const Scene& scene, float elapsedTime, const RetroFilmParameters& filmParameters,
-					RendererConstantBuffers& constantBuffers, ID3D12Device* device, CommandContext* context);
+			RendererConstantBuffers& constantBuffers, ID3D12Device* device, CommandContext* context);
 
 		float GetOceanSize() const {
 			return m_oceanSettings.size;
@@ -18,6 +18,17 @@ namespace Engine {
 		}
 
 	  private:
+		struct FrameViewData;
+		FrameViewData BuildFrameView(const Scene& scene, float elapsedTime) const;
+		void UpdateOceanConstants(
+			const FrameViewData&, const SceneEnvironment&, OceanConstantBufferData*) const;
+		void UpdateFogConstants(
+			const FrameViewData&, const SceneEnvironment&, OceanFogConstantBufferData*) const;
+		void UpdateFilmConstants(
+			const FrameViewData&, const RetroFilmParameters&, FilmConstantBufferData*) const;
+		void UpdateModelConstants(const FrameViewData&, const SceneEnvironment&, const Scene&,
+			RendererConstantBuffers&, UINT) const;
+
 		OceanSettings m_oceanSettings{};
 	};
 } // namespace Engine

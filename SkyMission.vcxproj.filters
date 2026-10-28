@@ -4,10 +4,10 @@
     <Filter Include="Engine">
       <UniqueIdentifier>{64a96883-8799-43cc-b664-da2427acad72}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Application">
+    <Filter Include="Game\Application">
       <UniqueIdentifier>{a1000000-0000-0000-0000-000000000001}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Aircraft">
+    <Filter Include="Game\Aircraft">
       <UniqueIdentifier>{a1000000-0000-0000-0000-000000000002}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Camera">
@@ -57,11 +57,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Application\Application.cpp">
-      <Filter>Engine\Application</Filter>
+    <ClCompile Include="Game\Application\Application.cpp">
+      <Filter>Game\Application</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Aircraft\AircraftController.cpp">
-      <Filter>Engine\Aircraft</Filter>
+    <ClCompile Include="Game\Aircraft\AircraftController.cpp">
+      <Filter>Game\Aircraft</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Window\Window.cpp">
       <Filter>Engine\Window</Filter>
@@ -115,28 +115,28 @@
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp">
       <Filter>Engine\Resources\Texture</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Scene\SceneLoader.cpp">
-      <Filter>Engine\Scene</Filter>
+    <ClCompile Include="Game\Scene\FlightSceneLoader.cpp">
+      <Filter>Game\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Resources\JsonAssetReader.cpp">
       <Filter>Engine\Resources</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Aircraft\AircraftFlightModel.cpp">
-      <Filter>Engine\Aircraft</Filter>
+    <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp">
+      <Filter>Game\Aircraft</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Application\Application.h">
-      <Filter>Engine\Application</Filter>
+    <ClInclude Include="Game\Application\Application.h">
+      <Filter>Game\Application</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Aircraft\AircraftFlightParameters.h">
-      <Filter>Engine\Aircraft</Filter>
+    <ClInclude Include="Game\Aircraft\AircraftFlightParameters.h">
+      <Filter>Game\Aircraft</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Aircraft\AircraftController.h">
-      <Filter>Engine\Aircraft</Filter>
+    <ClInclude Include="Game\Aircraft\AircraftController.h">
+      <Filter>Game\Aircraft</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Aircraft\AircraftFlightModel.h">
-      <Filter>Engine\Aircraft</Filter>
+    <ClInclude Include="Game\Aircraft\AircraftFlightModel.h">
+      <Filter>Game\Aircraft</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Window\Window.h">
       <Filter>Engine\Window</Filter>
@@ -192,8 +192,8 @@
     <ClInclude Include="Engine\Resources\Mesh\Model.h">
       <Filter>Engine\Resources\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Scene\SceneLoader.h">
-      <Filter>Engine\Scene</Filter>
+    <ClInclude Include="Game\Scene\FlightSceneLoader.h">
+      <Filter>Game\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h">
       <Filter>Engine\Interop\REDox</Filter>
@@ -204,8 +204,8 @@
     <ClInclude Include="Engine\Resources\JsonAssetReader.h">
       <Filter>Engine\Resources</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Aircraft\AircraftAIController.h">
-      <Filter>Engine\Aircraft</Filter>
+    <ClInclude Include="Game\Aircraft\AircraftAIController.h">
+      <Filter>Game\Aircraft</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Scene\OceanParameters.h">
       <Filter>Engine\Scene</Filter>
@@ -299,7 +299,9 @@
     <ClCompile Include="Engine\Resources\Mesh\MaterialTexturePaths.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
     <ClInclude Include="Engine\Log.h"><Filter>Engine</Filter></ClInclude>
     <ClInclude Include="Engine\ExecutablePath.h"><Filter>Engine</Filter></ClInclude>
-    <ClInclude Include="Engine\Aircraft\ValidateFlightParameters.h"><Filter>Engine\Aircraft</Filter></ClInclude>
+    <ClInclude Include="Game\Aircraft\ValidateFlightParameters.h">
+      <Filter>Game\Aircraft</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h"><Filter>Engine\Resources\Buffer</Filter></ClInclude>
     <ClInclude Include="Engine\Resources\Mesh\ModelLoadOptions.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
     <ClInclude Include="Engine\Resources\Mesh\MaterialTexturePaths.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
@@ -311,5 +313,28 @@
   <ItemGroup>
     <Filter Include="Engine\Input"><UniqueIdentifier>{ddaf6ba8-0ae7-4e26-b6ef-c6a73c315195}</UniqueIdentifier></Filter>
     <ClInclude Include="Engine\Input\RawInputState.h"><Filter>Engine\Input</Filter></ClInclude>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="Game\Scene\FlightScene.h">
+      <Filter>Game\Scene</Filter>
+    </ClInclude>
+    <ClCompile Include="Game\Scene\FlightScene.cpp">
+      <Filter>Game\Scene</Filter>
+    </ClCompile>
+    <ClInclude Include="Game\Camera\AircraftCameraController.h">
+      <Filter>Game\Camera</Filter>
+    </ClInclude>
+    <ClCompile Include="Game\Camera\AircraftCameraController.cpp">
+      <Filter>Game\Camera</Filter>
+    </ClCompile>
+    <ClInclude Include="Engine\Renderer\RendererDefinition.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Filter Include="Game"><UniqueIdentifier>{436bd76d-91c8-5264-ab59-7fe5cab94b55}</UniqueIdentifier></Filter>
+    <Filter Include="Game\Scene"><UniqueIdentifier>{16448455-e4c8-5714-b78f-a8f448ac004e}</UniqueIdentifier></Filter>
+    <Filter Include="Game\Camera"><UniqueIdentifier>{d5255d03-9b4c-58a0-a559-ea751c6cdfb3}</UniqueIdentifier></Filter>
+    <ClInclude Include="Engine\Renderer\RootBindings.h"><Filter>Engine\Renderer</Filter></ClInclude>
   </ItemGroup>
 </Project>
