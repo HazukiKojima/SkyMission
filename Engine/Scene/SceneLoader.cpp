@@ -11,19 +11,17 @@
 #include <vector>
 
 namespace Engine {
-	SceneAssetPaths SceneLoader::LoadAssets(
-		const std::filesystem::path& environmentJsonPath,
-		const std::filesystem::path& aircraftJsonPath) const
+	SceneDefinition SceneLoader::Load(const SceneSourcePaths& paths) const
 	{
 		JsonDocumentCache jsonDocuments;
 		AssetPathResolver resolver(jsonDocuments);
 		JsonParametersLoader parametersLoader(jsonDocuments);
-		const std::filesystem::path skyJsonPath = resolver.Resolve(environmentJsonPath, "sky");
-		const std::filesystem::path oceanJsonPath = resolver.Resolve(environmentJsonPath, "ocean");
-		const std::filesystem::path retroFilmJsonPath = environmentJsonPath.parent_path() / L"retroFilm.json";
+		const std::filesystem::path skyJsonPath = resolver.Resolve(paths.environment, "sky");
+		const std::filesystem::path oceanJsonPath = resolver.Resolve(paths.environment, "ocean");
+		const std::filesystem::path retroFilmJsonPath = paths.retroFilm;
 
-		const std::filesystem::path aircraftConfigJsonPath = aircraftJsonPath.parent_path() / L"N1K2JShidenKai/N1K2JShidenKai.json";
-		const std::filesystem::path enemyAircraftConfigJsonPath = aircraftJsonPath.parent_path() / L"F4U4Corsair/F4U4Corsair.json";
+		const std::filesystem::path aircraftConfigJsonPath = paths.playerAircraft;
+		const std::filesystem::path enemyAircraftConfigJsonPath = paths.enemyAircraft;
 		const float aircraftVisualScale = resolver.ResolveFloat(aircraftConfigJsonPath, "visualScale");
 		const std::filesystem::path enemyAircraftModel = resolver.Resolve(enemyAircraftConfigJsonPath, "model");
 		const float enemyAircraftVisualScale = resolver.ResolveFloat(enemyAircraftConfigJsonPath, "visualScale");
@@ -81,12 +79,8 @@ namespace Engine {
 			resolver.Resolve(oceanJsonPath, "texture"),
 			resolver.Resolve(oceanJsonPath, "normal"),
 			resolver.Resolve(oceanJsonPath, "normal2"),
-			resolver.Resolve(aircraftConfigJsonPath, "model"),
-			enemyAircraftModel,
-			aircraftVisualScale,
-			enemyAircraftVisualScale,
-			flightParameters,
-			enemyFlightParameters,
+			{ resolver.Resolve(aircraftConfigJsonPath, "model"), aircraftVisualScale, flightParameters },
+			{ enemyAircraftModel, enemyAircraftVisualScale, enemyFlightParameters },
 			enemyAIParameters,
 			ocean,
 			sky,
