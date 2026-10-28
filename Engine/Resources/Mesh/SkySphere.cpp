@@ -1,5 +1,5 @@
 #include "SkySphere.h"
-#include "../../../d3dx12.h"
+#include "d3dx12.h"
 
 namespace Engine {
 	void SkySphere::Initialize(ID3D12Device* device, float radius, UINT slices, UINT stacks) {
@@ -58,13 +58,9 @@ namespace Engine {
 			UINT64 vertexBufferSize = vertices.size() * sizeof(Vertex);
 			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
 			auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-			ThrowIfFailed(device->CreateCommittedResource(
-				&heapProps,
-				D3D12_HEAP_FLAG_NONE,
-				&desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&m_vertexBuffer)));
+			ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc,
+														  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+														  IID_PPV_ARGS(&m_vertexBuffer)));
 
 			void* pData;
 			m_vertexBuffer->Map(0, nullptr, &pData);
@@ -81,13 +77,9 @@ namespace Engine {
 			UINT64 indexBufferSize = indices.size() * sizeof(uint32_t);
 			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
 			auto desc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-			ThrowIfFailed(device->CreateCommittedResource(
-				&heapProps,
-				D3D12_HEAP_FLAG_NONE,
-				&desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&m_indexBuffer)));
+			ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc,
+														  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+														  IID_PPV_ARGS(&m_indexBuffer)));
 
 			void* pData;
 			m_indexBuffer->Map(0, nullptr, &pData);
@@ -99,4 +91,4 @@ namespace Engine {
 			m_indexBufferView.SizeInBytes = static_cast<UINT>(indexBufferSize);
 		}
 	}
-}
+} // namespace Engine

@@ -3,6 +3,7 @@
 #include "../Aircraft/AircraftAIController.h"
 #include "../Aircraft/AircraftFlightParameters.h"
 #include "../Renderer/RetroFilmParameters.h"
+#include "../Resources/Mesh/ModelLoadOptions.h"
 #include <filesystem>
 #include <DirectXMath.h>
 
@@ -17,6 +18,8 @@ namespace Engine {
 		float fogEndDistance;
 		float edgeFadeStart;
 		float edgeFadeWidth;
+		float fogTop;
+		float fogDensity;
 	};
 
 	struct SkySettings {
@@ -39,6 +42,7 @@ namespace Engine {
 		std::filesystem::path model;
 		float visualScale = 1.0f;
 		AircraftFlightParameters flightParameters;
+		ModelLoadOptions modelImport;
 	};
 
 	struct SceneDefinition {
@@ -55,7 +59,7 @@ namespace Engine {
 	};
 
 	class SceneLoader {
-	public:
+	  public:
 		SceneDefinition Load(const SceneSourcePaths& paths) const;
 	};
-}
+} // namespace Engine

@@ -1,5 +1,7 @@
 #include "RendererConstantBuffers.h"
 #include "CommandContext.h"
+#include "../../Resources/Buffer/BufferUtilities.h"
+#include <algorithm>
 
 namespace Engine {
 	namespace {
@@ -7,35 +9,18 @@ namespace Engine {
 			return (static_cast<UINT64>(size) + 255) & ~static_cast<UINT64>(255);
 		}
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> CreateUploadBuffer(ID3D12Device* device, UINT64 size, UINT8** mappedData) {
-			Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-			const auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
-			const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_UPLOAD);
-			ThrowIfFailed(device->CreateCommittedResource(
-				&heapProperties,
-				D3D12_HEAP_FLAG_NONE,
-				&desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&resource)));
-
-			const CD3DX12_RANGE readRange(0, 0);
-			ThrowIfFailed(resource->Map(0, &readRange, reinterpret_cast<void**>(mappedData)));
-			return resource;
-		}
-	}
+	} // namespace
 
 	static_assert(sizeof(OceanFogConstantBufferData) == 160);
 	static_assert(sizeof(FilmConstantBufferData) == 224);
 
 	void RendererConstantBuffers::Initialize(ID3D12Device* device) {
-		UINT8* oceanMappedData = nullptr;
-		m_oceanResource = CreateUploadBuffer(device, AlignConstantBufferSize(sizeof(OceanConstantBufferData)), &oceanMappedData);
-		m_oceanData = reinterpret_cast<OceanConstantBufferData*>(oceanMappedData);
-
-		UINT8* oceanFogMappedData = nullptr;
-		m_oceanFogResource = CreateUploadBuffer(device, AlignConstantBufferSize(sizeof(OceanFogConstantBufferData)), &oceanFogMappedData);
-		m_oceanFogData = reinterpret_cast<OceanFogConstantBufferData*>(oceanFogMappedData);
+		for (auto& buffer : m_oceanBuffers)
+			buffer.resource = CreateUploadBuffer(device, AlignConstantBufferSize(sizeof(OceanConstantBufferData)),
+												 &buffer.mappedData);
+		for (auto& buffer : m_oceanFogBuffers)
+			buffer.resource = CreateUploadBuffer(device, AlignConstantBufferSize(sizeof(OceanFogConstantBufferData)),
+												 &buffer.mappedData);
 
 		const UINT64 filmBufferSize = AlignConstantBufferSize(sizeof(FilmConstantBufferData));
 		for (auto& filmBuffer : m_filmBuffers) {
@@ -43,8 +28,10 @@ namespace Engine {
 		}
 	}
 
-	void RendererConstantBuffers::EnsureModelCapacity(ID3D12Device* device, CommandContext* context, size_t objectCount) {
-		if (objectCount <= m_modelBuffers[0].size() && objectCount <= m_modelBuffers[1].size()) {
+	void RendererConstantBuffers::EnsureModelCapacity(ID3D12Device* device, CommandContext* context,
+													  size_t objectCount) {
+		if (std::all_of(std::begin(m_modelBuffers), std::end(m_modelBuffers),
+						[objectCount](const auto& buffers) { return buffers.size() >= objectCount; })) {
 			return;
 		}
 
@@ -59,4 +46,4 @@ namespace Engine {
 			}
 		}
 	}
-}
+} // namespace Engine

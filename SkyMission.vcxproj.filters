@@ -118,10 +118,10 @@
     <ClCompile Include="Engine\Scene\SceneLoader.cpp">
       <Filter>Engine\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp">
+    <ClCompile Include="Engine\Resources\JsonAssetReader.cpp">
       <Filter>Engine\Resources</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp">
+    <ClCompile Include="Engine\Aircraft\AircraftFlightModel.cpp">
       <Filter>Engine\Aircraft</Filter>
     </ClCompile>
   </ItemGroup>
@@ -135,7 +135,7 @@
     <ClInclude Include="Engine\Aircraft\AircraftController.h">
       <Filter>Engine\Aircraft</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Aircraft\PlayerAircraft.h">
+    <ClInclude Include="Engine\Aircraft\AircraftFlightModel.h">
       <Filter>Engine\Aircraft</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Window\Window.h">
@@ -201,7 +201,7 @@
     <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h">
       <Filter>Engine\Interop\REDox</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Resources\AssetPathResolver.h">
+    <ClInclude Include="Engine\Resources\JsonAssetReader.h">
       <Filter>Engine\Resources</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Aircraft\AircraftAIController.h">
@@ -225,9 +225,6 @@
       <Filter>Engine\Asset\Json</Filter>
     </None>
     <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Aircraft\F16\flightParameters.json">
       <Filter>Engine\Asset\Json</Filter>
     </None>
     <None Include="Assets\Environment\retroFilm.json">
@@ -294,5 +291,21 @@
     <FxCompile Include="Engine\Renderer\Shader\OceanVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Tests"><UniqueIdentifier>{9d55585f-57a6-401d-aa70-6578e2d5fb92}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Resources\Mesh\MaterialTexturePaths.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
+    <ClInclude Include="Engine\Log.h"><Filter>Engine</Filter></ClInclude>
+    <ClInclude Include="Engine\ExecutablePath.h"><Filter>Engine</Filter></ClInclude>
+    <ClInclude Include="Engine\Aircraft\ValidateFlightParameters.h"><Filter>Engine\Aircraft</Filter></ClInclude>
+    <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h"><Filter>Engine\Resources\Buffer</Filter></ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\ModelLoadOptions.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\MaterialTexturePaths.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
+    <None Include="Assets\Aircraft\F4U4Corsair\modelImport.json"><Filter>Engine\Asset\Json</Filter></None>
+    <None Include="Assets\Aircraft\N1K2JShidenKai\modelImport.json"><Filter>Engine\Asset\Json</Filter></None>
+    <None Include="Tests\RegressionTests.cpp"><Filter>Tests</Filter></None>
+    <None Include="Tests\RunRegressionTests.ps1"><Filter>Tests</Filter></None>
   </ItemGroup>
 </Project>

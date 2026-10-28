@@ -10,20 +10,24 @@ namespace Engine {
 
 	// コマンドリストおよびダブルバッファリング用同期オブジェクトの初期化
 	void CommandContext::Initialize(RenderDevice* renderDevice) {
+		m_renderDevice = renderDevice;
 		auto device = renderDevice->GetDevice();
 		m_targetQueue = renderDevice->GetCommandQueue();
 		m_currentFrameIndex = renderDevice->GetFrameIndex();
 
 		// マルチバッファリング対応のため各フレーム専用のアロケータを生成
 		for (UINT i = 0; i < RenderDevice::FrameCount; i++) {
-			ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i])));
+			ThrowIfFailed(
+				device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i])));
 		}
 
 		// コマンドリスト生成直後のOpen状態を即Closeして初期状態を揃える
-		ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[0].Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+		ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[0].Get(),
+												nullptr, IID_PPV_ARGS(&m_commandList)));
 		ThrowIfFailed(m_commandList->Close());
 
-		ThrowIfFailed(device->CreateFence(m_fenceValues[m_currentFrameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+		ThrowIfFailed(
+			device->CreateFence(m_fenceValues[m_currentFrameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 		m_fenceValues[m_currentFrameIndex]++;
 
 		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -42,12 +46,13 @@ namespace Engine {
 	// コマンド記録を終了し、コマンドキューへ実行をキック
 	void CommandContext::EndFrame() {
 		ThrowIfFailed(m_commandList->Close());
-		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+		ID3D12CommandList* ppCommandLists[] = {m_commandList.Get()};
 		m_targetQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 	}
 
 	// リソースのパイプラインステート遷移に伴うリソースバリアの設定
-	void CommandContext::TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) {
+	void CommandContext::TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore,
+											D3D12_RESOURCE_STATES stateAfter) {
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Transition.pResource = resource;
@@ -75,7 +80,8 @@ namespace Engine {
 
 	// キック済みの全コマンドが完了するまでCPUを強制ブロック（解放同期用）
 	void CommandContext::WaitForGpu() {
-		if (!m_targetQueue || !m_fence) return;
+		if (!m_targetQueue || !m_fence)
+			return;
 
 		// 現在キックしている全コマンドの完了をその場で待機（リソース破棄時の安全同期用）
 		ThrowIfFailed(m_targetQueue->Signal(m_fence.Get(), m_fenceValues[m_currentFrameIndex]));
@@ -84,4 +90,4 @@ namespace Engine {
 
 		m_fenceValues[m_currentFrameIndex]++;
 	}
-}
+} // namespace Engine

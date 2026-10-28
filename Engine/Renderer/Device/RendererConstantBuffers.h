@@ -72,30 +72,44 @@ namespace Engine {
 	};
 
 	class RendererConstantBuffers {
-	public:
+	  public:
 		void Initialize(ID3D12Device* device);
 		void EnsureModelCapacity(ID3D12Device* device, CommandContext* context, size_t objectCount);
 
-		ID3D12Resource* GetOceanResource() const { return m_oceanResource.Get(); }
-		OceanConstantBufferData* GetOceanData() const { return m_oceanData; }
-		ID3D12Resource* GetOceanFogResource() const { return m_oceanFogResource.Get(); }
-		OceanFogConstantBufferData* GetOceanFogData() const { return m_oceanFogData; }
-		ID3D12Resource* GetFilmResource(UINT frameIndex) const { return m_filmBuffers[frameIndex].resource.Get(); }
-		FilmConstantBufferData* GetFilmData(UINT frameIndex) const { return reinterpret_cast<FilmConstantBufferData*>(m_filmBuffers[frameIndex].mappedData); }
-		ID3D12Resource* GetModelResource(UINT frameIndex, size_t objectIndex) const { return m_modelBuffers[frameIndex][objectIndex].resource.Get(); }
-		ModelConstantBufferData* GetModelData(UINT frameIndex, size_t objectIndex) const { return reinterpret_cast<ModelConstantBufferData*>(m_modelBuffers[frameIndex][objectIndex].mappedData); }
+		ID3D12Resource* GetOceanResource(UINT frame) const {
+			return m_oceanBuffers[frame].resource.Get();
+		}
+		OceanConstantBufferData* GetOceanData(UINT frame) const {
+			return reinterpret_cast<OceanConstantBufferData*>(m_oceanBuffers[frame].mappedData);
+		}
+		ID3D12Resource* GetOceanFogResource(UINT frame) const {
+			return m_oceanFogBuffers[frame].resource.Get();
+		}
+		OceanFogConstantBufferData* GetOceanFogData(UINT frame) const {
+			return reinterpret_cast<OceanFogConstantBufferData*>(m_oceanFogBuffers[frame].mappedData);
+		}
+		ID3D12Resource* GetFilmResource(UINT frameIndex) const {
+			return m_filmBuffers[frameIndex].resource.Get();
+		}
+		FilmConstantBufferData* GetFilmData(UINT frameIndex) const {
+			return reinterpret_cast<FilmConstantBufferData*>(m_filmBuffers[frameIndex].mappedData);
+		}
+		ID3D12Resource* GetModelResource(UINT frameIndex, size_t objectIndex) const {
+			return m_modelBuffers[frameIndex][objectIndex].resource.Get();
+		}
+		ModelConstantBufferData* GetModelData(UINT frameIndex, size_t objectIndex) const {
+			return reinterpret_cast<ModelConstantBufferData*>(m_modelBuffers[frameIndex][objectIndex].mappedData);
+		}
 
-	private:
+	  private:
 		struct MappedBuffer {
 			Microsoft::WRL::ComPtr<ID3D12Resource> resource;
 			UINT8* mappedData = nullptr;
 		};
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_oceanResource;
-		OceanConstantBufferData* m_oceanData = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_oceanFogResource;
-		OceanFogConstantBufferData* m_oceanFogData = nullptr;
+		MappedBuffer m_oceanBuffers[RenderDevice::FrameCount];
+		MappedBuffer m_oceanFogBuffers[RenderDevice::FrameCount];
 		MappedBuffer m_filmBuffers[RenderDevice::FrameCount];
 		std::vector<MappedBuffer> m_modelBuffers[RenderDevice::FrameCount];
 	};
-}
+} // namespace Engine

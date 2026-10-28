@@ -4,6 +4,10 @@
 #define UNICODE
 #endif
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include <windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -12,7 +16,7 @@
 #include <memory>
 #include <iomanip>
 #include <sstream>
-#include "../d3dx12.h"
+#include "d3dx12.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -20,8 +24,8 @@ using Microsoft::WRL::ComPtr;
 inline void ThrowIfFailed(HRESULT hr) {
 	if (FAILED(hr)) {
 		std::ostringstream message;
-		message << "DirectX 12 API call failed. HRESULT=0x"
-			<< std::uppercase << std::hex << static_cast<unsigned long>(hr);
+		message << "DirectX 12 API call failed. HRESULT=0x" << std::uppercase << std::hex
+				<< static_cast<unsigned long>(hr);
 		throw std::runtime_error(message.str());
 	}
 }

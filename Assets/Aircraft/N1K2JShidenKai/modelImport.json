@@ -1,0 +1,16 @@
+{
+    "propellerName": "Propeller",
+    "textureDirectory": "Textures",
+    "baseColorStemSuffix": "_Base_color_1001",
+    "baseColorSuffix": "_Base_color_1001.png",
+    "metallicSuffix": "_Metallic_1001.png",
+    "roughnessSuffix": "_Roughness_1001.png",
+    "normalSuffix": "_Normal_1001.png",
+    "openGlNormalSuffix": "_Normal_OpenGL_1001.png",
+    "openGlMarker": "_opengl_",
+    "fallbackMaterialToken": "boomb",
+    "matchingFallbackTexture": "T_boomb_AO.png",
+    "defaultFallbackTexture": "T_Jet_ID.png",
+    "normalizedExtent": 10.0,
+    "groundOffset": 0.1
+}

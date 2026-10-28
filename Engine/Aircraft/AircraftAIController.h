@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PlayerAircraft.h"
+#include "AircraftFlightModel.h"
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -21,17 +21,14 @@ namespace Engine {
 	};
 
 	class AircraftAIController {
-	public:
-		AircraftInput ReadInput(
-			const AircraftFlightModel& aircraft,
-			float targetSpeed,
-			float deltaSeconds,
-			const AircraftAIParameters& parameters) {
+	  public:
+		AircraftInput ReadInput(const AircraftFlightModel& aircraft, float targetSpeed, float deltaSeconds,
+								const AircraftAIParameters& parameters) {
 			AircraftInput input;
 			if (deltaSeconds <= 0.0f) {
 				return input;
 			}
-			m_elapsedSeconds += (std::min)(deltaSeconds, 0.25f);
+			m_elapsedSeconds += std::min(deltaSeconds, 0.25f);
 
 			const DirectX::XMFLOAT3 position = aircraft.GetPosition();
 			const DirectX::XMFLOAT3 heading = aircraft.GetHeading();
@@ -44,57 +41,41 @@ namespace Engine {
 				m_initialized = true;
 			}
 
-			static constexpr float directionChanges[] = {
-				DirectX::XM_PIDIV2,
-				-DirectX::XM_PIDIV2,
-				DirectX::XM_PI,
-				-DirectX::XM_PIDIV4,
-				DirectX::XM_PIDIV2,
-				DirectX::XM_PIDIV4,
-				-DirectX::XM_PI,
-				-DirectX::XM_PIDIV2
-			};
+			static constexpr float directionChanges[] = {DirectX::XM_PIDIV2,  -DirectX::XM_PIDIV2, DirectX::XM_PI,
+														 -DirectX::XM_PIDIV4, DirectX::XM_PIDIV2,  DirectX::XM_PIDIV4,
+														 -DirectX::XM_PI,	  -DirectX::XM_PIDIV2};
 			if (m_elapsedSeconds >= m_nextDirectionChange) {
-				m_targetYaw = std::remainder(
-					currentYaw + directionChanges[m_directionChangeIndex % std::size(directionChanges)],
-					DirectX::XM_2PI);
+				m_targetYaw =
+					std::remainder(currentYaw + directionChanges[m_directionChangeIndex % std::size(directionChanges)],
+								   DirectX::XM_2PI);
 				++m_directionChangeIndex;
 				m_nextDirectionChange += parameters.directionChangeSeconds;
 			}
 			if (m_elapsedSeconds >= m_nextAltitudeChange) {
-				m_targetAltitude = m_targetAltitude == parameters.highAltitude
-					? parameters.lowAltitude
-					: parameters.highAltitude;
+				m_targetAltitude =
+					m_targetAltitude == parameters.highAltitude ? parameters.lowAltitude : parameters.highAltitude;
 				m_nextAltitudeChange += parameters.altitudeChangeSeconds;
 			}
 
 			const float yawError = std::remainder(m_targetYaw - currentYaw, DirectX::XM_2PI);
-			input.turn = (std::clamp)(yawError * parameters.turnGain, -1.0f, 1.0f);
+			input.turn = std::clamp(yawError * parameters.turnGain, -1.0f, 1.0f);
 			const DirectX::XMFLOAT3 forward = aircraft.GetForward();
-			const float currentPitch = std::atan2(
-				forward.y,
-				std::sqrt(forward.x * forward.x + forward.z * forward.z));
+			const float currentPitch = std::atan2(forward.y, std::sqrt(forward.x * forward.x + forward.z * forward.z));
 			const float altitudeError = m_targetAltitude - position.y;
-			const float targetPitch = (std::clamp)(
-				std::atan2(altitudeError, parameters.pitchLookAheadDistance),
-				-0.45f,
-				0.45f);
-			input.pitch = (std::clamp)((targetPitch - currentPitch) * parameters.pitchGain, -1.0f, 1.0f);
-			input.throttle = (std::clamp)(
-				(targetSpeed - aircraft.GetSpeed()) * parameters.speedMatchGain,
-				-1.0f,
-				1.0f);
+			const float targetPitch =
+				std::clamp(std::atan2(altitudeError, parameters.pitchLookAheadDistance), -0.45f, 0.45f);
+			input.pitch = std::clamp((targetPitch - currentPitch) * parameters.pitchGain, -1.0f, 1.0f);
+			input.throttle = std::clamp((targetSpeed - aircraft.GetSpeed()) * parameters.speedMatchGain, -1.0f, 1.0f);
 
 			const float maneuverPhase = std::fmod(m_elapsedSeconds, parameters.highGManeuverIntervalSeconds);
-			input.highGTurn = maneuverPhase < parameters.highGManeuverDurationSeconds &&
-				std::abs(input.turn) > 0.3f;
+			input.highGTurn = maneuverPhase < parameters.highGManeuverDurationSeconds && std::abs(input.turn) > 0.3f;
 			if (input.highGTurn) {
-				input.turn = std::copysign((std::max)(std::abs(input.turn), 0.85f), input.turn);
+				input.turn = std::copysign(std::max(std::abs(input.turn), 0.85f), input.turn);
 			}
 			return input;
 		}
 
-	private:
+	  private:
 		float m_elapsedSeconds = 0.0f;
 		float m_nextDirectionChange = 0.0f;
 		float m_nextAltitudeChange = 0.0f;
@@ -103,4 +84,4 @@ namespace Engine {
 		std::size_t m_directionChangeIndex = 0;
 		bool m_initialized = false;
 	};
-}
+} // namespace Engine

@@ -1,10 +1,9 @@
-﻿#include "Window.h"
+#include "Window.h"
 
 namespace Engine {
 	// Win32APIを使用したメインウィンドウの生成および登録
 	Window::Window(UINT width, UINT height, const wchar_t* title, HINSTANCE hInstance)
-		: m_width(width), m_height(height)
-	{
+		: m_width(width), m_height(height) {
 		WNDCLASS wc = {};
 		wc.lpfnWndProc = WindowProc;
 		wc.hInstance = hInstance;
@@ -12,15 +11,11 @@ namespace Engine {
 		RegisterClass(&wc);
 
 		// 外枠を含めた全体のウィンドウサイズをクライアント領域から逆算
-		RECT rc = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+		RECT rc = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
 		AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
-		m_hwnd = CreateWindowEx(
-			0, wc.lpszClassName, title,
-			WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-			rc.right - rc.left, rc.bottom - rc.top,
-			nullptr, nullptr, hInstance, nullptr
-		);
+		m_hwnd = CreateWindowEx(0, wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+								rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, nullptr);
 
 		if (!m_hwnd) {
 			throw std::runtime_error("ウィンドウの作成に失敗しました。");
@@ -44,10 +39,11 @@ namespace Engine {
 			UINT newHeight = HIWORD(lParam);
 			self->m_width = newWidth;
 			self->m_height = newHeight;
-			if (self->m_onResize) self->m_onResize(newWidth, newHeight);
+			if (self->m_onResize)
+				self->m_onResize(newWidth, newHeight);
 			return 0;
 		}
 
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}
-}
+} // namespace Engine
