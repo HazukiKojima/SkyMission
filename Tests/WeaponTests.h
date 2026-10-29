@@ -65,9 +65,11 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 		.retroFilm = config / L"Environment/retroFilm.json"});
 	auto settings = definition.playerWeapon.gun;
+	JsonAssetReader reader;
 	Require(settings.maxProjectiles == 128 && settings.fireInterval == 0.1f &&
 		definition.playerWeapon.ammunition.options.origin == ModelOrigin::BoundsCenter &&
-		definition.playerWeapon.ammunition.options.normalizedExtent == 2.0f,
+		definition.playerWeapon.ammunition.options.normalizedExtent ==
+			reader.ResolveFloat(config / L"Ammunition/20mmAmmo/modelImport.json", "normalizedExtent"),
 		"Weapon/ammunition JSON was not loaded");
 	for (float invalid : {0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()}) {
 		for (auto member : {&GunSettings::fireInterval, &GunSettings::muzzleSpeed, &GunSettings::lifetime}) {
@@ -89,7 +91,6 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	const auto badWeaponPath = fixture / L"bad-weapon.json";
 	const auto badPlayerPath = fixture / L"bad-player.json";
 	const auto playerPath = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json";
-	JsonAssetReader reader;
 	{
 		std::ofstream player(badPlayerPath);
 		player << "{\"model\":\"" << reader.Resolve(playerPath, "model").generic_string()
@@ -125,9 +126,11 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	{
 		std::ifstream source(config / L"Ammunition/20mmAmmo/modelImport.json");
 		std::string text((std::istreambuf_iterator<char>(source)), std::istreambuf_iterator<char>());
-		const auto position = text.find("\"normalizedExtent\": 2.0");
+		const auto position = text.find("\"normalizedExtent\"");
 		Require(position != std::string::npos, "Ammo extent fixture could not be prepared");
-		text.replace(position, std::string("\"normalizedExtent\": 2.0").size(), "\"normalizedExtent\": 0.0");
+		const auto valueStart = text.find(':', position) + 1;
+		const auto valueEnd = text.find_first_of(",}", valueStart);
+		text.replace(valueStart, valueEnd - valueStart, " 0.0");
 		std::ofstream(badImport) << text;
 		std::ofstream(badAmmo) << "{\"model\":\"unused.fbx\",\"modelImport\":\"" << badImport.generic_string() << "\",\"modelForward\":\"+Y\"}";
 	}

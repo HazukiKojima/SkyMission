@@ -222,6 +222,39 @@ void TestRawInput() {
 			}
 		Require(matching == 2, "Window did not register foreground keyboard and mouse input");
 		Require(!second.ConsumeInput().active, "Hidden unfocused window exposes active input");
+		// タイトルバーの移動・サイズ変更が使うキャプチャを入力処理で解除しない
+		SetCapture(second.GetHandle());
+		Require(GetCapture() == second.GetHandle(), "Native mouse capture could not be established");
+		second.ConsumeInput();
+		Require(GetCapture() == second.GetHandle(), "Input polling stole native window-operation capture");
+		SendMessageW(second.GetHandle(), WM_INPUT_DEVICE_CHANGE, GIDC_REMOVAL, 0);
+		Require(GetCapture() == second.GetHandle(), "Device removal stole native window-operation capture");
+		ReleaseCapture();
+		SendMessageW(second.GetHandle(), WM_LBUTTONDOWN, MK_LBUTTON, 0);
+		Require(GetCapture() != second.GetHandle(), "Left click started camera capture");
+		SendMessageW(second.GetHandle(), WM_LBUTTONUP, 0, 0);
+		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
+		Require(GetCapture() == second.GetHandle(), "Client right drag did not capture the mouse");
+		SendMessageW(second.GetHandle(), WM_RBUTTONUP, 0, 0);
+		Require(GetCapture() != second.GetHandle(), "Right drag release kept camera capture");
+		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
+		SendMessageW(second.GetHandle(), WM_CANCELMODE, 0, 0);
+		Require(GetCapture() != second.GetHandle(), "Cancel mode kept camera capture");
+		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
+		SendMessageW(second.GetHandle(), WM_KILLFOCUS, 0, 0);
+		Require(GetCapture() != second.GetHandle(), "Focus loss kept camera capture");
+		UINT resizeCount = 0;
+		second.SetOnResize([&](UINT, UINT) { ++resizeCount; });
+		Require(SetWindowPos(second.GetHandle(), nullptr, 0, 0, 320, 240,
+			SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE), "Window resize failed");
+		Require(resizeCount > 0, "Window resize did not reach its callback");
+		SendMessageW(second.GetHandle(), WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+		Require(IsZoomed(second.GetHandle()), "Standard maximize command failed");
+		SendMessageW(second.GetHandle(), WM_SYSCOMMAND, SC_RESTORE, 0);
+		Require(!IsZoomed(second.GetHandle()), "Standard restore command failed");
+		const auto handle = second.GetHandle();
+		SendMessageW(handle, WM_SYSCOMMAND, SC_CLOSE, 0);
+		Require(!IsWindow(handle), "Standard close command failed");
 	}
 
 	for (const auto& device : registrations())
@@ -230,7 +263,7 @@ void TestRawInput() {
 	while (PeekMessageW(&message, nullptr, WM_QUIT, WM_QUIT, PM_REMOVE)) {
 	}
 	std::cout << "PASS: Raw Input make/break, modifiers, multiple devices, drag, focus loss, registration "
-				 "lifetime\n";
+				 "lifetime, camera/native capture, resize, maximize, restore and close\n";
 }
 
 void TestPathsAndJson(const fs::path& repository, const fs::path& fixture) {
