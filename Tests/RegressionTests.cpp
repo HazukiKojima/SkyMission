@@ -460,6 +460,27 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	const HWND window = CreateWindowW(L"STATIC", L"SkyMission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0,
 		256, 256, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 	Require(window != nullptr, "Hidden test window could not be created");
+	// 必須モデルの失敗は、Rendererの破棄を経ても呼び出し元に届くこと。
+	const auto invalidModel = fixture / L"invalid-model.obj";
+	std::ofstream(invalidModel) << "This file contains no mesh.\n";
+	for (const bool missingPlayer : {true, false}) {
+		auto invalidDefinition = definition.BuildRendererDefinition();
+		auto& asset = invalidDefinition.models[missingPlayer ? 0 : 1];
+		asset.file = missingPlayer ? fixture / L"存在しない機体.obj" : invalidModel;
+		const auto pathUtf8 = asset.file.u8string();
+		const std::string expectedPath(reinterpret_cast<const char*>(pathUtf8.data()), pathUtf8.size());
+		bool rejected = false;
+		try {
+			Renderer renderer;
+			renderer.Initialize(window, 64, 64, invalidDefinition);
+		} catch (const std::runtime_error& error) {
+			const std::string message = error.what();
+			rejected = message.find("Failed to load required model '" + asset.id + "': ") != std::string::npos &&
+				message.find(expectedPath) != std::string::npos;
+		}
+		Require(rejected, "Required model failure did not report its asset ID and UTF-8 path");
+	}
+	std::cout << "PASS: missing player and invalid enemy models reject initialization with ID/path\n";
 	{
 		Renderer renderer;
 		renderer.Initialize(window, 64, 64, definition.BuildRendererDefinition());

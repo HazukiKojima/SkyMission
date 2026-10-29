@@ -1,6 +1,7 @@
 #include "RendererAssets.h"
 #include "../../Log.h"
 #include <cassert>
+#include <stdexcept>
 
 namespace Engine {
 	namespace {
@@ -31,9 +32,8 @@ namespace Engine {
 			if (!model->Load(device.GetDevice(), context.GetCommandList(), &device, definition.file.wstring(),
 					definition.options)) {
 				const auto path = definition.file.u8string();
-				Log("RendererAssets: skipping missing model {}\n",
+				throw std::runtime_error("Failed to load required model '" + definition.id + "': " +
 					std::string(reinterpret_cast<const char*>(path.data()), path.size()));
-				return {};
 			}
 			return model;
 		}

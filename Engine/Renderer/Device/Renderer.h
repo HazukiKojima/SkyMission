@@ -17,7 +17,7 @@ namespace Engine {
 	class Renderer {
 	  public:
 		Renderer() = default;
-		~Renderer();
+		~Renderer() noexcept;
 
 		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
 		void InitializeConstantBuffers(const Scene& scene);
