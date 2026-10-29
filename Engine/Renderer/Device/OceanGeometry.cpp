@@ -1,21 +1,23 @@
 #include "OceanGeometry.h"
+#include "../../Resources/Buffer/BufferUtilities.h"
 #include <cmath>
+#include <numbers>
 #include <cstdint>
 #include <cstring>
 #include <vector>
 
 namespace Engine {
 	namespace {
-		constexpr float kPi = 3.14159265359f;
+		constexpr float kPi = std::numbers::pi_v<float>;
 		constexpr int kGridSize = 1000;
 
 		struct OceanVertex {
 			float pos[3];
 			float uv[2];
 		};
-	}
+	} // namespace
 
-	void OceanGeometry::Initialize(ID3D12Device* device, float oceanSize) {
+	void OceanGeometry::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize) {
 		std::vector<OceanVertex> vertices;
 		std::vector<uint32_t> indices;
 
@@ -29,7 +31,7 @@ namespace Engine {
 				const float u = static_cast<float>(x) / (kGridSize - 1);
 				const float v = static_cast<float>(z) / (kGridSize - 1);
 
-				vertices.push_back({ { px, 0.0f, pz }, { u, v } });
+				vertices.push_back({{px, 0.0f, pz}, {u, v}});
 			}
 		}
 
@@ -39,33 +41,32 @@ namespace Engine {
 				const uint32_t i1 = i0 + 1;
 				const uint32_t i2 = (z + 1) * kGridSize + x;
 				const uint32_t i3 = i2 + 1;
-				indices.push_back(i0); indices.push_back(i1); indices.push_back(i2);
-				indices.push_back(i1); indices.push_back(i3); indices.push_back(i2);
+				indices.push_back(i0);
+				indices.push_back(i1);
+				indices.push_back(i2);
+				indices.push_back(i1);
+				indices.push_back(i3);
+				indices.push_back(i2);
 			}
 		}
 
 		m_indexCount = static_cast<UINT>(indices.size());
 		m_vertexBuffer = std::make_unique<VertexBuffer>();
-		m_vertexBuffer->Initialize(device, vertices.data(), static_cast<UINT>(sizeof(OceanVertex) * vertices.size()), sizeof(OceanVertex));
+		m_vertexBuffer->Initialize(device, commands, vertices.data(),
+								   static_cast<UINT>(sizeof(OceanVertex) * vertices.size()), sizeof(OceanVertex));
 
-		const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_UPLOAD);
-		const auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint32_t) * indices.size());
-		ThrowIfFailed(device->CreateCommittedResource(
-			&heapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&desc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_indexBuffer)));
-
-		void* mappedData = nullptr;
-		ThrowIfFailed(m_indexBuffer->Map(0, nullptr, &mappedData));
-		std::memcpy(mappedData, indices.data(), sizeof(uint32_t) * indices.size());
-		m_indexBuffer->Unmap(0, nullptr);
+		m_indexBuffer = CreateStaticBuffer(device, commands, indices.data(), sizeof(uint32_t) * indices.size(),
+										   D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
 
 		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
 		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 		m_indexBufferView.SizeInBytes = static_cast<UINT>(sizeof(uint32_t) * indices.size());
+	}
+
+	void OceanGeometry::ReleaseUploadResources() {
+		if (m_vertexBuffer)
+			m_vertexBuffer->ReleaseUploadResources();
+		m_indexUpload.Reset();
 	}
 
 	float OceanGeometry::CalculateWaveHeight(float x, float z, float time, float wavelength, float steepness) {
@@ -91,4 +92,4 @@ namespace Engine {
 
 		return height;
 	}
-}
+} // namespace Engine

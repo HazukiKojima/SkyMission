@@ -1,8 +1,6 @@
 #include "CommonLighting.hlsli"
 
-// ============================================================
 // Constant Buffer
-// ============================================================
 
 cbuffer MatrixBuffer : register(b0)
 {
@@ -34,18 +32,14 @@ cbuffer MatrixBuffer : register(b0)
     float oceanEdgeFadeWidth;
 };
 
-// ============================================================
 // Resources
-// ============================================================
 
 Texture2D gDiffuse : register(t0);
 Texture2D gOceanNormal : register(t1);
 Texture2D gOceanNormal2 : register(t2);
 SamplerState gSampler : register(s0);
 
-// ============================================================
 // Input
-// ============================================================
 
 struct PS_INPUT
 {
@@ -57,9 +51,7 @@ struct PS_INPUT
     float3 tangent : TANGENT;
 };
 
-// ============================================================
 // Ocean Normal
-// ============================================================
 
 float3 SampleOceanNormal(float3 wavePos)
 {
@@ -77,9 +69,7 @@ float3 SampleOceanNormal(float3 wavePos)
     return SafeNormalize(normal);
 }
 
-// ============================================================
 // Main
-// ============================================================
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
@@ -91,16 +81,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
     lighting.ambientColor = ambientColor;
     lighting.padding = 0.0f;
 
-    // --------------------------------------------------------
     // View / Light Direction
-    // --------------------------------------------------------
 
     float3 V = SafeNormalize(cameraPos - input.worldPos);
     float3 L = SafeNormalize(lighting.sunDirection);
 
-    // --------------------------------------------------------
     // Base TBN
-    // --------------------------------------------------------
 
     float3 baseN;
     float3 T;
@@ -108,9 +94,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     BuildTBN(input.normal, input.tangent, baseN, T, B);
 
-    // --------------------------------------------------------
     // Ocean Normal
-    // --------------------------------------------------------
 
     float3 tangentNormal = SampleOceanNormal(input.wavePos);
 
@@ -123,30 +107,22 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float NdotV = saturate(dot(N, V));
     float NdotL = saturate(dot(N, L));
 
-    // --------------------------------------------------------
     // Water Material
-    // --------------------------------------------------------
 
     float3 F = float3(0.06f, 0.06f, 0.06f);
 
-    // --------------------------------------------------------
     // Reflection
-    // --------------------------------------------------------
 
     float3 R = reflect(-V, N);
     float3 reflectedSky = GetSkyColor(R, lighting);
     float3 reflection = reflectedSky * F;
 
-    // --------------------------------------------------------
     // Water Color
-    // --------------------------------------------------------
 
     float3 waterColor = float3(0.045f, 0.14f, 0.25f);
     float3 waterBase = waterColor * 0.85f;
 
-    // --------------------------------------------------------
     // Ocean Specular
-    // --------------------------------------------------------
 
     float3 sunSpecular = CalculateSunSpecular(
     N,
@@ -158,9 +134,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     sunSpecular *= 1.35f;
 
-    // --------------------------------------------------------
     // Ambient
-    // --------------------------------------------------------
 
     float skyLight = lerp(0.85f, 1.15f, saturate(N.y));
 
@@ -170,9 +144,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         skyLight *
         1.25f;
 
-    // --------------------------------------------------------
     // Subsurface
-    // --------------------------------------------------------
 
     float backLight = saturate(dot(-L, N));
 
@@ -181,9 +153,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         pow(backLight, 2.0f) *
         0.35f;
 
-    // --------------------------------------------------------
     // Wave Brightness
-    // --------------------------------------------------------
 
     float wavePattern = gDiffuse.Sample(
         gSampler,
@@ -196,9 +166,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float3 waveColor = waterColor * wavePattern * 0.35f;
 
-        // --------------------------------------------------------
     // Final Water
-    // --------------------------------------------------------
 
     float3 color =
         waterBase +
@@ -208,9 +176,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
         subsurface +
         waveColor;
 
-    // --------------------------------------------------------
     // Atmospheric Fog
-    // --------------------------------------------------------
 
     float cameraDistance = length(cameraPos - input.worldPos);
 
@@ -226,9 +192,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     fogFactor *= 0.5f;
     color = lerp(color, atmosphere, fogFactor);
 
-    // --------------------------------------------------------
-    // Tonemapping
-    // --------------------------------------------------------
+    // Tone Mapping
 
     color *= 1.2f;
     color = ToneMapReinhard(color);

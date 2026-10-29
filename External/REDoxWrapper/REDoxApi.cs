@@ -17,8 +17,8 @@ public static unsafe class REDoxApi
     private const int InvalidValue = -5;
     private const int UnexpectedFailure = -6;
 
-    // ハンドルは管理テーブルのIDであり、マネージドオブジェクトへの生ポインターではない。
-    // 全ての取得と解放を同じロックで直列化し、解放済み文書へのアクセスを防ぐ。
+    // ハンドルには生ポインターではなく管理テーブルのIDを使う
+    // 取得と解放を同じロックで保護し、解放済み文書へのアクセスを防ぐ
     private static readonly object DocumentLock = new();
     private static readonly Dictionary<nint, JsonDocument> Documents = new();
     private static long NextDocumentHandle;
@@ -338,8 +338,8 @@ public static unsafe class REDoxApi
                 return InvalidSchema;
             }
 
-            // RE:Doxのパース結果を検証しながら直接float列へ展開する。
-            // JsonSerializerによる二度目の解析と中間オブジェクトの生成を避ける。
+            // RE:Doxのパース結果を検証しながら直接float列へ展開する
+            // JsonSerializerによる二度目の解析と中間オブジェクトの生成を避ける
             Span<float> values = outputCapacity <= 256
                 ? stackalloc float[outputCapacity]
                 : new float[outputCapacity];

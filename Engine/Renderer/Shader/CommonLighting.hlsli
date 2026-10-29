@@ -3,9 +3,7 @@
 
 static const float PI = 3.14159265359f;
 
-// ============================================================
 // Common Lighting
-// ============================================================
 
 struct CommonLightingParameters
 {
@@ -17,9 +15,7 @@ struct CommonLightingParameters
     float padding;
 };
 
-// ============================================================
 // Utility
-// ============================================================
 
 float3 SafeNormalize(float3 v)
 {
@@ -37,9 +33,7 @@ float3 GetAmbientRadiance(CommonLightingParameters lighting)
     return max(lighting.ambientColor, 0.0f) * max(lighting.ambientIntensity, 0.0f);
 }
 
-// ============================================================
 // Sun
-// ============================================================
 
 float3 CalculateSunContribution(
     float3 direction,
@@ -59,9 +53,7 @@ float3 CalculateSunContribution(
     return GetSunRadiance(lighting) * sunAmount;
 }
 
-// ============================================================
 // Tone Mapping
-// ============================================================
 
 float3 ToneMapReinhard(float3 hdrColor)
 {
@@ -69,9 +61,7 @@ float3 ToneMapReinhard(float3 hdrColor)
     return hdrColor / (1.0f + hdrColor);
 }
 
-// ============================================================
 // Fresnel
-// ============================================================
 
 float3 FresnelSchlick(float cosTheta, float3 F0)
 {
@@ -92,9 +82,7 @@ float3 FresnelSchlickRoughness(
     ) * pow(1.0f - saturate(cosTheta), 5.0f);
 }
 
-// ============================================================
 // GGX
-// ============================================================
 
 float DistributionGGX(float NdotH, float roughness)
 {
@@ -132,9 +120,7 @@ float GeometrySmith(
            GeometrySchlickGGX(NdotL, roughness);
 }
 
-// ============================================================
 // Sun Specular
-// ============================================================
 
 float3 CalculateSunSpecular(
     float3 N,
@@ -180,9 +166,7 @@ float3 CalculateSunSpecular(
            NdotL;
 }
 
-// ============================================================
 // TBN
-// ============================================================
 
 void BuildTBN(
     float3 normal,
@@ -203,12 +187,7 @@ void BuildTBN(
     );
 }
 
-// ============================================================
-// Procedural Atmospheric Sky
-//
-// HDRIをベースにしつつ、
-// 空の高さによる大気色を加える。
-// ============================================================
+// 視線の高さで空の色を補間し、地平線付近の散乱光を加える
 
 float3 GetSkyColor(float3 direction, CommonLightingParameters lighting)
 {

@@ -10,5 +10,7 @@
     "fogStartDistance": 6500000.0,
     "fogEndDistance": 10000000.0,
     "edgeFadeStart": 0.98,
-    "edgeFadeWidth": 0.015
+    "edgeFadeWidth": 0.015,
+    "fogTop": 350.0,
+    "fogDensity": 1.12e-06
 }
