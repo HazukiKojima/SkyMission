@@ -8,6 +8,9 @@
 struct aiMaterial;
 #include <string>
 #include <vector>
+#include <optional>
+#include <string_view>
+#include <unordered_map>
 
 namespace Engine {
 	class RenderDevice;
@@ -19,6 +22,9 @@ namespace Engine {
 		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 			float nodeRotationAngle = 0.0f) const;
 		void ReleaseUploadResources();
+		// 同名ノードが複数ある場合も曖昧な位置を返さない。
+		std::optional<DirectX::XMFLOAT3> FindNodePosition(std::string_view name) const;
+		size_t CountNodes(std::string_view name) const;
 		bool IsLoaded() const {
 			return !m_meshes.empty();
 		}
@@ -61,5 +67,6 @@ namespace Engine {
 		std::unique_ptr<Texture> m_fallbackRoughnessTexture;
 		std::unique_ptr<Texture> m_fallbackNormalTexture;
 		std::vector<Mesh> m_meshes;
+		std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>> m_nodePositions;
 	};
 } // namespace Engine

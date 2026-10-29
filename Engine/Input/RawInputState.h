@@ -10,6 +10,7 @@ namespace Engine {
 		bool active = false;
 		std::array<bool, 256> keys{};
 		bool rightMouseDown = false;
+		bool leftMouseDown = false;
 		std::int64_t mouseDeltaX = 0;
 		std::int64_t mouseDeltaY = 0;
 
@@ -69,6 +70,10 @@ namespace Engine {
 				return;
 			const bool wasDragging = IsRightMouseDown();
 			auto& state = m_mice[device];
+			if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN)
+				state.leftDown = true;
+			if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP)
+				state.leftDown = false;
 			if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN)
 				state.rightDown = true;
 			if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP)
@@ -103,6 +108,12 @@ namespace Engine {
 					return true;
 			return false;
 		}
+		bool IsLeftMouseDown() const {
+			for (const auto& [device, state] : m_mice)
+				if (state.leftDown)
+					return true;
+			return false;
+		}
 		InputSnapshot ConsumeFrame() {
 			InputSnapshot snapshot{.active = m_active};
 			if (m_active) {
@@ -110,6 +121,7 @@ namespace Engine {
 					for (size_t i = 0; i < keys.size(); ++i)
 						snapshot.keys[i] = snapshot.keys[i] || keys[i];
 				snapshot.rightMouseDown = IsRightMouseDown();
+				snapshot.leftMouseDown = IsLeftMouseDown();
 				snapshot.mouseDeltaX = m_deltaX;
 				snapshot.mouseDeltaY = m_deltaY;
 			}
@@ -120,6 +132,7 @@ namespace Engine {
 	  private:
 		struct MouseState {
 			bool rightDown = false;
+			bool leftDown = false;
 			bool hasAbsolute = false;
 			bool virtualDesktop = false;
 			int width = 0, height = 0;

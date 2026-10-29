@@ -21,6 +21,8 @@ namespace Engine {
 
 		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
 		void InitializeConstantBuffers(const Scene& scene);
+		void ReserveModelCapacity(size_t objectCount);
+		size_t GetModelCapacity() const { return m_constantBuffers.GetModelCapacity(); }
 		void UpdateFrameConstants(const Scene& scene, float elapsedTime);
 		void Render(UINT width, UINT height, const Scene& scene);
 		void Resize(UINT width, UINT height);

@@ -7,6 +7,10 @@ namespace Engine {
 	namespace {
 		using RedoxGetString = int(__cdecl*)(std::intptr_t, const unsigned char*, int, unsigned char*, int);
 		using RedoxGetFloatArray = int(__cdecl*)(std::intptr_t, const unsigned char*, int, float*, int);
+		std::string FieldContext(const std::filesystem::path& path, const std::string& key) {
+			const auto utf8 = path.u8string();
+			return "JSON '" + std::string(reinterpret_cast<const char*>(utf8.data()), utf8.size()) + "', field '" + key + "'";
+		}
 	} // namespace
 
 	std::string JsonAssetReader::ResolveString(const std::filesystem::path& jsonPath, const std::string& key) const {
@@ -19,7 +23,7 @@ namespace Engine {
 		const int result = getString(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
 									 static_cast<int>(key.size()), output, sizeof(output));
 		if (result < 0) {
-			throw std::runtime_error("Failed to read asset path from JSON. REDox error code: " +
+			throw std::runtime_error(FieldContext(jsonPath, key) + ": failed to read string. REDox error code: " +
 									 std::to_string(result));
 		}
 
@@ -55,7 +59,7 @@ namespace Engine {
 		const int result = getFloatArray(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
 										 static_cast<int>(key.size()), output.data(), static_cast<int>(output.size()));
 		if (result < 0) {
-			throw std::runtime_error("Failed to read numeric value from JSON. REDox error code: " +
+			throw std::runtime_error(FieldContext(jsonPath, key) + ": failed to read number. REDox error code: " +
 									 std::to_string(result));
 		}
 
@@ -66,7 +70,7 @@ namespace Engine {
 	float JsonAssetReader::ResolveFloat(const std::filesystem::path& jsonPath, const std::string& key) const {
 		const std::vector<float> values = ResolveFloatArray(jsonPath, key);
 		if (values.size() != 1) {
-			throw std::runtime_error("JSON value is not a number.");
+			throw std::runtime_error(FieldContext(jsonPath, key) + ": value is not a number.");
 		}
 		return values.front();
 	}

@@ -337,4 +337,14 @@
     <Filter Include="Game\Camera"><UniqueIdentifier>{d5255d03-9b4c-58a0-a559-ea751c6cdfb3}</UniqueIdentifier></Filter>
     <ClInclude Include="Engine\Renderer\RootBindings.h"><Filter>Engine\Renderer</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Game\Weapons"><UniqueIdentifier>{920976bd-1bae-48ba-b6ca-b893f0aa8308}</UniqueIdentifier></Filter>
+    <ClInclude Include="Game\Weapons\WeaponController.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\WeaponDefinition.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\AircraftGun.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\ProjectileSystem.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClCompile Include="Game\Weapons\AircraftGun.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\ProjectileSystem.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClInclude Include="Tests\WeaponTests.h"><Filter>Tests</Filter></ClInclude>
+  </ItemGroup>
 </Project>

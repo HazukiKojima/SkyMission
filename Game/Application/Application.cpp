@@ -6,6 +6,7 @@
 #include <chrono>
 #include <filesystem>
 #include "Engine/ExecutablePath.h"
+#include "Game/Weapons/WeaponController.h"
 
 namespace Game {
 	using namespace Engine;
@@ -61,7 +62,9 @@ namespace Game {
 			assets.enemyAircraft.visualScale, assets.enemyAircraft.flightParameters,
 			assets.enemyAIParameters);
 
+		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
+		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() + assets.playerWeapon.gun.maxProjectiles);
 	}
 
 	void Application::ConfigureResizeHandling() {
@@ -114,7 +117,8 @@ namespace Game {
 
 		if (m_scene) {
 			const InputSnapshot input = m_window->ConsumeInput();
-			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input);
+			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input,
+				WeaponController{}.ReadInput(input));
 			m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 		}
 	}

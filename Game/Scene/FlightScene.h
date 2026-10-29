@@ -2,13 +2,18 @@
 #include "Engine/Scene/Scene.h"
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Game/Camera/AircraftCameraController.h"
+#include "Game/Weapons/AircraftGun.h"
+#include "Game/Weapons/ProjectileSystem.h"
 
 namespace Game {
 	class FlightScene {
 	  public:
 		void Initialize(float aspect, float nearZ, float farZ);
 		void Update(
-			const AircraftInput& input, float deltaSeconds, const Engine::InputSnapshot& cameraInput = {});
+			const AircraftInput& input, float deltaSeconds, const Engine::InputSnapshot& cameraInput = {},
+			WeaponInput weaponInput = {});
+		void ConfigurePlayerWeapon(const WeaponDefinition& definition, std::shared_ptr<Engine::Model> ammunition);
+		size_t GetProjectileCount() const { return m_projectiles.GetCount(); }
 		void OnResize(UINT width, UINT height);
 		const Engine::Scene& GetRenderScene() const {
 			return m_scene;
@@ -52,5 +57,8 @@ namespace Game {
 		Engine::ObjectId m_playerId = Engine::InvalidObjectId;
 		float m_playerVisualScale = 1, m_playerPropellerAngle = 0;
 		std::vector<EnemyAircraft> m_enemies;
+		AircraftGun m_gun;
+		ProjectileSystem m_projectiles;
+		bool m_weaponConfigured = false;
 	};
 } // namespace Game

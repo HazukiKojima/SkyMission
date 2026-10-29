@@ -1,0 +1,11 @@
+{
+    "muzzleL1": "GunMuzzle_L1",
+    "muzzleL2": "GunMuzzle_L2",
+    "muzzleR1": "GunMuzzle_R1",
+    "muzzleR2": "GunMuzzle_R2",
+    "fireInterval": 0.1,
+    "muzzleSpeed": 900.0,
+    "lifetime": 3.0,
+    "maxProjectiles": 128,
+    "ammunition": "../../Ammunition/20mmAmmo/ammunition.json"
+}

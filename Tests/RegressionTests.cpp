@@ -27,6 +27,8 @@ void Require(bool condition, const char* description) {
 		throw std::runtime_error(description);
 }
 
+#include "WeaponTests.h"
+
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
 	ValidateFlightParameters(parameters);
@@ -454,6 +456,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	std::ofstream(model) << "o Body\nv -1 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"
 							"o Propeller\nv -1 0 -1\nv 1 0 -1\nv 0 1 -1\nf 4 5 6\n";
 	definition.playerAircraft.model = definition.enemyAircraft.model = model;
+	definition.playerAircraft.model = fixture / L"muzzles.dae";
 	definition.environment.skyTexture = definition.environment.oceanTexture =
 		definition.environment.oceanNormalTexture = definition.environment.oceanNormalTexture2 =
 			fixture / L"機体.png";
@@ -463,10 +466,10 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	// 必須モデルの失敗は、Rendererの破棄を経ても呼び出し元に届くこと。
 	const auto invalidModel = fixture / L"invalid-model.obj";
 	std::ofstream(invalidModel) << "This file contains no mesh.\n";
-	for (const bool missingPlayer : {true, false}) {
+	for (const size_t modelIndex : {size_t(0), size_t(1), size_t(2)}) {
 		auto invalidDefinition = definition.BuildRendererDefinition();
-		auto& asset = invalidDefinition.models[missingPlayer ? 0 : 1];
-		asset.file = missingPlayer ? fixture / L"存在しない機体.obj" : invalidModel;
+		auto& asset = invalidDefinition.models[modelIndex];
+		asset.file = modelIndex == 1 ? invalidModel : fixture / L"存在しない機体.obj";
 		const auto pathUtf8 = asset.file.u8string();
 		const std::string expectedPath(reinterpret_cast<const char*>(pathUtf8.data()), pathUtf8.size());
 		bool rejected = false;
@@ -480,7 +483,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		}
 		Require(rejected, "Required model failure did not report its asset ID and UTF-8 path");
 	}
-	std::cout << "PASS: missing player and invalid enemy models reject initialization with ID/path\n";
+	std::cout << "PASS: missing player/ammunition and invalid enemy models reject initialization with ID/path\n";
 	{
 		Renderer renderer;
 		renderer.Initialize(window, 64, 64, definition.BuildRendererDefinition());
@@ -490,17 +493,27 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		scene.AddPlayerObject(renderer.GetModel(PlayerModelId));
 		scene.AddEnemyAircraft(renderer.GetModel(EnemyModelId), {30, 100, 0}, 1.0f,
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
+		scene.ConfigurePlayerWeapon(definition.playerWeapon, renderer.GetModel(AmmunitionModelId));
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
-		for (int i = 0; i < 3; ++i) {
-			scene.Update({}, 1.0f / 60.0f);
+		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles);
+		const auto reserved = renderer.GetModelCapacity();
+		for (int i = 0; i < 6; ++i) {
+			scene.Update({}, 0.05f, {}, {true});
 			renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
 			renderer.Render(64, 64, scene.GetRenderScene());
 		}
+		Require(scene.GetProjectileCount() >= 12, "Scene did not integrate continuous weapon fire");
+		Require(renderer.GetModelCapacity() == reserved, "Firing grew GPU constant buffers despite reservation");
 
 		renderer.Resize(0, 0);
 		renderer.Render(0, 0, scene.GetRenderScene());
 		renderer.Resize(96, 96);
 		renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
+		renderer.Render(96, 96, scene.GetRenderScene());
+		scene.RemoveObject(scene.GetObjects()[0].id);
+		for (int i = 0; i < 14; ++i) scene.Update({}, 0.25f, {}, {true});
+		Require(scene.GetProjectileCount() == 0, "Removed player kept firing or existing projectiles did not expire");
+		renderer.UpdateFrameConstants(scene.GetRenderScene(), 4.0f);
 		renderer.Render(96, 96, scene.GetRenderScene());
 	}
 
@@ -519,6 +532,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);
 		TestGpuTextures(fixture);
+		TestWeapons(argv[1], fixture);
 		TestRendererSmoke(argv[1], fixture);
 		CoUninitialize();
 		return 0;

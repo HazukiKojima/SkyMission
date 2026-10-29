@@ -35,13 +35,16 @@ namespace Engine {
 			bool isRotatingNode;
 		};
 
-		// X・Zを中心に寄せ、Yの最下点を地面オフセットに合わせる
+		// メッシュと補助ノードに同じ原点補正・縮尺を適用する。
 		struct ModelNormalization {
 			aiVector3D minimum, maximum;
 			float scale, groundOffset;
+			ModelOrigin origin;
 			DirectX::XMFLOAT3 Transform(const aiVector3D& position) const {
 				return {(position.x - (minimum.x + maximum.x) * 0.5f) * scale,
-					(position.y - minimum.y) * scale + groundOffset,
+					origin == ModelOrigin::BoundsCenter
+						? (position.y - (minimum.y + maximum.y) * 0.5f) * scale
+						: (position.y - minimum.y) * scale + groundOffset,
 					(position.z - (minimum.z + maximum.z) * 0.5f) * scale};
 			}
 		};
@@ -177,7 +180,17 @@ namespace Engine {
 			return scene;
 		}
 
-		std::vector<MeshGeometry> BuildModelGeometry(const aiScene& scene, const ModelLoadOptions& options) {
+		void CollectNodePositions(const aiNode& node, const aiMatrix4x4& parent,
+			const ModelNormalization& normalization,
+			std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>>& positions) {
+			const auto transform = parent * node.mTransformation;
+			positions[node.mName.C_Str()].push_back(normalization.Transform(transform * aiVector3D()));
+			for (unsigned i = 0; i < node.mNumChildren; ++i)
+				CollectNodePositions(*node.mChildren[i], transform, normalization, positions);
+		}
+
+		std::vector<MeshGeometry> BuildModelGeometry(const aiScene& scene, const ModelLoadOptions& options,
+			std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>>& positions) {
 			std::vector<MeshInstance> meshInstances;
 			CollectMeshInstances(
 				&scene, scene.mRootNode, aiMatrix4x4(), false, options.rotatingNodeName, meshInstances);
@@ -210,7 +223,8 @@ namespace Engine {
 				return {};
 			}
 			const ModelNormalization normalization{
-				boundsMin, boundsMax, options.normalizedExtent / extent, options.groundOffset};
+				boundsMin, boundsMax, options.normalizedExtent / extent, options.groundOffset, options.origin};
+			CollectNodePositions(*scene.mRootNode, aiMatrix4x4(), normalization, positions);
 			std::vector<MeshGeometry> geometries;
 			for (const auto& instance : meshInstances) {
 				auto geometry = BuildMeshGeometry(instance, normalization);
@@ -229,6 +243,7 @@ namespace Engine {
 	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 		const std::wstring& filePath, const ModelLoadOptions& options) {
 		m_meshes.clear();
+		m_nodePositions.clear();
 		m_vertexBuffer.Reset();
 		m_indexBuffer.Reset();
 		m_vertexUpload.Reset();
@@ -246,7 +261,7 @@ namespace Engine {
 		const aiScene* scene = ImportScene(importer, importerPath);
 		if (!scene)
 			return false;
-		const auto geometries = BuildModelGeometry(*scene, options);
+		const auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
 		if (geometries.empty())
 			return false;
 
@@ -300,6 +315,18 @@ namespace Engine {
 			static_cast<double>(totalVertexBufferBytes + totalIndexBufferBytes) / (1024.0 * 1024.0));
 
 		return !m_meshes.empty();
+	}
+
+	size_t Model::CountNodes(std::string_view name) const {
+		const auto found = m_nodePositions.find(std::string(name));
+		return found == m_nodePositions.end() ? 0 : found->second.size();
+	}
+
+	std::optional<DirectX::XMFLOAT3> Model::FindNodePosition(std::string_view name) const {
+		const auto found = m_nodePositions.find(std::string(name));
+		if (found == m_nodePositions.end() || found->second.size() != 1)
+			return std::nullopt;
+		return found->second.front();
 	}
 
 	void Model::AssignMaterialDescriptors(Mesh& mesh, ID3D12Device* device, RenderDevice* renderDevice,

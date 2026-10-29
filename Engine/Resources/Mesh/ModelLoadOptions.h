@@ -3,6 +3,7 @@
 #include <string>
 
 namespace Engine {
+	enum class ModelOrigin { Ground, BoundsCenter };
 	// アセットの命名規則はゲーム側の設定から渡す
 	struct ModelLoadOptions {
 		std::string rotatingNodeName;
@@ -19,5 +20,6 @@ namespace Engine {
 		std::filesystem::path defaultFallbackTexture;
 		float normalizedExtent = 10.0f;
 		float groundOffset = 0.1f;
+		ModelOrigin origin = ModelOrigin::Ground;
 	};
 } // namespace Engine

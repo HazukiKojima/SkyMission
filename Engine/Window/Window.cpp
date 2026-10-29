@@ -90,7 +90,7 @@ namespace Engine {
 			m_input.ProcessMouse(raw.header.hDevice, raw.data.mouse,
 								 GetSystemMetrics(virtualDesktop ? SM_CXVIRTUALSCREEN : SM_CXSCREEN),
 								 GetSystemMetrics(virtualDesktop ? SM_CYVIRTUALSCREEN : SM_CYSCREEN));
-			if (m_input.IsRightMouseDown()) {
+			if (m_input.IsRightMouseDown() || m_input.IsLeftMouseDown()) {
 				if (GetCapture() != m_hwnd)
 					SetCapture(m_hwnd);
 			} else if (GetCapture() == m_hwnd)
@@ -125,12 +125,13 @@ namespace Engine {
 			case WM_INPUT_DEVICE_CHANGE:
 				if (wParam == GIDC_REMOVAL) {
 					self->m_input.ForgetDevice(reinterpret_cast<HANDLE>(lParam));
-					if (!self->m_input.IsRightMouseDown() && GetCapture() == hwnd)
+					if (!self->m_input.IsRightMouseDown() && !self->m_input.IsLeftMouseDown() && GetCapture() == hwnd)
 						ReleaseCapture();
 				}
 				return 0;
 			case WM_CAPTURECHANGED:
-				if (reinterpret_cast<HWND>(lParam) != hwnd && self->m_input.IsRightMouseDown())
+				if (reinterpret_cast<HWND>(lParam) != hwnd &&
+					(self->m_input.IsRightMouseDown() || self->m_input.IsLeftMouseDown()))
 					self->m_input.ClearMouse();
 				break;
 			case WM_CANCELMODE:

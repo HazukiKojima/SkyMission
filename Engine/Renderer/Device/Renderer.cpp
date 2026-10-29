@@ -53,6 +53,10 @@ namespace Engine {
 			scene, 0.0f, m_retroFilmParameters, m_constantBuffers, m_device->GetDevice(), m_context.get());
 	}
 
+	void Renderer::ReserveModelCapacity(size_t objectCount) {
+		m_constantBuffers.EnsureModelCapacity(m_device->GetDevice(), m_context.get(), objectCount);
+	}
+
 	void Renderer::UpdateFrameConstants(const Scene& scene, float elapsedTime) {
 		m_frameUpdater.Update(scene, elapsedTime, m_retroFilmParameters, m_constantBuffers,
 			m_device->GetDevice(), m_context.get());
