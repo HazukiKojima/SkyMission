@@ -25,7 +25,7 @@ try
             string structName = args[argumentIndex + 1];
             string className = args[argumentIndex + 2];
             string source = File.ReadAllText(headerPath);
-            IReadOnlyList<Field> fields = CppStructParser.ParseFloatFields(source, structName);
+            IReadOnlyList<Field> fields = CppStructParser.ParseFloatFields(source, structName.Split("::")[^1]);
             WriteGeneratedFile(args[argumentIndex + 3], CSharpGenerator.Generate(fields, className));
             WriteGeneratedFile(args[argumentIndex + 4], CppGenerator.GenerateLayoutAssertions(
                 fields, structName, Path.GetRelativePath(Path.GetDirectoryName(args[argumentIndex + 4])!, headerPath)));
@@ -60,17 +60,18 @@ static class CppGenerator
     public static string GenerateLayoutAssertions(IReadOnlyList<Field> fields, string structName, string headerPath)
     {
         var source = new StringBuilder();
+        string qualifiedName = structName.Contains("::") ? structName : $"Engine::{structName}";
         source.AppendLine("#pragma once");
         source.AppendLine($"#include \"{headerPath.Replace('\\', '/')}\"");
         source.AppendLine("#include <cstddef>");
         source.AppendLine("#include <type_traits>");
         source.AppendLine();
-        source.AppendLine($"static_assert(std::is_standard_layout_v<Engine::{structName}>);");
+        source.AppendLine($"static_assert(std::is_standard_layout_v<{qualifiedName}>);");
         for (int index = 0; index < fields.Count; index++)
         {
-            source.AppendLine($"static_assert(offsetof(Engine::{structName}, {fields[index].Name}) == {fields[index].Offset} * sizeof(float));");
+            source.AppendLine($"static_assert(offsetof({qualifiedName}, {fields[index].Name}) == {fields[index].Offset} * sizeof(float));");
         }
-        source.AppendLine($"static_assert(sizeof(Engine::{structName}) == {fields.Sum(field => field.Length)} * sizeof(float));");
+        source.AppendLine($"static_assert(sizeof({qualifiedName}) == {fields.Sum(field => field.Length)} * sizeof(float));");
         return source.ToString();
     }
 }

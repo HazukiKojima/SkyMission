@@ -1,11 +1,11 @@
 #pragma once
-#include "../../EngineCommon.h"
+#include "RenderDevice.h"
 
 namespace Engine {
 	class RenderDevice;
 
 	class CommandContext {
-	public:
+	  public:
 		CommandContext() = default;
 		~CommandContext();
 
@@ -15,20 +15,33 @@ namespace Engine {
 		void EndFrame();
 		void MoveToNextFrame(RenderDevice* renderDevice);
 		void WaitForGpu();
+		// リサイズ後のインデックスに合わせるため、WaitForGpu後に呼ぶ
+		void SynchronizeFrameIndex(const RenderDevice& device) {
+			const UINT64 nextFenceValue = m_fenceValues[m_currentFrameIndex];
+			for (auto& value : m_fenceValues)
+				value = nextFenceValue;
+			m_currentFrameIndex = device.GetFrameIndex();
+		}
 
-		void TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
+		void TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore,
+								D3D12_RESOURCE_STATES stateAfter);
 
-		ID3D12GraphicsCommandList* GetCommandList() const { return m_commandList.Get(); }
-		UINT GetFrameIndex() const { return m_currentFrameIndex; }
+		ID3D12GraphicsCommandList* GetCommandList() const {
+			return m_commandList.Get();
+		}
+		UINT GetFrameIndex() const {
+			return m_renderDevice->GetFrameIndex();
+		}
 
-	private:
+	  private:
+		RenderDevice* m_renderDevice = nullptr;
 		ID3D12CommandQueue* m_targetQueue = nullptr;
 		ComPtr<ID3D12GraphicsCommandList> m_commandList;
-		ComPtr<ID3D12CommandAllocator>    m_commandAllocators[2];
+		ComPtr<ID3D12CommandAllocator> m_commandAllocators[RenderDevice::FrameCount];
 
 		ComPtr<ID3D12Fence> m_fence;
-		HANDLE              m_fenceEvent = nullptr;
-		UINT64              m_fenceValues[2] = { 0 };
-		UINT                m_currentFrameIndex = 0;
+		HANDLE m_fenceEvent = nullptr;
+		UINT64 m_fenceValues[RenderDevice::FrameCount] = {0};
+		UINT m_currentFrameIndex = 0;
 	};
-}
+} // namespace Engine

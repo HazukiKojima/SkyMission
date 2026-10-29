@@ -7,29 +7,36 @@
 
 namespace Engine {
 	class Scene;
+	struct FrameContext {
+		ID3D12GraphicsCommandList* commandList;
+		RenderDevice* device;
+		RendererPipelines& pipelines;
+		RendererConstantBuffers& constantBuffers;
+		UINT frameIndex;
+	};
 
 	class SkyRenderPass {
-	public:
-		void Record(ID3D12GraphicsCommandList* commandList, RenderDevice* device, RendererAssets& assets, RendererPipelines& pipelines, RendererConstantBuffers& constantBuffers) const;
+	  public:
+		void Record(const FrameContext& frame, RendererAssets& assets) const;
 	};
 
 	class OceanRenderPass {
-	public:
-		void Record(ID3D12GraphicsCommandList* commandList, RenderDevice* device, RendererAssets& assets, RendererPipelines& pipelines, RendererConstantBuffers& constantBuffers, OceanGeometry& geometry) const;
+	  public:
+		void Record(const FrameContext& frame, RendererAssets& assets, OceanGeometry& geometry) const;
 	};
 
 	class ModelRenderPass {
-	public:
-		void Record(ID3D12GraphicsCommandList* commandList, RenderDevice* device, CommandContext* context, RendererPipelines& pipelines, RendererConstantBuffers& constantBuffers, const Scene& scene, float propellerAngle) const;
+	  public:
+		void Record(const FrameContext& frame, const Scene& scene) const;
 	};
 
 	class OceanFogRenderPass {
-	public:
-		void Record(ID3D12GraphicsCommandList* commandList, RenderDevice* device, RendererPipelines& pipelines, RendererConstantBuffers& constantBuffers) const;
+	  public:
+		void Record(const FrameContext& frame) const;
 	};
 
 	class RetroFilmRenderPass {
-	public:
-		void Record(ID3D12GraphicsCommandList* commandList, RenderDevice* device, CommandContext* context, RendererPipelines& pipelines, RendererConstantBuffers& constantBuffers, const RetroFilmParameters& parameters, float elapsedTime) const;
+	  public:
+		void Record(const FrameContext& frame) const;
 	};
-}
+} // namespace Engine

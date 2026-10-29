@@ -1,31 +1,41 @@
 #pragma once
-#include "../EngineCommon.h"
-#include "../Scene/Scene.h"
+#include "Engine/EngineCommon.h"
+#include "Game/Aircraft/AircraftController.h"
+#include "Game/Scene/FlightScene.h"
 #include <chrono>
 
 namespace Engine {
 	class Window;
 	class Renderer;
+} // namespace Engine
+
+namespace Game {
+	struct FlightSceneDefinition;
+	using Engine::Renderer;
+	using Engine::Window;
 
 	class Application {
-	public:
+	  public:
 		Application(HINSTANCE hInstance);
 		virtual ~Application();
 
 		void Initialize();
 		int Run();
 
-	protected:
+	  protected:
 		virtual void Update();
 		virtual void Render();
 
-	private:
+	  private:
+		void InitializeFlightScene(const FlightSceneDefinition& assets);
+		void ConfigureResizeHandling();
 		HINSTANCE m_hInstance;
 		std::unique_ptr<Window> m_window;
 
 		std::unique_ptr<Renderer> m_renderer;
 
-		std::unique_ptr<Engine::Scene> m_scene;
+		std::unique_ptr<FlightScene> m_scene;
+		AircraftController m_aircraftController;
 		std::wstring m_windowTitle = L"SkyMission";
 		// timing
 		float m_elapsedTime = 0.0f;
@@ -33,4 +43,4 @@ namespace Engine {
 		float m_fpsTimer = 0.0f;
 		UINT m_fpsFrameCount = 0;
 	};
-}
+} // namespace Game

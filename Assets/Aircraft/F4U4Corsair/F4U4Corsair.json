@@ -2,5 +2,6 @@
     "model": "F4U4Corsair.fbx",
     "visualScale": 20.0,
     "flightParameters": "flightParameters.json",
-    "aiParameters": "aiParameters.json"
+    "aiParameters": "aiParameters.json",
+    "modelImport": "modelImport.json"
 }

@@ -12,24 +12,33 @@
 
 namespace Engine {
 	class Scene;
-	struct SceneAssetPaths;
+	struct RendererDefinition;
 
 	class Renderer {
-	public:
+	  public:
 		Renderer() = default;
-		~Renderer();
+		~Renderer() noexcept;
 
-		void Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets);
+		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
 		void InitializeConstantBuffers(const Scene& scene);
-		void Update(const Scene& scene, float elapsedTime, float deltaSeconds);
+		void UpdateFrameConstants(const Scene& scene, float elapsedTime);
 		void Render(UINT width, UINT height, const Scene& scene);
 		void Resize(UINT width, UINT height);
-		float GetOceanSize() const { return m_frameUpdater.GetOceanSize(); }
-		const std::wstring& GetAdapterName() const { return m_device->GetAdapterName(); }
-		std::shared_ptr<Engine::Model> GetModel() const { return m_assets.GetModel(); }
-		std::shared_ptr<Engine::Model> GetEnemyAircraftModel() const { return m_assets.GetEnemyAircraftModel(); }
+		float GetOceanSize() const {
+			return m_frameUpdater.GetOceanSize();
+		}
+		const std::wstring& GetAdapterName() const {
+			return m_device->GetAdapterName();
+		}
+		std::shared_ptr<Model> GetModel(std::string_view id) const {
+			return m_assets.GetModel(id);
+		}
 
-	private:
+	  private:
+		void RecordScenePass(const Scene& scene);
+		void RecordOceanFogPass();
+		void RecordRetroFilmPass();
+
 		std::unique_ptr<RenderDevice> m_device;
 		std::unique_ptr<CommandContext> m_context;
 
@@ -45,6 +54,5 @@ namespace Engine {
 		RetroFilmRenderPass m_retroFilmPass;
 
 		RetroFilmParameters m_retroFilmParameters{};
-
 	};
-}
+} // namespace Engine

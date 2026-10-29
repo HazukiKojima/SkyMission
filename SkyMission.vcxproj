@@ -19,12 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Aircraft\PlayerAircraft.cpp" />
-    <ClCompile Include="Engine\Application\Application.cpp" />
-    <ClCompile Include="Engine\Aircraft\AircraftController.cpp" />
+    <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
+    <ClCompile Include="Game\Application\Application.cpp" />
+    <ClCompile Include="Game\Aircraft\AircraftController.cpp" />
     <ClCompile Include="Engine\Camera\Camera.cpp" />
     <ClCompile Include="Engine\Scene\Scene.cpp" />
-    <ClCompile Include="Engine\Scene\SceneLoader.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneLoader.cpp" />
     <ClCompile Include="Engine\Window\Window.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp" />
@@ -37,24 +37,24 @@
     <ClCompile Include="Engine\Renderer\Device\Renderer.cpp" />
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
-    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp" />
+    <ClCompile Include="Engine\Resources\JsonAssetReader.cpp" />
     <ClCompile Include="Engine\Resources\Mesh\Model.cpp" />
     <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp" />
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Aircraft\AircraftAIController.h" />
-    <ClInclude Include="Engine\Application\Application.h" />
-    <ClInclude Include="Engine\Aircraft\AircraftController.h" />
-    <ClInclude Include="Engine\Aircraft\AircraftFlightParameters.h" />
+    <ClInclude Include="Game\Aircraft\AircraftAIController.h" />
+    <ClInclude Include="Game\Application\Application.h" />
+    <ClInclude Include="Game\Aircraft\AircraftController.h" />
+    <ClInclude Include="Game\Aircraft\AircraftFlightParameters.h" />
     <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h" />
     <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h" />
     <ClInclude Include="Engine\Scene\OceanParameters.h" />
-    <ClInclude Include="Engine\Aircraft\PlayerAircraft.h" />
+    <ClInclude Include="Game\Aircraft\AircraftFlightModel.h" />
     <ClInclude Include="Engine\Camera\Camera.h" />
     <ClInclude Include="Engine\Scene\Scene.h" />
-    <ClInclude Include="Engine\Scene\SceneLoader.h" />
+    <ClInclude Include="Game\Scene\FlightSceneLoader.h" />
     <ClInclude Include="Engine\Scene\SkyParameters.h" />
     <ClInclude Include="Engine\Renderer\RetroFilmParameters.h" />
     <ClInclude Include="Engine\Window\Window.h" />
@@ -69,7 +69,7 @@
     <ClInclude Include="Engine\Renderer\Device\Renderer.h" />
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h" />
-    <ClInclude Include="Engine\Resources\AssetPathResolver.h" />
+    <ClInclude Include="Engine\Resources\JsonAssetReader.h" />
     <ClInclude Include="Engine\Resources\Mesh\Model.h" />
     <ClInclude Include="Engine\Resources\Mesh\SkySphere.h" />
     <ClInclude Include="Engine\Resources\Texture\Texture.h" />
@@ -175,12 +175,17 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\Aircraft\aircraft.json" />
     <None Include="Assets\Aircraft\F4U4Corsair\aiParameters.json" />
     <None Include="Assets\Aircraft\F4U4Corsair\F4U4Corsair.json" />
     <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\flightParameters.json" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\N1K2JShidenKai.json" />
+    <None Include="Assets\Environment\environment.json" />
+    <None Include="Assets\Environment\Ocean\Ocean.json" />
+    <None Include="Assets\Environment\Sky\sky.json" />
     <None Include="Engine\Renderer\Shader\Common.hlsli" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli" />
-    <None Include="Assets\Aircraft\F16\flightParameters.json" />
     <None Include="Assets\Environment\retroFilm.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -245,9 +250,10 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -261,11 +267,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -279,9 +286,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -297,11 +305,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -340,7 +349,7 @@
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json" Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)Engine\Aircraft\AircraftFlightParameters.h;$(SolutionDir)Engine\Scene\OceanParameters.h;$(SolutionDir)Engine\Scene\SkyParameters.h" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)Game\Aircraft\AircraftFlightParameters.h;$(SolutionDir)Game\Aircraft\AircraftAIController.h;$(SolutionDir)Engine\Scene\OceanParameters.h;$(SolutionDir)Engine\Scene\SkyParameters.h" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.props" Condition="Exists('$(SolutionDir)Directory.Build.props')" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.targets" Condition="Exists('$(SolutionDir)Directory.Build.targets')" />
   </ItemGroup>
@@ -351,4 +360,36 @@
     <Exec Command="set DOTNET_CLI_UI_LANGUAGE=en&#xD;&#xA;dotnet publish &quot;$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj&quot; -c $(Configuration) -r win-x64" />
     <Copy SourceFiles="$(REDoxWrapperPublishDll)" DestinationFiles="$(OutDir)REDoxWrapper.dll" />
   </Target>
+
+  <ItemGroup>
+    <ClInclude Include="Engine\Log.h" />
+    <ClInclude Include="Engine\ExecutablePath.h" />
+    <ClInclude Include="Game\Aircraft\ValidateFlightParameters.h" />
+    <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h" />
+    <ClInclude Include="Engine\Resources\Mesh\ModelLoadOptions.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Resources\Mesh\MaterialTexturePaths.cpp" />
+    <ClInclude Include="Engine\Resources\Mesh\MaterialTexturePaths.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Aircraft\F4U4Corsair\modelImport.json" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\modelImport.json" />
+    <None Include="Tests\RegressionTests.cpp" />
+    <None Include="Tests\RunRegressionTests.ps1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Input\RawInputState.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="Game\Scene\FlightScene.h" />
+    <ClCompile Include="Game\Scene\FlightScene.cpp" />
+    <ClInclude Include="Game\Camera\AircraftCameraController.h" />
+    <ClCompile Include="Game\Camera\AircraftCameraController.cpp" />
+    <ClInclude Include="Engine\Renderer\RendererDefinition.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Renderer\RootBindings.h" />
+  </ItemGroup>
 </Project>

@@ -25,9 +25,7 @@ struct PS_INPUT
     float3 tangent : TANGENT;
 };
 
-// ============================================================
 // Gerstner Wave
-// ============================================================
 
 float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, float3 p, inout float3 tangent, inout float3 binormal, float phaseOffset)
 {
@@ -60,9 +58,7 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
     );
 }
 
-// ============================================================
 // Vertex Shader
-// ============================================================
 
 PS_INPUT VS(VS_INPUT input)
 {
@@ -72,16 +68,12 @@ PS_INPUT VS(VS_INPUT input)
 
     float3 pos = wavePos;
 
-    // --------------------------------------------------------
     // Tangent / Binormal
-    // --------------------------------------------------------
 
     float3 tangent = float3(1.0f, 0.0f, 0.0f);
     float3 binormal = float3(0.0f, 0.0f, 1.0f);
 
-    // --------------------------------------------------------
     // Wave Settings
-    // --------------------------------------------------------
 
     float2 baseWindDir = normalize(float2(1.0f, 0.6f));
     float wavelength = 30.0f;
@@ -89,9 +81,7 @@ PS_INPUT VS(VS_INPUT input)
 
     const int NUM_WAVES = 6;
 
-    // --------------------------------------------------------
     // Gerstner Waves
-    // --------------------------------------------------------
 
     for (int i = 0; i < NUM_WAVES; ++i)
     {
@@ -123,21 +113,15 @@ PS_INPUT VS(VS_INPUT input)
         steepness *= 0.72f;
     }
 
-    // --------------------------------------------------------
     // Normal
-    // --------------------------------------------------------
 
     float3 normal = normalize(cross(binormal, tangent));
 
-    // --------------------------------------------------------
     // World Position
-    // --------------------------------------------------------
 
     float3 worldPos = pos;
 
-    // --------------------------------------------------------
     // Output
-    // --------------------------------------------------------
 
     result.position = mul(float4(worldPos, 1.0f), mvp);
     result.worldPos = worldPos;

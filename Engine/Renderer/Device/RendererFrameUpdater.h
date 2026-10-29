@@ -1,28 +1,34 @@
 #pragma once
 #include "RendererConstantBuffers.h"
 #include "../../Scene/Scene.h"
-#include "../../Scene/SceneLoader.h"
+#include "../RendererDefinition.h"
 
 namespace Engine {
 	class RendererFrameUpdater {
-	public:
+	  public:
 		void Configure(const OceanSettings& settings);
-		void Update(
-			const Scene& scene,
-			float elapsedTime,
-			float deltaSeconds,
-			RendererConstantBuffers& constantBuffers,
-			ID3D12Device* device,
-			CommandContext* context);
+		void Update(const Scene& scene, float elapsedTime, const RetroFilmParameters& filmParameters,
+			RendererConstantBuffers& constantBuffers, ID3D12Device* device, CommandContext* context);
 
-		float GetOceanSize() const { return m_oceanSettings.size; }
-		const OceanSettings& GetOceanSettings() const { return m_oceanSettings; }
-		float GetElapsedTime() const { return m_elapsedTime; }
-		float GetPropellerAngle() const { return m_propellerAngle; }
+		float GetOceanSize() const {
+			return m_oceanSettings.size;
+		}
+		const OceanSettings& GetOceanSettings() const {
+			return m_oceanSettings;
+		}
 
-	private:
+	  private:
+		struct FrameViewData;
+		FrameViewData BuildFrameView(const Scene& scene, float elapsedTime) const;
+		void UpdateOceanConstants(
+			const FrameViewData&, const SceneEnvironment&, OceanConstantBufferData*) const;
+		void UpdateFogConstants(
+			const FrameViewData&, const SceneEnvironment&, OceanFogConstantBufferData*) const;
+		void UpdateFilmConstants(
+			const FrameViewData&, const RetroFilmParameters&, FilmConstantBufferData*) const;
+		void UpdateModelConstants(const FrameViewData&, const SceneEnvironment&, const Scene&,
+			RendererConstantBuffers&, UINT) const;
+
 		OceanSettings m_oceanSettings{};
-		float m_elapsedTime = 0.0f;
-		float m_propellerAngle = 0.0f;
 	};
-}
+} // namespace Engine
