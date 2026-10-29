@@ -2,6 +2,8 @@
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Engine/Renderer/RendererDefinition.h"
 #include "Game/Weapons/WeaponDefinition.h"
+#include "Game/Combat/CombatTypes.h"
+#include "Engine/Renderer/Hud/HudDrawList.h"
 namespace Game {
 	inline constexpr const char* PlayerModelId = "player";
 	inline constexpr const char* EnemyModelId = "enemy";
@@ -20,6 +22,8 @@ namespace Game {
 		AircraftDefinition playerAircraft, enemyAircraft;
 		AircraftAIParameters enemyAIParameters;
 		WeaponDefinition playerWeapon;
+		CombatSettings combat;
+		Engine::HudSettings hud;
 		Engine::RendererDefinition BuildRendererDefinition() const {
 			return {environment,
 				{{PlayerModelId, playerAircraft.model, playerAircraft.modelImport},

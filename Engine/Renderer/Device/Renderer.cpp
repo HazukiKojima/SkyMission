@@ -40,11 +40,13 @@ namespace Engine {
 		m_assets.InitializeSkySphere(m_device->GetDevice(), commands, assets.environment.sky.radius);
 		m_oceanGeometry.Initialize(m_device->GetDevice(), commands, m_frameUpdater.GetOceanSize());
 		m_assets.Load(m_device.get(), m_context.get(), assets);
+		m_hudRenderer.Initialize(*m_device, commands);
 		m_context->EndFrame();
 		m_context->WaitForGpu();
 		// 初期転送のGPU完了後に転送用リソースを解放する
 		m_assets.ReleaseUploadResources();
 		m_oceanGeometry.ReleaseUploadResources();
+		m_hudRenderer.ReleaseUploadResources();
 	}
 
 	void Renderer::InitializeConstantBuffers(const Scene& scene) {
@@ -57,12 +59,15 @@ namespace Engine {
 		m_constantBuffers.EnsureModelCapacity(m_device->GetDevice(), m_context.get(), objectCount);
 	}
 
-	void Renderer::UpdateFrameConstants(const Scene& scene, float elapsedTime) {
+	RenderView Renderer::UpdateFrameConstants(const Scene& scene, float elapsedTime) {
 		m_frameUpdater.Update(scene, elapsedTime, m_retroFilmParameters, m_constantBuffers,
 			m_device->GetDevice(), m_context.get());
+		auto view = m_frameUpdater.GetRenderView();
+		view.width = m_device->GetWidth(); view.height = m_device->GetHeight();
+		return view;
 	}
 
-	void Renderer::Render(UINT width, UINT height, const Scene& runtimeScene) {
+	void Renderer::Render(UINT width, UINT height, const Scene& runtimeScene, const HudDrawList* hud) {
 		if (width == 0 || height == 0)
 			return;
 		m_context->BeginFrame();
@@ -93,6 +98,7 @@ namespace Engine {
 		RecordScenePass(runtimeScene);
 		RecordOceanFogPass();
 		RecordRetroFilmPass();
+		if (hud) m_hudRenderer.Record(*m_device, cmd, *hud);
 
 		// Present 処理
 		m_context->TransitionResource(

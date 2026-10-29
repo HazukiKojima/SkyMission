@@ -244,6 +244,7 @@ namespace Engine {
 		const std::wstring& filePath, const ModelLoadOptions& options) {
 		m_meshes.clear();
 		m_nodePositions.clear();
+		m_localBounds.reset();
 		m_vertexBuffer.Reset();
 		m_indexBuffer.Reset();
 		m_vertexUpload.Reset();
@@ -264,6 +265,17 @@ namespace Engine {
 		const auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
 		if (geometries.empty())
 			return false;
+		Bounds3 bounds{geometries.front().vertices.front().position, geometries.front().vertices.front().position};
+		for (const auto& geometry : geometries)
+			for (const auto& vertex : geometry.vertices) {
+				bounds.minimum.x = std::min(bounds.minimum.x, vertex.position.x);
+				bounds.minimum.y = std::min(bounds.minimum.y, vertex.position.y);
+				bounds.minimum.z = std::min(bounds.minimum.z, vertex.position.z);
+				bounds.maximum.x = std::max(bounds.maximum.x, vertex.position.x);
+				bounds.maximum.y = std::max(bounds.maximum.y, vertex.position.y);
+				bounds.maximum.z = std::max(bounds.maximum.z, vertex.position.z);
+			}
+		m_localBounds = bounds;
 
 		InitializeFallbackTextures(device, commandList);
 

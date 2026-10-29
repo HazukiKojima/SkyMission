@@ -3,6 +3,7 @@
 #include "Game/Aircraft/AircraftController.h"
 #include "Game/Scene/FlightScene.h"
 #include <chrono>
+#include "Game/UI/CombatHudPresenter.h"
 
 namespace Engine {
 	class Window;
@@ -36,6 +37,8 @@ namespace Game {
 
 		std::unique_ptr<FlightScene> m_scene;
 		AircraftController m_aircraftController;
+		CombatHudPresenter m_hudPresenter;
+		Engine::HudDrawList m_hud;
 		std::wstring m_windowTitle = L"SkyMission";
 		// timing
 		float m_elapsedTime = 0.0f;

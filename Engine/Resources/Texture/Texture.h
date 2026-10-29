@@ -4,6 +4,7 @@
 #include "d3dx12.h"
 #include <memory>
 #include <filesystem>
+#include <span>
 
 namespace Engine {
 	struct TextureLoadOptions {
@@ -27,6 +28,8 @@ namespace Engine {
 			uint8_t g, uint8_t b, uint8_t a = 255);
 		void CreateShaderResourceView(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE srvHandle) const;
 		void ReleaseUploadResources();
+		void CreateFromRgba(ID3D12Device* device, ID3D12GraphicsCommandList* commands,
+			UINT width, UINT height, std::span<const uint8_t> pixels);
 
 		ID3D12Resource* GetResource() const {
 			return m_texture.Get();

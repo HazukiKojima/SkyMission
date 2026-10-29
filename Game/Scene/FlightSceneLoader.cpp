@@ -10,6 +10,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <limits>
+#include "Game/Combat/CombatSettingsLoader.h"
 
 namespace Game {
 	using namespace Engine;
@@ -176,6 +177,8 @@ namespace Game {
 			.playerAircraft = LoadAircraftDefinition(reader, parameters, paths.playerAircraft),
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
-			.playerWeapon = LoadWeapon(reader, paths.playerAircraft)};
+			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
+			.combat = LoadCombatSettings(reader, paths.environment.parent_path().parent_path()/L"Combat/targeting.json"),
+			.hud = LoadHudSettings(reader, paths.environment.parent_path().parent_path()/L"UI/combatHud.json")};
 	}
 } // namespace Game

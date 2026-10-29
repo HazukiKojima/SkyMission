@@ -7,6 +7,7 @@
 #include <filesystem>
 #include "Engine/ExecutablePath.h"
 #include "Game/Weapons/WeaponController.h"
+#include "Game/Combat/CombatController.h"
 
 namespace Game {
 	using namespace Engine;
@@ -45,6 +46,8 @@ namespace Game {
 
 	void Application::InitializeFlightScene(const FlightSceneDefinition& assets) {
 		m_scene = std::make_unique<FlightScene>();
+		m_scene->ConfigureCombat(assets.combat);
+		m_hudPresenter.Configure(assets.hud);
 		m_scene->Initialize(
 			static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 1.0f,
 			m_renderer->GetOceanSize());
@@ -58,9 +61,10 @@ namespace Game {
 		m_scene->SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		m_scene->SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
 		m_scene->AddPlayerObject(m_renderer->GetModel(PlayerModelId));
-		m_scene->AddEnemyAircraft(m_renderer->GetModel(EnemyModelId), {30.0f, 0.0f, -100.0f},
-			assets.enemyAircraft.visualScale, assets.enemyAircraft.flightParameters,
-			assets.enemyAIParameters);
+		for (size_t i=0; i<assets.combat.enemyPositions.size(); ++i)
+			m_scene->AddEnemyAircraft(m_renderer->GetModel(EnemyModelId), assets.combat.enemyPositions[i],
+				assets.enemyAircraft.visualScale, assets.enemyAircraft.flightParameters,
+				assets.enemyAIParameters, assets.combat.enemyHealth, "ENEMY 0"+std::to_string(i+1));
 
 		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
@@ -117,15 +121,17 @@ namespace Game {
 
 		if (m_scene) {
 			const InputSnapshot input = m_window->ConsumeInput();
+			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input,
-				WeaponController{}.ReadInput(input));
-			m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
+				combat.weapon, combat.nextTarget);
+			const auto view=m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
+			m_hudPresenter.Build(m_scene->GetCombatSnapshot(),view,m_hud);
 		}
 	}
 
 	// 描画処理（レンダリングコマンド発行）
 	void Application::Render() {
-		m_renderer->Render(m_window->GetWidth(), m_window->GetHeight(), m_scene->GetRenderScene());
+		m_renderer->Render(m_window->GetWidth(), m_window->GetHeight(), m_scene->GetRenderScene(), &m_hud);
 	}
 
 } // namespace Game

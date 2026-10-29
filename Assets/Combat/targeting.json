@@ -1,0 +1,15 @@
+{
+    "selectionDistance": 6000,
+    "acquireDistance": 2500,
+    "acquireAngleDegrees": 25,
+    "acquireSeconds": 0.5,
+    "maintainDistance": 2750,
+    "maintainAngleDegrees": 35,
+    "lossGraceSeconds": 0.25,
+    "assistAngleDegrees": 3,
+    "enemyHealth": 100,
+    "bulletDamage": 10,
+    "enemyPosition1": [0, 300, -1200],
+    "enemyPosition2": [-450, 350, -1700],
+    "enemyPosition3": [500, 400, -2000]
+}

@@ -48,6 +48,8 @@ namespace Engine {
 		const UINT index = context->GetFrameIndex();
 		buffers.EnsureModelCapacity(device, context, scene.GetObjects().size());
 		const auto frame = BuildFrameView(scene, elapsedTime);
+		DirectX::XMStoreFloat4x4(&m_renderView.view, frame.view);
+		DirectX::XMStoreFloat4x4(&m_renderView.projection, frame.projection);
 		const auto& lighting = scene.GetEnvironment();
 		UpdateOceanConstants(frame, lighting, buffers.GetOceanData(index));
 		UpdateFogConstants(frame, lighting, buffers.GetOceanFogData(index));

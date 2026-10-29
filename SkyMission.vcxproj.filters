@@ -347,4 +347,29 @@
     <ClCompile Include="Game\Weapons\ProjectileSystem.cpp"><Filter>Game\Weapons</Filter></ClCompile>
     <ClInclude Include="Tests\WeaponTests.h"><Filter>Tests</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Scene\Bounds3.h" />
+    <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h" />
+    <ClCompile Include="Engine\Renderer\Hud\HudDrawList.cpp" />
+    <ClInclude Include="Engine\Renderer\Hud\HudRenderer.h" />
+    <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp" />
+    <ClInclude Include="Game\Combat\CombatTypes.h" />
+    <ClInclude Include="Game\Combat\CombatController.h" />
+    <ClInclude Include="Game\Combat\GunAimSolver.h" />
+    <ClCompile Include="Game\Combat\GunAimSolver.cpp" />
+    <ClInclude Include="Game\Combat\TargetingSystem.h" />
+    <ClCompile Include="Game\Combat\TargetingSystem.cpp" />
+    <ClInclude Include="Game\Combat\ProjectileCollision.h" />
+    <ClCompile Include="Game\Combat\ProjectileCollision.cpp" />
+    <ClInclude Include="Game\Combat\CombatSettingsLoader.h" />
+    <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp" />
+    <ClInclude Include="Game\UI\CombatHudPresenter.h" />
+    <ClCompile Include="Game\UI\CombatHudPresenter.cpp" />
+    <None Include="Assets\Combat\targeting.json" />
+    <None Include="Assets\UI\combatHud.json" />
+    <None Include="Docs\Design\TargetLockCombatHud.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\CombatTests.h"><Filter>Tests</Filter></ClInclude>
+  </ItemGroup>
 </Project>

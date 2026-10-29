@@ -28,6 +28,7 @@ void Require(bool condition, const char* description) {
 }
 
 #include "WeaponTests.h"
+#include "CombatTests.h"
 
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
@@ -530,10 +531,13 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
 		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles);
 		const auto reserved = renderer.GetModelCapacity();
+		Engine::HudDrawList hud;
+		Game::CombatHudPresenter presenter;
 		for (int i = 0; i < 6; ++i) {
 			scene.Update({}, 0.05f, {}, {true});
-			renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
-			renderer.Render(64, 64, scene.GetRenderScene());
+			const auto view=renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
+			presenter.Build(scene.GetCombatSnapshot(),view,hud);
+			renderer.Render(64, 64, scene.GetRenderScene(),&hud);
 		}
 		Require(scene.GetProjectileCount() >= 12, "Scene did not integrate continuous weapon fire");
 		Require(renderer.GetModelCapacity() == reserved, "Firing grew GPU constant buffers despite reservation");
@@ -541,8 +545,10 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		renderer.Resize(0, 0);
 		renderer.Render(0, 0, scene.GetRenderScene());
 		renderer.Resize(96, 96);
-		renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
-		renderer.Render(96, 96, scene.GetRenderScene());
+		const auto resizedView=renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
+		Require(resizedView.width==96 && resizedView.height==96,"HUD view did not reflect renderer resize");
+		presenter.Build(scene.GetCombatSnapshot(),resizedView,hud);
+		renderer.Render(96, 96, scene.GetRenderScene(),&hud);
 		scene.RemoveObject(scene.GetObjects()[0].id);
 		for (int i = 0; i < 14; ++i) scene.Update({}, 0.25f, {}, {true});
 		Require(scene.GetProjectileCount() == 0, "Removed player kept firing or existing projectiles did not expire");
@@ -562,10 +568,13 @@ int wmain(int argc, wchar_t** argv) {
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
 		TestFlightAndScene();
+		TestCombatMath();
 		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
+		TestCombatDamage(argv[1],fixture);
+		TestHudRendering(fixture);
 		TestRendererSmoke(argv[1], fixture);
 		CoUninitialize();
 		return 0;
