@@ -162,8 +162,10 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 		.playerAircraft = assets / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = assets / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 		.retroFilm = assets / L"Environment/retroFilm.json"});
+	const float expectedExtent = JsonAssetReader{}.ResolveFloat(
+		assets / L"Ammunition/Rocket/modelImport.json", "normalizedExtent");
 	Require(definition.playerRocket.settings.cooldownSeconds == 3 &&
-			definition.playerRocket.ammunition.options.normalizedExtent == 12 &&
+			definition.playerRocket.ammunition.options.normalizedExtent == expectedExtent &&
 			definition.playerRocket.modelForward.x == 1,
 		"Rocket configuration did not load");
 	const HWND window = CreateWindowW(L"STATIC", L"Rocket asset test", WS_OVERLAPPEDWINDOW, 0, 0, 64, 64,
@@ -184,7 +186,7 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 					definition.playerRocket.ammunition.options),
 			"Actual rocket model failed to load");
 		const auto bounds = rocket->GetLocalBounds();
-		Require(bounds && std::abs(bounds->maximum.x - bounds->minimum.x - 12) < 0.01f &&
+		Require(bounds && std::abs(bounds->maximum.x - bounds->minimum.x - expectedExtent) < 0.01f &&
 				std::abs(bounds->Center().x) < 0.01f,
 			"Rocket bounds center or display length incorrect");
 		RocketLauncher launcher;
