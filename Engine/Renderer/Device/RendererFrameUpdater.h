@@ -2,11 +2,13 @@
 #include "RendererConstantBuffers.h"
 #include "../../Scene/Scene.h"
 #include "../RendererDefinition.h"
+#include "Engine/Renderer/Hud/HudDrawList.h"
 
 namespace Engine {
 	class RendererFrameUpdater {
 	  public:
 		void Configure(const OceanSettings& settings);
+		RenderView GetRenderView() const { return m_renderView; }
 		void Update(const Scene& scene, float elapsedTime, const RetroFilmParameters& filmParameters,
 			RendererConstantBuffers& constantBuffers, ID3D12Device* device, CommandContext* context);
 
@@ -30,5 +32,6 @@ namespace Engine {
 			RendererConstantBuffers&, UINT) const;
 
 		OceanSettings m_oceanSettings{};
+		RenderView m_renderView;
 	};
 } // namespace Engine

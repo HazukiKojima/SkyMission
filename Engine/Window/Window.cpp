@@ -43,6 +43,13 @@ namespace Engine {
 
 	void Window::DeactivateInput() {
 		m_input.SetActive(false);
+		EndCameraDrag();
+	}
+
+	void Window::EndCameraDrag() {
+		if (!m_cameraMouseCaptured)
+			return;
+		m_cameraMouseCaptured = false;
 		if (GetCapture() == m_hwnd)
 			ReleaseCapture();
 	}
@@ -90,11 +97,10 @@ namespace Engine {
 			m_input.ProcessMouse(raw.header.hDevice, raw.data.mouse,
 								 GetSystemMetrics(virtualDesktop ? SM_CXVIRTUALSCREEN : SM_CXSCREEN),
 								 GetSystemMetrics(virtualDesktop ? SM_CYVIRTUALSCREEN : SM_CYSCREEN));
-			if (m_input.IsRightMouseDown()) {
-				if (GetCapture() != m_hwnd)
-					SetCapture(m_hwnd);
-			} else if (GetCapture() == m_hwnd)
-				ReleaseCapture();
+			// Raw Inputは非クライアント領域の操作中にも届く
+			// 標準の移動・リサイズ操作が所有するキャプチャには触らない
+			if (!m_input.IsRightMouseDown())
+				EndCameraDrag();
 		}
 	}
 
@@ -107,6 +113,15 @@ namespace Engine {
 		}
 		if (self) {
 			switch (message) {
+			case WM_RBUTTONDOWN:
+				// 画面内で開始したカメラ操作だけ、画面外までドラッグを継続する
+				SetCapture(hwnd);
+				self->m_cameraMouseCaptured = GetCapture() == hwnd;
+				return 0;
+			case WM_RBUTTONUP:
+				if (!self->m_input.IsRightMouseDown())
+					self->EndCameraDrag();
+				return 0;
 			case WM_INPUT:
 				if (GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT)
 					self->ProcessRawInput(reinterpret_cast<HRAWINPUT>(lParam));
@@ -125,18 +140,19 @@ namespace Engine {
 			case WM_INPUT_DEVICE_CHANGE:
 				if (wParam == GIDC_REMOVAL) {
 					self->m_input.ForgetDevice(reinterpret_cast<HANDLE>(lParam));
-					if (!self->m_input.IsRightMouseDown() && GetCapture() == hwnd)
-						ReleaseCapture();
+					if (!self->m_input.IsRightMouseDown())
+						self->EndCameraDrag();
 				}
 				return 0;
 			case WM_CAPTURECHANGED:
-				if (reinterpret_cast<HWND>(lParam) != hwnd && self->m_input.IsRightMouseDown())
+				if (reinterpret_cast<HWND>(lParam) != hwnd && self->m_cameraMouseCaptured) {
+					self->m_cameraMouseCaptured = false;
 					self->m_input.ClearMouse();
+				}
 				break;
 			case WM_CANCELMODE:
 				self->m_input.ClearMouse();
-				if (GetCapture() == hwnd)
-					ReleaseCapture();
+				self->EndCameraDrag();
 				break;
 			case WM_SIZE:
 				self->m_width = LOWORD(lParam);

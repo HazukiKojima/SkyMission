@@ -29,6 +29,7 @@ namespace Game {
 			m_position = position;
 		}
 		float GetSpeed() const;
+		DirectX::XMFLOAT3 GetVelocity() const { return m_velocity; }
 		float GetMaximumSpeed() const {
 			return m_flightParameters.maximumSpeed;
 		}

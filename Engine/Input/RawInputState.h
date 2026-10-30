@@ -9,7 +9,10 @@ namespace Engine {
 	struct InputSnapshot {
 		bool active = false;
 		std::array<bool, 256> keys{};
+		std::array<bool, 256> pressedKeys{};
+		bool WasKeyPressed(UINT key) const { return active && key < pressedKeys.size() && pressedKeys[key]; }
 		bool rightMouseDown = false;
+		bool leftMouseDown = false;
 		std::int64_t mouseDeltaX = 0;
 		std::int64_t mouseDeltaY = 0;
 
@@ -36,6 +39,7 @@ namespace Engine {
 		}
 		void Clear() {
 			m_keyboards.clear();
+			m_pressedKeys.fill(false);
 			ClearMouse();
 		}
 		void ClearMouse() {
@@ -62,13 +66,23 @@ namespace Engine {
 				key = keyboard.Flags & RI_KEY_E0 ? VK_RMENU : VK_LMENU;
 			else if (key == VK_SHIFT)
 				key = keyboard.MakeCode == 0x36 ? VK_RSHIFT : VK_LSHIFT;
-			m_keyboards[device][key] = (keyboard.Flags & RI_KEY_BREAK) == 0;
+			const bool down = (keyboard.Flags & RI_KEY_BREAK) == 0;
+			bool wasDown = false;
+			for (const auto& [id, keys] : m_keyboards)
+				wasDown = wasDown || keys[key];
+			if (down && !wasDown)
+				m_pressedKeys[key] = true;
+			m_keyboards[device][key] = down;
 		}
 		void ProcessMouse(HANDLE device, const RAWMOUSE& mouse, int desktopWidth, int desktopHeight) {
 			if (!m_active)
 				return;
 			const bool wasDragging = IsRightMouseDown();
 			auto& state = m_mice[device];
+			if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN)
+				state.leftDown = true;
+			if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP)
+				state.leftDown = false;
 			if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN)
 				state.rightDown = true;
 			if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP)
@@ -103,6 +117,12 @@ namespace Engine {
 					return true;
 			return false;
 		}
+		bool IsLeftMouseDown() const {
+			for (const auto& [device, state] : m_mice)
+				if (state.leftDown)
+					return true;
+			return false;
+		}
 		InputSnapshot ConsumeFrame() {
 			InputSnapshot snapshot{.active = m_active};
 			if (m_active) {
@@ -110,22 +130,27 @@ namespace Engine {
 					for (size_t i = 0; i < keys.size(); ++i)
 						snapshot.keys[i] = snapshot.keys[i] || keys[i];
 				snapshot.rightMouseDown = IsRightMouseDown();
+				snapshot.pressedKeys = m_pressedKeys;
+				snapshot.leftMouseDown = IsLeftMouseDown();
 				snapshot.mouseDeltaX = m_deltaX;
 				snapshot.mouseDeltaY = m_deltaY;
 			}
 			m_deltaX = m_deltaY = 0;
+			m_pressedKeys.fill(false);
 			return snapshot;
 		}
 
 	  private:
 		struct MouseState {
 			bool rightDown = false;
+			bool leftDown = false;
 			bool hasAbsolute = false;
 			bool virtualDesktop = false;
 			int width = 0, height = 0;
 			POINT absolute{};
 		};
 		bool m_active = false;
+		std::array<bool, 256> m_pressedKeys{};
 		std::unordered_map<HANDLE, std::array<bool, 256>> m_keyboards;
 		std::unordered_map<HANDLE, MouseState> m_mice;
 		std::int64_t m_deltaX = 0, m_deltaY = 0;

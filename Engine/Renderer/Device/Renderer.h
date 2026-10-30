@@ -9,6 +9,7 @@
 #include "RendererAssets.h"
 #include "RendererFrameUpdater.h"
 #include "RendererPasses.h"
+#include "Engine/Renderer/Hud/HudRenderer.h"
 
 namespace Engine {
 	class Scene;
@@ -21,8 +22,10 @@ namespace Engine {
 
 		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
 		void InitializeConstantBuffers(const Scene& scene);
-		void UpdateFrameConstants(const Scene& scene, float elapsedTime);
-		void Render(UINT width, UINT height, const Scene& scene);
+		void ReserveModelCapacity(size_t objectCount);
+		size_t GetModelCapacity() const { return m_constantBuffers.GetModelCapacity(); }
+		RenderView UpdateFrameConstants(const Scene& scene, float elapsedTime);
+		void Render(UINT width, UINT height, const Scene& scene, const HudDrawList* hud = nullptr);
 		void Resize(UINT width, UINT height);
 		float GetOceanSize() const {
 			return m_frameUpdater.GetOceanSize();
@@ -52,6 +55,7 @@ namespace Engine {
 		ModelRenderPass m_modelPass;
 		OceanFogRenderPass m_oceanFogPass;
 		RetroFilmRenderPass m_retroFilmPass;
+		HudRenderer m_hudRenderer;
 
 		RetroFilmParameters m_retroFilmParameters{};
 	};

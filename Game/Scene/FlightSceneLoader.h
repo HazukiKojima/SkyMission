@@ -1,9 +1,13 @@
 #pragma once
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Engine/Renderer/RendererDefinition.h"
+#include "Game/Weapons/WeaponDefinition.h"
+#include "Game/Combat/CombatTypes.h"
+#include "Engine/Renderer/Hud/HudDrawList.h"
 namespace Game {
 	inline constexpr const char* PlayerModelId = "player";
 	inline constexpr const char* EnemyModelId = "enemy";
+	inline constexpr const char* AmmunitionModelId = "20mmAmmo";
 	struct SceneSourcePaths {
 		std::filesystem::path environment, playerAircraft, enemyAircraft, retroFilm;
 	};
@@ -17,10 +21,13 @@ namespace Game {
 		Engine::RenderEnvironmentDefinition environment;
 		AircraftDefinition playerAircraft, enemyAircraft;
 		AircraftAIParameters enemyAIParameters;
+		WeaponDefinition playerWeapon;
+		CombatSettings combat;
+		Engine::HudSettings hud;
 		Engine::RendererDefinition BuildRendererDefinition() const {
 			return {environment,
 				{{PlayerModelId, playerAircraft.model, playerAircraft.modelImport},
-					{EnemyModelId, enemyAircraft.model, enemyAircraft.modelImport}}};
+					{EnemyModelId, enemyAircraft.model, enemyAircraft.modelImport}, playerWeapon.ammunition}};
 		}
 	};
 	class FlightSceneLoader {

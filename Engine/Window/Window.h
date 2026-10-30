@@ -34,9 +34,11 @@ namespace Engine {
 		void ProcessRawInput(HRAWINPUT handle);
 		void DeactivateInput();
 		void UnregisterRawInput();
+		void EndCameraDrag();
 
 		RawInputState m_input;
 		HWND m_hwnd = nullptr;
+		bool m_cameraMouseCaptured = false;
 		UINT m_width = 0;
 		UINT m_height = 0;
 		std::function<void(UINT, UINT)> m_onResize;

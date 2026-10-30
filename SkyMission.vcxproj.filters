@@ -337,4 +337,39 @@
     <Filter Include="Game\Camera"><UniqueIdentifier>{d5255d03-9b4c-58a0-a559-ea751c6cdfb3}</UniqueIdentifier></Filter>
     <ClInclude Include="Engine\Renderer\RootBindings.h"><Filter>Engine\Renderer</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Game\Weapons"><UniqueIdentifier>{920976bd-1bae-48ba-b6ca-b893f0aa8308}</UniqueIdentifier></Filter>
+    <ClInclude Include="Game\Weapons\WeaponController.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\WeaponDefinition.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\AircraftGun.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\ProjectileSystem.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClCompile Include="Game\Weapons\AircraftGun.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\ProjectileSystem.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClInclude Include="Tests\WeaponTests.h"><Filter>Tests</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Scene\Bounds3.h" />
+    <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h" />
+    <ClCompile Include="Engine\Renderer\Hud\HudDrawList.cpp" />
+    <ClInclude Include="Engine\Renderer\Hud\HudRenderer.h" />
+    <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp" />
+    <ClInclude Include="Game\Combat\CombatTypes.h" />
+    <ClInclude Include="Game\Combat\CombatController.h" />
+    <ClInclude Include="Game\Combat\GunAimSolver.h" />
+    <ClCompile Include="Game\Combat\GunAimSolver.cpp" />
+    <ClInclude Include="Game\Combat\TargetingSystem.h" />
+    <ClCompile Include="Game\Combat\TargetingSystem.cpp" />
+    <ClInclude Include="Game\Combat\ProjectileCollision.h" />
+    <ClCompile Include="Game\Combat\ProjectileCollision.cpp" />
+    <ClInclude Include="Game\Combat\CombatSettingsLoader.h" />
+    <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp" />
+    <ClInclude Include="Game\UI\CombatHudPresenter.h" />
+    <ClCompile Include="Game\UI\CombatHudPresenter.cpp" />
+    <None Include="Assets\Combat\targeting.json" />
+    <None Include="Assets\UI\combatHud.json" />
+    <None Include="Docs\Design\TargetLockCombatHud.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\CombatTests.h"><Filter>Tests</Filter></ClInclude>
+  </ItemGroup>
 </Project>

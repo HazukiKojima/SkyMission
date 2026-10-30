@@ -9,6 +9,8 @@
 #include "External/REDoxWrapper/Generated/SkyParametersLayout.h"
 #include <cmath>
 #include <stdexcept>
+#include <limits>
+#include "Game/Combat/CombatSettingsLoader.h"
 
 namespace Game {
 	using namespace Engine;
@@ -37,9 +39,10 @@ namespace Game {
 				.defaultFallbackTexture = wide("defaultFallbackTexture"),
 				.normalizedExtent = reader.ResolveFloat(path, "normalizedExtent"),
 				.groundOffset = reader.ResolveFloat(path, "groundOffset")};
-			if (!std::isfinite(options.normalizedExtent) || options.normalizedExtent <= 0.0f ||
-				!std::isfinite(options.groundOffset))
-				throw std::runtime_error("Invalid model normalization settings.");
+			if (!std::isfinite(options.normalizedExtent) || options.normalizedExtent <= 0.0f)
+				throw std::runtime_error("normalizedExtent must be positive and finite");
+			if (!std::isfinite(options.groundOffset))
+				throw std::runtime_error("groundOffset must be finite");
 			return options;
 		}
 
@@ -54,6 +57,48 @@ namespace Game {
 				throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
 			ValidateFlightParameters(aircraft.flightParameters);
 			return aircraft;
+		}
+
+		WeaponDefinition LoadWeapon(const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
+			const auto weaponPath = reader.Resolve(aircraftPath, "weapon");
+			const auto pathText = [](const std::filesystem::path& path) {
+				const auto text = path.u8string();
+				return std::string(reinterpret_cast<const char*>(text.data()), text.size());
+			};
+			WeaponDefinition definition;
+			definition.sourcePath = weaponPath;
+			try {
+				const char* muzzleKeys[] = {"muzzleL1", "muzzleL2", "muzzleR1", "muzzleR2"};
+				for (size_t i = 0; i < 4; ++i)
+					definition.gun.muzzleNames[i] = reader.ResolveString(weaponPath, muzzleKeys[i]);
+				definition.gun.fireInterval = reader.ResolveFloat(weaponPath, "fireInterval");
+				definition.gun.muzzleSpeed = reader.ResolveFloat(weaponPath, "muzzleSpeed");
+				definition.gun.lifetime = reader.ResolveFloat(weaponPath, "lifetime");
+				const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
+				if (!std::isfinite(capacity) || capacity < 4 || std::floor(capacity) != capacity ||
+					capacity > static_cast<float>(std::numeric_limits<int>::max() / 2))
+					throw std::invalid_argument("maxProjectiles must be an integer of at least 4 within supported range");
+				definition.gun.maxProjectiles = static_cast<size_t>(capacity);
+				ValidateGunSettings(definition.gun);
+			} catch (const std::exception& error) {
+				throw std::runtime_error(pathText(weaponPath) + ": " + error.what());
+			}
+			const auto ammoPath = reader.Resolve(weaponPath, "ammunition");
+			try {
+				definition.ammunition = {AmmunitionModelId, reader.Resolve(ammoPath, "model"), LoadModelOptions(reader, ammoPath)};
+				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
+				const auto axis = reader.ResolveString(ammoPath, "modelForward");
+				if (axis == "+Y") definition.modelForward = {0, 1, 0};
+				else if (axis == "-Y") definition.modelForward = {0, -1, 0};
+				else if (axis == "+X") definition.modelForward = {1, 0, 0};
+				else if (axis == "-X") definition.modelForward = {-1, 0, 0};
+				else if (axis == "+Z") definition.modelForward = {0, 0, 1};
+				else if (axis == "-Z") definition.modelForward = {0, 0, -1};
+				else throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
+			} catch (const std::exception& error) {
+				throw std::runtime_error(pathText(ammoPath) + ": " + error.what());
+			}
+			return definition;
 		}
 
 		void ValidateAIParameters(const AircraftAIParameters& parameters) {
@@ -131,6 +176,9 @@ namespace Game {
 		return {.environment = LoadEnvironment(paths, reader, parameters),
 			.playerAircraft = LoadAircraftDefinition(reader, parameters, paths.playerAircraft),
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
-			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft)};
+			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
+			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
+			.combat = LoadCombatSettings(reader, paths.environment.parent_path().parent_path()/L"Combat/targeting.json"),
+			.hud = LoadHudSettings(reader, paths.environment.parent_path().parent_path()/L"UI/combatHud.json")};
 	}
 } // namespace Game

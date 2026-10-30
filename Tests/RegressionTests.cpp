@@ -27,6 +27,9 @@ void Require(bool condition, const char* description) {
 		throw std::runtime_error(description);
 }
 
+#include "WeaponTests.h"
+#include "CombatTests.h"
+
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
 	ValidateFlightParameters(parameters);
@@ -220,6 +223,39 @@ void TestRawInput() {
 			}
 		Require(matching == 2, "Window did not register foreground keyboard and mouse input");
 		Require(!second.ConsumeInput().active, "Hidden unfocused window exposes active input");
+		// タイトルバーの移動・サイズ変更が使うキャプチャを入力処理で解除しない
+		SetCapture(second.GetHandle());
+		Require(GetCapture() == second.GetHandle(), "Native mouse capture could not be established");
+		second.ConsumeInput();
+		Require(GetCapture() == second.GetHandle(), "Input polling stole native window-operation capture");
+		SendMessageW(second.GetHandle(), WM_INPUT_DEVICE_CHANGE, GIDC_REMOVAL, 0);
+		Require(GetCapture() == second.GetHandle(), "Device removal stole native window-operation capture");
+		ReleaseCapture();
+		SendMessageW(second.GetHandle(), WM_LBUTTONDOWN, MK_LBUTTON, 0);
+		Require(GetCapture() != second.GetHandle(), "Left click started camera capture");
+		SendMessageW(second.GetHandle(), WM_LBUTTONUP, 0, 0);
+		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
+		Require(GetCapture() == second.GetHandle(), "Client right drag did not capture the mouse");
+		SendMessageW(second.GetHandle(), WM_RBUTTONUP, 0, 0);
+		Require(GetCapture() != second.GetHandle(), "Right drag release kept camera capture");
+		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
+		SendMessageW(second.GetHandle(), WM_CANCELMODE, 0, 0);
+		Require(GetCapture() != second.GetHandle(), "Cancel mode kept camera capture");
+		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
+		SendMessageW(second.GetHandle(), WM_KILLFOCUS, 0, 0);
+		Require(GetCapture() != second.GetHandle(), "Focus loss kept camera capture");
+		UINT resizeCount = 0;
+		second.SetOnResize([&](UINT, UINT) { ++resizeCount; });
+		Require(SetWindowPos(second.GetHandle(), nullptr, 0, 0, 320, 240,
+			SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE), "Window resize failed");
+		Require(resizeCount > 0, "Window resize did not reach its callback");
+		SendMessageW(second.GetHandle(), WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+		Require(IsZoomed(second.GetHandle()), "Standard maximize command failed");
+		SendMessageW(second.GetHandle(), WM_SYSCOMMAND, SC_RESTORE, 0);
+		Require(!IsZoomed(second.GetHandle()), "Standard restore command failed");
+		const auto handle = second.GetHandle();
+		SendMessageW(handle, WM_SYSCOMMAND, SC_CLOSE, 0);
+		Require(!IsWindow(handle), "Standard close command failed");
 	}
 
 	for (const auto& device : registrations())
@@ -228,7 +264,7 @@ void TestRawInput() {
 	while (PeekMessageW(&message, nullptr, WM_QUIT, WM_QUIT, PM_REMOVE)) {
 	}
 	std::cout << "PASS: Raw Input make/break, modifiers, multiple devices, drag, focus loss, registration "
-				 "lifetime\n";
+				 "lifetime, camera/native capture, resize, maximize, restore and close\n";
 }
 
 void TestPathsAndJson(const fs::path& repository, const fs::path& fixture) {
@@ -454,6 +490,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	std::ofstream(model) << "o Body\nv -1 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"
 							"o Propeller\nv -1 0 -1\nv 1 0 -1\nv 0 1 -1\nf 4 5 6\n";
 	definition.playerAircraft.model = definition.enemyAircraft.model = model;
+	definition.playerAircraft.model = fixture / L"muzzles.dae";
 	definition.environment.skyTexture = definition.environment.oceanTexture =
 		definition.environment.oceanNormalTexture = definition.environment.oceanNormalTexture2 =
 			fixture / L"機体.png";
@@ -463,10 +500,10 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	// 必須モデルの失敗は、Rendererの破棄を経ても呼び出し元に届くこと。
 	const auto invalidModel = fixture / L"invalid-model.obj";
 	std::ofstream(invalidModel) << "This file contains no mesh.\n";
-	for (const bool missingPlayer : {true, false}) {
+	for (const size_t modelIndex : {size_t(0), size_t(1), size_t(2)}) {
 		auto invalidDefinition = definition.BuildRendererDefinition();
-		auto& asset = invalidDefinition.models[missingPlayer ? 0 : 1];
-		asset.file = missingPlayer ? fixture / L"存在しない機体.obj" : invalidModel;
+		auto& asset = invalidDefinition.models[modelIndex];
+		asset.file = modelIndex == 1 ? invalidModel : fixture / L"存在しない機体.obj";
 		const auto pathUtf8 = asset.file.u8string();
 		const std::string expectedPath(reinterpret_cast<const char*>(pathUtf8.data()), pathUtf8.size());
 		bool rejected = false;
@@ -480,7 +517,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		}
 		Require(rejected, "Required model failure did not report its asset ID and UTF-8 path");
 	}
-	std::cout << "PASS: missing player and invalid enemy models reject initialization with ID/path\n";
+	std::cout << "PASS: missing player/ammunition and invalid enemy models reject initialization with ID/path\n";
 	{
 		Renderer renderer;
 		renderer.Initialize(window, 64, 64, definition.BuildRendererDefinition());
@@ -490,17 +527,32 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		scene.AddPlayerObject(renderer.GetModel(PlayerModelId));
 		scene.AddEnemyAircraft(renderer.GetModel(EnemyModelId), {30, 100, 0}, 1.0f,
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
+		scene.ConfigurePlayerWeapon(definition.playerWeapon, renderer.GetModel(AmmunitionModelId));
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
-		for (int i = 0; i < 3; ++i) {
-			scene.Update({}, 1.0f / 60.0f);
-			renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
-			renderer.Render(64, 64, scene.GetRenderScene());
+		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles);
+		const auto reserved = renderer.GetModelCapacity();
+		Engine::HudDrawList hud;
+		Game::CombatHudPresenter presenter;
+		for (int i = 0; i < 6; ++i) {
+			scene.Update({}, 0.05f, {}, {true});
+			const auto view=renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
+			presenter.Build(scene.GetCombatSnapshot(),view,hud);
+			renderer.Render(64, 64, scene.GetRenderScene(),&hud);
 		}
+		Require(scene.GetProjectileCount() >= 12, "Scene did not integrate continuous weapon fire");
+		Require(renderer.GetModelCapacity() == reserved, "Firing grew GPU constant buffers despite reservation");
 
 		renderer.Resize(0, 0);
 		renderer.Render(0, 0, scene.GetRenderScene());
 		renderer.Resize(96, 96);
-		renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
+		const auto resizedView=renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
+		Require(resizedView.width==96 && resizedView.height==96,"HUD view did not reflect renderer resize");
+		presenter.Build(scene.GetCombatSnapshot(),resizedView,hud);
+		renderer.Render(96, 96, scene.GetRenderScene(),&hud);
+		scene.RemoveObject(scene.GetObjects()[0].id);
+		for (int i = 0; i < 14; ++i) scene.Update({}, 0.25f, {}, {true});
+		Require(scene.GetProjectileCount() == 0, "Removed player kept firing or existing projectiles did not expire");
+		renderer.UpdateFrameConstants(scene.GetRenderScene(), 4.0f);
 		renderer.Render(96, 96, scene.GetRenderScene());
 	}
 
@@ -516,9 +568,13 @@ int wmain(int argc, wchar_t** argv) {
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
 		TestFlightAndScene();
+		TestCombatMath();
 		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);
 		TestGpuTextures(fixture);
+		TestWeapons(argv[1], fixture);
+		TestCombatDamage(argv[1],fixture);
+		TestHudRendering(fixture);
 		TestRendererSmoke(argv[1], fixture);
 		CoUninitialize();
 		return 0;

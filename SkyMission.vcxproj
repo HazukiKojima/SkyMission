@@ -392,4 +392,44 @@
   <ItemGroup>
     <ClInclude Include="Engine\Renderer\RootBindings.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\WeaponController.h" />
+    <ClInclude Include="Game\Weapons\WeaponDefinition.h" />
+    <ClInclude Include="Game\Weapons\AircraftGun.h" />
+    <ClInclude Include="Game\Weapons\ProjectileSystem.h" />
+    <ClCompile Include="Game\Weapons\AircraftGun.cpp" />
+    <ClCompile Include="Game\Weapons\ProjectileSystem.cpp" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\weapon.json" />
+    <None Include="Assets\Ammunition\20mmAmmo\ammunition.json" />
+    <None Include="Assets\Ammunition\20mmAmmo\modelImport.json" />
+    <None Include="Docs\Design\PlayerAircraftGun.md" />
+    <ClInclude Include="Tests\WeaponTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Scene\Bounds3.h" />
+    <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h" />
+    <ClCompile Include="Engine\Renderer\Hud\HudDrawList.cpp" />
+    <ClInclude Include="Engine\Renderer\Hud\HudRenderer.h" />
+    <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp" />
+    <ClInclude Include="Game\Combat\CombatTypes.h" />
+    <ClInclude Include="Game\Combat\CombatController.h" />
+    <ClInclude Include="Game\Combat\GunAimSolver.h" />
+    <ClCompile Include="Game\Combat\GunAimSolver.cpp" />
+    <ClInclude Include="Game\Combat\TargetingSystem.h" />
+    <ClCompile Include="Game\Combat\TargetingSystem.cpp" />
+    <ClInclude Include="Game\Combat\ProjectileCollision.h" />
+    <ClCompile Include="Game\Combat\ProjectileCollision.cpp" />
+    <ClInclude Include="Game\Combat\CombatSettingsLoader.h" />
+    <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp" />
+    <ClInclude Include="Game\UI\CombatHudPresenter.h" />
+    <ClCompile Include="Game\UI\CombatHudPresenter.cpp" />
+    <None Include="Assets\Combat\targeting.json" />
+    <None Include="Assets\UI\combatHud.json" />
+    <None Include="Docs\Design\TargetLockCombatHud.md" />
+    <FxCompile Include="Engine\Renderer\Shader\HudVS.hlsl"><ShaderType>Vertex</ShaderType><ShaderModel>5.0</ShaderModel><EntryPointName>VS</EntryPointName></FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\HudPS.hlsl"><ShaderType>Pixel</ShaderType><ShaderModel>5.0</ShaderModel><EntryPointName>PS</EntryPointName></FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\CombatTests.h" />
+  </ItemGroup>
 </Project>

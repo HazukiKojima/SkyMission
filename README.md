@@ -126,7 +126,17 @@ DirectX 12のリソース管理を意識し、テクスチャや3Dモデルの�
 
 ※ REDoxWrapperなどの外部DLLや各種アセットが必要な構成では、それらの配置・ビルドも必要です。リポジトリの最新の構成に従ってください。
 
-## Project Status
+## 機関砲の操作と設定
+
+- Fキーを押している間、プレイヤー機の4門から20mm弾を同時連射します。
+- Tabで敵を切り替え、機首を向けて0.5秒捕捉するとロックが成立します。緑の予測照準に機首を近づけると小さな射撃補正が働きます。
+- 弾は機体速度を引き継いで直進し、命中・寿命・基準海面到達で消滅します。敵3機を撃破でき、再出現はしません。
+- `Assets/Combat/targeting.json` で捕捉条件・配置・耐久値・ダメージ、`Assets/UI/combatHud.json` でHUDの色・線幅・文字サイズを調整できます。
+- ロックオンとHUDの設計は [TargetLockCombatHud.md](Docs/Design/TargetLockCombatHud.md) を参照してください。
+- `Assets/Aircraft/N1K2JShidenKai/weapon.json` で発射間隔・弾速・寿命・上限を調整できます。
+- 設計は [PlayerAircraftGun.md](Docs/Design/PlayerAircraftGun.md) を参照してください。
+
+## 開発状況
 
 SkyMissionは現在開発中です。
 
