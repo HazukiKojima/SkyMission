@@ -3,11 +3,16 @@
 #include "Game/Weapons/WeaponController.h"
 
 namespace Game {
-	struct CombatInput { WeaponInput weapon; bool nextTarget = false; };
+	struct CombatInput {
+		WeaponInput weapon;
+		bool nextTarget = false;
+		unsigned rocketPressCount = 0;
+	};
 	class CombatController {
-	public:
+	  public:
 		CombatInput ReadInput(const Engine::InputSnapshot& input) const {
-			return {WeaponController{}.ReadInput(input), input.WasKeyPressed(VK_TAB)};
+			return {WeaponController{}.ReadInput(input), input.WasKeyPressed(VK_TAB),
+				input.GetKeyPressCount('F')};
 		}
 	};
-}
+} // namespace Game

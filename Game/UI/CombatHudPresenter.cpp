@@ -1,6 +1,8 @@
 #include "CombatHudPresenter.h"
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
+#include <sstream>
 
 namespace Game {
 	using namespace DirectX;
@@ -78,6 +80,15 @@ namespace Game {
 		else if (!snapshot.aim) label(80, 80, "OUT OF RANGE");
 		if (snapshot.destroyedSeconds > 0) label(800, 720, "DESTROYED");
 		else if (snapshot.hitSeconds > 0) label(920, 640, "HIT");
+		if (snapshot.rocket.configured) {
+			for (size_t port=0; port<2; ++port) {
+				std::ostringstream text;
+				text << (snapshot.rocket.nextMuzzle==port ? "> " : "  ") << "RKT " << (port==0 ? "L1 " : "R1 ");
+				if (snapshot.rocket.cooldowns[port]<=1e-6f) text << "READY";
+				else text << std::fixed << std::setprecision(1) << std::ceil(snapshot.rocket.cooldowns[port]*10)/10 << "s";
+				label(80,900+float(port)*48,text.str());
+			}
+		}
 		if (snapshot.allDownSeconds > 0) label(760, 180, "ALL TARGETS DOWN");
 	}
 }

@@ -30,6 +30,7 @@ void Require(bool condition, const char* description) {
 #include "WeaponTests.h"
 #include "CombatTests.h"
 #include "CombatEffectTests.h"
+#include "RocketTests.h"
 
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
@@ -501,7 +502,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	// 必須モデルの失敗は、Rendererの破棄を経ても呼び出し元に届くこと。
 	const auto invalidModel = fixture / L"invalid-model.obj";
 	std::ofstream(invalidModel) << "This file contains no mesh.\n";
-	for (const size_t modelIndex : {size_t(0), size_t(1), size_t(2)}) {
+	for (const size_t modelIndex : {size_t(0), size_t(1), size_t(2), size_t(3)}) {
 		auto invalidDefinition = definition.BuildRendererDefinition();
 		auto& asset = invalidDefinition.models[modelIndex];
 		asset.file = modelIndex == 1 ? invalidModel : fixture / L"存在しない機体.obj";
@@ -529,14 +530,17 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		scene.AddEnemyAircraft(renderer.GetModel(EnemyModelId), {30, 100, 0}, 1.0f,
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
 		scene.ConfigurePlayerWeapon(definition.playerWeapon, renderer.GetModel(AmmunitionModelId));
+		scene.ConfigurePlayerRocket(definition.playerRocket,renderer.GetModel(RocketModelId));
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
-		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles);
+		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles+definition.playerRocket.settings.maxRockets);
 		const auto reserved = renderer.GetModelCapacity();
 		Engine::HudDrawList hud;
 		Game::CombatHudPresenter presenter;
 		for (int i = 0; i < 6; ++i) {
-			scene.Update({}, 0.05f, {}, {true});
+			scene.Update({}, 0.05f, {}, {{true},false,i==0 ? 2u : 0u});
 			const auto view=renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
+			hud.Reset(view.width,view.height);
+			CombatEffectPresenter{}.Build(scene.GetEffectSnapshot(),view,hud);
 			presenter.Build(scene.GetCombatSnapshot(),view,hud);
 			renderer.Render(64, 64, scene.GetRenderScene(),&hud);
 		}
@@ -548,10 +552,12 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		renderer.Resize(96, 96);
 		const auto resizedView=renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
 		Require(resizedView.width==96 && resizedView.height==96,"HUD view did not reflect renderer resize");
+		hud.Reset(resizedView.width,resizedView.height);
+		CombatEffectPresenter{}.Build(scene.GetEffectSnapshot(),resizedView,hud);
 		presenter.Build(scene.GetCombatSnapshot(),resizedView,hud);
 		renderer.Render(96, 96, scene.GetRenderScene(),&hud);
 		scene.RemoveObject(scene.GetObjects()[0].id);
-		for (int i = 0; i < 14; ++i) scene.Update({}, 0.25f, {}, {true});
+		for (int i = 0; i < 14; ++i) scene.Update({}, 0.25f, {}, {{true}});
 		Require(scene.GetProjectileCount() == 0, "Removed player kept firing or existing projectiles did not expire");
 		renderer.UpdateFrameConstants(scene.GetRenderScene(), 4.0f);
 		renderer.Render(96, 96, scene.GetRenderScene());
@@ -571,10 +577,12 @@ int wmain(int argc, wchar_t** argv) {
 		TestFlightAndScene();
 		TestCombatMath();
 		TestCombatEffectLifetime();
+		TestRocketInputAndFlight();
 		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
+		TestRocketLauncherAndAssets(argv[1],fixture);
 		TestCombatDamage(argv[1],fixture);
 		TestHudRendering(fixture);
 		TestRendererSmoke(argv[1], fixture);

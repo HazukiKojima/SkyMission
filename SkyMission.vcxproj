@@ -450,4 +450,16 @@
   <ItemGroup>
     <ClInclude Include="Tests\CombatEffectTests.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\RocketDefinition.h" />
+    <ClInclude Include="Game\Weapons\RocketLauncher.h" />
+    <ClCompile Include="Game\Weapons\RocketLauncher.cpp" />
+    <ClInclude Include="Game\Weapons\RocketSystem.h" />
+    <ClCompile Include="Game\Weapons\RocketSystem.cpp" />
+    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp" />
+    <ClInclude Include="Tests\RocketTests.h" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\rocketWeapon.json" />
+    <None Include="Assets\Ammunition\Rocket\ammunition.json" />
+    <None Include="Assets\Ammunition\Rocket\modelImport.json" />
+  </ItemGroup>
 </Project>

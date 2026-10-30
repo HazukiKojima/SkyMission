@@ -554,4 +554,39 @@
       <Filter>Tests</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\RocketDefinition.h">
+      <Filter>Game\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Weapons\RocketLauncher.h">
+      <Filter>Game\Weapons</Filter>
+    </ClInclude>
+    <ClCompile Include="Game\Weapons\RocketLauncher.cpp">
+      <Filter>Game\Weapons</Filter>
+    </ClCompile>
+    <ClInclude Include="Game\Weapons\RocketSystem.h">
+      <Filter>Game\Weapons</Filter>
+    </ClInclude>
+    <ClCompile Include="Game\Weapons\RocketSystem.cpp">
+      <Filter>Game\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp">
+      <Filter>Game\Effects</Filter>
+    </ClCompile>
+    <ClInclude Include="Tests\RocketTests.h">
+      <Filter>Tests</Filter>
+    </ClInclude>
+    <None Include="Assets\Aircraft\N1K2JShidenKai\rocketWeapon.json">
+      <Filter>Assets\Aircraft\N1K2JShidenKai</Filter>
+    </None>
+    <None Include="Assets\Ammunition\Rocket\ammunition.json">
+      <Filter>Assets\Ammunition\Rocket</Filter>
+    </None>
+    <None Include="Assets\Ammunition\Rocket\modelImport.json">
+      <Filter>Assets\Ammunition\Rocket</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Assets\Ammunition\Rocket"><UniqueIdentifier>{f2394500-71ec-413d-a188-7058516f2c02}</UniqueIdentifier></Filter>
+  </ItemGroup>
 </Project>

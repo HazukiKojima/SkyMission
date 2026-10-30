@@ -94,7 +94,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
 			scene.AddPlayerObject(player); scene.ConfigurePlayerWeapon(definition.playerWeapon,player);
 			scene.AddEnemyAircraft(enemy,{0,15,-160},5,definition.enemyAircraft.flightParameters,definition.enemyAIParameters,100,"ENEMY 01");
-			scene.Update({},0.25f,{}, {true});
+			scene.Update({}, 0.25f, {}, {{true}});
 			const auto& state=scene.GetCombatSnapshot();
 			const auto& effectState=scene.GetEffectSnapshot();
 			Require(state.enemies.empty() && state.destroyedSeconds>0 && state.allDownSeconds>0,
@@ -109,7 +109,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			Require(scene.GetCombatSnapshot().firedVolleys == 0 && scene.GetCombatSnapshot().hitCount == 0,
 				"Combat sound events persisted across frames");
 			Require(state.selected==Engine::InvalidObjectId && state.lockState==LockState::None,"Destroyed enemy retained target reference");
-			scene.Update({},0.25f,{}, {true});
+			scene.Update({}, 0.25f, {}, {{true}});
 			Require(scene.GetCombatSnapshot().allDownSeconds<3,"All-down timer was repeatedly restarted");
 			scene.Update({}, 0.25f);
 			Require(scene.GetEffectSnapshot().impacts.empty(), "Impact effect did not expire");
@@ -167,6 +167,7 @@ void TestHudRendering(const fs::path& fixture) {
 			snapshot.enemies={{1,{0,30,1000},{},"ENEMY 01",100},{2,{-200,50,1500},{},"ENEMY 02",100},{3,{5000,0,1000},{},"ENEMY 03",100}};
 			snapshot.selected=1; snapshot.lockState=LockState::Locked; snapshot.forward={0,0,1};
 			snapshot.gunImpactPoint=XMFLOAT3{20,10,1000};
+			snapshot.rocket={true,{0,2.4f},0};
 			snapshot.aim=AimSolution{{0.05f,0,1},{60,50,1100},1}; snapshot.assistReady=true; snapshot.hitSeconds=0.15f;
 			Engine::HudDrawList list;
 			CombatEffectSnapshot effects;
@@ -189,9 +190,12 @@ void TestHudRendering(const fs::path& fixture) {
 			Require(list.GetVertices().size() == baseVertices, "Rear explosion was drawn");
 			effects.explosions.assign(4, {{0,0,250}, {}, 0.08f, 22});
 			effects.impacts.assign(64, {{0,0,250}, 0});
+			effects.rocketSmoke.assign(RocketEffectSettings::maxSmokeCount,{{0,0,250},0.1f});
+			effects.rocketExhausts.assign(RocketEffectSettings::maxExhaustCount,{{0,0,250},{0,0,-1}});
 			buildFrame();
 			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices, "Combined effects overflowed HUD");
 			effects.explosions.clear(); effects.impacts.clear();
+			effects.rocketSmoke.clear(); effects.rocketExhausts.clear();
             for (float age : {0.0f, 0.04f, 0.2f, 0.42f}) {
 				effects.impacts = {{{0,0,100},age}};
 				buildFrame();
@@ -207,6 +211,8 @@ void TestHudRendering(const fs::path& fixture) {
             snapshot.selected=3; buildFrame();
 			for (const auto& vertex:list.GetVertices()) Require(std::isfinite(vertex.position.x)&&std::isfinite(vertex.position.y),"HUD projection generated NaN");
 			effects.explosions = {{{-25,0,250}, {}, 0.2f, 22}};
+			effects.rocketExhausts={{{60,0,200},{0,0,-1}}};
+			for (int smoke=0; smoke<20; ++smoke) effects.rocketSmoke.push_back({{60,0,200+smoke*5.0f},smoke*0.025f});
 			snapshot.selected=1; buildFrame();
 			context.BeginFrame(); auto* commands=context.GetCommandList(); auto* target=device.GetCurrentRenderTarget();
 			context.TransitionResource(target,D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);

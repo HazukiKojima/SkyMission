@@ -1,7 +1,8 @@
 {
     "model": "N1K2JShidenKai.fbx",
-    "visualScale": 20.0,
+    "visualScale": 20,
     "flightParameters": "flightParameters.json",
     "modelImport": "modelImport.json",
-    "weapon": "weapon.json"
+    "weapon": "weapon.json",
+    "rocketWeapon": "rocketWeapon.json"
 }

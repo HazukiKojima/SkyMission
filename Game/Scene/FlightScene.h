@@ -4,6 +4,9 @@
 #include "Game/Camera/AircraftCameraController.h"
 #include "Game/Weapons/AircraftGun.h"
 #include "Game/Weapons/ProjectileSystem.h"
+#include "Game/Weapons/RocketLauncher.h"
+#include "Game/Weapons/RocketSystem.h"
+#include "Game/Combat/CombatController.h"
 #include "Game/Combat/TargetingSystem.h"
 #include "Game/Effects/CombatEffectSystem.h"
 
@@ -13,8 +16,10 @@ namespace Game {
 		void Initialize(float aspect, float nearZ, float farZ);
 		void Update(
 			const AircraftInput& input, float deltaSeconds, const Engine::InputSnapshot& cameraInput = {},
-			WeaponInput weaponInput = {}, bool nextTarget = false);
+			CombatInput combatInput = {});
 		void ConfigureCombat(const CombatSettings& settings);
+		void ConfigurePlayerRocket(const RocketDefinition& definition, std::shared_ptr<Engine::Model> model);
+		size_t GetRocketCount() const { return m_rockets.GetCount(); }
 		const CombatSnapshot& GetCombatSnapshot() const { return m_combat; }
 		const CombatEffectSnapshot& GetEffectSnapshot() const { return m_effects.GetSnapshot(); }
 		void ConfigurePlayerWeapon(const WeaponDefinition& definition, std::shared_ptr<Engine::Model> ammunition);
@@ -62,6 +67,7 @@ namespace Game {
 		void RefreshCombatSnapshot();
 		std::vector<CollisionTarget> BuildCollisionTargets();
 		void ApplyHits();
+		void UpdateRockets(const CombatInput& input, float dt, std::span<const CollisionTarget> targets);
 		Engine::Scene m_scene;
 		AircraftCameraController m_cameraController;
 		AircraftFlightModel m_player;
@@ -70,6 +76,10 @@ namespace Game {
 		std::vector<EnemyAircraft> m_enemies;
 		AircraftGun m_gun;
 		ProjectileSystem m_projectiles;
+		RocketLauncher m_rocketLauncher;
+		RocketSystem m_rockets;
+		RocketSettings m_rocketSettings;
+		bool m_rocketConfigured = false;
 		bool m_weaponConfigured = false;
 		GunSettings m_gunSettings;
 		CombatSettings m_combatSettings;
