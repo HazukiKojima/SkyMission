@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <unordered_map>
 
 namespace Engine {
@@ -10,6 +11,8 @@ namespace Engine {
 		bool active = false;
 		std::array<bool, 256> keys{};
 		std::array<bool, 256> pressedKeys{};
+		std::array<std::uint16_t, 256> keyPressCounts{};
+		unsigned GetKeyPressCount(UINT key) const { return active && key < keyPressCounts.size() ? keyPressCounts[key] : 0; }
 		bool WasKeyPressed(UINT key) const { return active && key < pressedKeys.size() && pressedKeys[key]; }
 		bool rightMouseDown = false;
 		bool leftMouseDown = false;
@@ -40,6 +43,7 @@ namespace Engine {
 		void Clear() {
 			m_keyboards.clear();
 			m_pressedKeys.fill(false);
+			m_keyPressCounts.fill(0);
 			ClearMouse();
 		}
 		void ClearMouse() {
@@ -70,8 +74,11 @@ namespace Engine {
 			bool wasDown = false;
 			for (const auto& [id, keys] : m_keyboards)
 				wasDown = wasDown || keys[key];
-			if (down && !wasDown)
+			if (down && !wasDown) {
 				m_pressedKeys[key] = true;
+				// 同じフレーム内の再押下も保持し、OSのキーリピートは数えない
+				if (m_keyPressCounts[key] < std::numeric_limits<std::uint16_t>::max()) ++m_keyPressCounts[key];
+			}
 			m_keyboards[device][key] = down;
 		}
 		void ProcessMouse(HANDLE device, const RAWMOUSE& mouse, int desktopWidth, int desktopHeight) {
@@ -131,12 +138,14 @@ namespace Engine {
 						snapshot.keys[i] = snapshot.keys[i] || keys[i];
 				snapshot.rightMouseDown = IsRightMouseDown();
 				snapshot.pressedKeys = m_pressedKeys;
+				snapshot.keyPressCounts = m_keyPressCounts;
 				snapshot.leftMouseDown = IsLeftMouseDown();
 				snapshot.mouseDeltaX = m_deltaX;
 				snapshot.mouseDeltaY = m_deltaY;
 			}
 			m_deltaX = m_deltaY = 0;
 			m_pressedKeys.fill(false);
+			m_keyPressCounts.fill(0);
 			return snapshot;
 		}
 
@@ -151,6 +160,7 @@ namespace Engine {
 		};
 		bool m_active = false;
 		std::array<bool, 256> m_pressedKeys{};
+		std::array<std::uint16_t, 256> m_keyPressCounts{};
 		std::unordered_map<HANDLE, std::array<bool, 256>> m_keyboards;
 		std::unordered_map<HANDLE, MouseState> m_mice;
 		std::int64_t m_deltaX = 0, m_deltaY = 0;

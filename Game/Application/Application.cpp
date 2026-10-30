@@ -68,8 +68,9 @@ namespace Game {
 				assets.enemyAIParameters, assets.combat.enemyHealth, "ENEMY 0"+std::to_string(i+1));
 
 		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
+		m_scene->ConfigurePlayerRocket(assets.playerRocket,m_renderer->GetModel(RocketModelId));
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
-		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() + assets.playerWeapon.gun.maxProjectiles);
+		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() + assets.playerWeapon.gun.maxProjectiles + assets.playerRocket.settings.maxRockets);
 	}
 
 	void Application::ConfigureResizeHandling() {
@@ -124,7 +125,7 @@ namespace Game {
 			const InputSnapshot input = m_window->ConsumeInput();
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input,
-				combat.weapon, combat.nextTarget);
+				combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount);
 			const auto view=m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);

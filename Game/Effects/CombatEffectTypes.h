@@ -4,6 +4,8 @@
 #include <vector>
 
 namespace Game {
+	struct RocketTrailSample { DirectX::XMFLOAT3 position{}; float age = 0; };
+	struct RocketExhaust { DirectX::XMFLOAT3 position{}, direction{0,0,-1}; };
 	struct ImpactEffect {
 		DirectX::XMFLOAT3 position{};
 		float age = 0;
@@ -22,5 +24,7 @@ namespace Game {
 	struct CombatEffectSnapshot {
 		std::vector<ImpactEffect> impacts;
 		std::vector<ExplosionEffect> explosions;
+		std::vector<RocketTrailSample> rocketSmoke;
+		std::vector<RocketExhaust> rocketExhausts;
 	};
 } // namespace Game

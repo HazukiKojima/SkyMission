@@ -13,6 +13,7 @@ namespace Game {
 	  private:
 		void DrawExplosion(
 			const ExplosionEffect& effect, EffectDrawContext& context, float fragmentScale) const;
+		void DrawRocketEffects(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
 		void DrawImpact(const ImpactEffect& effect, EffectDrawContext& context) const;
 	};
 } // namespace Game

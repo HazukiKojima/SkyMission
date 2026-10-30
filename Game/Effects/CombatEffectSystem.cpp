@@ -26,7 +26,17 @@ namespace Game {
 			return;
 		const float step = std::min(deltaSeconds, CombatEffectSettings::maximumFrameSeconds);
 		AdvanceEffects(m_snapshot.impacts, step, ImpactEffectSettings::lifetimeSeconds);
+		AdvanceEffects(m_snapshot.rocketSmoke, step, RocketEffectSettings::smokeLifetimeSeconds);
 		AdvanceEffects(m_snapshot.explosions, step, ExplosionEffectSettings::lifetimeSeconds);
+	}
+
+	void CombatEffectSystem::SpawnRocketSmoke(const DirectX::XMFLOAT3& position, float age) {
+		if (!std::isfinite(age) || age<0 || age>=RocketEffectSettings::smokeLifetimeSeconds) return;
+		AddBoundedEffect(m_snapshot.rocketSmoke,RocketTrailSample{position,age},RocketEffectSettings::maxSmokeCount);
+	}
+	void CombatEffectSystem::SetRocketExhausts(std::vector<RocketExhaust> exhausts) {
+		if (exhausts.size()>RocketEffectSettings::maxExhaustCount) exhausts.resize(RocketEffectSettings::maxExhaustCount);
+		m_snapshot.rocketExhausts=std::move(exhausts);
 	}
 
 	void CombatEffectSystem::SpawnImpact(const HitEvent& hit, const DirectX::XMFLOAT3& targetVelocity) {

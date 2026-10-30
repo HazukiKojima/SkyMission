@@ -43,7 +43,7 @@ namespace Game {
 	}
 
 	void FlightScene::Update(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput,
-		WeaponInput weaponInput, bool nextTarget) {
+		CombatInput combatInput) {
 		using namespace DirectX;
 		m_combat.firedVolleys = 0;
 		m_combat.hitCount = 0;
@@ -60,14 +60,14 @@ namespace Game {
 		UpdateEnemies(dt);
 		ApplyRenderStates();
 		RefreshCombatSnapshot();
-		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, nextTarget, dt);
+		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, combatInput.nextTarget, dt);
 		RefreshCombatSnapshot();
 		const auto targets = BuildCollisionTargets();
 		m_projectiles.Update(m_scene, dt, targets);
 		// 集合変更前に機体行列を値として保持し、弾追加で無効になるポインタを残さない。
 		if (m_weaponConfigured) {
 			const bool hasPlayer = m_scene.FindObject(m_playerId) != nullptr;
-			const auto ages = m_gun.Update({ weaponInput.fire && hasPlayer }, dt);
+			const auto ages = m_gun.Update({ combatInput.weapon.fire && hasPlayer }, dt);
 			const auto pose = m_player.GetWorldTransform();
 			DirectX::XMFLOAT4X4 world;
 			DirectX::XMStoreFloat4x4(&world,
@@ -85,12 +85,56 @@ namespace Game {
 				if (m_projectiles.FireVolley(m_scene, m_gun.GetMuzzles(), world, pose,
 					m_player.GetForward(), m_player.GetVelocity(), age, assistance, targets, dt)) ++m_combat.firedVolleys;
 		}
+		UpdateRockets(combatInput, dt, targets);
 		ApplyHits();
 		RefreshCombatSnapshot();
 		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, false, 0);
 		RefreshCombatSnapshot();
 		UpdateCamera(input, dt, cameraInput);
 		ApplyRenderStates();
+	}
+
+	void FlightScene::ConfigurePlayerRocket(
+		const RocketDefinition& definition, std::shared_ptr<Engine::Model> model) {
+		try {
+			const auto* aircraft = m_scene.FindObject(m_playerId);
+			if (!aircraft)
+				throw std::invalid_argument("player model must be added before configuring rocket weapon");
+			m_rocketLauncher.Configure(definition.settings, *aircraft->model);
+			m_rockets.Configure(definition.settings, std::move(model), definition.modelForward);
+			m_rocketSettings = definition.settings;
+			m_rocketConfigured = true;
+		} catch (const std::exception& error) {
+			const auto path = definition.sourcePath.u8string();
+			throw std::runtime_error(
+				std::string(reinterpret_cast<const char*>(path.data()), path.size()) + ": " + error.what());
+		}
+	}
+
+	void FlightScene::UpdateRockets(
+		const CombatInput& input, float dt, std::span<const CollisionTarget> targets) {
+		if (!m_rocketConfigured)
+			return;
+		if (const auto* aircraft = m_scene.FindObject(m_playerId)) {
+			// オブジェクト追加で集合が変わるため、銃口変換は値で保持する
+			const auto world = aircraft->worldTransform;
+			const auto target =
+				m_combat.lockState == LockState::Locked ? m_combat.selected : Engine::InvalidObjectId;
+			for (unsigned press = 0; press < std::min(input.rocketPressCount, 2u); ++press) {
+				const auto muzzle = m_rocketLauncher.GetNextMuzzle();
+				if (!muzzle)
+					break;
+				if (m_rockets.Fire(
+						m_scene, *muzzle, world, m_player.GetForward(), m_player.GetVelocity(), target))
+					m_rocketLauncher.CommitShot();
+			}
+		}
+		m_rocketLauncher.Update(dt);
+		m_combat.rocket = m_rocketLauncher.GetState();
+		m_rockets.Update(m_scene, dt, targets, m_combat.enemies);
+		for (const auto& sample : m_rockets.TakeTrail())
+			m_effects.SpawnRocketSmoke(sample.position, sample.age);
+		m_effects.SetRocketExhausts(m_rockets.GetExhausts());
 	}
 
 	void FlightScene::UpdatePlayer(const AircraftInput& input, float dt) {
@@ -232,14 +276,20 @@ namespace Game {
 
 	void FlightScene::ApplyHits() {
 		auto hits = m_projectiles.TakeHits();
+		const auto rocketHits=m_rockets.TakeHits();
+		hits.insert(hits.end(),rocketHits.begin(),rocketHits.end());
 		std::stable_sort(hits.begin(), hits.end(), [](const HitEvent& a, const HitEvent& b) { return a.frameSeconds < b.frameSeconds; });
 		std::vector<Engine::ObjectId> destroyed;
 		for (const auto& hit : hits) {
 			auto enemy = std::find_if(m_enemies.begin(), m_enemies.end(), [&](const EnemyAircraft& e) { return e.objectId == hit.target; });
-			if (enemy == m_enemies.end() || enemy->health <= 0) continue;
-			enemy->health -= m_combatSettings.bulletDamage;
+			if (enemy == m_enemies.end() || enemy->health <= 0) {
+				if (hit.kind==ProjectileKind::Rocket) m_effects.SpawnExplosion(hit.position,{});
+				continue;
+			}
+			enemy->health -= hit.kind==ProjectileKind::Rocket ? m_rocketSettings.damage : m_combatSettings.bulletDamage;
 			++m_combat.hitCount;
-			m_effects.SpawnImpact(hit, enemy->flightModel.GetVelocity());
+			if (hit.kind==ProjectileKind::Gun) m_effects.SpawnImpact(hit, enemy->flightModel.GetVelocity());
+			else if (enemy->health>0) m_effects.SpawnExplosion(hit.position, enemy->flightModel.GetVelocity());
 			m_combat.hitSeconds = 0.15f;
 			if (enemy->health <= 0) {
 				if (const auto* aircraft = m_scene.FindObject(enemy->objectId))

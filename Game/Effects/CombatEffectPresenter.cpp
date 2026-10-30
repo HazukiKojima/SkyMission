@@ -15,6 +15,7 @@ namespace Game {
 				continue;
 			DrawExplosion(explosion, context, view.height / EffectDrawSettings::referenceHeight);
 		}
+		DrawRocketEffects(snapshot, context);
 		for (const auto& impact : snapshot.impacts) {
 			if (!context.HasVertexBudget(EffectDrawSettings::impactVertexBudget))
 				break;
