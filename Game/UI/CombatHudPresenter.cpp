@@ -21,12 +21,32 @@ namespace Game {
 		const auto color=m_settings.color;
 		const float ox=(view.width-1920*scale)*0.5f, oy=(view.height-1080*scale)*0.5f;
 		const auto label=[&](float x,float y,std::string_view text) { list.Text({ox+x*scale,oy+y*scale},text,font,color); };
+		// The boresight follows the gun axis independently of the predicted bullet path.
 		XMFLOAT3 sight;
 		XMStoreFloat3(&sight,XMLoadFloat3(&snapshot.muzzle)+XMLoadFloat3(&snapshot.forward)*1500);
 		const auto cross=ProjectHudPoint(sight,view);
 		if (cross.visible) {
 			list.Line({cross.pixel.x-12*scale,cross.pixel.y},{cross.pixel.x+12*scale,cross.pixel.y},line,color);
 			list.Line({cross.pixel.x,cross.pixel.y-12*scale},{cross.pixel.x,cross.pixel.y+12*scale},line,color);
+		}
+		if (snapshot.gunImpactPoint) {
+			const auto impact = ProjectHudPoint(*snapshot.gunImpactPoint,view);
+			if (impact.visible) {
+				const auto p = impact.pixel;
+				const XMFLOAT4 sightColor{0.65f,1.0f,0.65f,color.w};
+				list.Circle(p,34*scale,1,line,sightColor);
+				list.Circle(p,25*scale,1,line,sightColor);
+				list.Circle(p,5*scale,1,line,sightColor);
+				for (int i=0;i<12;++i) {
+					const float angle=XM_2PI*i/12;
+					const float x=std::cos(angle), y=std::sin(angle);
+					list.Line({p.x+x*31*scale,p.y+y*31*scale},
+						{p.x+x*(i%3==0?40:37)*scale,p.y+y*(i%3==0?40:37)*scale},line,sightColor);
+				}
+				for (const XMFLOAT2 axis : {XMFLOAT2{1,0},XMFLOAT2{-1,0},XMFLOAT2{0,1},XMFLOAT2{0,-1}})
+					list.Line({p.x+axis.x*10*scale,p.y+axis.y*10*scale},
+						{p.x+axis.x*23*scale,p.y+axis.y*23*scale},line,sightColor);
+			}
 		}
 		for (const auto& enemy:snapshot.enemies) {
 			const auto projected=ProjectHudPoint(enemy.center,view);
@@ -55,14 +75,7 @@ namespace Game {
 				list.Line(tip,{tip.x-ux*20*scale-uy*9*scale,tip.y-uy*20*scale+ux*9*scale},line,color);
 				list.Line(tip,{tip.x-ux*20*scale+uy*9*scale,tip.y-uy*20*scale-ux*9*scale},line,color);
 			}
-			if (selected && !projected.behind && snapshot.aim) {
-				const auto aim=ProjectHudPoint(snapshot.aim->aimPoint,view);
-				if (aim.visible) {
-					auto bright=color; if (snapshot.assistReady) { bright={0.65f,1,0.65f,1}; }
-					list.Circle(aim.pixel,16*scale,1,line,bright);
-					if (projected.visible) list.Line(projected.pixel,aim.pixel,std::max(1.0f,line*0.5f),color);
-				}
-			}
+
 		}
 		if (snapshot.selected==Engine::InvalidObjectId) label(80,80,"NO TARGET");
 		else if (!snapshot.aim) label(80,80,"OUT OF RANGE");

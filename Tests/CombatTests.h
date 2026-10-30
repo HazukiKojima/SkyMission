@@ -147,6 +147,7 @@ void TestHudRendering(const fs::path& fixture) {
 			CombatSnapshot snapshot;
 			snapshot.enemies={{1,{0,30,1000},{},"ENEMY 01",100},{2,{-200,50,1500},{},"ENEMY 02",100},{3,{5000,0,1000},{},"ENEMY 03",100}};
 			snapshot.selected=1; snapshot.lockState=LockState::Locked; snapshot.forward={0,0,1};
+			snapshot.gunImpactPoint=XMFLOAT3{20,10,1000};
 			snapshot.aim=AimSolution{{0.05f,0,1},{60,50,1100},1}; snapshot.assistReady=true; snapshot.hitSeconds=0.15f;
 			Engine::HudDrawList list; CombatHudPresenter{}.Build(snapshot,view,list);
 			Require(!list.GetVertices().empty() && list.GetVertices().size()<Engine::HudDrawList::MaxVertices,"HUD mesh was empty or overflowed");

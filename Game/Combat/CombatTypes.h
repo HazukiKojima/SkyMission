@@ -44,6 +44,7 @@ namespace Game {
 		float acquireProgress = 0;
 		DirectX::XMFLOAT3 muzzle{}, forward{0,0,-1};
 		std::optional<AimSolution> aim;
+		std::optional<DirectX::XMFLOAT3> gunImpactPoint;
 		bool assistReady = false;
 		float hitSeconds = 0, destroyedSeconds = 0, allDownSeconds = 0;
 	};

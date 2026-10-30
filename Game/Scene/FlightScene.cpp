@@ -206,6 +206,25 @@ namespace Game {
 				XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center)-XMLoadFloat3(&m_combat.muzzle))) <= m_combatSettings.targeting.acquireDistance &&
 				IsWithinAngle(m_combat.forward, m_combat.aim->direction, m_combatSettings.targeting.assistAngleDegrees);
 		}
+		m_combat.gunImpactPoint.reset();
+		if (m_weaponConfigured) {
+			// Use the actual launch velocity, including the active firing assistance.
+			const auto direction = XMLoadFloat3(m_combat.assistReady ? &m_combat.aim->direction : &m_combat.forward);
+			const auto aircraftVelocity = m_player.GetVelocity();
+			const auto velocity = XMLoadFloat3(&aircraftVelocity) + direction*m_gunSettings.muzzleSpeed;
+			float distance = 1500.0f;
+			for (const auto& target : m_combat.enemies) if (target.id == m_combat.selected)
+				distance = XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center)-XMLoadFloat3(&m_combat.muzzle)));
+			const float speed = XMVectorGetX(XMVector3Length(velocity));
+			if (speed > 0.001f) {
+				float seconds = std::min(distance/speed, m_gunSettings.lifetime);
+				const float vy = XMVectorGetY(velocity);
+				if (vy < 0) seconds = std::min(seconds, std::max(0.0f, -m_combat.muzzle.y/vy));
+				XMFLOAT3 point;
+				XMStoreFloat3(&point, XMLoadFloat3(&m_combat.muzzle)+velocity*seconds);
+				m_combat.gunImpactPoint = point;
+			}
+		}
 	}
 
 	void FlightScene::ApplyHits() {
