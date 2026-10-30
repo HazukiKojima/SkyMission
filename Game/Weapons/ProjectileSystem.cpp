@@ -58,7 +58,9 @@ namespace Game {
         if (first) {
             XMFLOAT3 position;
             XMStoreFloat3(&position, XMVectorLerp(XMLoadFloat3(&start), XMLoadFloat3(&projectile.position), *first));
-            m_hits.push_back({hit, frameOffset + *first*valid, position}); return false;
+            XMFLOAT3 direction;
+            XMStoreFloat3(&direction, XMVector3Normalize(XMLoadFloat3(&projectile.velocity)));
+            m_hits.push_back({hit, frameOffset + *first*valid, position, direction}); return false;
         }
         return valid >= duration && projectile.remainingLifetime > 0 && projectile.position.y > 0;
     }

@@ -98,7 +98,12 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			Require(state.enemies.empty() && state.destroyedSeconds>0 && state.allDownSeconds>0,
 				"Projectile damage did not destroy enemy and notify all-down");
 			Require(state.firedVolleys > 0 && state.hitCount == 1 && !state.impacts.empty(), "Combat feedback events missing");
+			Require(state.explosions.size() == 1 && state.explosions.front().age == 0,
+				"Lethal multi-hit did not create exactly one explosion");
+			const auto deathPosition = state.explosions.front().position;
 			scene.Update({}, 0.01f);
+			Require(state.explosions.size() == 1 && state.explosions.front().position.z == deathPosition.z,
+				"Explosion did not survive enemy removal");
 			Require(scene.GetCombatSnapshot().firedVolleys == 0 && scene.GetCombatSnapshot().hitCount == 0,
 				"Combat sound events persisted across frames");
 			Require(state.selected==Engine::InvalidObjectId && state.lockState==LockState::None,"Destroyed enemy retained target reference");
@@ -106,6 +111,8 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			Require(scene.GetCombatSnapshot().allDownSeconds<3,"All-down timer was repeatedly restarted");
 			scene.Update({}, 0.25f);
 			Require(scene.GetCombatSnapshot().impacts.empty(), "Impact effect did not expire");
+			for (int frame = 0; frame < 14; ++frame) scene.Update({}, 0.25f);
+			Require(state.explosions.empty(), "Explosion did not expire");
 		}
 		GunSettings gun=definition.playerWeapon.gun;
 		gun.muzzleSpeed = 900;
@@ -119,7 +126,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		const auto hits=bullets.TakeHits();
 		Require(hits.size()==4 && std::all_of(hits.begin(),hits.end(),[](const HitEvent& hit){return hit.target==1;}),"Projectile did not hit nearest enemy once");
 		Require(std::all_of(hits.begin(), hits.end(), [](const HitEvent& hit) {
-			return std::abs(hit.position.z + 95) < 0.01f && std::abs(hit.position.y - 20) < 0.01f;
+			return std::abs(hit.position.z + 95) < 0.01f && std::abs(hit.position.y - 20) < 0.01f && hit.direction.z < -0.999f;
 		}), "Impact position did not match first contact");
 		Require(bullets.GetCount()==0 && bullets.TakeHits().empty(),"Consumed projectile generated duplicate hit");
 		gun.lifetime=0.05f; bullets.Configure(gun,player,{0,1,0});
@@ -163,7 +170,25 @@ void TestHudRendering(const fs::path& fixture) {
 			Require(!list.GetVertices().empty() && list.GetVertices().size()<Engine::HudDrawList::MaxVertices,"HUD mesh was empty or overflowed");
 			Require(ProjectHudPoint({0,0,100},view).visible && ProjectHudPoint({0,0,-100},view).behind,"HUD projection front/rear failed");
 			const auto baseVertices = list.GetVertices().size();
-            snapshot.impacts.push_back({{0, 0, 100}, 0.08f});
+			for (float age : {0.0f, 0.2f, 0.9f, 2.0f, 3.4f}) {
+				snapshot.explosions = {{{0,0,250}, {}, age, 22}};
+				CombatHudPresenter{}.Build(snapshot,view,list);
+				Require(list.GetVertices().size() > baseVertices, "Explosion phase was invisible");
+			}
+			snapshot.explosions = {{{0,0,-250}, {}, 0.2f, 22}};
+			CombatHudPresenter{}.Build(snapshot,view,list);
+			Require(list.GetVertices().size() == baseVertices, "Rear explosion was drawn");
+			snapshot.explosions.assign(4, {{0,0,250}, {}, 0.08f, 22});
+			snapshot.impacts.assign(64, {{0,0,250}, 0});
+			CombatHudPresenter{}.Build(snapshot,view,list);
+			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices, "Combined effects overflowed HUD");
+			snapshot.explosions.clear(); snapshot.impacts.clear();
+            for (float age : {0.0f, 0.04f, 0.2f, 0.42f}) {
+				snapshot.impacts = {{{0,0,100},age}};
+				CombatHudPresenter{}.Build(snapshot,view,list);
+				Require(list.GetVertices().size() > baseVertices, "Impact phase was invisible");
+			}
+			snapshot.impacts = {{{0,0,100},0.08f}};
             CombatHudPresenter{}.Build(snapshot,view,list);
             Require(list.GetVertices().size() > baseVertices, "Visible impact did not produce sparks");
             snapshot.impacts.front().position.z = -100;
@@ -172,6 +197,7 @@ void TestHudRendering(const fs::path& fixture) {
             snapshot.impacts.front().position.z = 100;
             snapshot.selected=3; CombatHudPresenter{}.Build(snapshot,view,list);
 			for (const auto& vertex:list.GetVertices()) Require(std::isfinite(vertex.position.x)&&std::isfinite(vertex.position.y),"HUD projection generated NaN");
+			snapshot.explosions = {{{-25,0,250}, {}, 0.2f, 22}};
 			snapshot.selected=1; CombatHudPresenter{}.Build(snapshot,view,list);
 			context.BeginFrame(); auto* commands=context.GetCommandList(); auto* target=device.GetCurrentRenderTarget();
 			context.TransitionResource(target,D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);
