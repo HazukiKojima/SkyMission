@@ -19,6 +19,31 @@ namespace Game {
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		const float line = std::max(1.0f, m_settings.lineWidth * scale), font = m_settings.fontSize * scale;
 		const auto color = m_settings.color;
+		// 接触点からワールド空間に火花を広げる
+		for (const auto& impact : snapshot.impacts) {
+			const float fade = std::clamp(1 - impact.age / 0.45f, 0.0f, 1.0f);
+			const auto center = ProjectHudPoint(impact.position, view);
+			const float flash = std::clamp(1 - impact.age / 0.12f, 0.0f, 1.0f);
+			if (center.visible && flash > 0) {
+				const float radius = (6 + 12 * (1 - flash)) * scale;
+				list.Circle(center.pixel, radius, 1, std::max(2.0f, 6 * scale * flash), {1, 0.85f, 0.4f, flash});
+			}
+			for (int i = 0; i < 18; ++i) {
+				const float angle = XM_2PI * i / 18;
+				const XMFLOAT3 direction{std::cos(angle), std::sin(angle), std::sin(angle * 3 + 1) * 0.6f};
+				const float radius = 1.6f + impact.age * (32 + (i % 7) * 4);
+				auto point = impact.position;
+				point.x += direction.x * radius; point.y += direction.y * radius - 12 * impact.age * impact.age;
+				point.z += direction.z * radius;
+				auto tail = point;
+				tail.x -= direction.x * 4.5f; tail.y -= direction.y * 4.5f; tail.z -= direction.z * 4.5f;
+				const auto a = ProjectHudPoint(tail, view), b = ProjectHudPoint(point, view);
+				if (a.visible && b.visible) {
+					list.Line(a.pixel, b.pixel, std::max(2.0f, 7 * scale * fade), {1, 0.4f, 0.05f, fade * 0.45f});
+					list.Line(a.pixel, b.pixel, std::max(1.0f, 3.5f * scale * fade), {1, 0.75f + fade * 0.25f, 0.4f, std::sqrt(fade)});
+				}
+			}
+		}
 		const float ox = (view.width - 1920 * scale) * 0.5f, oy = (view.height - 1080 * scale) * 0.5f;
 		const auto label = [&](float x, float y, std::string_view text) { list.Text({ ox + x * scale,oy + y * scale }, text, font, color); };
 		// The boresight follows the gun axis independently of the predicted bullet path.

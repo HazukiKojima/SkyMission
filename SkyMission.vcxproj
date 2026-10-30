@@ -397,6 +397,7 @@
     <ClInclude Include="Game\Weapons\WeaponDefinition.h" />
     <ClInclude Include="Game\Weapons\AircraftGun.h" />
     <ClInclude Include="Game\Weapons\ProjectileSystem.h" />
+    <ClInclude Include="Game\Audio\CombatAudio.h" />
     <ClCompile Include="Game\Weapons\AircraftGun.cpp" />
     <ClCompile Include="Game\Weapons\ProjectileSystem.cpp" />
     <None Include="Assets\Aircraft\N1K2JShidenKai\weapon.json" />

@@ -39,6 +39,7 @@ namespace Game {
 		SetWindowTextW(m_window->GetHandle(), m_windowTitle.c_str());
 
 		InitializeFlightScene(assets);
+		m_combatAudio.Initialize();
 		ConfigureResizeHandling();
 
 		m_lastTime = std::chrono::steady_clock::now();
@@ -124,6 +125,8 @@ namespace Game {
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input,
 				combat.weapon, combat.nextTarget);
+			const auto& combatState = m_scene->GetCombatSnapshot();
+			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount);
 			const auto view=m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 			m_hudPresenter.Build(m_scene->GetCombatSnapshot(),view,m_hud);
 		}

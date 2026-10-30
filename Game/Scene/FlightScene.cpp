@@ -45,9 +45,13 @@ namespace Game {
 	void FlightScene::Update(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput,
 		WeaponInput weaponInput, bool nextTarget) {
 		using namespace DirectX;
+		m_combat.firedVolleys = 0;
+		m_combat.hitCount = 0;
 		if (!std::isfinite(dt) || dt <= 0)
 			return;
 		dt = std::min(dt, 0.25f);
+		for (auto& impact : m_combat.impacts) impact.age += dt;
+		std::erase_if(m_combat.impacts, [](const ImpactEffect& impact) { return impact.age >= 0.45f; });
 		m_combat.hitSeconds = std::max(0.0f, m_combat.hitSeconds - dt);
 		m_combat.destroyedSeconds = std::max(0.0f, m_combat.destroyedSeconds - dt);
 		m_combat.allDownSeconds = std::max(0.0f, m_combat.allDownSeconds - dt);
@@ -78,8 +82,8 @@ namespace Game {
 						assistance.target = target;
 			}
 			for (const float age : ages)
-				m_projectiles.FireVolley(m_scene, m_gun.GetMuzzles(), world, pose,
-					m_player.GetForward(), m_player.GetVelocity(), age, assistance, targets, dt);
+				if (m_projectiles.FireVolley(m_scene, m_gun.GetMuzzles(), world, pose,
+					m_player.GetForward(), m_player.GetVelocity(), age, assistance, targets, dt)) ++m_combat.firedVolleys;
 		}
 		ApplyHits();
 		RefreshCombatSnapshot();
@@ -234,6 +238,9 @@ namespace Game {
 			auto enemy = std::find_if(m_enemies.begin(), m_enemies.end(), [&](const EnemyAircraft& e) { return e.objectId == hit.target; });
 			if (enemy == m_enemies.end() || enemy->health <= 0) continue;
 			enemy->health -= m_combatSettings.bulletDamage;
+			++m_combat.hitCount;
+			if (m_combat.impacts.size() == 64) m_combat.impacts.erase(m_combat.impacts.begin());
+			m_combat.impacts.push_back({hit.position, 0});
 			m_combat.hitSeconds = 0.15f;
 			if (enemy->health <= 0) { destroyed.push_back(enemy->objectId); m_combat.destroyedSeconds = 0.8f; }
 		}

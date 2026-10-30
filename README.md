@@ -150,3 +150,9 @@ SkyMissionは現在開発中です。
 - `Tests/RunRegressionTests.ps1` には、Raw Input の押下・解放、左右 Ctrl、複数デバイス、フォーカス喪失、入力登録の寿命、および海・空の DEFAULT ヒープと GPU 読み戻しの確認を含みます。
 
 Raw Input の登録とメッセージ後処理は Microsoft の [RegisterRawInputDevices](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerrawinputdevices) と [WM_INPUT](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-input) の仕様に従います。
+
+## 戦闘フィードバック
+
+- 実際に発射した斉射で機関砲音、有効な命中で金属的な命中音を再生します。同一フレームの複数発は一音にまとめます。
+- 音は初期化時に合成し、XAudio2の12音声プールで再生します。音声デバイスを利用できない場合もゲームは継続します。
+- 命中位置から火花が広がり、0.45秒で消えます。最大64件を保持します。既存HUD描画経路による投影表示のため、3D物体による遮蔽は行いません。

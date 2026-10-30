@@ -186,6 +186,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		gun.Update({false}, 0.25f);
 		Require(gun.Update({true}, 0.01f).size() == 1, "Released cooldown did not advance");
 
+		settings.muzzleSpeed = 900;
 		ProjectileSystem projectiles;
 		projectiles.Configure(settings, model, {0, 1, 0});
 		Scene scene;

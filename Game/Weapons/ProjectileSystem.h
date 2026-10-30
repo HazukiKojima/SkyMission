@@ -9,7 +9,7 @@ namespace Game {
 		void Configure(const GunSettings& settings, std::shared_ptr<Engine::Model> model,
 			const DirectX::XMFLOAT3& modelForward);
 		void Update(Engine::Scene& scene, float dt, std::span<const CollisionTarget> targets = {});
-		void FireVolley(Engine::Scene& scene, const std::array<DirectX::XMFLOAT3, 4>& muzzles,
+		bool FireVolley(Engine::Scene& scene, const std::array<DirectX::XMFLOAT3, 4>& muzzles,
 			const DirectX::XMFLOAT4X4& aircraftWorld, const DirectX::XMFLOAT4X4& aircraftPose,
 			const DirectX::XMFLOAT3& forward, const DirectX::XMFLOAT3& aircraftVelocity, float age,
 			const AimAssistance& assistance = {}, std::span<const CollisionTarget> targets = {}, float frameSeconds = 0);

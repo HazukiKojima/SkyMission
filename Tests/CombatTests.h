@@ -97,11 +97,18 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			const auto& state=scene.GetCombatSnapshot();
 			Require(state.enemies.empty() && state.destroyedSeconds>0 && state.allDownSeconds>0,
 				"Projectile damage did not destroy enemy and notify all-down");
+			Require(state.firedVolleys > 0 && state.hitCount == 1 && !state.impacts.empty(), "Combat feedback events missing");
+			scene.Update({}, 0.01f);
+			Require(scene.GetCombatSnapshot().firedVolleys == 0 && scene.GetCombatSnapshot().hitCount == 0,
+				"Combat sound events persisted across frames");
 			Require(state.selected==Engine::InvalidObjectId && state.lockState==LockState::None,"Destroyed enemy retained target reference");
 			scene.Update({},0.25f,{}, {true});
 			Require(scene.GetCombatSnapshot().allDownSeconds<3,"All-down timer was repeatedly restarted");
+			scene.Update({}, 0.25f);
+			Require(scene.GetCombatSnapshot().impacts.empty(), "Impact effect did not expire");
 		}
 		GunSettings gun=definition.playerWeapon.gun;
+		gun.muzzleSpeed = 900;
 		std::array<XMFLOAT3,4> muzzles{}; XMFLOAT4X4 world,pose;
 		XMStoreFloat4x4(&world,XMMatrixTranslation(0,20,0)); pose=world;
 		CollisionTarget nearBox{1,*enemy->GetLocalBounds(),{0,20,-100},{}}, farBox{2,*enemy->GetLocalBounds(),{0,20,-160},{}};
@@ -111,6 +118,9 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		bullets.FireVolley(scene,muzzles,world,pose,{0,0,-1},{},0.25f,{},boxes,0.25f);
 		const auto hits=bullets.TakeHits();
 		Require(hits.size()==4 && std::all_of(hits.begin(),hits.end(),[](const HitEvent& hit){return hit.target==1;}),"Projectile did not hit nearest enemy once");
+		Require(std::all_of(hits.begin(), hits.end(), [](const HitEvent& hit) {
+			return std::abs(hit.position.z + 95) < 0.01f && std::abs(hit.position.y - 20) < 0.01f;
+		}), "Impact position did not match first contact");
 		Require(bullets.GetCount()==0 && bullets.TakeHits().empty(),"Consumed projectile generated duplicate hit");
 		gun.lifetime=0.05f; bullets.Configure(gun,player,{0,1,0});
 		bullets.FireVolley(scene,muzzles,world,pose,{0,0,-1},{},0.25f,{},boxes,0.25f);
@@ -152,7 +162,15 @@ void TestHudRendering(const fs::path& fixture) {
 			Engine::HudDrawList list; CombatHudPresenter{}.Build(snapshot,view,list);
 			Require(!list.GetVertices().empty() && list.GetVertices().size()<Engine::HudDrawList::MaxVertices,"HUD mesh was empty or overflowed");
 			Require(ProjectHudPoint({0,0,100},view).visible && ProjectHudPoint({0,0,-100},view).behind,"HUD projection front/rear failed");
-			snapshot.selected=3; CombatHudPresenter{}.Build(snapshot,view,list);
+			const auto baseVertices = list.GetVertices().size();
+            snapshot.impacts.push_back({{0, 0, 100}, 0.08f});
+            CombatHudPresenter{}.Build(snapshot,view,list);
+            Require(list.GetVertices().size() > baseVertices, "Visible impact did not produce sparks");
+            snapshot.impacts.front().position.z = -100;
+            CombatHudPresenter{}.Build(snapshot,view,list);
+            Require(list.GetVertices().size() == baseVertices, "Rear impact produced sparks");
+            snapshot.impacts.front().position.z = 100;
+            snapshot.selected=3; CombatHudPresenter{}.Build(snapshot,view,list);
 			for (const auto& vertex:list.GetVertices()) Require(std::isfinite(vertex.position.x)&&std::isfinite(vertex.position.y),"HUD projection generated NaN");
 			snapshot.selected=1; CombatHudPresenter{}.Build(snapshot,view,list);
 			context.BeginFrame(); auto* commands=context.GetCommandList(); auto* target=device.GetCurrentRenderTarget();

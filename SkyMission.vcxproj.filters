@@ -372,4 +372,7 @@
   <ItemGroup>
     <ClInclude Include="Tests\CombatTests.h"><Filter>Tests</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Audio\CombatAudio.h" />
+  </ItemGroup>
 </Project>
