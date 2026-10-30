@@ -4,6 +4,8 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="External/REDoxWrapper/REDoxWrapper.csproj" />
+  <Folder Name="/External/">
+    <Project Path="External/REDoxWrapper/REDoxWrapper.csproj" />
+  </Folder>
   <Project Path="SkyMission.vcxproj" Id="bdf49253-e7c4-45b8-af8c-8d9ca81c25f5" />
 </Solution>
