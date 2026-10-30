@@ -7,7 +7,7 @@ namespace Game {
 	class WeaponController {
 	public:
 		WeaponInput ReadInput(const Engine::InputSnapshot& input) const {
-			return {.fire = input.IsKeyDown('F')};
+			return {.fire = input.leftMouseDown};
 		}
 	};
 }

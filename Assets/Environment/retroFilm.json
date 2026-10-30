@@ -2,7 +2,7 @@
   "colorGrading": {
     "desaturation": 0.12,
     "tint": [1.035, 1.015, 0.94],
-    "gain": 1.25,
+    "gain": 1.05,
     "offset": [0.012, 0.009, 0.002],
     "blackLift": {
       "color": [0.018, 0.014, 0.008],

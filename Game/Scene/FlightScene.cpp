@@ -35,7 +35,8 @@ namespace Game {
 			m_projectiles.Configure(definition.gun, std::move(ammunition), definition.modelForward);
 			m_weaponConfigured = true;
 			m_gunSettings = definition.gun;
-		} catch (const std::exception& error) {
+		}
+		catch (const std::exception& error) {
 			const auto path = definition.sourcePath.u8string();
 			throw std::runtime_error(std::string(reinterpret_cast<const char*>(path.data()), path.size()) + ": " + error.what());
 		}
@@ -47,9 +48,9 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0)
 			return;
 		dt = std::min(dt, 0.25f);
-		m_combat.hitSeconds = std::max(0.0f, m_combat.hitSeconds-dt);
-		m_combat.destroyedSeconds = std::max(0.0f, m_combat.destroyedSeconds-dt);
-		m_combat.allDownSeconds = std::max(0.0f, m_combat.allDownSeconds-dt);
+		m_combat.hitSeconds = std::max(0.0f, m_combat.hitSeconds - dt);
+		m_combat.destroyedSeconds = std::max(0.0f, m_combat.destroyedSeconds - dt);
+		m_combat.allDownSeconds = std::max(0.0f, m_combat.allDownSeconds - dt);
 		// 更新後の機体位置・姿勢をカメラと描画状態へ反映する
 		UpdatePlayer(input, dt);
 		UpdateEnemies(dt);
@@ -62,7 +63,7 @@ namespace Game {
 		// 集合変更前に機体行列を値として保持し、弾追加で無効になるポインタを残さない。
 		if (m_weaponConfigured) {
 			const bool hasPlayer = m_scene.FindObject(m_playerId) != nullptr;
-			const auto ages = m_gun.Update({weaponInput.fire && hasPlayer}, dt);
+			const auto ages = m_gun.Update({ weaponInput.fire && hasPlayer }, dt);
 			const auto pose = m_player.GetWorldTransform();
 			DirectX::XMFLOAT4X4 world;
 			DirectX::XMStoreFloat4x4(&world,
@@ -73,7 +74,7 @@ namespace Game {
 			if (m_combat.lockState == LockState::Locked) {
 				for (const auto& target : m_combat.enemies)
 					if (target.id == m_combat.selected && DirectX::XMVectorGetX(DirectX::XMVector3Length(
-						DirectX::XMLoadFloat3(&target.center)-DirectX::XMLoadFloat3(&m_combat.muzzle))) <= m_combatSettings.targeting.acquireDistance)
+						DirectX::XMLoadFloat3(&target.center) - DirectX::XMLoadFloat3(&m_combat.muzzle))) <= m_combatSettings.targeting.acquireDistance)
 						assistance.target = target;
 			}
 			for (const float age : ages)
@@ -110,12 +111,12 @@ namespace Game {
 	void FlightScene::UpdateCamera(
 		const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput) {
 		if (m_scene.FindObject(m_playerId))
-			m_cameraController.SetFollowTarget({.position = m_player.GetPosition(),
+			m_cameraController.SetFollowTarget({ .position = m_player.GetPosition(),
 				.heading = m_player.GetHeading(),
 				.forward = m_player.GetForward(),
 				.pitchInputActive = input.pitch > 0.01f || input.pitch < -0.01f,
 				.speed = m_player.GetSpeed(),
-				.maximumSpeed = m_player.GetMaximumSpeed()});
+				.maximumSpeed = m_player.GetMaximumSpeed() });
 		m_cameraController.Update(dt, cameraInput);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
@@ -171,7 +172,7 @@ namespace Game {
 		std::vector<CollisionTarget> targets;
 		for (const auto& enemy : m_enemies)
 			if (const auto* object = m_scene.FindObject(enemy.objectId); object && object->model->GetLocalBounds())
-				targets.push_back({enemy.objectId, *object->model->GetLocalBounds(), enemy.previousPosition, object->worldTransform});
+				targets.push_back({ enemy.objectId, *object->model->GetLocalBounds(), enemy.previousPosition, object->worldTransform });
 		return targets;
 	}
 
@@ -185,16 +186,16 @@ namespace Game {
 			const XMFLOAT3 center = bounds ? bounds->Center() : XMFLOAT3{};
 			XMFLOAT3 worldCenter;
 			XMStoreFloat3(&worldCenter, XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&object->worldTransform)));
-			m_combat.enemies.push_back({enemy.objectId, worldCenter, enemy.flightModel.GetVelocity(), enemy.name, enemy.health});
+			m_combat.enemies.push_back({ enemy.objectId, worldCenter, enemy.flightModel.GetVelocity(), enemy.name, enemy.health });
 		}
 		m_combat.forward = m_player.GetForward();
 		m_combat.muzzle = m_player.GetPosition();
 		if (m_weaponConfigured) {
 			XMVECTOR center = XMVectorZero();
-			for (const auto& muzzle : m_gun.GetMuzzles()) center += XMLoadFloat3(&muzzle)*0.25f;
+			for (const auto& muzzle : m_gun.GetMuzzles()) center += XMLoadFloat3(&muzzle) * 0.25f;
 			const auto pose = m_player.GetWorldTransform();
 			XMStoreFloat3(&m_combat.muzzle, XMVector3TransformCoord(center,
-				XMMatrixScaling(m_playerVisualScale, m_playerVisualScale, m_playerVisualScale)*XMLoadFloat4x4(&pose)));
+				XMMatrixScaling(m_playerVisualScale, m_playerVisualScale, m_playerVisualScale) * XMLoadFloat4x4(&pose)));
 		}
 		m_combat.selected = m_targeting.GetSelected();
 		m_combat.lockState = m_targeting.GetState();
@@ -203,25 +204,23 @@ namespace Game {
 		for (const auto& target : m_combat.enemies) if (target.id == m_combat.selected && m_weaponConfigured) {
 			m_combat.aim = SolveGunAim(m_combat.muzzle, m_player.GetVelocity(), target, m_gunSettings.muzzleSpeed, m_gunSettings.lifetime);
 			m_combat.assistReady = m_combat.lockState == LockState::Locked && m_combat.aim &&
-				XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center)-XMLoadFloat3(&m_combat.muzzle))) <= m_combatSettings.targeting.acquireDistance &&
+				XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center) - XMLoadFloat3(&m_combat.muzzle))) <= m_combatSettings.targeting.acquireDistance &&
 				IsWithinAngle(m_combat.forward, m_combat.aim->direction, m_combatSettings.targeting.assistAngleDegrees);
 		}
 		m_combat.gunImpactPoint.reset();
 		if (m_weaponConfigured) {
-			// Use the actual launch velocity, including the active firing assistance.
-			const auto direction = XMLoadFloat3(m_combat.assistReady ? &m_combat.aim->direction : &m_combat.forward);
+			// Fixed-range sight: independent of target selection and predictive assistance.
+			const auto direction = XMLoadFloat3(&m_combat.forward);
 			const auto aircraftVelocity = m_player.GetVelocity();
-			const auto velocity = XMLoadFloat3(&aircraftVelocity) + direction*m_gunSettings.muzzleSpeed;
-			float distance = 1500.0f;
-			for (const auto& target : m_combat.enemies) if (target.id == m_combat.selected)
-				distance = XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center)-XMLoadFloat3(&m_combat.muzzle)));
+			const auto velocity = XMLoadFloat3(&aircraftVelocity) + direction * m_gunSettings.muzzleSpeed;
+			constexpr float distance = CombatSnapshot::gunSightDistance;
 			const float speed = XMVectorGetX(XMVector3Length(velocity));
 			if (speed > 0.001f) {
-				float seconds = std::min(distance/speed, m_gunSettings.lifetime);
+				float seconds = std::min(distance / speed, m_gunSettings.lifetime);
 				const float vy = XMVectorGetY(velocity);
-				if (vy < 0) seconds = std::min(seconds, std::max(0.0f, -m_combat.muzzle.y/vy));
+				if (vy < 0) seconds = std::min(seconds, std::max(0.0f, -m_combat.muzzle.y / vy));
 				XMFLOAT3 point;
-				XMStoreFloat3(&point, XMLoadFloat3(&m_combat.muzzle)+velocity*seconds);
+				XMStoreFloat3(&point, XMLoadFloat3(&m_combat.muzzle) + velocity * seconds);
 				m_combat.gunImpactPoint = point;
 			}
 		}

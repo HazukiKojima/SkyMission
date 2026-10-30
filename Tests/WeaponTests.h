@@ -44,17 +44,18 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		raw.ProcessKeyboard(keyboard, packet);
 	};
 	key(RI_KEY_MAKE);
-	Require(WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "F make did not start firing");
-	Require(WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Held F did not keep firing");
+	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "F key still fired");
+	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Held F still fired");
 	key(RI_KEY_BREAK);
 	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "F break did not stop firing");
 	mouse(mouse1, RI_MOUSE_LEFT_BUTTON_DOWN);
-	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Left mouse still fired");
+	Require(WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Left mouse did not fire");
+	Require(WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Held left mouse did not keep firing");
 	key(RI_KEY_MAKE);
 	raw.SetActive(false);
-	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Focus loss did not stop F firing");
+	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Focus loss did not stop mouse firing");
 	raw.SetActive(true);
-	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Focus regain restored F firing");
+	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Focus regain restored mouse firing");
 	key(RI_KEY_MAKE);
 	raw.ForgetDevice(keyboard);
 	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Disconnected keyboard kept firing");
@@ -255,5 +256,5 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	}
 	writeNodes(false);
 	DestroyWindow(window);
-	std::cout << "PASS: F firing, left mouse state, weapon settings, empty/duplicate nodes, timing, velocity, lifetime, sea and projectile cap\n";
+	std::cout << "PASS: left mouse firing, weapon settings, empty/duplicate nodes, timing, velocity, lifetime, sea and projectile cap\n";
 }

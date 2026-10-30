@@ -2,7 +2,7 @@
 
 ## 目的・仕様
 
-Fキーを押している間、プレイヤー機の `GunMuzzle_L1`、`GunMuzzle_L2`、
+マウスの左ボタンを押している間、プレイヤー機の `GunMuzzle_L1`、`GunMuzzle_L2`、
 `GunMuzzle_R1`、`GunMuzzle_R2` から4発同時に発射する。
 弾は `Assets/Ammunition/20mmAmmo/20mmAmmo.fbx` を使用する。
 当たり判定、ダメージ、重力、誘導、発射音、マズルフラッシュは今回の対象外。

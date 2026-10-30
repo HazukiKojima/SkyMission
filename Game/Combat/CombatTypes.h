@@ -38,6 +38,7 @@ namespace Game {
 	};
 	struct HitEvent { Engine::ObjectId target; float frameSeconds; };
 	struct CombatSnapshot {
+		static constexpr float gunSightDistance = 500.0f;
 		std::vector<CombatTarget> enemies;
 		Engine::ObjectId selected = Engine::InvalidObjectId;
 		LockState lockState = LockState::None;
