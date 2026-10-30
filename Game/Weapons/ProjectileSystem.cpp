@@ -55,7 +55,13 @@ namespace Game {
                 first = contact; hit = target.id;
             }
         }
-        if (first) { m_hits.push_back({hit, frameOffset + *first*valid}); return false; }
+        if (first) {
+            XMFLOAT3 position;
+            XMStoreFloat3(&position, XMVectorLerp(XMLoadFloat3(&start), XMLoadFloat3(&projectile.position), *first));
+            XMFLOAT3 direction;
+            XMStoreFloat3(&direction, XMVector3Normalize(XMLoadFloat3(&projectile.velocity)));
+            m_hits.push_back({hit, frameOffset + *first*valid, position, direction}); return false;
+        }
         return valid >= duration && projectile.remainingLifetime > 0 && projectile.position.y > 0;
     }
 
@@ -73,11 +79,11 @@ namespace Game {
         });
     }
 
-    void ProjectileSystem::FireVolley(Engine::Scene& scene, const std::array<XMFLOAT3, 4>& muzzles,
+    bool ProjectileSystem::FireVolley(Engine::Scene& scene, const std::array<XMFLOAT3, 4>& muzzles,
         const XMFLOAT4X4& aircraftWorld, const XMFLOAT4X4& aircraftPose,
         const XMFLOAT3& forward, const XMFLOAT3& aircraftVelocity, float age,
         const AimAssistance& assistance, std::span<const CollisionTarget> targets, float frameSeconds) {
-        if (!m_model || m_settings.maxProjectiles - m_projectiles.size() < 4) return;
+        if (!m_model || m_settings.maxProjectiles - m_projectiles.size() < 4) return false;
         auto aircraftRotation = XMLoadFloat4x4(&aircraftPose);
         aircraftRotation.r[3] = XMVectorSet(0, 0, 0, 1);
         for (const auto& muzzle : muzzles) {
@@ -103,5 +109,6 @@ namespace Game {
             projectile.objectId = scene.AddObject(m_model, transform);
             m_projectiles.push_back(projectile);
         }
+        return true;
     }
 }

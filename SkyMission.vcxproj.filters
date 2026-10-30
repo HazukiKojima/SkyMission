@@ -1,23 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{6885f2c9-a204-469c-a702-1b3ab80670f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Aircraft">
+      <UniqueIdentifier>{f378f861-2619-4f5f-b725-83def9dd5d0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Aircraft\F4U4Corsair">
+      <UniqueIdentifier>{d8170f69-6ab9-4ea5-b4db-d35763243b73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Aircraft\N1K2JShidenKai">
+      <UniqueIdentifier>{bdbf5af0-51a4-4086-a6ca-7731160ffd9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Ammunition">
+      <UniqueIdentifier>{aeee84b2-3f4d-490d-b9f3-9cea2812da3d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Ammunition\20mmAmmo">
+      <UniqueIdentifier>{f63c131d-c240-42ed-a54f-4c8580be58b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Combat">
+      <UniqueIdentifier>{603122d3-daef-4972-a37a-aa62179d98de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Environment">
+      <UniqueIdentifier>{0d20faf4-be33-45c5-8893-af0f8c33d610}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Environment\Ocean">
+      <UniqueIdentifier>{be42d478-5046-4645-aa87-76b884fb798b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Environment\Sky">
+      <UniqueIdentifier>{905aeeaa-42d6-4cca-a37c-b86aad5f05b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\UI">
+      <UniqueIdentifier>{2f1ef609-571c-4ccd-aee4-214fa4b6eaf4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Docs">
+      <UniqueIdentifier>{efa5c60b-1a67-4bc7-afae-572b591d3534}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Docs\Design">
+      <UniqueIdentifier>{b616ccd2-4036-452d-95f9-0ec9113ba7ff}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Engine">
       <UniqueIdentifier>{64a96883-8799-43cc-b664-da2427acad72}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\Application">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000001}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\Aircraft">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000002}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Camera">
       <UniqueIdentifier>{a1000000-0000-0000-0000-000000000003}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Scene">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000004}</UniqueIdentifier>
+    <Filter Include="Engine\Input">
+      <UniqueIdentifier>{ddaf6ba8-0ae7-4e26-b6ef-c6a73c315195}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Window">
-      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000005}</UniqueIdentifier>
+    <Filter Include="Engine\Interop">
+      <UniqueIdentifier>{7dc9c04a-fd60-4ed7-a4e0-b677d007da6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Interop\Redox">
+      <UniqueIdentifier>{83083dbb-fd2f-452f-be81-c13e971f15a4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Renderer">
       <UniqueIdentifier>{5c3f1a70-3efe-4b9f-986c-6557ff4b9194}</UniqueIdentifier>
@@ -25,17 +61,20 @@
     <Filter Include="Engine\Renderer\Device">
       <UniqueIdentifier>{c98320a7-a019-4df8-9859-8e463386b381}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Renderer\Hud">
+      <UniqueIdentifier>{e8ed4886-d828-46f0-a410-7da6746974af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Pipeline">
+      <UniqueIdentifier>{e7d0d959-8ab3-4e1b-96fa-0002c15333fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Shader">
+      <UniqueIdentifier>{fe1e8bb6-4f0b-4803-87dd-98c4bb40856e}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Engine\Resources">
       <UniqueIdentifier>{c412221a-b58b-4d41-a0cd-f4ddf546e0a7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Resources\Buffer">
       <UniqueIdentifier>{8023bee2-63a7-4755-9b0b-c02dfc17cd3c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\Shader">
-      <UniqueIdentifier>{fe1e8bb6-4f0b-4803-87dd-98c4bb40856e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\Pipeline">
-      <UniqueIdentifier>{e7d0d959-8ab3-4e1b-96fa-0002c15333fc}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Resources\Mesh">
       <UniqueIdentifier>{7272f4cc-86f4-478a-b597-81449d6f3e32}</UniqueIdentifier>
@@ -43,93 +82,273 @@
     <Filter Include="Engine\Resources\Texture">
       <UniqueIdentifier>{34ae2c3c-d26a-4887-b6c8-36809e90687f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Interop">
-      <UniqueIdentifier>{7dc9c04a-fd60-4ed7-a4e0-b677d007da6d}</UniqueIdentifier>
+    <Filter Include="Engine\Scene">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000004}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Interop\REDox">
-      <UniqueIdentifier>{83083dbb-fd2f-452f-be81-c13e971f15a4}</UniqueIdentifier>
+    <Filter Include="Engine\Window">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000005}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Asset">
-      <UniqueIdentifier>{ab5cea78-7a10-4063-b05c-db0756d388bd}</UniqueIdentifier>
+    <Filter Include="Game">
+      <UniqueIdentifier>{436bd76d-91c8-5264-ab59-7fe5cab94b55}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Asset\Json">
-      <UniqueIdentifier>{8605be24-9328-477c-b36d-eb33331310ca}</UniqueIdentifier>
+    <Filter Include="Game\Aircraft">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Application">
+      <UniqueIdentifier>{a1000000-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Audio">
+      <UniqueIdentifier>{d67fefd8-683b-49c8-8028-89a6fbde5908}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Camera">
+      <UniqueIdentifier>{d5255d03-9b4c-58a0-a559-ea751c6cdfb3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Combat">
+      <UniqueIdentifier>{079cf850-e638-400a-ba12-a1db8e43f6cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Effects">
+      <UniqueIdentifier>{13431fda-41e7-49e7-8de5-c5335689b5b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene">
+      <UniqueIdentifier>{16448455-e4c8-5714-b78f-a8f448ac004e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\UI">
+      <UniqueIdentifier>{99039fb1-2636-4fbc-85e7-939ffe91cfd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Weapons">
+      <UniqueIdentifier>{920976bd-1bae-48ba-b6ca-b893f0aa8308}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tests">
+      <UniqueIdentifier>{9d55585f-57a6-401d-aa70-6578e2d5fb92}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Game\Application\Application.cpp">
-      <Filter>Game\Application</Filter>
+    <ClCompile Include="Engine\Camera\Camera.cpp">
+      <Filter>Engine\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Aircraft\AircraftController.cpp">
-      <Filter>Game\Aircraft</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Window\Window.cpp">
-      <Filter>Engine\Window</Filter>
-    </ClCompile>
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererPasses.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererFrameUpdater.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererAssets.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererPipelines.cpp">
       <Filter>Engine\Renderer\Device</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Renderer\Device\OceanGeometry.cpp">
       <Filter>Engine\Renderer\Device</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererConstantBuffers.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp">
       <Filter>Engine\Renderer\Device</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp">
-      <Filter>Engine\Resources\Buffer</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp">
-      <Filter>Engine\Renderer\Pipeline</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Camera\Camera.cpp">
-      <Filter>Engine\Camera</Filter>
-    </ClCompile>
-    <ClCompile Include="Engine\Scene\Scene.cpp">
-      <Filter>Engine\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Renderer\Device\Renderer.cpp">
       <Filter>Engine\Renderer\Device</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp">
+    <ClCompile Include="Engine\Renderer\Device\RendererAssets.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererConstantBuffers.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererFrameUpdater.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererPasses.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RendererPipelines.cpp">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Hud\HudDrawList.cpp">
+      <Filter>Engine\Renderer\Hud</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp">
+      <Filter>Engine\Renderer\Hud</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp">
+      <Filter>Engine\Renderer\Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp">
+      <Filter>Engine\Resources\Buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\JsonAssetReader.cpp">
+      <Filter>Engine\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\MaterialTexturePaths.cpp">
       <Filter>Engine\Resources\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\Model.cpp">
       <Filter>Engine\Resources\Mesh</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp">
       <Filter>Engine\Resources\Texture</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Scene\FlightSceneLoader.cpp">
-      <Filter>Game\Scene</Filter>
+    <ClCompile Include="Engine\Scene\Scene.cpp">
+      <Filter>Engine\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Resources\JsonAssetReader.cpp">
-      <Filter>Engine\Resources</Filter>
+    <ClCompile Include="Engine\Window\Window.cpp">
+      <Filter>Engine\Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Aircraft\AircraftController.cpp">
+      <Filter>Game\Aircraft</Filter>
     </ClCompile>
     <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp">
       <Filter>Game\Aircraft</Filter>
     </ClCompile>
+    <ClCompile Include="Game\Application\Application.cpp">
+      <Filter>Game\Application</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Camera\AircraftCameraController.cpp">
+      <Filter>Game\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp">
+      <Filter>Game\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Combat\GunAimSolver.cpp">
+      <Filter>Game\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Combat\ProjectileCollision.cpp">
+      <Filter>Game\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Combat\TargetingSystem.cpp">
+      <Filter>Game\Combat</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Effects\CombatEffectPresenter.cpp">
+      <Filter>Game\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Effects\CombatEffectSystem.cpp">
+      <Filter>Game\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Effects\EffectDrawContext.cpp">
+      <Filter>Game\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Effects\ExplosionEffectPresenter.cpp">
+      <Filter>Game\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Effects\ImpactEffectPresenter.cpp">
+      <Filter>Game\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Scene\FlightScene.cpp">
+      <Filter>Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Scene\FlightSceneLoader.cpp">
+      <Filter>Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\UI\CombatHudPresenter.cpp">
+      <Filter>Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\UI\HudProjection.cpp">
+      <Filter>Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Weapons\AircraftGun.cpp">
+      <Filter>Game\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Weapons\ProjectileSystem.cpp">
+      <Filter>Game\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Game\Application\Application.h">
-      <Filter>Game\Application</Filter>
+    <ClInclude Include="Engine\Camera\Camera.h">
+      <Filter>Engine\Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Aircraft\AircraftFlightParameters.h">
+    <ClInclude Include="Engine\ExecutablePath.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Input\RawInputState.h">
+      <Filter>Engine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h">
+      <Filter>Engine\Interop\Redox</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h">
+      <Filter>Engine\Interop\Redox</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Log.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\CommandContext.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\OceanGeometry.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RenderDevice.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\Renderer.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererAssets.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererConstantBuffers.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererFrameUpdater.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererPasses.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RendererPipelines.h">
+      <Filter>Engine\Renderer\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h">
+      <Filter>Engine\Renderer\Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Hud\HudRenderer.h">
+      <Filter>Engine\Renderer\Hud</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h">
+      <Filter>Engine\Renderer\Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\RendererDefinition.h">
+      <Filter>Engine\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\RetroFilmParameters.h">
+      <Filter>Engine\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\RootBindings.h">
+      <Filter>Engine\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h">
+      <Filter>Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h">
+      <Filter>Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\JsonAssetReader.h">
+      <Filter>Engine\Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\MaterialTexturePaths.h">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\Model.h">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\ModelLoadOptions.h">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\SkySphere.h">
+      <Filter>Engine\Resources\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Resources\Texture\Texture.h">
+      <Filter>Engine\Resources\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Scene\Bounds3.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Scene\OceanParameters.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Scene\Scene.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Scene\SkyParameters.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Window\Window.h">
+      <Filter>Engine\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Aircraft\AircraftAIController.h">
       <Filter>Game\Aircraft</Filter>
     </ClInclude>
     <ClInclude Include="Game\Aircraft\AircraftController.h">
@@ -138,139 +357,99 @@
     <ClInclude Include="Game\Aircraft\AircraftFlightModel.h">
       <Filter>Game\Aircraft</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Window\Window.h">
-      <Filter>Engine\Window</Filter>
+    <ClInclude Include="Game\Aircraft\AircraftFlightParameters.h">
+      <Filter>Game\Aircraft</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\CommandContext.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Aircraft\ValidateFlightParameters.h">
+      <Filter>Game\Aircraft</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererPasses.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Application\Application.h">
+      <Filter>Game\Application</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererFrameUpdater.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Audio\CombatAudio.h">
+      <Filter>Game\Audio</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererAssets.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Camera\AircraftCameraController.h">
+      <Filter>Game\Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererPipelines.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Combat\CombatController.h">
+      <Filter>Game\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\OceanGeometry.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Combat\CombatSettingsLoader.h">
+      <Filter>Game\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererConstantBuffers.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Combat\CombatTypes.h">
+      <Filter>Game\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RenderDevice.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Combat\GunAimSolver.h">
+      <Filter>Game\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h">
-      <Filter>Engine\Resources\Buffer</Filter>
+    <ClInclude Include="Game\Combat\ProjectileCollision.h">
+      <Filter>Game\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h">
-      <Filter>Engine\Renderer\Pipeline</Filter>
+    <ClInclude Include="Game\Combat\TargetingSystem.h">
+      <Filter>Game\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Camera\Camera.h">
-      <Filter>Engine\Camera</Filter>
+    <ClInclude Include="Game\Effects\CombatEffectPresenter.h">
+      <Filter>Game\Effects</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Scene\Scene.h">
-      <Filter>Engine\Scene</Filter>
+    <ClInclude Include="Game\Effects\CombatEffectSettings.h">
+      <Filter>Game\Effects</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\RetroFilmParameters.h">
-      <Filter>Engine\Renderer</Filter>
+    <ClInclude Include="Game\Effects\CombatEffectSystem.h">
+      <Filter>Game\Effects</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\Renderer.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Game\Effects\CombatEffectTypes.h">
+      <Filter>Game\Effects</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Resources\Mesh\SkySphere.h">
-      <Filter>Engine\Resources\Mesh</Filter>
+    <ClInclude Include="Game\Effects\EffectDrawContext.h">
+      <Filter>Game\Effects</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Resources\Texture\Texture.h">
-      <Filter>Engine\Resources\Texture</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Resources\Mesh\Model.h">
-      <Filter>Engine\Resources\Mesh</Filter>
+    <ClInclude Include="Game\Scene\FlightScene.h">
+      <Filter>Game\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Game\Scene\FlightSceneLoader.h">
       <Filter>Game\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h">
-      <Filter>Engine\Interop\REDox</Filter>
+    <ClInclude Include="Game\UI\CombatHudPresenter.h">
+      <Filter>Game\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h">
-      <Filter>Engine\Interop\REDox</Filter>
+    <ClInclude Include="Game\UI\HudProjection.h">
+      <Filter>Game\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Resources\JsonAssetReader.h">
-      <Filter>Engine\Resources</Filter>
+    <ClInclude Include="Game\Weapons\AircraftGun.h">
+      <Filter>Game\Weapons</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Aircraft\AircraftAIController.h">
-      <Filter>Game\Aircraft</Filter>
+    <ClInclude Include="Game\Weapons\ProjectileSystem.h">
+      <Filter>Game\Weapons</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Scene\OceanParameters.h">
-      <Filter>Engine\Scene</Filter>
+    <ClInclude Include="Game\Weapons\WeaponController.h">
+      <Filter>Game\Weapons</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Scene\SkyParameters.h">
-      <Filter>Engine\Scene</Filter>
+    <ClInclude Include="Game\Weapons\WeaponDefinition.h">
+      <Filter>Game\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="Tests\CombatEffectTests.h">
+      <Filter>Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="Tests\CombatTests.h">
+      <Filter>Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="Tests\WeaponTests.h">
+      <Filter>Tests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Engine\Renderer\Shader\Common.hlsli">
-      <Filter>Engine\Renderer\Shader</Filter>
-    </None>
-    <None Include="Engine\Renderer\Shader\CommonLighting.hlsli">
-      <Filter>Engine\Renderer\Shader</Filter>
-    </None>
-    <None Include="Assets\Aircraft\F4U4Corsair\aiParameters.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Environment\retroFilm.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Aircraft\F4U4Corsair\F4U4Corsair.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Aircraft\N1K2JShidenKai\N1K2JShidenKai.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Environment\Sky\sky.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Aircraft\N1K2JShidenKai\flightParameters.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Environment\environment.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Environment\Ocean\Ocean.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-    <None Include="Assets\Aircraft\aircraft.json">
-      <Filter>Engine\Asset\Json</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Engine\Renderer\Shader\BasicVS.hlsl">
-      <Filter>Engine\Renderer\Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\BasicPS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\OceanFogPS.hlsl">
+    <FxCompile Include="Engine\Renderer\Shader\BasicVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\OceanFogVS.hlsl">
+    <FxCompile Include="Engine\Renderer\Shader\HudPS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\RetroFilmPS.hlsl">
-      <Filter>Engine\Renderer\Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\RetroFilmVS.hlsl">
+    <FxCompile Include="Engine\Renderer\Shader\HudVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\ModelPS.hlsl">
@@ -279,7 +458,22 @@
     <FxCompile Include="Engine\Renderer\Shader\ModelVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\OceanFogPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\OceanFogVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\OceanPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\OceanVS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmPS.hlsl">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\SkyPS.hlsl">
@@ -288,88 +482,76 @@
     <FxCompile Include="Engine\Renderer\Shader\SkyVS.hlsl">
       <Filter>Engine\Renderer\Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Engine\Renderer\Shader\OceanVS.hlsl">
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Aircraft\aircraft.json">
+      <Filter>Assets\Aircraft</Filter>
+    </None>
+    <None Include="Assets\Aircraft\F4U4Corsair\aiParameters.json">
+      <Filter>Assets\Aircraft\F4U4Corsair</Filter>
+    </None>
+    <None Include="Assets\Aircraft\F4U4Corsair\F4U4Corsair.json">
+      <Filter>Assets\Aircraft\F4U4Corsair</Filter>
+    </None>
+    <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json">
+      <Filter>Assets\Aircraft\F4U4Corsair</Filter>
+    </None>
+    <None Include="Assets\Aircraft\F4U4Corsair\modelImport.json">
+      <Filter>Assets\Aircraft\F4U4Corsair</Filter>
+    </None>
+    <None Include="Assets\Aircraft\N1K2JShidenKai\flightParameters.json">
+      <Filter>Assets\Aircraft\N1K2JShidenKai</Filter>
+    </None>
+    <None Include="Assets\Aircraft\N1K2JShidenKai\modelImport.json">
+      <Filter>Assets\Aircraft\N1K2JShidenKai</Filter>
+    </None>
+    <None Include="Assets\Aircraft\N1K2JShidenKai\N1K2JShidenKai.json">
+      <Filter>Assets\Aircraft\N1K2JShidenKai</Filter>
+    </None>
+    <None Include="Assets\Aircraft\N1K2JShidenKai\weapon.json">
+      <Filter>Assets\Aircraft\N1K2JShidenKai</Filter>
+    </None>
+    <None Include="Assets\Ammunition\20mmAmmo\ammunition.json">
+      <Filter>Assets\Ammunition\20mmAmmo</Filter>
+    </None>
+    <None Include="Assets\Ammunition\20mmAmmo\modelImport.json">
+      <Filter>Assets\Ammunition\20mmAmmo</Filter>
+    </None>
+    <None Include="Assets\Combat\targeting.json">
+      <Filter>Assets\Combat</Filter>
+    </None>
+    <None Include="Assets\Environment\environment.json">
+      <Filter>Assets\Environment</Filter>
+    </None>
+    <None Include="Assets\Environment\Ocean\Ocean.json">
+      <Filter>Assets\Environment\Ocean</Filter>
+    </None>
+    <None Include="Assets\Environment\retroFilm.json">
+      <Filter>Assets\Environment</Filter>
+    </None>
+    <None Include="Assets\Environment\Sky\sky.json">
+      <Filter>Assets\Environment\Sky</Filter>
+    </None>
+    <None Include="Assets\UI\combatHud.json">
+      <Filter>Assets\UI</Filter>
+    </None>
+    <None Include="Docs\Design\PlayerAircraftGun.md">
+      <Filter>Docs\Design</Filter>
+    </None>
+    <None Include="Docs\Design\TargetLockCombatHud.md">
+      <Filter>Docs\Design</Filter>
+    </None>
+    <None Include="Engine\Renderer\Shader\Common.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
-    </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="Tests"><UniqueIdentifier>{9d55585f-57a6-401d-aa70-6578e2d5fb92}</UniqueIdentifier></Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Engine\Resources\Mesh\MaterialTexturePaths.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
-    <ClInclude Include="Engine\Log.h"><Filter>Engine</Filter></ClInclude>
-    <ClInclude Include="Engine\ExecutablePath.h"><Filter>Engine</Filter></ClInclude>
-    <ClInclude Include="Game\Aircraft\ValidateFlightParameters.h">
-      <Filter>Game\Aircraft</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h"><Filter>Engine\Resources\Buffer</Filter></ClInclude>
-    <ClInclude Include="Engine\Resources\Mesh\ModelLoadOptions.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
-    <ClInclude Include="Engine\Resources\Mesh\MaterialTexturePaths.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
-    <None Include="Assets\Aircraft\F4U4Corsair\modelImport.json"><Filter>Engine\Asset\Json</Filter></None>
-    <None Include="Assets\Aircraft\N1K2JShidenKai\modelImport.json"><Filter>Engine\Asset\Json</Filter></None>
-    <None Include="Tests\RegressionTests.cpp"><Filter>Tests</Filter></None>
-    <None Include="Tests\RunRegressionTests.ps1"><Filter>Tests</Filter></None>
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="Engine\Input"><UniqueIdentifier>{ddaf6ba8-0ae7-4e26-b6ef-c6a73c315195}</UniqueIdentifier></Filter>
-    <ClInclude Include="Engine\Input\RawInputState.h"><Filter>Engine\Input</Filter></ClInclude>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ClInclude Include="Game\Scene\FlightScene.h">
-      <Filter>Game\Scene</Filter>
-    </ClInclude>
-    <ClCompile Include="Game\Scene\FlightScene.cpp">
-      <Filter>Game\Scene</Filter>
-    </ClCompile>
-    <ClInclude Include="Game\Camera\AircraftCameraController.h">
-      <Filter>Game\Camera</Filter>
-    </ClInclude>
-    <ClCompile Include="Game\Camera\AircraftCameraController.cpp">
-      <Filter>Game\Camera</Filter>
-    </ClCompile>
-    <ClInclude Include="Engine\Renderer\RendererDefinition.h" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Filter Include="Game"><UniqueIdentifier>{436bd76d-91c8-5264-ab59-7fe5cab94b55}</UniqueIdentifier></Filter>
-    <Filter Include="Game\Scene"><UniqueIdentifier>{16448455-e4c8-5714-b78f-a8f448ac004e}</UniqueIdentifier></Filter>
-    <Filter Include="Game\Camera"><UniqueIdentifier>{d5255d03-9b4c-58a0-a559-ea751c6cdfb3}</UniqueIdentifier></Filter>
-    <ClInclude Include="Engine\Renderer\RootBindings.h"><Filter>Engine\Renderer</Filter></ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="Game\Weapons"><UniqueIdentifier>{920976bd-1bae-48ba-b6ca-b893f0aa8308}</UniqueIdentifier></Filter>
-    <ClInclude Include="Game\Weapons\WeaponController.h"><Filter>Game\Weapons</Filter></ClInclude>
-    <ClInclude Include="Game\Weapons\WeaponDefinition.h"><Filter>Game\Weapons</Filter></ClInclude>
-    <ClInclude Include="Game\Weapons\AircraftGun.h"><Filter>Game\Weapons</Filter></ClInclude>
-    <ClInclude Include="Game\Weapons\ProjectileSystem.h"><Filter>Game\Weapons</Filter></ClInclude>
-    <ClCompile Include="Game\Weapons\AircraftGun.cpp"><Filter>Game\Weapons</Filter></ClCompile>
-    <ClCompile Include="Game\Weapons\ProjectileSystem.cpp"><Filter>Game\Weapons</Filter></ClCompile>
-    <ClInclude Include="Tests\WeaponTests.h"><Filter>Tests</Filter></ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Engine\Scene\Bounds3.h" />
-    <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h" />
-    <ClCompile Include="Engine\Renderer\Hud\HudDrawList.cpp" />
-    <ClInclude Include="Engine\Renderer\Hud\HudRenderer.h" />
-    <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp" />
-    <ClInclude Include="Game\Combat\CombatTypes.h" />
-    <ClInclude Include="Game\Combat\CombatController.h" />
-    <ClInclude Include="Game\Combat\GunAimSolver.h" />
-    <ClCompile Include="Game\Combat\GunAimSolver.cpp" />
-    <ClInclude Include="Game\Combat\TargetingSystem.h" />
-    <ClCompile Include="Game\Combat\TargetingSystem.cpp" />
-    <ClInclude Include="Game\Combat\ProjectileCollision.h" />
-    <ClCompile Include="Game\Combat\ProjectileCollision.cpp" />
-    <ClInclude Include="Game\Combat\CombatSettingsLoader.h" />
-    <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp" />
-    <ClInclude Include="Game\UI\CombatHudPresenter.h" />
-    <ClCompile Include="Game\UI\CombatHudPresenter.cpp" />
-    <None Include="Assets\Combat\targeting.json" />
-    <None Include="Assets\UI\combatHud.json" />
-    <None Include="Docs\Design\TargetLockCombatHud.md" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Tests\CombatTests.h"><Filter>Tests</Filter></ClInclude>
+    </None>
+    <None Include="Engine\Renderer\Shader\CommonLighting.hlsli">
+      <Filter>Engine\Renderer\Shader</Filter>
+    </None>
+    <None Include="Tests\RegressionTests.cpp">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="Tests\RunRegressionTests.ps1">
+      <Filter>Tests</Filter>
+    </None>
   </ItemGroup>
 </Project>

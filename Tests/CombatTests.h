@@ -4,6 +4,7 @@
 #include "Game/Combat/TargetingSystem.h"
 #include "Game/Combat/ProjectileCollision.h"
 #include "Game/UI/CombatHudPresenter.h"
+#include "Game/Effects/CombatEffectPresenter.h"
 
 void TestCombatMath() {
 	using namespace DirectX;
@@ -95,13 +96,28 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			scene.AddEnemyAircraft(enemy,{0,15,-160},5,definition.enemyAircraft.flightParameters,definition.enemyAIParameters,100,"ENEMY 01");
 			scene.Update({},0.25f,{}, {true});
 			const auto& state=scene.GetCombatSnapshot();
+			const auto& effectState=scene.GetEffectSnapshot();
 			Require(state.enemies.empty() && state.destroyedSeconds>0 && state.allDownSeconds>0,
 				"Projectile damage did not destroy enemy and notify all-down");
+			Require(state.firedVolleys > 0 && state.hitCount == 1 && !effectState.impacts.empty(), "Combat feedback events missing");
+			Require(effectState.explosions.size() == 1 && effectState.explosions.front().age == 0,
+				"Lethal multi-hit did not create exactly one explosion");
+			const auto deathPosition = effectState.explosions.front().position;
+			scene.Update({}, 0.01f);
+			Require(effectState.explosions.size() == 1 && effectState.explosions.front().position.z == deathPosition.z,
+				"Explosion did not survive enemy removal");
+			Require(scene.GetCombatSnapshot().firedVolleys == 0 && scene.GetCombatSnapshot().hitCount == 0,
+				"Combat sound events persisted across frames");
 			Require(state.selected==Engine::InvalidObjectId && state.lockState==LockState::None,"Destroyed enemy retained target reference");
 			scene.Update({},0.25f,{}, {true});
 			Require(scene.GetCombatSnapshot().allDownSeconds<3,"All-down timer was repeatedly restarted");
+			scene.Update({}, 0.25f);
+			Require(scene.GetEffectSnapshot().impacts.empty(), "Impact effect did not expire");
+			for (int frame = 0; frame < 14; ++frame) scene.Update({}, 0.25f);
+			Require(effectState.explosions.empty(), "Explosion did not expire");
 		}
 		GunSettings gun=definition.playerWeapon.gun;
+		gun.muzzleSpeed = 900;
 		std::array<XMFLOAT3,4> muzzles{}; XMFLOAT4X4 world,pose;
 		XMStoreFloat4x4(&world,XMMatrixTranslation(0,20,0)); pose=world;
 		CollisionTarget nearBox{1,*enemy->GetLocalBounds(),{0,20,-100},{}}, farBox{2,*enemy->GetLocalBounds(),{0,20,-160},{}};
@@ -111,6 +127,9 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		bullets.FireVolley(scene,muzzles,world,pose,{0,0,-1},{},0.25f,{},boxes,0.25f);
 		const auto hits=bullets.TakeHits();
 		Require(hits.size()==4 && std::all_of(hits.begin(),hits.end(),[](const HitEvent& hit){return hit.target==1;}),"Projectile did not hit nearest enemy once");
+		Require(std::all_of(hits.begin(), hits.end(), [](const HitEvent& hit) {
+			return std::abs(hit.position.z + 95) < 0.01f && std::abs(hit.position.y - 20) < 0.01f && hit.direction.z < -0.999f;
+		}), "Impact position did not match first contact");
 		Require(bullets.GetCount()==0 && bullets.TakeHits().empty(),"Consumed projectile generated duplicate hit");
 		gun.lifetime=0.05f; bullets.Configure(gun,player,{0,1,0});
 		bullets.FireVolley(scene,muzzles,world,pose,{0,0,-1},{},0.25f,{},boxes,0.25f);
@@ -149,12 +168,46 @@ void TestHudRendering(const fs::path& fixture) {
 			snapshot.selected=1; snapshot.lockState=LockState::Locked; snapshot.forward={0,0,1};
 			snapshot.gunImpactPoint=XMFLOAT3{20,10,1000};
 			snapshot.aim=AimSolution{{0.05f,0,1},{60,50,1100},1}; snapshot.assistReady=true; snapshot.hitSeconds=0.15f;
-			Engine::HudDrawList list; CombatHudPresenter{}.Build(snapshot,view,list);
+			Engine::HudDrawList list;
+			CombatEffectSnapshot effects;
+			const auto buildFrame = [&]() {
+				list.Reset(view.width, view.height);
+				CombatEffectPresenter{}.Build(effects, view, list);
+				CombatHudPresenter{}.Build(snapshot, view, list);
+			};
+			buildFrame();
 			Require(!list.GetVertices().empty() && list.GetVertices().size()<Engine::HudDrawList::MaxVertices,"HUD mesh was empty or overflowed");
 			Require(ProjectHudPoint({0,0,100},view).visible && ProjectHudPoint({0,0,-100},view).behind,"HUD projection front/rear failed");
-			snapshot.selected=3; CombatHudPresenter{}.Build(snapshot,view,list);
+			const auto baseVertices = list.GetVertices().size();
+			for (float age : {0.0f, 0.2f, 0.9f, 2.0f, 3.4f}) {
+				effects.explosions = {{{0,0,250}, {}, age, 22}};
+				buildFrame();
+				Require(list.GetVertices().size() > baseVertices, "Explosion phase was invisible");
+			}
+			effects.explosions = {{{0,0,-250}, {}, 0.2f, 22}};
+			buildFrame();
+			Require(list.GetVertices().size() == baseVertices, "Rear explosion was drawn");
+			effects.explosions.assign(4, {{0,0,250}, {}, 0.08f, 22});
+			effects.impacts.assign(64, {{0,0,250}, 0});
+			buildFrame();
+			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices, "Combined effects overflowed HUD");
+			effects.explosions.clear(); effects.impacts.clear();
+            for (float age : {0.0f, 0.04f, 0.2f, 0.42f}) {
+				effects.impacts = {{{0,0,100},age}};
+				buildFrame();
+				Require(list.GetVertices().size() > baseVertices, "Impact phase was invisible");
+			}
+			effects.impacts = {{{0,0,100},0.08f}};
+            buildFrame();
+            Require(list.GetVertices().size() > baseVertices, "Visible impact did not produce sparks");
+            effects.impacts.front().position.z = -100;
+            buildFrame();
+            Require(list.GetVertices().size() == baseVertices, "Rear impact produced sparks");
+            effects.impacts.front().position.z = 100;
+            snapshot.selected=3; buildFrame();
 			for (const auto& vertex:list.GetVertices()) Require(std::isfinite(vertex.position.x)&&std::isfinite(vertex.position.y),"HUD projection generated NaN");
-			snapshot.selected=1; CombatHudPresenter{}.Build(snapshot,view,list);
+			effects.explosions = {{{-25,0,250}, {}, 0.2f, 22}};
+			snapshot.selected=1; buildFrame();
 			context.BeginFrame(); auto* commands=context.GetCommandList(); auto* target=device.GetCurrentRenderTarget();
 			context.TransitionResource(target,D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);
 			const auto rtv=device.GetCurrentRtvHandle(); const float background[]={0.015f,0.025f,0.035f,1};

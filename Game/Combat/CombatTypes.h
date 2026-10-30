@@ -36,10 +36,11 @@ namespace Game {
 		DirectX::XMFLOAT3 previousPosition;
 		DirectX::XMFLOAT4X4 world;
 	};
-	struct HitEvent { Engine::ObjectId target; float frameSeconds; };
+	struct HitEvent { Engine::ObjectId target; float frameSeconds; DirectX::XMFLOAT3 position{}, direction{0,0,-1}; };
 	struct CombatSnapshot {
 		static constexpr float gunSightDistance = 500.0f;
 		std::vector<CombatTarget> enemies;
+		unsigned firedVolleys = 0, hitCount = 0;
 		Engine::ObjectId selected = Engine::InvalidObjectId;
 		LockState lockState = LockState::None;
 		float acquireProgress = 0;

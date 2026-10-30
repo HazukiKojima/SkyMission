@@ -4,27 +4,18 @@
 
 namespace Game {
 	using namespace DirectX;
-	HudProjection ProjectHudPoint(const XMFLOAT3& point, const Engine::RenderView& view) {
-		const auto clip = XMVector4Transform(XMVectorSet(point.x, point.y, point.z, 1),
-			XMLoadFloat4x4(&view.view) * XMLoadFloat4x4(&view.projection));
-		const float w = XMVectorGetW(clip), divisor = std::max(std::abs(w), 1e-5f);
-		const float x = XMVectorGetX(clip) / divisor, y = XMVectorGetY(clip) / divisor, z = XMVectorGetZ(clip) / divisor;
-		return { {(x + 1) * view.width * 0.5f,(1 - y) * view.height * 0.5f},
-			w > 0 && std::abs(x) <= 1 && std::abs(y) <= 1 && z >= 0 && z <= 1, w <= 0 };
-	}
-	void CombatHudPresenter::Build(const CombatSnapshot& snapshot, const Engine::RenderView& view,
-		Engine::HudDrawList& list) const {
-		list.Reset(view.width, view.height);
+	void CombatHudPresenter::Build(const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		if (view.width == 0 || view.height == 0) return;
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		const float line = std::max(1.0f, m_settings.lineWidth * scale), font = m_settings.fontSize * scale;
 		const auto color = m_settings.color;
+		const HudProjector projector(view);
 		const float ox = (view.width - 1920 * scale) * 0.5f, oy = (view.height - 1080 * scale) * 0.5f;
 		const auto label = [&](float x, float y, std::string_view text) { list.Text({ ox + x * scale,oy + y * scale }, text, font, color); };
 		// The boresight follows the gun axis independently of the predicted bullet path.
 		XMFLOAT3 sight;
 		XMStoreFloat3(&sight, XMLoadFloat3(&snapshot.muzzle) + XMLoadFloat3(&snapshot.forward) * CombatSnapshot::gunSightDistance);
-		const auto cross = ProjectHudPoint(sight, view);
+		const auto cross = projector.Project(sight);
 		if (cross.visible) {
 			list.Line({ cross.pixel.x - 12 * scale,cross.pixel.y }, { cross.pixel.x + 12 * scale,cross.pixel.y }, line, color);
 			list.Line({ cross.pixel.x,cross.pixel.y - 12 * scale }, { cross.pixel.x,cross.pixel.y + 12 * scale }, line, color);
@@ -35,7 +26,7 @@ namespace Game {
 			snapshot.selected != Engine::InvalidObjectId && snapshot.aim
 			? std::optional<XMFLOAT3>{snapshot.aim->aimPoint} : std::nullopt;
 		if (circlePoint) {
-			const auto impact = ProjectHudPoint(*circlePoint, view);
+			const auto impact = projector.Project(*circlePoint);
 			if (impact.visible) {
 				const auto p = impact.pixel;
 				const XMFLOAT4 sightColor{ 0.65f,1.0f,0.65f,color.w };
@@ -54,7 +45,7 @@ namespace Game {
 			}
 		}
 		for (const auto& enemy : snapshot.enemies) {
-			const auto projected = ProjectHudPoint(enemy.center, view);
+			const auto projected = projector.Project(enemy.center);
 			const bool selected = enemy.id == snapshot.selected;
 			if (projected.visible) {
 				const auto p = projected.pixel;

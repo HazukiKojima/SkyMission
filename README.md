@@ -150,3 +150,22 @@ SkyMissionは現在開発中です。
 - `Tests/RunRegressionTests.ps1` には、Raw Input の押下・解放、左右 Ctrl、複数デバイス、フォーカス喪失、入力登録の寿命、および海・空の DEFAULT ヒープと GPU 読み戻しの確認を含みます。
 
 Raw Input の登録とメッセージ後処理は Microsoft の [RegisterRawInputDevices](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerrawinputdevices) と [WM_INPUT](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-input) の仕様に従います。
+
+## 戦闘フィードバック
+
+- 実際に発射した斉射で機関砲音、有効な命中で金属的な命中音を再生します。同一フレームの複数発は一音にまとめます。
+- 音は初期化時に合成し、XAudio2の12音声プールで再生します。音声デバイスを利用できない場合もゲームは継続します。
+- 着弾時に短い閃光、入射方向へ跳ね返る不規則な金属片、薄い灰色の煙を表示し、0.45秒で消えます。金属片と煙は命中した機体の速度を引き継ぎます。最大64件を保持します。既存HUD描画経路による投影表示のため、3D物体による遮蔽は行いません。
+
+## 撃破時の爆発
+
+- 敵機のHPが0以下になると、機体中心で短い閃光、乱流模様を持つ不規則な火球、24本の燃える破片と煙の軌跡、上昇する黒煙を表示します。
+- 爆発は敵機の削除後も3.5秒間残り、機体サイズと撃破時の速度を反映します。同時表示は最大4件です。
+- 着弾と同じ投影描画経路を使用します。3D物体による遮蔽は行いません。
+
+## エフェクトの構成
+
+- `Game/Effects/CombatEffectSystem` が着弾・爆発の生成、寿命、同時表示件数を管理します。戦闘状態とは別の `CombatEffectSnapshot` を描画側へ渡します。
+- `CombatEffectPresenter` が着弾と爆発を描画し、`CombatHudPresenter` は照準と文字を描画します。描画リストはApplicationで一度だけ初期化し、エフェクト、HUDの順に追記します。
+- `EffectDrawContext` が座標投影、煙、閃光、二層の軌跡、頂点数の予約を共通化します。`HudProjector` の合成行列とカメラの右方向はフレーム内で共有します。
+- 寿命・本数・速度・描画上限などの調整値は `Game/Effects/CombatEffectSettings.h` にまとめています。

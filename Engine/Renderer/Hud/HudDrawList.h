@@ -19,6 +19,8 @@ namespace Engine {
 		HudDrawList() { m_vertices.reserve(MaxVertices); }
 		void Reset(unsigned width, unsigned height) { m_vertices.clear(); m_width = width; m_height = height; }
 		void Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color);
+		void CloudPuff(DirectX::XMFLOAT2 center, float radius, float rotation, unsigned seed, DirectX::XMFLOAT4 color);
+		void SoftDisc(DirectX::XMFLOAT2 center, float radius, DirectX::XMFLOAT4 color);
 		void Circle(DirectX::XMFLOAT2 center, float radius, float progress, float width, DirectX::XMFLOAT4 color);
 		void Text(DirectX::XMFLOAT2 position, std::string_view text, float height, DirectX::XMFLOAT4 color);
 		const std::vector<HudVertex>& GetVertices() const { return m_vertices; }

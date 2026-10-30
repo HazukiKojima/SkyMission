@@ -397,6 +397,7 @@
     <ClInclude Include="Game\Weapons\WeaponDefinition.h" />
     <ClInclude Include="Game\Weapons\AircraftGun.h" />
     <ClInclude Include="Game\Weapons\ProjectileSystem.h" />
+    <ClInclude Include="Game\Audio\CombatAudio.h" />
     <ClCompile Include="Game\Weapons\AircraftGun.cpp" />
     <ClCompile Include="Game\Weapons\ProjectileSystem.cpp" />
     <None Include="Assets\Aircraft\N1K2JShidenKai\weapon.json" />
@@ -431,5 +432,22 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Tests\CombatTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Effects\CombatEffectSettings.h" />
+    <ClInclude Include="Game\Effects\CombatEffectTypes.h" />
+    <ClInclude Include="Game\Effects\CombatEffectSystem.h" />
+    <ClCompile Include="Game\Effects\CombatEffectSystem.cpp" />
+    <ClInclude Include="Game\Effects\EffectDrawContext.h" />
+    <ClCompile Include="Game\Effects\EffectDrawContext.cpp" />
+    <ClInclude Include="Game\Effects\CombatEffectPresenter.h" />
+    <ClCompile Include="Game\Effects\CombatEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\ExplosionEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\ImpactEffectPresenter.cpp" />
+    <ClInclude Include="Game\UI\HudProjection.h" />
+    <ClCompile Include="Game\UI\HudProjection.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\CombatEffectTests.h" />
   </ItemGroup>
 </Project>
