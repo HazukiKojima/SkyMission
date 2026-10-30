@@ -128,7 +128,10 @@ namespace Game {
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount);
 			const auto view=m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
-			m_hudPresenter.Build(m_scene->GetCombatSnapshot(),view,m_hud);
+			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
+			m_hud.Reset(view.width, view.height);
+			m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);
+			m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud);
 		}
 	}
 

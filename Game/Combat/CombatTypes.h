@@ -37,22 +37,9 @@ namespace Game {
 		DirectX::XMFLOAT4X4 world;
 	};
 	struct HitEvent { Engine::ObjectId target; float frameSeconds; DirectX::XMFLOAT3 position{}, direction{0,0,-1}; };
-	struct ImpactEffect {
-		DirectX::XMFLOAT3 position{};
-		float age = 0;
-		DirectX::XMFLOAT3 velocity{}, direction{0,0,-1};
-	};
-	struct ExplosionEffect {
-		static constexpr float lifetime = 3.5f;
-		DirectX::XMFLOAT3 position{}, velocity{};
-		float age = 0;
-		float radius = 18;
-	};
 	struct CombatSnapshot {
 		static constexpr float gunSightDistance = 500.0f;
 		std::vector<CombatTarget> enemies;
-		std::vector<ImpactEffect> impacts;
-		std::vector<ExplosionEffect> explosions;
 		unsigned firedVolleys = 0, hitCount = 0;
 		Engine::ObjectId selected = Engine::InvalidObjectId;
 		LockState lockState = LockState::None;

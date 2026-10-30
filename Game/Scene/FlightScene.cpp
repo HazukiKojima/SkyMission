@@ -50,10 +50,8 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0)
 			return;
 		dt = std::min(dt, 0.25f);
-		for (auto& explosion : m_combat.explosions) explosion.age += dt;
-		std::erase_if(m_combat.explosions, [](const ExplosionEffect& effect) { return effect.age >= ExplosionEffect::lifetime; });
-		for (auto& impact : m_combat.impacts) impact.age += dt;
-		std::erase_if(m_combat.impacts, [](const ImpactEffect& impact) { return impact.age >= 0.45f; });
+		// 既存の演出を進めてから、このフレームの新しい演出を生成する
+		m_effects.Update(dt);
 		m_combat.hitSeconds = std::max(0.0f, m_combat.hitSeconds - dt);
 		m_combat.destroyedSeconds = std::max(0.0f, m_combat.destroyedSeconds - dt);
 		m_combat.allDownSeconds = std::max(0.0f, m_combat.allDownSeconds - dt);
@@ -241,24 +239,13 @@ namespace Game {
 			if (enemy == m_enemies.end() || enemy->health <= 0) continue;
 			enemy->health -= m_combatSettings.bulletDamage;
 			++m_combat.hitCount;
-			if (m_combat.impacts.size() == 64) m_combat.impacts.erase(m_combat.impacts.begin());
-			m_combat.impacts.push_back({hit.position, 0, enemy->flightModel.GetVelocity(), hit.direction});
+			m_effects.SpawnImpact(hit, enemy->flightModel.GetVelocity());
 			m_combat.hitSeconds = 0.15f;
 			if (enemy->health <= 0) {
-				ExplosionEffect explosion;
-				explosion.position = enemy->flightModel.GetPosition();
-				explosion.velocity = enemy->flightModel.GetVelocity();
-				if (const auto* object = m_scene.FindObject(enemy->objectId)) {
-					if (const auto bounds = object->model->GetLocalBounds()) {
-						const auto center = bounds->Center();
-						DirectX::XMStoreFloat3(&explosion.position, DirectX::XMVector3TransformCoord(
-							DirectX::XMLoadFloat3(&center), DirectX::XMLoadFloat4x4(&object->worldTransform)));
-						const auto extent = DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&bounds->maximum), DirectX::XMLoadFloat3(&bounds->minimum));
-						explosion.radius = std::clamp(DirectX::XMVectorGetX(DirectX::XMVector3Length(extent)) * enemy->visualScale * 0.65f, 18.0f, 65.0f);
-					}
-				}
-				if (m_combat.explosions.size() >= 4) m_combat.explosions.erase(m_combat.explosions.begin());
-				m_combat.explosions.push_back(explosion);
+				if (const auto* aircraft = m_scene.FindObject(enemy->objectId))
+					m_effects.SpawnExplosion(*aircraft, enemy->flightModel.GetVelocity(), enemy->visualScale);
+				else
+					m_effects.SpawnExplosion(enemy->flightModel.GetPosition(), enemy->flightModel.GetVelocity());
 				destroyed.push_back(enemy->objectId);
 				m_combat.destroyedSeconds = 0.8f;
 			}

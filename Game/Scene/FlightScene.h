@@ -5,6 +5,7 @@
 #include "Game/Weapons/AircraftGun.h"
 #include "Game/Weapons/ProjectileSystem.h"
 #include "Game/Combat/TargetingSystem.h"
+#include "Game/Effects/CombatEffectSystem.h"
 
 namespace Game {
 	class FlightScene {
@@ -15,6 +16,7 @@ namespace Game {
 			WeaponInput weaponInput = {}, bool nextTarget = false);
 		void ConfigureCombat(const CombatSettings& settings);
 		const CombatSnapshot& GetCombatSnapshot() const { return m_combat; }
+		const CombatEffectSnapshot& GetEffectSnapshot() const { return m_effects.GetSnapshot(); }
 		void ConfigurePlayerWeapon(const WeaponDefinition& definition, std::shared_ptr<Engine::Model> ammunition);
 		size_t GetProjectileCount() const { return m_projectiles.GetCount(); }
 		void OnResize(UINT width, UINT height);
@@ -73,6 +75,7 @@ namespace Game {
 		CombatSettings m_combatSettings;
 		TargetingSystem m_targeting;
 		CombatSnapshot m_combat;
+		CombatEffectSystem m_effects;
 		size_t m_enemySequence = 0;
 	};
 } // namespace Game

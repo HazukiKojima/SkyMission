@@ -29,6 +29,7 @@ void Require(bool condition, const char* description) {
 
 #include "WeaponTests.h"
 #include "CombatTests.h"
+#include "CombatEffectTests.h"
 
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
@@ -569,6 +570,7 @@ int wmain(int argc, wchar_t** argv) {
 		fs::create_directories(fixture);
 		TestFlightAndScene();
 		TestCombatMath();
+		TestCombatEffectLifetime();
 		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);
 		TestGpuTextures(fixture);

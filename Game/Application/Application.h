@@ -5,6 +5,7 @@
 #include <chrono>
 #include "Game/Audio/CombatAudio.h"
 #include "Game/UI/CombatHudPresenter.h"
+#include "Game/Effects/CombatEffectPresenter.h"
 
 namespace Engine {
 	class Window;
@@ -39,6 +40,7 @@ namespace Game {
 		std::unique_ptr<FlightScene> m_scene;
 		AircraftController m_aircraftController;
 		CombatHudPresenter m_hudPresenter;
+		CombatEffectPresenter m_effectPresenter;
 		CombatAudio m_combatAudio;
 		Engine::HudDrawList m_hud;
 		std::wstring m_windowTitle = L"SkyMission";

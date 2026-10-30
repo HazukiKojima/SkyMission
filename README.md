@@ -162,3 +162,10 @@ Raw Input の登録とメッセージ後処理は Microsoft の [RegisterRawInpu
 - 敵機のHPが0以下になると、機体中心で短い閃光、乱流模様を持つ不規則な火球、24本の燃える破片と煙の軌跡、上昇する黒煙を表示します。
 - 爆発は敵機の削除後も3.5秒間残り、機体サイズと撃破時の速度を反映します。同時表示は最大4件です。
 - 着弾と同じ投影描画経路を使用します。3D物体による遮蔽は行いません。
+
+## エフェクトの構成
+
+- `Game/Effects/CombatEffectSystem` が着弾・爆発の生成、寿命、同時表示件数を管理します。戦闘状態とは別の `CombatEffectSnapshot` を描画側へ渡します。
+- `CombatEffectPresenter` が着弾と爆発を描画し、`CombatHudPresenter` は照準と文字を描画します。描画リストはApplicationで一度だけ初期化し、エフェクト、HUDの順に追記します。
+- `EffectDrawContext` が座標投影、煙、閃光、二層の軌跡、頂点数の予約を共通化します。`HudProjector` の合成行列とカメラの右方向はフレーム内で共有します。
+- 寿命・本数・速度・描画上限などの調整値は `Game/Effects/CombatEffectSettings.h` にまとめています。

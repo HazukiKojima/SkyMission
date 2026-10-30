@@ -375,4 +375,21 @@
   <ItemGroup>
     <ClInclude Include="Game\Audio\CombatAudio.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Effects\CombatEffectSettings.h" />
+    <ClInclude Include="Game\Effects\CombatEffectTypes.h" />
+    <ClInclude Include="Game\Effects\CombatEffectSystem.h" />
+    <ClCompile Include="Game\Effects\CombatEffectSystem.cpp" />
+    <ClInclude Include="Game\Effects\EffectDrawContext.h" />
+    <ClCompile Include="Game\Effects\EffectDrawContext.cpp" />
+    <ClInclude Include="Game\Effects\CombatEffectPresenter.h" />
+    <ClCompile Include="Game\Effects\CombatEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\ExplosionEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\ImpactEffectPresenter.cpp" />
+    <ClInclude Include="Game\UI\HudProjection.h" />
+    <ClCompile Include="Game\UI\HudProjection.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\CombatEffectTests.h" />
+  </ItemGroup>
 </Project>
