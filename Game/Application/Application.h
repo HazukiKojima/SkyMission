@@ -44,7 +44,7 @@ namespace Game {
 		CombatAudio m_combatAudio;
 		Engine::HudDrawList m_hud;
 		std::wstring m_windowTitle = L"SkyMission";
-		// timing
+		// フレーム時間とFPSの計測
 		float m_elapsedTime = 0.0f;
 		std::chrono::steady_clock::time_point m_lastTime;
 		float m_fpsTimer = 0.0f;

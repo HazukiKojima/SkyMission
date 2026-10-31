@@ -59,7 +59,8 @@ namespace Game {
 			return aircraft;
 		}
 
-		WeaponDefinition LoadWeapon(const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
+		WeaponDefinition LoadWeapon(
+			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
 			const auto weaponPath = reader.Resolve(aircraftPath, "weapon");
 			const auto pathText = [](const std::filesystem::path& path) {
 				const auto text = path.u8string();
@@ -77,7 +78,8 @@ namespace Game {
 				const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
 				if (!std::isfinite(capacity) || capacity < 4 || std::floor(capacity) != capacity ||
 					capacity > static_cast<float>(std::numeric_limits<int>::max() / 2))
-					throw std::invalid_argument("maxProjectiles must be an integer of at least 4 within supported range");
+					throw std::invalid_argument(
+						"maxProjectiles must be an integer of at least 4 within supported range");
 				definition.gun.maxProjectiles = static_cast<size_t>(capacity);
 				ValidateGunSettings(definition.gun);
 			} catch (const std::exception& error) {
@@ -85,28 +87,38 @@ namespace Game {
 			}
 			const auto ammoPath = reader.Resolve(weaponPath, "ammunition");
 			try {
-				definition.ammunition = {AmmunitionModelId, reader.Resolve(ammoPath, "model"), LoadModelOptions(reader, ammoPath)};
+				definition.ammunition = {
+					AmmunitionModelId, reader.Resolve(ammoPath, "model"), LoadModelOptions(reader, ammoPath)};
 				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
 				const auto axis = reader.ResolveString(ammoPath, "modelForward");
-				if (axis == "+Y") definition.modelForward = {0, 1, 0};
-				else if (axis == "-Y") definition.modelForward = {0, -1, 0};
-				else if (axis == "+X") definition.modelForward = {1, 0, 0};
-				else if (axis == "-X") definition.modelForward = {-1, 0, 0};
-				else if (axis == "+Z") definition.modelForward = {0, 0, 1};
-				else if (axis == "-Z") definition.modelForward = {0, 0, -1};
-				else throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
+				if (axis == "+Y")
+					definition.modelForward = {0, 1, 0};
+				else if (axis == "-Y")
+					definition.modelForward = {0, -1, 0};
+				else if (axis == "+X")
+					definition.modelForward = {1, 0, 0};
+				else if (axis == "-X")
+					definition.modelForward = {-1, 0, 0};
+				else if (axis == "+Z")
+					definition.modelForward = {0, 0, 1};
+				else if (axis == "-Z")
+					definition.modelForward = {0, 0, -1};
+				else
+					throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
 			} catch (const std::exception& error) {
 				throw std::runtime_error(pathText(ammoPath) + ": " + error.what());
 			}
 			return definition;
 		}
 
-		RocketDefinition LoadRocket(const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
-			const auto weaponPath=reader.Resolve(aircraftPath,"rocketWeapon");
-			RocketDefinition definition; definition.sourcePath=weaponPath;
-			auto source=weaponPath;
+		RocketDefinition LoadRocket(
+			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
+			const auto weaponPath = reader.Resolve(aircraftPath, "rocketWeapon");
+			RocketDefinition definition;
+			definition.sourcePath = weaponPath;
+			auto source = weaponPath;
 			try {
-				auto& settings=definition.settings;
+				auto& settings = definition.settings;
 				settings.muzzleNames = {reader.ResolveString(weaponPath, "muzzleL1"),
 					reader.ResolveString(weaponPath, "muzzleR1")};
 				settings.cooldownSeconds = reader.ResolveFloat(weaponPath, "cooldownSeconds");
@@ -177,6 +189,58 @@ namespace Game {
 			return parameters;
 		}
 
+		void RequireEnvironment(
+			const std::filesystem::path& path, const std::string& field, bool valid, const char* reason) {
+			if (valid)
+				return;
+			const auto text = path.u8string();
+			throw std::runtime_error("JSON '" +
+				std::string(reinterpret_cast<const char*>(text.data()), text.size()) + "', field '" + field +
+				"': " + reason);
+		}
+
+		void ValidateOceanSettings(const OceanSettings& ocean, const std::filesystem::path& path) {
+			// 不正値をGPUへ渡さず、CPUの波高計算とシェーダーで同じ条件を保証する
+			for (const auto& [field, value] :
+				{std::pair{"size", ocean.size}, std::pair{"waveLength", ocean.waveLength},
+					std::pair{"normalUvScale", ocean.normalUvScale},
+					std::pair{"wavePatternUvScale", ocean.wavePatternUvScale},
+					std::pair{"edgeFadeWidth", ocean.edgeFadeWidth}, std::pair{"fogTop", ocean.fogTop}})
+				RequireEnvironment(
+					path, field, std::isfinite(value) && value > 0, "must be positive and finite");
+			for (const auto& [field, value] : {std::pair{"waveSteepness", ocean.waveSteepness},
+					 std::pair{"fogStartDistance", ocean.fogStartDistance},
+					 std::pair{"fogDensity", ocean.fogDensity},
+					 std::pair{"edgeFadeStart", ocean.edgeFadeStart}})
+				RequireEnvironment(
+					path, field, std::isfinite(value) && value >= 0, "must be nonnegative and finite");
+			RequireEnvironment(path, "fogEndDistance",
+				std::isfinite(ocean.fogEndDistance) && ocean.fogEndDistance > ocean.fogStartDistance,
+				"must be finite and greater than fogStartDistance");
+			RequireEnvironment(path, "edgeFadeStart", ocean.edgeFadeStart < 1, "must be less than 1");
+			RequireEnvironment(path, "edgeFadeWidth", ocean.edgeFadeWidth <= 1, "must be at most 1");
+		}
+
+		void ValidateSkySettings(const SkySettings& sky, const std::filesystem::path& path) {
+			RequireEnvironment(
+				path, "radius", std::isfinite(sky.radius) && sky.radius > 0, "must be positive and finite");
+			for (const auto& [field, value] : {std::pair{"sunIntensity", sky.sunIntensity},
+					 std::pair{"ambientIntensity", sky.ambientIntensity}})
+				RequireEnvironment(
+					path, field, std::isfinite(value) && value >= 0, "must be nonnegative and finite");
+			for (const auto& [field, value] :
+				{std::pair{"sunColor", sky.sunColor}, std::pair{"ambientColor", sky.ambientColor}})
+				RequireEnvironment(path, field,
+					std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z) &&
+						value.x >= 0 && value.y >= 0 && value.z >= 0,
+					"must contain three nonnegative finite components");
+			const auto& direction = sky.sunDirection;
+			const double lengthSquared = double(direction.x) * direction.x +
+				double(direction.y) * direction.y + double(direction.z) * direction.z;
+			RequireEnvironment(path, "sunDirection", std::isfinite(lengthSquared) && lengthSquared > 1e-12,
+				"must be finite and nonzero");
+		}
+
 		RenderEnvironmentDefinition LoadEnvironment(const SceneSourcePaths& paths,
 			const JsonAssetReader& reader, const JsonParametersLoader& parametersLoader) {
 			const auto skyJsonPath = reader.Resolve(paths.environment, "sky");
@@ -199,9 +263,7 @@ namespace Game {
 				.edgeFadeWidth = oceanParameters.edgeFadeWidth,
 				.fogTop = reader.ResolveFloat(oceanJsonPath, "fogTop"),
 				.fogDensity = reader.ResolveFloat(oceanJsonPath, "fogDensity")};
-			if (!std::isfinite(ocean.fogTop) || ocean.fogTop <= 0.0f || !std::isfinite(ocean.fogDensity) ||
-				ocean.fogDensity < 0.0f)
-				throw std::runtime_error("Invalid ocean fog settings.");
+			ValidateOceanSettings(ocean, oceanJsonPath);
 			const SkySettings sky = {.radius = skyParameters.radius,
 				.sunDirection = {skyParameters.sunDirection[0], skyParameters.sunDirection[1],
 					skyParameters.sunDirection[2]},
@@ -210,6 +272,8 @@ namespace Game {
 				.ambientIntensity = skyParameters.ambientIntensity,
 				.ambientColor = {skyParameters.ambientColor[0], skyParameters.ambientColor[1],
 					skyParameters.ambientColor[2]}};
+
+			ValidateSkySettings(sky, skyJsonPath);
 
 			return {reader.Resolve(skyJsonPath, "texture"), reader.Resolve(oceanJsonPath, "texture"),
 				reader.Resolve(oceanJsonPath, "normal"), reader.Resolve(oceanJsonPath, "normal2"), ocean, sky,
@@ -226,7 +290,9 @@ namespace Game {
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
 			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
 			.playerRocket = LoadRocket(reader, paths.playerAircraft),
-			.combat = LoadCombatSettings(reader, paths.environment.parent_path().parent_path()/L"Combat/targeting.json"),
-			.hud = LoadHudSettings(reader, paths.environment.parent_path().parent_path()/L"UI/combatHud.json")};
+			.combat = LoadCombatSettings(
+				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),
+			.hud = LoadHudSettings(
+				reader, paths.environment.parent_path().parent_path() / L"UI/combatHud.json")};
 	}
 } // namespace Game

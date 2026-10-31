@@ -6,7 +6,8 @@
 namespace Game {
 	enum class EffectClipMode { CenterVisible, BoundsVisible };
 	struct ProjectedEffectSegment {
-		DirectX::XMFLOAT2 head, tail;
+		DirectX::XMFLOAT2 head;
+		DirectX::XMFLOAT2 tail;
 	};
 
 	class EffectRandom {

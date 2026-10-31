@@ -16,11 +16,11 @@ namespace Engine {
 
 	void RendererConstantBuffers::Initialize(ID3D12Device* device) {
 		for (auto& buffer : m_oceanBuffers)
-			buffer.resource = CreateUploadBuffer(device, AlignConstantBufferSize(sizeof(OceanConstantBufferData)),
-												 &buffer.mappedData);
+			buffer.resource = CreateUploadBuffer(
+				device, AlignConstantBufferSize(sizeof(OceanConstantBufferData)), &buffer.mappedData);
 		for (auto& buffer : m_oceanFogBuffers)
-			buffer.resource = CreateUploadBuffer(device, AlignConstantBufferSize(sizeof(OceanFogConstantBufferData)),
-												 &buffer.mappedData);
+			buffer.resource = CreateUploadBuffer(
+				device, AlignConstantBufferSize(sizeof(OceanFogConstantBufferData)), &buffer.mappedData);
 
 		const UINT64 filmBufferSize = AlignConstantBufferSize(sizeof(FilmConstantBufferData));
 		for (auto& filmBuffer : m_filmBuffers) {
@@ -28,10 +28,12 @@ namespace Engine {
 		}
 	}
 
-	void RendererConstantBuffers::EnsureModelCapacity(ID3D12Device* device, CommandContext* context,
-													  size_t objectCount) {
-		if (std::all_of(std::begin(m_modelBuffers), std::end(m_modelBuffers),
-						[objectCount](const auto& buffers) { return buffers.size() >= objectCount; })) {
+	void RendererConstantBuffers::EnsureModelCapacity(
+		ID3D12Device* device, CommandContext* context, size_t objectCount) {
+		if (std::all_of(
+				std::begin(m_modelBuffers), std::end(m_modelBuffers), [objectCount](const auto& buffers) {
+					return buffers.size() >= objectCount;
+				})) {
 			return;
 		}
 

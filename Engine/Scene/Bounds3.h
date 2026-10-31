@@ -9,4 +9,4 @@ namespace Engine {
 				(minimum.z + maximum.z) * 0.5f};
 		}
 	};
-}
+} // namespace Engine

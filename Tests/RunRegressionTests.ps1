@@ -37,7 +37,13 @@ foreach ($shader in Get-ChildItem -LiteralPath (Join-Path $repository 'Engine\Re
     if ($shader.BaseName.EndsWith('VS')) { $profile = 'vs_5_0'; $entry = 'VS' }
     elseif ($shader.BaseName.EndsWith('PS')) { $profile = 'ps_5_0'; $entry = 'PS' }
     else { continue }
-    $shaderCommands += 'fxc.exe /nologo /T {0} /E {1} /Fo "{2}\{3}.cso" "{4}"' -f $profile, $entry, $build, $shader.BaseName, $shader.FullName
+    # Debug相当とRelease相当の両方で、警告も失敗として検出する
+    foreach ($optimization in @('Od', 'O3')) {
+        $shaderCommands += 'fxc.exe /nologo /WX /{0} /T {1} /E {2} /Fo "{3}\{4}-{0}.cso" "{5}"' -f $optimization, $profile, $entry, $build, $shader.BaseName, $shader.FullName
+        $shaderCommands += 'if errorlevel 1 exit /b %errorlevel%'
+    }
+    # 描画テストで読み込む名前は従来どおりにする
+    $shaderCommands += 'copy /y "{0}\{1}-Od.cso" "{0}\{1}.cso" >nul' -f $build, $shader.BaseName
     $shaderCommands += 'if errorlevel 1 exit /b %errorlevel%'
 }
 $batch = Join-Path $build 'build-tests.cmd'

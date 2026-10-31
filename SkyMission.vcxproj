@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
+    <ClCompile Include="Game\Audio\CombatAudio.cpp" />
     <ClCompile Include="Game\Application\Application.cpp" />
     <ClCompile Include="Game\Aircraft\AircraftController.cpp" />
     <ClCompile Include="Engine\Camera\Camera.cpp" />
@@ -212,7 +213,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -324,6 +325,11 @@
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <FxCompile>
+      <AdditionalOptions>/WX %(AdditionalOptions)</AdditionalOptions>
+    </FxCompile>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets" Condition="Exists('packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" />
@@ -346,6 +352,7 @@
   <ItemGroup>
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\**\*.cs" Exclude="$(SolutionDir)External\REDoxWrapper\bin\**;$(SolutionDir)External\REDoxWrapper\obj\**" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)global.json" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json" Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
@@ -461,5 +468,9 @@
     <None Include="Assets\Aircraft\N1K2JShidenKai\rocketWeapon.json" />
     <None Include="Assets\Ammunition\Rocket\ammunition.json" />
     <None Include="Assets\Ammunition\Rocket\modelImport.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="global.json" />
+    <ClInclude Include="Tests\EnvironmentSettingsTests.h"></ClInclude>
   </ItemGroup>
 </Project>

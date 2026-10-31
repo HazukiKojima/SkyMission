@@ -386,16 +386,17 @@ namespace Engine {
 		return true;
 	}
 
-	void Texture::CreateFromRgba(ID3D12Device* device, ID3D12GraphicsCommandList* commands,
-		UINT width, UINT height, std::span<const uint8_t> pixels) {
-		if (width == 0 || height == 0 || pixels.size() != size_t(width)*height*4)
+	void Texture::CreateFromRgba(ID3D12Device* device, ID3D12GraphicsCommandList* commands, UINT width,
+		UINT height, std::span<const uint8_t> pixels) {
+		if (width == 0 || height == 0 || pixels.size() != size_t(width) * height * 4)
 			throw std::invalid_argument("Invalid RGBA texture dimensions or byte count");
-		ThrowIfFailed(m_image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM,width,height,1,1));
+		ThrowIfFailed(m_image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
 		m_meta = m_image.GetMetadata();
-		const auto* image = m_image.GetImage(0,0,0);
-		for (UINT row=0; row<height; ++row)
-			std::memcpy(image->pixels+row*image->rowPitch,pixels.data()+size_t(row)*width*4,size_t(width)*4);
-		UploadImage(device,commands);
+		const auto* image = m_image.GetImage(0, 0, 0);
+		for (UINT row = 0; row < height; ++row)
+			std::memcpy(image->pixels + row * image->rowPitch, pixels.data() + size_t(row) * width * 4,
+				size_t(width) * 4);
+		UploadImage(device, commands);
 		m_image.Release();
 	}
 

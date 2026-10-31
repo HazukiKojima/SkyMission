@@ -8,8 +8,9 @@ namespace Game {
 		void AdvanceEffects(std::vector<Effect>& effects, float deltaSeconds, float lifetimeSeconds) {
 			for (auto& effect : effects)
 				effect.age += deltaSeconds;
-			std::erase_if(
-				effects, [lifetimeSeconds](const Effect& effect) { return effect.age >= lifetimeSeconds; });
+			std::erase_if(effects, [lifetimeSeconds](const Effect& effect) {
+				return effect.age >= lifetimeSeconds;
+			});
 		}
 
 		template <class Effect>
@@ -31,12 +32,15 @@ namespace Game {
 	}
 
 	void CombatEffectSystem::SpawnRocketSmoke(const DirectX::XMFLOAT3& position, float age) {
-		if (!std::isfinite(age) || age<0 || age>=RocketEffectSettings::smokeLifetimeSeconds) return;
-		AddBoundedEffect(m_snapshot.rocketSmoke,RocketTrailSample{position,age},RocketEffectSettings::maxSmokeCount);
+		if (!std::isfinite(age) || age < 0 || age >= RocketEffectSettings::smokeLifetimeSeconds)
+			return;
+		AddBoundedEffect(
+			m_snapshot.rocketSmoke, RocketTrailSample{position, age}, RocketEffectSettings::maxSmokeCount);
 	}
 	void CombatEffectSystem::SetRocketExhausts(std::vector<RocketExhaust> exhausts) {
-		if (exhausts.size()>RocketEffectSettings::maxExhaustCount) exhausts.resize(RocketEffectSettings::maxExhaustCount);
-		m_snapshot.rocketExhausts=std::move(exhausts);
+		if (exhausts.size() > RocketEffectSettings::maxExhaustCount)
+			exhausts.resize(RocketEffectSettings::maxExhaustCount);
+		m_snapshot.rocketExhausts = std::move(exhausts);
 	}
 
 	void CombatEffectSystem::SpawnImpact(const HitEvent& hit, const DirectX::XMFLOAT3& targetVelocity) {

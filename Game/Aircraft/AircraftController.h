@@ -8,8 +8,14 @@ namespace Game {
 	  public:
 		// フレームの入力スナップショットを機体制御用の入力値へ変換する
 		struct KeyboardState {
-			bool pitchUp = false, pitchDown = false, turnLeft = false, turnRight = false;
-			bool yawLeft = false, yawRight = false, accelerate = false, decelerate = false;
+			bool pitchUp = false;
+			bool pitchDown = false;
+			bool turnLeft = false;
+			bool turnRight = false;
+			bool yawLeft = false;
+			bool yawRight = false;
+			bool accelerate = false;
+			bool decelerate = false;
 		};
 		static AircraftInput MapInput(const KeyboardState& keys);
 		AircraftInput ReadInput(const Engine::InputSnapshot& input) const;

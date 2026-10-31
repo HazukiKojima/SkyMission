@@ -9,7 +9,8 @@ namespace Game {
 		const float scale = context.GetScale();
 		// 入射方向の逆を基準にして、金属片を機体の外側へ散らす
 		const float ageSeconds = impact.age;
-		const auto origin = XMLoadFloat3(&impact.position), inherited = XMLoadFloat3(&impact.velocity);
+		const auto origin = XMLoadFloat3(&impact.position);
+		const auto inherited = XMLoadFloat3(&impact.velocity);
 		const auto normal = -XMVector3Normalize(XMLoadFloat3(&impact.direction));
 		const auto reference =
 			std::abs(XMVectorGetY(normal)) < 0.9f ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
@@ -45,7 +46,8 @@ namespace Game {
 				random.Sample(i + 32) * ImpactEffectSettings::fragmentLifetimeRange;
 			if (ageSeconds >= lifetimeSeconds)
 				continue;
-			const float angle = random.Sample(i + 52) * XM_2PI, outward = 0.2f + random.Sample(i + 72) * 0.8f;
+			const float angle = random.Sample(i + 52) * XM_2PI;
+			const float outward = 0.2f + random.Sample(i + 72) * 0.8f;
 			const auto direction = XMVector3Normalize(
 				normal * outward + tangent * std::cos(angle) + bitangent * std::sin(angle));
 			const float speed = ImpactEffectSettings::fragmentMinSpeed +

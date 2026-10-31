@@ -15,9 +15,8 @@ namespace Game {
 	};
 
 	inline void ValidateGunSettings(const GunSettings& settings) {
-		for (const auto& [name, value] : {
-			std::pair{"fireInterval", settings.fireInterval},
-			std::pair{"muzzleSpeed", settings.muzzleSpeed}, std::pair{"lifetime", settings.lifetime}}) {
+		for (const auto& [name, value] : {std::pair{"fireInterval", settings.fireInterval},
+				 std::pair{"muzzleSpeed", settings.muzzleSpeed}, std::pair{"lifetime", settings.lifetime}}) {
 			if (!std::isfinite(value) || value <= 0)
 				throw std::invalid_argument(std::string(name) + " must be positive and finite");
 		}
@@ -32,8 +31,8 @@ namespace Game {
 	struct WeaponDefinition {
 		GunSettings gun;
 		Engine::ModelAssetDefinition ammunition;
-		// Assimpの座標変換後のモデル前方軸。
+		// Assimpの座標変換後のモデル前方軸
 		DirectX::XMFLOAT3 modelForward{0, 1, 0};
 		std::filesystem::path sourcePath;
 	};
-}
+} // namespace Game

@@ -5,11 +5,15 @@
 
 namespace Game {
 	class CombatHudPresenter {
-	public:
-		void Configure(const Engine::HudSettings& settings) { m_settings = settings; }
+	  public:
+		void Configure(const Engine::HudSettings& settings) {
+			m_settings = settings;
+		}
 		// エフェクト描画後のリストへ照準と文字を追記する
-		void Build(const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
-	private:
+		void Build(
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+
+	  private:
 		Engine::HudSettings m_settings;
 	};
-}
+} // namespace Game

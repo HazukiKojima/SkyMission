@@ -31,10 +31,12 @@ namespace Game {
 	std::optional<EffectDrawContext::ProjectedBillboard> EffectDrawContext::ProjectBillboard(
 		DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode) const {
 		using namespace DirectX;
-		XMFLOAT3 center, edge;
+		XMFLOAT3 center;
+		XMFLOAT3 edge;
 		XMStoreFloat3(&center, position);
 		XMStoreFloat3(&edge, position + XMLoadFloat3(&m_cameraRight) * radius);
-		const auto projectedCenter = m_projector.Project(center), projectedEdge = m_projector.Project(edge);
+		const auto projectedCenter = m_projector.Project(center);
+		const auto projectedEdge = m_projector.Project(edge);
 		if (projectedCenter.behind || projectedEdge.behind)
 			return std::nullopt;
 		const float pixels = std::hypot(
@@ -66,11 +68,12 @@ namespace Game {
 
 	std::optional<ProjectedEffectSegment> EffectDrawContext::ProjectSegment(
 		DirectX::FXMVECTOR head, DirectX::FXMVECTOR tail) const {
-		DirectX::XMFLOAT3 headPosition, tailPosition;
+		DirectX::XMFLOAT3 headPosition;
+		DirectX::XMFLOAT3 tailPosition;
 		DirectX::XMStoreFloat3(&headPosition, head);
 		DirectX::XMStoreFloat3(&tailPosition, tail);
-		const auto headProjection = m_projector.Project(headPosition),
-				   tailProjection = m_projector.Project(tailPosition);
+		const auto headProjection = m_projector.Project(headPosition);
+		const auto tailProjection = m_projector.Project(tailPosition);
 		if (!headProjection.visible || !tailProjection.visible)
 			return std::nullopt;
 		return ProjectedEffectSegment{headProjection.pixel, tailProjection.pixel};

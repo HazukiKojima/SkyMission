@@ -4,8 +4,11 @@
 namespace Game {
 	struct RocketSettings {
 		std::array<std::string, 2> muzzleNames{"GunMuzzle_L1", "GunMuzzle_R1"};
-		float cooldownSeconds = 3, speed = 1200, turnDegreesPerSecond = 30;
-		float lifetimeSeconds = 8, damage = 100;
+		float cooldownSeconds = 3;
+		float speed = 1200;
+		float turnDegreesPerSecond = 30;
+		float lifetimeSeconds = 8;
+		float damage = 100;
 		size_t maxRockets = 16;
 	};
 	inline void ValidateRocketSettings(const RocketSettings& settings) {

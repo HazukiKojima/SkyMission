@@ -38,7 +38,7 @@ float3 RotateNodeVector(float3 value)
     float sine = sin(nodeRotationAngle);
     float cosine = cos(nodeRotationAngle);
     return value * cosine + cross(nodeRotationAxis, value) * sine +
-        nodeRotationAxis * dot(nodeRotationAxis, value) * (1.0f - cosine);
+           nodeRotationAxis * dot(nodeRotationAxis, value) * (1.0f - cosine);
 }
 
 PS_INPUT VS(VS_INPUT input)

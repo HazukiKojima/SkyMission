@@ -3,32 +3,44 @@
 #include <cmath>
 
 namespace Game {
-	std::optional<float> IntersectMovingTarget(const DirectX::XMFLOAT3& start,
-		const DirectX::XMFLOAT3& end, const CollisionTarget& target, float startFraction, float endFraction) {
+	std::optional<float> IntersectMovingTarget(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end,
+		const CollisionTarget& target, float startFraction, float endFraction) {
 		using namespace DirectX;
 		const auto world = XMLoadFloat4x4(&target.world);
 		XMVECTOR determinant;
 		const auto inverse = XMMatrixInverse(&determinant, world);
-		if (std::abs(XMVectorGetX(determinant)) < 1e-12f) return std::nullopt;
+		if (std::abs(XMVectorGetX(determinant)) < 1e-12f)
+			return std::nullopt;
 		const auto displacement = world.r[3] - XMLoadFloat3(&target.previousPosition);
-		XMFLOAT3 a, b;
-		XMStoreFloat3(&a, XMVector3TransformCoord(XMLoadFloat3(&start) + displacement*(1-startFraction), inverse));
-		XMStoreFloat3(&b, XMVector3TransformCoord(XMLoadFloat3(&end) + displacement*(1-endFraction), inverse));
-		const float origins[] = {a.x, a.y, a.z}, ends[] = {b.x, b.y, b.z};
-		const float lo[] = {target.bounds.minimum.x, target.bounds.minimum.y, target.bounds.minimum.z};
-		const float hi[] = {target.bounds.maximum.x, target.bounds.maximum.y, target.bounds.maximum.z};
-		float enter = 0, exit = 1;
+		// 敵の移動量を差し戻し、相対的な弾道を現在のOBBのローカル空間で判定する
+		XMFLOAT3 localStart;
+		XMFLOAT3 localEnd;
+		XMStoreFloat3(&localStart,
+			XMVector3TransformCoord(XMLoadFloat3(&start) + displacement * (1 - startFraction), inverse));
+		XMStoreFloat3(&localEnd,
+			XMVector3TransformCoord(XMLoadFloat3(&end) + displacement * (1 - endFraction), inverse));
+		const float origins[] = {localStart.x, localStart.y, localStart.z};
+		const float ends[] = {localEnd.x, localEnd.y, localEnd.z};
+		const float minimum[] = {target.bounds.minimum.x, target.bounds.minimum.y, target.bounds.minimum.z};
+		const float maximum[] = {target.bounds.maximum.x, target.bounds.maximum.y, target.bounds.maximum.z};
+		float enterFraction = 0;
+		float exitFraction = 1;
 		for (int axis = 0; axis < 3; ++axis) {
 			const float delta = ends[axis] - origins[axis];
 			if (std::abs(delta) < 1e-8f) {
-				if (origins[axis] < lo[axis] || origins[axis] > hi[axis]) return std::nullopt;
+				if (origins[axis] < minimum[axis] || origins[axis] > maximum[axis])
+					return std::nullopt;
 			} else {
-				float nearTime = (lo[axis]-origins[axis])/delta, farTime = (hi[axis]-origins[axis])/delta;
-				if (nearTime > farTime) std::swap(nearTime, farTime);
-				enter = std::max(enter, nearTime); exit = std::min(exit, farTime);
-				if (enter > exit) return std::nullopt;
+				float nearFraction = (minimum[axis] - origins[axis]) / delta;
+				float farFraction = (maximum[axis] - origins[axis]) / delta;
+				if (nearFraction > farFraction)
+					std::swap(nearFraction, farFraction);
+				enterFraction = std::max(enterFraction, nearFraction);
+				exitFraction = std::min(exitFraction, farFraction);
+				if (enterFraction > exitFraction)
+					return std::nullopt;
 			}
 		}
-		return enter;
+		return enterFraction;
 	}
-}
+} // namespace Game

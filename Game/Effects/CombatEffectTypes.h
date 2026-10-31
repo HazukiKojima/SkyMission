@@ -4,8 +4,13 @@
 #include <vector>
 
 namespace Game {
-	struct RocketTrailSample { DirectX::XMFLOAT3 position{}; float age = 0; };
-	struct RocketExhaust { DirectX::XMFLOAT3 position{}, direction{0,0,-1}; };
+	struct RocketTrailSample {
+		DirectX::XMFLOAT3 position{};
+		float age = 0;
+	};
+	struct RocketExhaust {
+		DirectX::XMFLOAT3 position{}, direction{0, 0, -1};
+	};
 	struct ImpactEffect {
 		DirectX::XMFLOAT3 position{};
 		float age = 0;

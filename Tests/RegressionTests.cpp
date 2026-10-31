@@ -2,6 +2,7 @@
 #include "Game/Aircraft/AircraftFlightModel.h"
 #include "Game/Scene/FlightScene.h"
 #include "Game/Scene/FlightSceneLoader.h"
+#include "Game/Audio/CombatAudio.h"
 #include "Engine/Resources/Mesh/MaterialTexturePaths.h"
 #include "Engine/Resources/JsonAssetReader.h"
 #include "Engine/Resources/Texture/Texture.h"
@@ -17,6 +18,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <thread>
 
 using namespace Engine;
 using namespace Game;
@@ -31,6 +33,44 @@ void Require(bool condition, const char* description) {
 #include "CombatTests.h"
 #include "CombatEffectTests.h"
 #include "RocketTests.h"
+#include "EnvironmentSettingsTests.h"
+
+void TestCombatAudioLifecycle() {
+	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
+	for (const bool initializeComFirst : {false, true}) {
+		HRESULT originalApartmentResult = E_FAIL;
+		HRESULT apartmentResult = E_FAIL;
+		APTTYPE originalApartment = APTTYPE_CURRENT;
+		APTTYPEQUALIFIER originalQualifier = APTTYPEQUALIFIER_NONE;
+		APTTYPE apartment = APTTYPE_CURRENT;
+		APTTYPEQUALIFIER qualifier = APTTYPEQUALIFIER_NONE;
+		std::thread worker([&]() {
+			if (initializeComFirst) {
+				ThrowIfFailed(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+			}
+			// 他スレッドのMTAから暗黙に参加している場合も、呼び出し前の状態と比較する
+			originalApartmentResult = CoGetApartmentType(&originalApartment, &originalQualifier);
+			{
+				CombatAudio audio;
+				audio.Update(1, 1);
+				audio.Initialize();
+				audio.Update(2, 3);
+				audio.Initialize();
+				audio.Update(1, 1);
+			}
+			apartmentResult = CoGetApartmentType(&apartment, &qualifier);
+			if (initializeComFirst) {
+				CoUninitialize();
+			}
+		});
+		worker.join();
+		Require(apartmentResult == originalApartmentResult &&
+				(FAILED(apartmentResult) ||
+					(apartment == originalApartment && qualifier == originalQualifier)),
+			"CombatAudio changed caller COM ownership or left COM initialized");
+	}
+	std::cout << "PASS: audio initialization, repeated playback, reinitialization and COM ownership\n";
+}
 
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
@@ -161,6 +201,8 @@ void TestRawInput() {
 
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 3, -2);
 	mouse(mouse1, 0, 4, 5);
+	// マウス以外のデバイス削除で、蓄積した移動量を消さない
+	state.ForgetDevice(keyboard2);
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_UP, 2, 0);
 	snapshot = state.ConsumeFrame();
 	Require(!snapshot.rightMouseDown && snapshot.mouseDeltaX == 9 && snapshot.mouseDeltaY == 3,
@@ -247,9 +289,12 @@ void TestRawInput() {
 		SendMessageW(second.GetHandle(), WM_KILLFOCUS, 0, 0);
 		Require(GetCapture() != second.GetHandle(), "Focus loss kept camera capture");
 		UINT resizeCount = 0;
-		second.SetOnResize([&](UINT, UINT) { ++resizeCount; });
-		Require(SetWindowPos(second.GetHandle(), nullptr, 0, 0, 320, 240,
-			SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE), "Window resize failed");
+		second.SetOnResize([&](UINT, UINT) {
+			++resizeCount;
+		});
+		Require(SetWindowPos(
+					second.GetHandle(), nullptr, 0, 0, 320, 240, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE),
+			"Window resize failed");
 		Require(resizeCount > 0, "Window resize did not reach its callback");
 		SendMessageW(second.GetHandle(), WM_SYSCOMMAND, SC_MAXIMIZE, 0);
 		Require(IsZoomed(second.GetHandle()), "Standard maximize command failed");
@@ -514,12 +559,14 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 			renderer.Initialize(window, 64, 64, invalidDefinition);
 		} catch (const std::runtime_error& error) {
 			const std::string message = error.what();
-			rejected = message.find("Failed to load required model '" + asset.id + "': ") != std::string::npos &&
+			rejected =
+				message.find("Failed to load required model '" + asset.id + "': ") != std::string::npos &&
 				message.find(expectedPath) != std::string::npos;
 		}
 		Require(rejected, "Required model failure did not report its asset ID and UTF-8 path");
 	}
-	std::cout << "PASS: missing player/ammunition and invalid enemy models reject initialization with ID/path\n";
+	std::cout
+		<< "PASS: missing player/ammunition and invalid enemy models reject initialization with ID/path\n";
 	{
 		Renderer renderer;
 		renderer.Initialize(window, 64, 64, definition.BuildRendererDefinition());
@@ -530,35 +577,40 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		scene.AddEnemyAircraft(renderer.GetModel(EnemyModelId), {30, 100, 0}, 1.0f,
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
 		scene.ConfigurePlayerWeapon(definition.playerWeapon, renderer.GetModel(AmmunitionModelId));
-		scene.ConfigurePlayerRocket(definition.playerRocket,renderer.GetModel(RocketModelId));
+		scene.ConfigurePlayerRocket(definition.playerRocket, renderer.GetModel(RocketModelId));
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
-		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles+definition.playerRocket.settings.maxRockets);
+		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles +
+			definition.playerRocket.settings.maxRockets);
 		const auto reserved = renderer.GetModelCapacity();
 		Engine::HudDrawList hud;
 		Game::CombatHudPresenter presenter;
 		for (int i = 0; i < 6; ++i) {
-			scene.Update({}, 0.05f, {}, {{true},false,i==0 ? 2u : 0u});
-			const auto view=renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
-			hud.Reset(view.width,view.height);
-			CombatEffectPresenter{}.Build(scene.GetEffectSnapshot(),view,hud);
-			presenter.Build(scene.GetCombatSnapshot(),view,hud);
-			renderer.Render(64, 64, scene.GetRenderScene(),&hud);
+			scene.Update({}, 0.05f, {}, {{true}, false, i == 0 ? 2u : 0u});
+			const auto view = renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
+			hud.Reset(view.width, view.height);
+			CombatEffectPresenter{}.Build(scene.GetEffectSnapshot(), view, hud);
+			presenter.Build(scene.GetCombatSnapshot(), view, hud);
+			renderer.Render(64, 64, scene.GetRenderScene(), &hud);
 		}
 		Require(scene.GetProjectileCount() >= 12, "Scene did not integrate continuous weapon fire");
-		Require(renderer.GetModelCapacity() == reserved, "Firing grew GPU constant buffers despite reservation");
+		Require(
+			renderer.GetModelCapacity() == reserved, "Firing grew GPU constant buffers despite reservation");
 
 		renderer.Resize(0, 0);
 		renderer.Render(0, 0, scene.GetRenderScene());
 		renderer.Resize(96, 96);
-		const auto resizedView=renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
-		Require(resizedView.width==96 && resizedView.height==96,"HUD view did not reflect renderer resize");
-		hud.Reset(resizedView.width,resizedView.height);
-		CombatEffectPresenter{}.Build(scene.GetEffectSnapshot(),resizedView,hud);
-		presenter.Build(scene.GetCombatSnapshot(),resizedView,hud);
-		renderer.Render(96, 96, scene.GetRenderScene(),&hud);
+		const auto resizedView = renderer.UpdateFrameConstants(scene.GetRenderScene(), 1.0f);
+		Require(
+			resizedView.width == 96 && resizedView.height == 96, "HUD view did not reflect renderer resize");
+		hud.Reset(resizedView.width, resizedView.height);
+		CombatEffectPresenter{}.Build(scene.GetEffectSnapshot(), resizedView, hud);
+		presenter.Build(scene.GetCombatSnapshot(), resizedView, hud);
+		renderer.Render(96, 96, scene.GetRenderScene(), &hud);
 		scene.RemoveObject(scene.GetObjects()[0].id);
-		for (int i = 0; i < 14; ++i) scene.Update({}, 0.25f, {}, {{true}});
-		Require(scene.GetProjectileCount() == 0, "Removed player kept firing or existing projectiles did not expire");
+		for (int i = 0; i < 14; ++i)
+			scene.Update({}, 0.25f, {}, {{true}});
+		Require(scene.GetProjectileCount() == 0,
+			"Removed player kept firing or existing projectiles did not expire");
 		renderer.UpdateFrameConstants(scene.GetRenderScene(), 4.0f);
 		renderer.Render(96, 96, scene.GetRenderScene());
 	}
@@ -575,15 +627,17 @@ int wmain(int argc, wchar_t** argv) {
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
 		TestFlightAndScene();
+		TestCombatAudioLifecycle();
 		TestCombatMath();
 		TestCombatEffectLifetime();
 		TestRocketInputAndFlight();
 		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);
+		TestEnvironmentSettings(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
-		TestRocketLauncherAndAssets(argv[1],fixture);
-		TestCombatDamage(argv[1],fixture);
+		TestRocketLauncherAndAssets(argv[1], fixture);
+		TestCombatDamage(argv[1], fixture);
 		TestHudRendering(fixture);
 		TestRendererSmoke(argv[1], fixture);
 		CoUninitialize();

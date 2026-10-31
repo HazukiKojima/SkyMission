@@ -15,11 +15,9 @@ namespace Engine {
 	struct SceneObject {
 		explicit SceneObject(std::shared_ptr<Model> model)
 			: model(std::move(model)), worldTransform(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-										   0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f) {
-		}
+										   0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f) {}
 		SceneObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& worldTransform)
-			: model(std::move(model)), worldTransform(worldTransform) {
-		}
+			: model(std::move(model)), worldTransform(worldTransform) {}
 
 		ObjectId id = InvalidObjectId;
 		float nodeRotationRadians = 0.0f;

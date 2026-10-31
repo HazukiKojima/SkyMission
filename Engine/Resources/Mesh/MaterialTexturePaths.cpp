@@ -6,11 +6,11 @@
 namespace Engine::MaterialTexturePaths {
 
 	std::filesystem::path FindTexturePath(const std::filesystem::path& modelDirectory,
-										  const std::filesystem::path& texturePath, const ModelLoadOptions& options) {
+		const std::filesystem::path& texturePath, const ModelLoadOptions& options) {
 		const std::filesystem::path texturesDirectory = modelDirectory / options.textureDirectory;
 		const std::filesystem::path candidates[] = {
-			texturePath.is_absolute() ? texturePath : modelDirectory / texturePath, texturesDirectory / texturePath,
-			texturesDirectory / texturePath.filename()};
+			texturePath.is_absolute() ? texturePath : modelDirectory / texturePath,
+			texturesDirectory / texturePath, texturesDirectory / texturePath.filename()};
 
 		for (const auto& candidate : candidates) {
 			if (std::filesystem::exists(candidate)) {
@@ -22,20 +22,18 @@ namespace Engine::MaterialTexturePaths {
 	}
 
 	std::filesystem::path FindFallbackTexturePath(const std::filesystem::path& modelDirectory,
-												  const std::string& materialName, const ModelLoadOptions& options) {
+		const std::string& materialName, const ModelLoadOptions& options) {
 		const std::filesystem::path texturesDirectory = modelDirectory / options.textureDirectory;
-		const std::filesystem::path fallbackPath =
-			!options.fallbackMaterialToken.empty() &&
-					materialName.find(options.fallbackMaterialToken) != std::string::npos
-				? texturesDirectory / options.matchingFallbackTexture
-				: texturesDirectory / options.defaultFallbackTexture;
+		const std::filesystem::path fallbackPath = !options.fallbackMaterialToken.empty() &&
+				materialName.find(options.fallbackMaterialToken) != std::string::npos
+			? texturesDirectory / options.matchingFallbackTexture
+			: texturesDirectory / options.defaultFallbackTexture;
 		return std::filesystem::is_regular_file(fallbackPath) ? fallbackPath : std::filesystem::path();
 	}
 
 	std::filesystem::path FindNamedMaterialTexturePath(const std::filesystem::path& modelDirectory,
-													   const std::string& materialName,
-													   const std::filesystem::path& baseColorPath,
-													   const std::wstring& suffix, const ModelLoadOptions& options) {
+		const std::string& materialName, const std::filesystem::path& baseColorPath,
+		const std::wstring& suffix, const ModelLoadOptions& options) {
 		if (suffix.empty())
 			return {};
 		const std::filesystem::path texturesDirectory = modelDirectory / options.textureDirectory;
@@ -55,7 +53,9 @@ namespace Engine::MaterialTexturePaths {
 
 		std::string materialNameLower = materialName;
 		std::transform(materialNameLower.begin(), materialNameLower.end(), materialNameLower.begin(),
-					   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+			[](unsigned char c) {
+				return static_cast<char>(std::tolower(c));
+			});
 		std::error_code error;
 		for (const auto& entry : std::filesystem::directory_iterator(texturesDirectory, error)) {
 			if (error || !entry.is_regular_file()) {
@@ -75,8 +75,9 @@ namespace Engine::MaterialTexturePaths {
 			const auto utf8 = std::filesystem::path(prefix).u8string();
 			const std::string prefixUtf8(reinterpret_cast<const char*>(utf8.data()), utf8.size());
 			std::string prefixLower = prefixUtf8;
-			std::transform(prefixLower.begin(), prefixLower.end(), prefixLower.begin(),
-						   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+			std::transform(prefixLower.begin(), prefixLower.end(), prefixLower.begin(), [](unsigned char c) {
+				return static_cast<char>(std::tolower(c));
+			});
 			if (prefixLower == materialNameLower) {
 				return entry.path();
 			}

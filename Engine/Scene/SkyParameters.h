@@ -9,4 +9,4 @@ namespace Engine {
 		float ambientIntensity;
 		float ambientColor[3];
 	};
-}
+} // namespace Engine

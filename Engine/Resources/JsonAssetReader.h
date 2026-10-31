@@ -12,18 +12,18 @@ namespace Engine {
 	class JsonAssetReader {
 	  public:
 		JsonAssetReader() = default;
-		explicit JsonAssetReader(JsonFileCache& files) : m_files(&files) {
-		}
-		explicit JsonAssetReader(JsonDocumentCache& documents) : m_documents(&documents) {
-		}
+		explicit JsonAssetReader(JsonFileCache& files) : m_files(&files) {}
+		explicit JsonAssetReader(JsonDocumentCache& documents) : m_documents(&documents) {}
 
 		std::string ResolveString(const std::filesystem::path& jsonPath, const std::string& key) const;
 		std::filesystem::path Resolve(const std::filesystem::path& jsonPath, const std::string& key) const;
 		float ResolveFloat(const std::filesystem::path& jsonPath, const std::string& key) const;
-		std::vector<float> ResolveFloatArray(const std::filesystem::path& jsonPath, const std::string& key) const;
+		std::vector<float> ResolveFloatArray(
+			const std::filesystem::path& jsonPath, const std::string& key) const;
 
 	  private:
-		const RedoxDocument& AcquireDocument(const std::filesystem::path& path, RedoxDocument& transient) const;
+		const RedoxDocument& AcquireDocument(
+			const std::filesystem::path& path, RedoxDocument& transient) const;
 		JsonFileCache* m_files = nullptr;
 		JsonDocumentCache* m_documents = nullptr;
 	};

@@ -30,13 +30,7 @@ struct PS_INPUT
     float2 texcoord : TEXCOORD0;
 };
 
-bool RayBox(
-    float3 origin,
-    float3 direction,
-    float3 boxMin,
-    float3 boxMax,
-    out float tMin,
-    out float tMax)
+bool RayBox(float3 origin, float3 direction, float3 boxMin, float3 boxMax, out float tMin, out float tMax)
 {
     float3 invDirection = 1.0f / max(abs(direction), 1e-5f);
     invDirection *= sign(direction);
@@ -65,81 +59,76 @@ float3 ReconstructWorldPosition(float2 uv, float depth)
 
 float OceanFogDensityAt(float3 worldPosition)
 {
-    float height = saturate(
-        (worldPosition.y - oceanFogBottom) /
-        max(oceanFogTop - oceanFogBottom, 1.0f));
+    float height = saturate((worldPosition.y - oceanFogBottom) / max(oceanFogTop - oceanFogBottom, 1.0f));
     float heightDensity = 1.0f - smoothstep(0.0f, 1.0f, height);
 
     float2 oceanLocalPosition = worldPosition.xz - cameraPosition.xz;
-    float oceanDistance = max(
-        abs(oceanLocalPosition.x),
-        abs(oceanLocalPosition.y));
-    float edgeDensity = smoothstep(
-        oceanFogStartDistance,
-        oceanFogEndDistance,
-        oceanDistance);
+    float oceanDistance = max(abs(oceanLocalPosition.x), abs(oceanLocalPosition.y));
+    float edgeDensity = smoothstep(oceanFogStartDistance, oceanFogEndDistance, oceanDistance);
 
     return heightDensity * edgeDensity;
 }
 
-float OceanHorizonFog(
-    float3 rayOrigin,
-    float3 rayDirection,
-    float maxDistance)
+float OceanHorizonFog(float3 rayOrigin, float3 rayDirection, float maxDistance)
 {
-    float3 fogMin = float3(
-        rayOrigin.x - oceanFogEndDistance,
-        oceanFogBottom,
-        rayOrigin.z - oceanFogEndDistance);
-    float3 fogMax = float3(
-        rayOrigin.x + oceanFogEndDistance,
-        oceanFogTop,
-        rayOrigin.z + oceanFogEndDistance);
+    float3 fogMin =
+        float3(rayOrigin.x - oceanFogEndDistance, oceanFogBottom, rayOrigin.z - oceanFogEndDistance);
+    float3 fogMax = float3(rayOrigin.x + oceanFogEndDistance, oceanFogTop, rayOrigin.z + oceanFogEndDistance);
 
-    float fogEnter;
-    float fogExit;
-    if (!RayBox(rayOrigin, rayDirection, fogMin, fogMax, fogEnter, fogExit))
-        return 0.0f;
+    float fogEnter = 0.0f;
+    float fogExit = 0.0f;
+    bool intersectsFog = RayBox(rayOrigin, rayDirection, fogMin, fogMax, fogEnter, fogExit);
 
     fogEnter = max(fogEnter, oceanFogStartDistance);
     fogExit = min(fogExit, min(maxDistance, oceanFogEndDistance));
-    if (fogExit <= fogEnter)
-        return 0.0f;
-
-    const int FOG_STEPS = 24;
-    float fogStep = (fogExit - fogEnter) / FOG_STEPS;
-    float opticalDepth = 0.0f;
-
-    [unroll]
-    for (int i = 0; i < FOG_STEPS; ++i)
+    // 霧を通る区間だけ積分し、区間がなければ初期値のゼロを返す
+    float fogAmount = 0.0f;
+    if (intersectsFog && fogExit > fogEnter)
     {
-        float t = fogEnter + fogStep * ((float)i + 0.5f);
-        float3 samplePosition = rayOrigin + rayDirection * t;
-        opticalDepth += OceanFogDensityAt(samplePosition) * oceanFogDensity * fogStep;
-    }
 
-    float horizonMask = pow(1.0f - saturate(abs(rayDirection.y)), 4.0f);
-    return saturate((1.0f - exp(-opticalDepth)) * horizonMask);
+        const int FOG_STEPS = 24;
+        float fogStep = (fogExit - fogEnter) / FOG_STEPS;
+        float opticalDepth = 0.0f;
+
+        [unroll] for (int i = 0; i < FOG_STEPS; ++i)
+        {
+            float t = fogEnter + fogStep * ((float)i + 0.5f);
+            float3 samplePosition = rayOrigin + rayDirection * t;
+            opticalDepth += OceanFogDensityAt(samplePosition) * oceanFogDensity * fogStep;
+        }
+
+        float horizonMask = pow(1.0f - saturate(abs(rayDirection.y)), 4.0f);
+        fogAmount = saturate((1.0f - exp(-opticalDepth)) * horizonMask);
+    }
+    return fogAmount;
 }
 
 float3 SampleSceneSkyAbove(float2 uv, float pixelHeight, float3 fallback)
 {
-    [unroll]
-    for (int i = 0; i < 8; ++i)
+    float3 skyColor = fallback;
+    bool foundSky = false;
+    // 最初に見つけた空の色を保持し、見つからなければ代替色を使う
+    [unroll] for (int i = 0; i < 8; ++i)
     {
-        float sampleOffset = pixelHeight * exp2((float)i);
-        float2 sampleUv = float2(uv.x, max(uv.y - sampleOffset, pixelHeight * 0.5f));
-        float sampleDepth = gSceneDepth.SampleLevel(gSampler, sampleUv, 0).r;
-
-        if (sampleDepth >= 1.0f)
+        if (!foundSky)
         {
-            float4 sampleColor = gSceneColor.SampleLevel(gSampler, sampleUv, 0);
-            if (sampleColor.a > 0.99f)
-                return sampleColor.rgb;
+            float sampleOffset = pixelHeight * exp2((float)i);
+            float2 sampleUv = float2(uv.x, max(uv.y - sampleOffset, pixelHeight * 0.5f));
+            float sampleDepth = gSceneDepth.SampleLevel(gSampler, sampleUv, 0).r;
+
+            if (sampleDepth >= 1.0f)
+            {
+                float4 sampleColor = gSceneColor.SampleLevel(gSampler, sampleUv, 0);
+                if (sampleColor.a > 0.99f)
+                {
+                    skyColor = sampleColor.rgb;
+                    foundSky = true;
+                }
+            }
         }
     }
 
-    return fallback;
+    return skyColor;
 }
 
 float4 PS(PS_INPUT input) : SV_TARGET
@@ -172,13 +161,10 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
         float3 oceanPosition = cameraPosition + rayDirection * sceneDistance;
         float2 oceanLocalPosition = oceanPosition.xz - cameraPosition.xz;
-        float oceanEdgeDistance = max(
-            abs(oceanLocalPosition.x),
-            abs(oceanLocalPosition.y)) / max(oceanFogEndDistance, 1.0f);
+        float oceanEdgeDistance =
+            max(abs(oceanLocalPosition.x), abs(oceanLocalPosition.y)) / max(oceanFogEndDistance, 1.0f);
         oceanEdgeFade = smoothstep(
-            oceanEdgeFadeStart,
-            oceanEdgeFadeStart + max(oceanEdgeFadeWidth, 1e-6f),
-            oceanEdgeDistance);
+            oceanEdgeFadeStart, oceanEdgeFadeStart + max(oceanEdgeFadeWidth, 1e-6f), oceanEdgeDistance);
     }
     else if (sceneDepth < 1.0f)
     {
