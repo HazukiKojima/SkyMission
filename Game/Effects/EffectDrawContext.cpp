@@ -19,8 +19,19 @@ namespace Game {
 	}
 
 	bool EffectDrawContext::HasVertexBudget(size_t requiredVertices) const {
-		return m_list.GetVertices().size() + requiredVertices <=
-			Engine::HudDrawList::MaxVertices - EffectDrawSettings::hudReservedVertices;
+		return m_list.GetVertices().size() + requiredVertices <= Engine::HudDrawList::MaxVertices -
+			EffectDrawSettings::hudReservedVertices - m_additionalReservedVertices;
+	}
+
+	void EffectDrawContext::SetAdditionalReservedVertices(size_t vertices) {
+		m_additionalReservedVertices = std::min(vertices, GunEffectSettings::reservedVertices);
+	}
+
+	std::optional<ProjectedEffectSegment> EffectDrawContext::ProjectClippedSegment(
+		const DirectX::XMFLOAT3& head, const DirectX::XMFLOAT3& tail) const {
+		if (const auto segment = m_projector.ProjectClippedSegment(head, tail))
+			return ProjectedEffectSegment{segment->head, segment->tail};
+		return std::nullopt;
 	}
 
 	float EffectDrawContext::GetScale() const {

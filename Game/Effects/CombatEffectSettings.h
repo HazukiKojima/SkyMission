@@ -2,6 +2,28 @@
 #include <cstddef>
 
 namespace Game {
+	struct GunEffectSettings {
+		static constexpr float flashLifetimeSeconds = 0.065f;
+		static constexpr float flashRadius = 2.5f;
+		static constexpr float flameLength = 8.0f;
+		static constexpr size_t maxFlashCount = 4;
+		static constexpr float tracerSeconds = 0.018f;
+		static constexpr float tracerMaxLength = 120.0f;
+		static constexpr float tracerOuterWidth = 4.0f;
+		static constexpr float tracerInnerWidth = 1.5f;
+		static constexpr size_t maxTracerCount = 256;
+		static constexpr float smokeLifetimeSeconds = 0.35f;
+		static constexpr float smokeStartRadius = 0.8f;
+		static constexpr float smokeEndRadius = 2.8f;
+		static constexpr float smokeOpacity = 0.16f;
+		static constexpr float smokeVelocityInheritance = 0.25f;
+		static constexpr float smokeDrag = 2.0f;
+		static constexpr float smokeRiseSpeed = 3.0f;
+		static constexpr size_t maxSmokeCount = 64;
+		static constexpr size_t reservedVertices = 4000;
+		static constexpr size_t flashVertexBudget = 222;
+		static constexpr size_t tracerVertexBudget = 12;
+	};
 	// 時間は秒、距離はワールド単位、太さは1920x1080基準で指定する
 	struct ImpactEffectSettings {
 		static constexpr float lifetimeSeconds = 0.45f;

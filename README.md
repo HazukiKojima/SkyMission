@@ -116,6 +116,8 @@ L1 / R1には独立した3秒のクールタイムがあり、HUD左下で次の
 
 モデルの表示サイズは各 `modelImport.json` の `normalizedExtent` で指定します。変更後はアプリを再起動してください。
 演出の寿命・本数・描画上限は `Game/Effects/CombatEffectSettings.h` にまとめています。
+機関砲には4門のマズルフラッシュ、2発に1発の曳光弾、薄い発射煙を表示します。
+調整値と描画の制約は[機関砲の発射エフェクト設計](Docs/Design/GunFireEffects.md)を参照してください。
 詳細は [機関砲の設計](Docs/Design/PlayerAircraftGun.md) と [ロックオン・HUDの設計](Docs/Design/TargetLockCombatHud.md) を参照してください。
 
 ## テスト
