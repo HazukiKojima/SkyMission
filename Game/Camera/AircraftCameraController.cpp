@@ -8,6 +8,7 @@ namespace Game {
 
 	void AircraftCameraController::Initialize(float fovY, float aspect, float nearZ, float farZ) {
 		m_camera.Initialize(fovY, aspect, nearZ, farZ);
+		m_lookYaw = m_lookPitch = 0;
 		UpdateView();
 	}
 
@@ -16,8 +17,10 @@ namespace Game {
 	}
 
 	void AircraftCameraController::Update(float deltaSeconds, const Engine::InputSnapshot& input) {
+		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0)
+			return;
 		if (m_following) {
-			UpdateFollow(deltaSeconds);
+			UpdateFollow(deltaSeconds, input);
 			UpdateView();
 			return;
 		}
@@ -62,9 +65,10 @@ namespace Game {
 			m_position.z += right.z * moveSpeed;
 		}
 
-		// フレーム途中で終了したドラッグの移動量も反映する
-		m_yaw += static_cast<float>(input.mouseDeltaX) * m_mouseSensitivity;
-		m_pitch -= static_cast<float>(input.mouseDeltaY) * m_mouseSensitivity;
+		if (input.IsKeyDown('Z')) {
+			m_yaw += static_cast<float>(input.mouseDeltaX) * m_mouseSensitivity;
+			m_pitch -= static_cast<float>(input.mouseDeltaY) * m_mouseSensitivity;
+		}
 		const float pitchLimit = XM_PIDIV2 - 0.01f;
 		m_pitch = std::clamp(m_pitch, -pitchLimit, pitchLimit);
 
@@ -81,7 +85,18 @@ namespace Game {
 		m_followMaximumSpeed = target.maximumSpeed;
 	}
 
-	void AircraftCameraController::UpdateFollow(float deltaSeconds) {
+	void AircraftCameraController::UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input) {
+		if (input.IsKeyDown('Z')) {
+			m_lookYaw = std::remainder(
+				m_lookYaw - static_cast<float>(input.mouseDeltaX) * m_mouseSensitivity, XM_2PI);
+			m_lookPitch = std::clamp(
+				m_lookPitch - static_cast<float>(input.mouseDeltaY) * m_mouseSensitivity, -1.1f, 1.1f);
+		} else {
+			// 機体の追従とは別に視点のオフセットを減衰させ、解放時に瞬間移動しない。
+			const float decay = std::exp(-m_lookReturnRate * deltaSeconds);
+			m_lookYaw *= decay;
+			m_lookPitch *= decay;
+		}
 		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
 		XMVECTOR followDirection = XMVector3Normalize(XMLoadFloat3(&m_followHeading));
 		if (!m_followPitchInputActive) {
@@ -104,9 +119,11 @@ namespace Game {
 			std::clamp(std::atan2(XMVectorGetY(forward), horizontalForwardLength) * 0.4f, -0.35f, 0.35f);
 		const float pitchBlend = 1.0f - std::exp(-m_followDirectionSmoothing * deltaSeconds);
 		m_followCameraPitch += (targetPitch - m_followCameraPitch) * pitchBlend;
-		const float pitchCosine = std::cos(m_followCameraPitch);
-		const XMVECTOR smoothedDirection = XMVectorSet(std::sin(m_followCameraYaw) * pitchCosine,
-			std::sin(m_followCameraPitch), -std::cos(m_followCameraYaw) * pitchCosine, 0.0f);
+		const float orbitYaw = m_followCameraYaw + m_lookYaw;
+		const float orbitPitch = std::clamp(m_followCameraPitch + m_lookPitch, -1.15f, 1.15f);
+		const float pitchCosine = std::cos(orbitPitch);
+		const XMVECTOR smoothedDirection = XMVectorSet(
+			std::sin(orbitYaw) * pitchCosine, std::sin(orbitPitch), -std::cos(orbitYaw) * pitchCosine, 0.0f);
 		const XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		const float speedRange = std::max(m_followMaximumSpeed - 60.0f, 0.001f);
 		const float speedRatio = std::clamp((m_followSpeed - 60.0f) / speedRange, 0.0f, 1.0f);

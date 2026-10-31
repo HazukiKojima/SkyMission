@@ -151,6 +151,70 @@ void TestFlightAndScene() {
 	std::cout << "PASS: flight validation, integration, input, stable IDs, independent propellers\n";
 }
 
+void TestFollowCameraLook() {
+	using namespace DirectX;
+	AircraftCameraController reference;
+	reference.Initialize();
+	AircraftCameraTarget target{{0, 1500, 0}, {0, 0, -1}, {0, 0, -1}, false, 500, 1500};
+	reference.SetFollowTarget(target);
+	reference.Update(1.0f);
+	const auto distance = [](XMFLOAT3 a, XMFLOAT3 b) {
+		return XMVectorGetX(XMVector3Length(XMLoadFloat3(&a) - XMLoadFloat3(&b)));
+	};
+	Engine::InputSnapshot look;
+	look.active = true;
+	look.keys['Z'] = true;
+	look.mouseDeltaX = 400;
+	look.mouseDeltaY = -100;
+	auto camera = reference;
+	camera.Update(1 / 60.0f, look);
+	const float initialOffset = distance(camera.GetPosition(), reference.GetPosition());
+	Require(camera.GetPosition().x > reference.GetPosition().x, "Right mouse motion orbited camera left");
+	Require(initialOffset > 100, "Z mouse movement did not orbit following camera");
+	Engine::InputSnapshot rocket;
+	rocket.active = true;
+	rocket.rightMouseDown = true;
+	rocket.rightMousePressCount = 1;
+	rocket.mouseDeltaX = 900;
+	rocket.mouseDeltaY = 900;
+	auto unchanged = reference;
+	unchanged.Update(1 / 60.0f, rocket);
+	Require(distance(unchanged.GetPosition(), reference.GetPosition()) < 0.01f,
+		"Rocket click rotated camera without Z");
+	camera.Update(1 / 60.0f, {});
+	const float releaseOffset = distance(camera.GetPosition(), reference.GetPosition());
+	Require(releaseOffset > 1 && releaseOffset < initialOffset && releaseOffset > initialOffset * 0.5f,
+		"Z release snapped camera or did not start smooth return");
+	auto slowFrames = camera, fastFrames = camera;
+	for (int i = 0; i < 30; ++i)
+		slowFrames.Update(1 / 30.0f);
+	for (int i = 0; i < 120; ++i)
+		fastFrames.Update(1 / 120.0f);
+	Require(distance(slowFrames.GetPosition(), fastFrames.GetPosition()) < 0.05f,
+		"Look return depended on frame rate");
+	for (int i = 0; i < 180; ++i) {
+		target.position.z -= 10;
+		target.heading = target.forward = {0.5f, 0, -0.8660254f};
+		reference.SetFollowTarget(target);
+		camera.SetFollowTarget(target);
+		reference.Update(1 / 60.0f);
+		camera.Update(1 / 60.0f);
+	}
+	Require(distance(camera.GetPosition(), reference.GetPosition()) < 0.05f,
+		"Released camera did not return to moving aircraft's default view");
+	look.mouseDeltaY = 1000000;
+	camera.Update(1 / 60.0f, look);
+	XMFLOAT4X4 view;
+	XMStoreFloat4x4(&view, camera.GetView());
+	Require(std::isfinite(view._11) && std::isfinite(view._22) && std::isfinite(view._33),
+		"Look pitch limit produced invalid view");
+	const auto before = camera.GetPosition();
+	camera.Update(std::numeric_limits<float>::infinity(), look);
+	Require(distance(before, camera.GetPosition()) == 0, "Invalid delta moved camera");
+	std::cout << "PASS: Z orbit, rocket/camera independence, smooth return, moving follow and frame-rate "
+				 "stability\n";
+}
+
 void TestRawInput() {
 	RawInputState state;
 	const auto keyboard1 = reinterpret_cast<HANDLE>(std::uintptr_t(1));
@@ -203,14 +267,16 @@ void TestRawInput() {
 	key(keyboard1, 'W', RI_KEY_MAKE, 0xff);
 	Require(!state.ConsumeFrame().IsKeyDown('W'), "Keyboard overrun packet was retained");
 
+	key(keyboard1, 'Z');
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 3, -2);
 	mouse(mouse1, 0, 4, 5);
 	// マウス以外のデバイス削除で、蓄積した移動量を消さない
 	state.ForgetDevice(keyboard2);
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_UP, 2, 0);
 	snapshot = state.ConsumeFrame();
-	Require(!snapshot.rightMouseDown && snapshot.mouseDeltaX == 9 && snapshot.mouseDeltaY == 3,
-		"Short right-button drag or accumulated motion was lost");
+	Require(!snapshot.rightMouseDown && snapshot.rightMousePressCount == 1 && snapshot.mouseDeltaX == 9 &&
+			snapshot.mouseDeltaY == 3,
+		"Z-held mouse motion was lost");
 	const auto next = state.ConsumeFrame();
 	Require(next.mouseDeltaX == 0 && next.mouseDeltaY == 0, "Raw mouse movement was replayed next frame");
 	AircraftCameraController camera;
@@ -219,11 +285,12 @@ void TestRawInput() {
 	DirectX::XMStoreFloat4x4(&before, camera.GetView());
 	camera.Update(0.0f, snapshot);
 	DirectX::XMStoreFloat4x4(&after, camera.GetView());
-	Require(
-		std::abs(after._13 - before._13) > 0.001f, "Camera did not consume released-in-frame drag motion");
-	mouse(mouse1, 0, 100, 100);
-	Require(state.ConsumeFrame().mouseDeltaX == 0, "Mouse movement without right drag rotated the camera");
+	Require(std::abs(after._13 - before._13) > 0.001f, "Camera did not consume Z-held mouse motion");
+	key(keyboard1, 'Z', RI_KEY_BREAK);
+	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 100, 100);
+	Require(state.ConsumeFrame().mouseDeltaX == 0, "Mouse movement without Z rotated the camera");
 
+	key(keyboard1, 'Z');
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 0, 0, MOUSE_MOVE_ABSOLUTE);
 	mouse(mouse1, 0, 65535, 65535, MOUSE_MOVE_ABSOLUTE);
 	snapshot = state.ConsumeFrame();
@@ -283,13 +350,16 @@ void TestRawInput() {
 		Require(GetCapture() != second.GetHandle(), "Left click started camera capture");
 		SendMessageW(second.GetHandle(), WM_LBUTTONUP, 0, 0);
 		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
-		Require(GetCapture() == second.GetHandle(), "Client right drag did not capture the mouse");
+		Require(GetCapture() != second.GetHandle(), "Rocket click captured the camera mouse");
 		SendMessageW(second.GetHandle(), WM_RBUTTONUP, 0, 0);
-		Require(GetCapture() != second.GetHandle(), "Right drag release kept camera capture");
-		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
+		SendMessageW(second.GetHandle(), WM_KEYDOWN, 'Z', 0);
+		Require(GetCapture() == second.GetHandle(), "Z did not capture the camera mouse");
+		SendMessageW(second.GetHandle(), WM_KEYUP, 'Z', 0);
+		Require(GetCapture() != second.GetHandle(), "Z release kept camera capture");
+		SendMessageW(second.GetHandle(), WM_KEYDOWN, 'Z', 0);
 		SendMessageW(second.GetHandle(), WM_CANCELMODE, 0, 0);
 		Require(GetCapture() != second.GetHandle(), "Cancel mode kept camera capture");
-		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
+		SendMessageW(second.GetHandle(), WM_KEYDOWN, 'Z', 0);
 		SendMessageW(second.GetHandle(), WM_KILLFOCUS, 0, 0);
 		Require(GetCapture() != second.GetHandle(), "Focus loss kept camera capture");
 		UINT resizeCount = 0;
@@ -656,6 +726,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestGunSegmentClipping();
 		TestRocketInputAndFlight();
 		TestRawInput();
+		TestFollowCameraLook();
 		TestPathsAndJson(argv[1], fixture);
 		TestEnvironmentSettings(argv[1], fixture);
 		TestGpuTextures(fixture);

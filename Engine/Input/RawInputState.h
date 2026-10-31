@@ -19,6 +19,7 @@ namespace Engine {
 			return active && key < pressedKeys.size() && pressedKeys[key];
 		}
 		bool rightMouseDown = false;
+		unsigned rightMousePressCount = 0;
 		bool leftMouseDown = false;
 		std::int64_t mouseDeltaX = 0;
 		std::int64_t mouseDeltaY = 0;
@@ -52,6 +53,7 @@ namespace Engine {
 		}
 		void ClearMouse() {
 			m_mice.clear();
+			m_rightMousePressCount = 0;
 			m_deltaX = 0;
 			m_deltaY = 0;
 		}
@@ -92,7 +94,10 @@ namespace Engine {
 		void ProcessMouse(HANDLE device, const RAWMOUSE& mouse, int desktopWidth, int desktopHeight) {
 			if (!m_active)
 				return;
-			const bool wasDragging = IsRightMouseDown();
+			const bool wasRightDown = IsRightMouseDown();
+			if ((mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) && !wasRightDown &&
+				m_rightMousePressCount < std::numeric_limits<std::uint16_t>::max())
+				++m_rightMousePressCount;
 			auto& state = m_mice[device];
 			if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN)
 				state.leftDown = true;
@@ -121,10 +126,18 @@ namespace Engine {
 				state.height = desktopHeight;
 			} else
 				state.hasAbsolute = false;
-			if (wasDragging || IsRightMouseDown()) {
+			if (IsKeyDown('Z')) {
 				m_deltaX += dx;
 				m_deltaY += dy;
 			}
+		}
+		bool IsKeyDown(UINT key) const {
+			if (!m_active || key >= 256)
+				return false;
+			for (const auto& [device, keys] : m_keyboards)
+				if (keys[key])
+					return true;
+			return false;
 		}
 		bool IsRightMouseDown() const {
 			for (const auto& [device, state] : m_mice)
@@ -145,6 +158,7 @@ namespace Engine {
 					for (size_t i = 0; i < keys.size(); ++i)
 						snapshot.keys[i] = snapshot.keys[i] || keys[i];
 				snapshot.rightMouseDown = IsRightMouseDown();
+				snapshot.rightMousePressCount = m_rightMousePressCount;
 				snapshot.pressedKeys = m_pressedKeys;
 				snapshot.keyPressCounts = m_keyPressCounts;
 				snapshot.leftMouseDown = IsLeftMouseDown();
@@ -155,6 +169,7 @@ namespace Engine {
 			m_deltaY = 0;
 			m_pressedKeys.fill(false);
 			m_keyPressCounts.fill(0);
+			m_rightMousePressCount = 0;
 			return snapshot;
 		}
 
@@ -169,6 +184,7 @@ namespace Engine {
 			POINT absolute{};
 		};
 		bool m_active = false;
+		std::uint16_t m_rightMousePressCount = 0;
 		std::array<bool, 256> m_pressedKeys{};
 		std::array<std::uint16_t, 256> m_keyPressCounts{};
 		std::unordered_map<HANDLE, std::array<bool, 256>> m_keyboards;
