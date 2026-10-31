@@ -17,6 +17,10 @@ namespace Game {
 		void Update(const AircraftInput& input, float deltaSeconds,
 			const Engine::InputSnapshot& cameraInput = {}, CombatInput combatInput = {});
 		void ConfigureCombat(const CombatSettings& settings);
+		void ConfigureEnemyMissile(const RocketDefinition& definition, std::shared_ptr<Engine::Model> model);
+		size_t GetEnemyMissileCount() const {
+			return m_enemyMissiles.GetCount();
+		}
 		void ConfigurePlayerRocket(const RocketDefinition& definition, std::shared_ptr<Engine::Model> model);
 		size_t GetRocketCount() const {
 			return m_rockets.GetCount();
@@ -42,6 +46,9 @@ namespace Game {
 		void SetEnvironment(const Engine::SceneEnvironment& environment) {
 			m_scene.SetEnvironment(environment);
 		}
+		void SetPlayerAircraftPosition(const DirectX::XMFLOAT3& position) {
+			m_player.SetPosition(position);
+		}
 		void SetPlayerAircraftVisualScale(float scale) {
 			m_playerVisualScale = scale;
 		}
@@ -51,7 +58,8 @@ namespace Game {
 		Engine::ObjectId AddPlayerObject(std::shared_ptr<Engine::Model> model);
 		Engine::ObjectId AddEnemyAircraft(std::shared_ptr<Engine::Model> model,
 			const DirectX::XMFLOAT3& position, float scale, const AircraftFlightParameters& flight,
-			const AircraftAIParameters& ai, float health = 100, std::string name = "");
+			const AircraftAIParameters& ai, float health = 100, std::string name = "",
+			bool facePlayer = false);
 		Engine::ObjectId AddObject(std::shared_ptr<Engine::Model> model) {
 			return m_scene.AddObject(std::move(model));
 		}
@@ -66,6 +74,11 @@ namespace Game {
 			float visualScale = 1;
 			float propellerAngle = 0;
 			float health = 100;
+			size_t slot = 0;
+			bool fire = false;
+			float missileCooldown = 0;
+			bool locking = false;
+			float lockProgress = 0;
 			std::string name;
 			DirectX::XMFLOAT3 previousPosition{};
 		};
@@ -78,6 +91,16 @@ namespace Game {
 		void ApplyHits();
 		void UpdateGunEffects();
 		void UpdateRockets(const CombatInput& input, float dt, std::span<const CollisionTarget> targets);
+		void UpdateEnemyWeapons(float dt);
+		// 初回更新直前の状態を保持し、アセットを共有したまま再挑戦する。
+		std::shared_ptr<const FlightScene> m_initialState;
+		UINT m_width = 800, m_height = 600;
+		float m_battleSeconds = 0;
+		DirectX::XMFLOAT3 m_previousPlayerPosition{};
+		RocketSystem m_enemyMissiles;
+		RocketSettings m_enemyMissileSettings;
+		bool m_enemyMissileConfigured = false;
+		void RefreshThreatWarning();
 		Engine::Scene m_scene;
 		AircraftCameraController m_cameraController;
 		AircraftFlightModel m_player;

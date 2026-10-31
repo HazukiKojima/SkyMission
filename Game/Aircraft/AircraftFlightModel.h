@@ -2,6 +2,7 @@
 #include "AircraftFlightParameters.h"
 #include "ValidateFlightParameters.h"
 #include <DirectXMath.h>
+#include <cmath>
 
 namespace Game {
 	struct AircraftInput {
@@ -10,6 +11,7 @@ namespace Game {
 		float yaw = 0.0f;
 		float throttle = 0.0f;
 		bool highGTurn = false;
+		bool autoLevelRoll = false;
 	};
 
 	class AircraftFlightModel {
@@ -27,6 +29,15 @@ namespace Game {
 		}
 		void SetPosition(const DirectX::XMFLOAT3& position) {
 			m_position = position;
+		}
+		void SetHeading(const DirectX::XMFLOAT3& direction) {
+			m_yaw = std::atan2(-direction.x, -direction.z);
+			m_pitch = std::atan2(direction.y, std::hypot(direction.x, direction.z));
+			m_roll = 0;
+			DirectX::XMStoreFloat4(&m_attitude, DirectX::XMQuaternionRotationRollPitchYaw(m_pitch, m_yaw, 0));
+			const auto forward = GetForward();
+			DirectX::XMStoreFloat3(
+				&m_velocity, DirectX::XMVectorScale(DirectX::XMLoadFloat3(&forward), GetSpeed()));
 		}
 		float GetSpeed() const;
 		DirectX::XMFLOAT3 GetVelocity() const {

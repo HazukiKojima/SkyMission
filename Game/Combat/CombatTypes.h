@@ -17,7 +17,8 @@ namespace Game {
 	};
 	struct CombatSettings {
 		TargetingSettings targeting;
-		float enemyHealth = 100;
+		float enemyHealth = 120;
+		float playerHealth = 100;
 		float bulletDamage = 10;
 		std::array<DirectX::XMFLOAT3, 3> enemyPositions{
 			{{0, 300, -1200}, {-450, 350, -1700}, {500, 400, -2000}}};
@@ -55,10 +56,26 @@ namespace Game {
 		std::array<float, 2> cooldowns{};
 		size_t nextMuzzle = 0;
 	};
+	enum class CombatResult { Active, Victory, Defeat };
+	enum class ThreatWarning { None, LockOn, Missile };
+	struct MissileThreat {
+		Engine::ObjectId id;
+		DirectX::XMFLOAT3 position;
+		float distance;
+	};
 	struct CombatSnapshot {
+		float playerHealth = 100, playerMaxHealth = 100, playerHitSeconds = 0;
+		DirectX::XMFLOAT3 playerHitDirection{};
+		CombatResult result = CombatResult::Active;
 		static constexpr float gunSightDistance = 500.0f;
 		std::vector<CombatTarget> enemies;
 		unsigned firedVolleys = 0;
+		unsigned enemyMissilesLaunched = 0;
+		ThreatWarning threatWarning = ThreatWarning::None;
+		unsigned lockingEnemyCount = 0;
+		float enemyLockProgress = 0;
+		std::vector<MissileThreat> incomingMissiles;
+		DirectX::XMFLOAT3 threatDirection{};
 		unsigned hitCount = 0;
 		RocketHudState rocket;
 		Engine::ObjectId selected = Engine::InvalidObjectId;

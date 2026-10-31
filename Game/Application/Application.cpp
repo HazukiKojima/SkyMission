@@ -57,19 +57,22 @@ namespace Game {
 		environment.ambientIntensity = assets.environment.sky.ambientIntensity;
 		environment.ambientColor = assets.environment.sky.ambientColor;
 		m_scene->SetEnvironment(environment);
+		m_scene->SetPlayerAircraftPosition({0, 1500, 0});
 		m_scene->SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		m_scene->SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
 		m_scene->AddPlayerObject(m_renderer->GetModel(PlayerModelId));
 		for (size_t i = 0; i < assets.combat.enemyPositions.size(); ++i)
 			m_scene->AddEnemyAircraft(m_renderer->GetModel(EnemyModelId), assets.combat.enemyPositions[i],
 				assets.enemyAircraft.visualScale, assets.enemyAircraft.flightParameters,
-				assets.enemyAIParameters, assets.combat.enemyHealth, "ENEMY 0" + std::to_string(i + 1));
+				assets.enemyAIParameters, assets.combat.enemyHealth, "ENEMY 0" + std::to_string(i + 1), true);
 
 		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
 		m_scene->ConfigurePlayerRocket(assets.playerRocket, m_renderer->GetModel(RocketModelId));
+		m_scene->ConfigureEnemyMissile(assets.enemyMissile, m_renderer->GetModel(EnemyMissileModelId));
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
-			assets.playerWeapon.gun.maxProjectiles + assets.playerRocket.settings.maxRockets);
+			assets.playerWeapon.gun.maxProjectiles + assets.enemyMissile.settings.maxRockets +
+			assets.playerRocket.settings.maxRockets);
 	}
 
 	void Application::ConfigureResizeHandling() {
@@ -138,7 +141,9 @@ namespace Game {
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
-			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount);
+			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount,
+				combatState.threatWarning == ThreatWarning::LockOn,
+				combatState.threatWarning == ThreatWarning::Missile, deltaSeconds);
 			const auto view = m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
 			m_hud.Reset(view.width, view.height);

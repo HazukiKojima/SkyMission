@@ -40,6 +40,17 @@ void TestRocketInputAndFlight() {
 		}
 		Require(rejected, "Invalid rocket turn rate accepted");
 	}
+	for (float invalid : {0.0f, -1.0f, 181.0f, std::numeric_limits<float>::quiet_NaN()}) {
+		auto bad = settings;
+		bad.seekerAngleDegrees = invalid;
+		bool rejected = false;
+		try {
+			ValidateRocketSettings(bad);
+		} catch (const std::invalid_argument&) {
+			rejected = true;
+		}
+		Require(rejected, "Invalid missile seeker angle accepted");
+	}
 	XMFLOAT4X4 world;
 	XMStoreFloat4x4(&world, XMMatrixTranslation(0, 100, 0));
 	auto model = std::make_shared<Model>();

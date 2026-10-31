@@ -111,8 +111,8 @@ namespace Game {
 			return definition;
 		}
 
-		RocketDefinition LoadRocket(
-			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
+		RocketDefinition LoadRocket(const JsonAssetReader& reader, const std::filesystem::path& aircraftPath,
+			const char* modelId = RocketModelId) {
 			const auto weaponPath = reader.Resolve(aircraftPath, "rocketWeapon");
 			RocketDefinition definition;
 			definition.sourcePath = weaponPath;
@@ -126,6 +126,7 @@ namespace Game {
 				settings.turnDegreesPerSecond = reader.ResolveFloat(weaponPath, "turnDegreesPerSecond");
 				settings.lifetimeSeconds = reader.ResolveFloat(weaponPath, "lifetimeSeconds");
 				settings.damage = reader.ResolveFloat(weaponPath, "damage");
+				settings.seekerAngleDegrees = reader.ResolveFloat(weaponPath, "seekerAngleDegrees");
 				const float capacity = reader.ResolveFloat(weaponPath, "maxRockets");
 				if (!std::isfinite(capacity) || capacity < 1 || capacity > 1024 ||
 					std::floor(capacity) != capacity)
@@ -134,7 +135,7 @@ namespace Game {
 				ValidateRocketSettings(settings);
 				source = reader.Resolve(weaponPath, "ammunition");
 				definition.ammunition = {
-					RocketModelId, reader.Resolve(source, "model"), LoadModelOptions(reader, source)};
+					modelId, reader.Resolve(source, "model"), LoadModelOptions(reader, source)};
 				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
 				const auto axis = reader.ResolveString(source, "modelForward");
 				if (axis == "+X")
@@ -161,6 +162,36 @@ namespace Game {
 		}
 
 		void ValidateAIParameters(const AircraftAIParameters& parameters) {
+			for (const float value : {parameters.cruiseSpeed, parameters.attackSpeed, parameters.escapeSpeed,
+					 parameters.reengageDistance, parameters.attackRunSeconds,
+					 parameters.separationLookAheadSeconds})
+				if (!std::isfinite(value) || value <= 0)
+					throw std::runtime_error("Invalid enemy attack-run parameter");
+			if (parameters.attackSpeed >= parameters.cruiseSpeed ||
+				parameters.cruiseSpeed >= parameters.escapeSpeed ||
+				parameters.reengageDistance <= parameters.attackDistance)
+				throw std::runtime_error("Invalid enemy speed/distance ordering");
+			if (!std::isfinite(parameters.reactionSeconds) || parameters.reactionSeconds <= 0)
+				throw std::runtime_error("reactionSeconds must be positive and finite");
+			if (!std::isfinite(parameters.maneuverSeconds) || parameters.maneuverSeconds <= 0)
+				throw std::runtime_error("maneuverSeconds must be positive and finite");
+			if (!std::isfinite(parameters.disengageDistance) || parameters.disengageDistance <= 0)
+				throw std::runtime_error("disengageDistance must be positive and finite");
+			if (!std::isfinite(parameters.threatDistance) || parameters.threatDistance <= 0)
+				throw std::runtime_error("threatDistance must be positive and finite");
+			if (!std::isfinite(parameters.attackDistance) || parameters.attackDistance <= 0)
+				throw std::runtime_error("attackDistance must be positive and finite");
+			if (!std::isfinite(parameters.aimAngleDegrees) || parameters.aimAngleDegrees <= 0)
+				throw std::runtime_error("aimAngleDegrees must be positive and finite");
+			if (!std::isfinite(parameters.aimHoldSeconds) || parameters.aimHoldSeconds <= 0)
+				throw std::runtime_error("aimHoldSeconds must be positive and finite");
+			if (!std::isfinite(parameters.openingGraceSeconds) || parameters.openingGraceSeconds <= 0)
+				throw std::runtime_error("openingGraceSeconds must be positive and finite");
+			if (!std::isfinite(parameters.aimErrorDegrees) || parameters.aimErrorDegrees <= 0)
+				throw std::runtime_error("aimErrorDegrees must be positive and finite");
+			if (parameters.aimAngleDegrees > 45 || parameters.aimErrorDegrees > parameters.aimAngleDegrees ||
+				parameters.disengageDistance >= parameters.attackDistance)
+				throw std::runtime_error("Invalid enemy aim or distance ranges");
 			if (!std::isfinite(parameters.directionChangeSeconds) ||
 				parameters.directionChangeSeconds <= 0.0f ||
 				!std::isfinite(parameters.altitudeChangeSeconds) ||
@@ -284,11 +315,13 @@ namespace Game {
 		JsonDocumentCache documents;
 		JsonAssetReader reader(documents);
 		JsonParametersLoader parameters(documents);
+
 		return {.environment = LoadEnvironment(paths, reader, parameters),
 			.playerAircraft = LoadAircraftDefinition(reader, parameters, paths.playerAircraft),
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
 			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
+			.enemyMissile = LoadRocket(reader, paths.enemyAircraft, EnemyMissileModelId),
 			.playerRocket = LoadRocket(reader, paths.playerAircraft),
 			.combat = LoadCombatSettings(
 				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),

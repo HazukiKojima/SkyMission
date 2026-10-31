@@ -1,0 +1,12 @@
+{
+  "muzzleL1": "Missile_L",
+  "muzzleR1": "Missile_R",
+  "cooldownSeconds": 9,
+  "speed": 2000,
+  "turnDegreesPerSecond": 8,
+  "seekerAngleDegrees": 70,
+  "lifetimeSeconds": 14,
+  "damage": 35,
+  "maxRockets": 4,
+  "ammunition": "../../Ammunition/Rocket/ammunition.json"
+}
