@@ -20,6 +20,33 @@ namespace Game {
 		const auto drawLabel = [&](float x, float y, std::string_view text) {
 			list.Text({offsetX + x * scale, offsetY + y * scale}, text, fontSize, color);
 		};
+		// 敵機とミサイルで同じ画面端配置・記号を共有する。
+		const auto drawOffscreenIndicator = [&](const HudProjection& projection, XMFLOAT4 tint) {
+			if (projection.visible || !std::isfinite(projection.pixel.x) ||
+				!std::isfinite(projection.pixel.y))
+				return;
+			const float centerX = view.width * 0.5f;
+			const float centerY = view.height * 0.5f;
+			float deltaX = projection.pixel.x - centerX;
+			float deltaY = projection.pixel.y - centerY;
+			if (std::hypot(deltaX, deltaY) < 0.001f)
+				deltaY = 1;
+			const float ratio = 1 /
+				std::max(std::abs(deltaX) / std::max(1.0f, centerX - 50 * scale),
+					std::abs(deltaY) / std::max(1.0f, centerY - 50 * scale));
+			const XMFLOAT2 tip{centerX + deltaX * ratio, centerY + deltaY * ratio};
+			const float length = std::hypot(deltaX, deltaY);
+			const float unitX = deltaX / length;
+			const float unitY = deltaY / length;
+			list.Line(tip,
+				{tip.x - unitX * 20 * scale - unitY * 9 * scale,
+					tip.y - unitY * 20 * scale + unitX * 9 * scale},
+				lineWidth, tint);
+			list.Line(tip,
+				{tip.x - unitX * 20 * scale + unitY * 9 * scale,
+					tip.y - unitY * 20 * scale - unitX * 9 * scale},
+				lineWidth, tint);
+		};
 		drawLabel(80, 820,
 			"HULL " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
 				std::to_string(static_cast<int>(snapshot.playerMaxHealth)));
@@ -48,25 +75,9 @@ namespace Game {
 				? "MISSILE ALERT  " + std::to_string(snapshot.incomingMissiles.size())
 				: "LOCK WARNING  " + std::to_string(snapshot.lockingEnemyCount);
 			list.Text({offsetX + 650 * scale, offsetY + 160 * scale}, label, fontSize * 1.35f, warning);
-			const auto& d = snapshot.threatDirection;
-			const auto& f = snapshot.forward;
-			const float bearing = std::atan2(-f.z * d.x + f.x * d.z, f.x * d.x + f.z * d.z);
-			const float x = std::sin(bearing), y = -std::cos(bearing);
-			const XMFLOAT2 tip{view.width * 0.5f + x * 220 * scale, view.height * 0.5f + y * 220 * scale};
-			list.Line(tip, {tip.x - x * 30 * scale - y * 15 * scale, tip.y - y * 30 * scale + x * 15 * scale},
-				lineWidth * 2, warning);
-			list.Line(tip, {tip.x - x * 30 * scale + y * 15 * scale, tip.y - y * 30 * scale - x * 15 * scale},
-				lineWidth * 2, warning);
-			if (!missile)
+			if (!missile) {
 				list.Circle({view.width * 0.5f, offsetY + 240 * scale}, 20 * scale,
 					snapshot.enemyLockProgress, lineWidth * 2, warning);
-			for (const auto& threat : snapshot.incomingMissiles) {
-				const auto point = projector.Project(threat.position);
-				if (point.visible) {
-					list.Circle(point.pixel, 18 * scale, 1, lineWidth * 2, warning);
-					list.Text({point.pixel.x + 24 * scale, point.pixel.y},
-						"MSL " + std::to_string(static_cast<int>(threat.distance)) + "M", fontSize, warning);
-				}
 			}
 		}
 		// 照準は弾道予測とは独立し、機関砲の軸に追従する
@@ -140,27 +151,7 @@ namespace Game {
 							"LOCK", fontSize, color);
 				}
 			} else if (selected) {
-				const float centerX = view.width * 0.5f;
-				const float centerY = view.height * 0.5f;
-				float deltaX = projected.pixel.x - centerX;
-				float deltaY = projected.pixel.y - centerY;
-				if (std::hypot(deltaX, deltaY) < 0.001f)
-					deltaY = 1;
-				const float ratio = 1 /
-					std::max(std::abs(deltaX) / std::max(1.0f, centerX - 50 * scale),
-						std::abs(deltaY) / std::max(1.0f, centerY - 50 * scale));
-				const XMFLOAT2 tip{centerX + deltaX * ratio, centerY + deltaY * ratio};
-				const float length = std::hypot(deltaX, deltaY);
-				const float unitX = deltaX / length;
-				const float unitY = deltaY / length;
-				list.Line(tip,
-					{tip.x - unitX * 20 * scale - unitY * 9 * scale,
-						tip.y - unitY * 20 * scale + unitX * 9 * scale},
-					lineWidth, color);
-				list.Line(tip,
-					{tip.x - unitX * 20 * scale + unitY * 9 * scale,
-						tip.y - unitY * 20 * scale - unitX * 9 * scale},
-					lineWidth, color);
+				drawOffscreenIndicator(projected, color);
 			}
 		}
 		if (snapshot.selected == Engine::InvalidObjectId)
@@ -186,5 +177,17 @@ namespace Game {
 		}
 		if (snapshot.allDownSeconds > 0)
 			drawLabel(760, 180, "ALL TARGETS DOWN");
+		// ロック中の敵と飛来ミサイルは、同じ画面端配置を色で区別する。
+		for (const auto& position : snapshot.lockingEnemyPositions)
+			drawOffscreenIndicator(projector.Project(position), {1, 0.65f, 0.15f, 1});
+		if (snapshot.threatWarning == ThreatWarning::Missile)
+			for (const auto& threat : snapshot.incomingMissiles) {
+				const auto projected = projector.Project(threat.position);
+				if (projected.visible)
+					list.Circle(
+						projected.pixel, std::max(10.0f, 22 * scale), 1, lineWidth * 2, {1, 0.15f, 0.12f, 1});
+				else
+					drawOffscreenIndicator(projected, {1, 0.15f, 0.12f, 1});
+			}
 	}
 } // namespace Game

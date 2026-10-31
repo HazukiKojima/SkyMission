@@ -720,6 +720,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestFlightAndScene();
 		TestCombatAudioLifecycle();
 		TestCombatMath();
+		TestMissileEdgeIndicators();
 		TestEnemyCombatAI();
 		TestCombatEffectLifetime();
 		TestGunFireEffects();
