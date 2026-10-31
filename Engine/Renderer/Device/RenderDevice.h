@@ -12,8 +12,12 @@ namespace Engine {
 
 		void Initialize(HWND hwnd, UINT width, UINT height);
 		void Present();
-		UINT GetWidth() const { return m_width; }
-		UINT GetHeight() const { return m_height; }
+		UINT GetWidth() const {
+			return m_width;
+		}
+		UINT GetHeight() const {
+			return m_height;
+		}
 		void Resize(UINT width, UINT height);
 
 		ID3D12Device* GetDevice() const {

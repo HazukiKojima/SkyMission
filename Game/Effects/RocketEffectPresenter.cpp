@@ -20,7 +20,8 @@ namespace Game {
 		for (const auto& exhaust : snapshot.rocketExhausts) {
 			if (!context.HasVertexBudget(222))
 				break;
-			const auto tail = XMLoadFloat3(&exhaust.position), direction = XMLoadFloat3(&exhaust.direction);
+			const auto tail = XMLoadFloat3(&exhaust.position);
+			const auto direction = XMLoadFloat3(&exhaust.direction);
 			context.DrawGlow(tail, 2.0f, {1, 0.75f, 0.25f, 0.85f});
 			context.DrawGlow(tail - direction * 2, 3.0f, {1, 0.25f, 0.02f, 0.5f});
 			context.DrawCloud(tail - direction * 4, 3.5f, 0, 31, {1, 0.45f, 0.06f, 0.8f});

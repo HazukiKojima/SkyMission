@@ -75,7 +75,9 @@ namespace Engine {
 	  public:
 		void Initialize(ID3D12Device* device);
 		void EnsureModelCapacity(ID3D12Device* device, CommandContext* context, size_t objectCount);
-		size_t GetModelCapacity() const { return m_modelBuffers[0].size(); }
+		size_t GetModelCapacity() const {
+			return m_modelBuffers[0].size();
+		}
 
 		ID3D12Resource* GetOceanResource(UINT frame) const {
 			return m_oceanBuffers[frame].resource.Get();
@@ -99,7 +101,8 @@ namespace Engine {
 			return m_modelBuffers[frameIndex][objectIndex].resource.Get();
 		}
 		ModelConstantBufferData* GetModelData(UINT frameIndex, size_t objectIndex) const {
-			return reinterpret_cast<ModelConstantBufferData*>(m_modelBuffers[frameIndex][objectIndex].mappedData);
+			return reinterpret_cast<ModelConstantBufferData*>(
+				m_modelBuffers[frameIndex][objectIndex].mappedData);
 		}
 
 	  private:

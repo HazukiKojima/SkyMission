@@ -13,7 +13,9 @@ namespace Game {
 		void SpawnExplosion(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity);
 		void SpawnExplosion(
 			const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale);
-		const CombatEffectSnapshot& GetSnapshot() const { return m_snapshot; }
+		const CombatEffectSnapshot& GetSnapshot() const {
+			return m_snapshot;
+		}
 
 	  private:
 		void AddExplosion(ExplosionEffect explosion);

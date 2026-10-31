@@ -6,9 +6,12 @@
 namespace Game {
 	// 追従先の位置・向き・速度（ワールド単位/秒）
 	struct AircraftCameraTarget {
-		DirectX::XMFLOAT3 position, heading, forward;
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT3 heading;
+		DirectX::XMFLOAT3 forward;
 		bool pitchInputActive;
-		float speed, maximumSpeed;
+		float speed;
+		float maximumSpeed;
 	};
 
 	class AircraftCameraController {
@@ -42,9 +45,9 @@ namespace Game {
 		void UpdateFollow(float deltaSeconds);
 
 		DirectX::XMFLOAT3 m_position = {0.0f, 10.0f, -10.0f};
-		float m_yaw = 0.0f;			// radians
-		float m_pitch = -0.4f;		// radians
-		float m_moveSpeed = 100.0f; // units per second
+		float m_yaw = 0.0f;			// ラジアン
+		float m_pitch = -0.4f;		// ラジアン
+		float m_moveSpeed = 100.0f; // ワールド単位/秒
 		float m_mouseSensitivity =
 			0.0025f; // マウス入力1カウント当たりのラジアン（絶対位置入力ではピクセル差分）
 		bool m_following = false;

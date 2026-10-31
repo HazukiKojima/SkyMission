@@ -3,8 +3,9 @@
 namespace Engine {
 
 	SceneObject* Scene::FindObject(ObjectId id) {
-		const auto found = std::find_if(
-			m_objects.begin(), m_objects.end(), [id](const SceneObject& object) { return object.id == id; });
+		const auto found = std::find_if(m_objects.begin(), m_objects.end(), [id](const SceneObject& object) {
+			return object.id == id;
+		});
 		return found == m_objects.end() ? nullptr : &*found;
 	}
 
@@ -25,6 +26,8 @@ namespace Engine {
 	}
 
 	void Scene::RemoveObject(ObjectId id) {
-		std::erase_if(m_objects, [id](const SceneObject& object) { return object.id == id; });
+		std::erase_if(m_objects, [id](const SceneObject& object) {
+			return object.id == id;
+		});
 	}
 } // namespace Engine

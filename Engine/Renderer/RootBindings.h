@@ -1,10 +1,7 @@
 #pragma once
 #include "../EngineCommon.h"
 namespace Engine {
-	enum class RootSignatureLayout {
-		Textured,
-		NodeRotation
-	};
+	enum class RootSignatureLayout { Textured, NodeRotation };
 	namespace RootBinding {
 		inline constexpr UINT TextureTable = 0;
 		inline constexpr UINT FrameConstants = 1;

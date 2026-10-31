@@ -11,14 +11,12 @@ namespace Engine {
 			try {
 				// 初期化失敗による巻き戻し時も、投入済みのGPU処理を待つ
 				m_context->WaitForGpu();
-			}
-			catch (const std::exception& error) {
+			} catch (const std::exception& error) {
 				// 終了処理の失敗で元の例外を失わない。ログにも例外を送出する整形処理を使わない
 				OutputDebugStringA("Renderer: GPU wait failed during destruction: ");
 				OutputDebugStringA(error.what());
 				OutputDebugStringA("\n");
-			}
-			catch (...) {
+			} catch (...) {
 				OutputDebugStringA("Renderer: unknown GPU wait failure during destruction.\n");
 			}
 		}
@@ -63,7 +61,8 @@ namespace Engine {
 		m_frameUpdater.Update(scene, elapsedTime, m_retroFilmParameters, m_constantBuffers,
 			m_device->GetDevice(), m_context.get());
 		auto view = m_frameUpdater.GetRenderView();
-		view.width = m_device->GetWidth(); view.height = m_device->GetHeight();
+		view.width = m_device->GetWidth();
+		view.height = m_device->GetHeight();
 		return view;
 	}
 
@@ -89,8 +88,8 @@ namespace Engine {
 			sceneDepth, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 		D3D12_VIEWPORT viewport = {
-			0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f };
-		D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+			0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f};
+		D3D12_RECT scissorRect = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
 
 		cmd->RSSetViewports(1, &viewport);
 		cmd->RSSetScissorRects(1, &scissorRect);
@@ -98,9 +97,10 @@ namespace Engine {
 		RecordScenePass(runtimeScene);
 		RecordOceanFogPass();
 		RecordRetroFilmPass();
-		if (hud) m_hudRenderer.Record(*m_device, cmd, *hud);
+		if (hud)
+			m_hudRenderer.Record(*m_device, cmd, *hud);
 
-		// Present 処理
+		// 描画したフレームを表示する
 		m_context->TransitionResource(
 			backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
@@ -113,14 +113,14 @@ namespace Engine {
 		auto cmd = m_context->GetCommandList();
 		// 画面クリア
 		auto rtv = m_device->GetSceneRtvHandle();
-		const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+		const float clearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 		auto dsv = m_device->GetDsvHandle();
 		cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
 		const FrameContext frame{
-			cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex() };
+			cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()};
 		m_skyPass.Record(frame, m_assets);
 		m_oceanPass.Record(frame, m_assets, m_oceanGeometry);
 		m_modelPass.Record(frame, scene);
@@ -133,12 +133,12 @@ namespace Engine {
 		m_context->TransitionResource(m_device->GetSceneDepth(), D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		auto rtv = m_device->GetPostProcessRtvHandle();
-		const float postProcessClear[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+		const float postProcessClear[] = {0.1f, 0.1f, 0.1f, 1.0f};
 		cmd->ClearRenderTargetView(rtv, postProcessClear, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 
 		m_oceanFogPass.Record(
-			{ cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex() });
+			{cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()});
 		m_context->TransitionResource(m_device->GetPostProcessRenderTarget(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
@@ -146,12 +146,12 @@ namespace Engine {
 	void Renderer::RecordRetroFilmPass() {
 		auto cmd = m_context->GetCommandList();
 		auto rtv = m_device->GetCurrentRtvHandle();
-		const float backBufferClear[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		const float backBufferClear[] = {0.0f, 0.0f, 0.0f, 1.0f};
 		cmd->ClearRenderTargetView(rtv, backBufferClear, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 
 		m_retroFilmPass.Record(
-			{ cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex() });
+			{cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()});
 	}
 
 	void Renderer::Resize(UINT width, UINT height) {

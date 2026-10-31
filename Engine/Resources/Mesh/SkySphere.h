@@ -17,7 +17,7 @@ namespace Engine {
 
 		// 球体メッシュを生成して頂点/インデックスバッファを作成する
 		void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius = 100.0f,
-						UINT slices = 64, UINT stacks = 32);
+			UINT slices = 64, UINT stacks = 32);
 		// 転送コマンドの GPU 完了後に呼ぶ
 		void ReleaseUploadResources();
 		ID3D12Resource* GetVertexBufferResource() const {

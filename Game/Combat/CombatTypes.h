@@ -6,14 +6,21 @@
 
 namespace Game {
 	struct TargetingSettings {
-		float selectionDistance = 6000, acquireDistance = 2500, acquireAngleDegrees = 25;
-		float acquireSeconds = 0.5f, maintainDistance = 2750, maintainAngleDegrees = 35;
-		float lossGraceSeconds = 0.25f, assistAngleDegrees = 3;
+		float selectionDistance = 6000;
+		float acquireDistance = 2500;
+		float acquireAngleDegrees = 25;
+		float acquireSeconds = 0.5f;
+		float maintainDistance = 2750;
+		float maintainAngleDegrees = 35;
+		float lossGraceSeconds = 0.25f;
+		float assistAngleDegrees = 3;
 	};
 	struct CombatSettings {
 		TargetingSettings targeting;
-		float enemyHealth = 100, bulletDamage = 10;
-		std::array<DirectX::XMFLOAT3, 3> enemyPositions{{{0,300,-1200}, {-450,350,-1700}, {500,400,-2000}}};
+		float enemyHealth = 100;
+		float bulletDamage = 10;
+		std::array<DirectX::XMFLOAT3, 3> enemyPositions{
+			{{0, 300, -1200}, {-450, 350, -1700}, {500, 400, -2000}}};
 	};
 	struct CombatTarget {
 		Engine::ObjectId id = Engine::InvalidObjectId;
@@ -37,7 +44,12 @@ namespace Game {
 		DirectX::XMFLOAT4X4 world;
 	};
 	enum class ProjectileKind { Gun, Rocket };
-	struct HitEvent { Engine::ObjectId target; float frameSeconds; DirectX::XMFLOAT3 position{}, direction{0,0,-1}; ProjectileKind kind = ProjectileKind::Gun; };
+	struct HitEvent {
+		Engine::ObjectId target;
+		float frameSeconds;
+		DirectX::XMFLOAT3 position{}, direction{0, 0, -1};
+		ProjectileKind kind = ProjectileKind::Gun;
+	};
 	struct RocketHudState {
 		bool configured = false;
 		std::array<float, 2> cooldowns{};
@@ -46,15 +58,18 @@ namespace Game {
 	struct CombatSnapshot {
 		static constexpr float gunSightDistance = 500.0f;
 		std::vector<CombatTarget> enemies;
-		unsigned firedVolleys = 0, hitCount = 0;
+		unsigned firedVolleys = 0;
+		unsigned hitCount = 0;
 		RocketHudState rocket;
 		Engine::ObjectId selected = Engine::InvalidObjectId;
 		LockState lockState = LockState::None;
 		float acquireProgress = 0;
-		DirectX::XMFLOAT3 muzzle{}, forward{0,0,-1};
+		DirectX::XMFLOAT3 muzzle{}, forward{0, 0, -1};
 		std::optional<AimSolution> aim;
 		std::optional<DirectX::XMFLOAT3> gunImpactPoint;
 		bool assistReady = false;
-		float hitSeconds = 0, destroyedSeconds = 0, allDownSeconds = 0;
+		float hitSeconds = 0;
+		float destroyedSeconds = 0;
+		float allDownSeconds = 0;
 	};
-}
+} // namespace Game

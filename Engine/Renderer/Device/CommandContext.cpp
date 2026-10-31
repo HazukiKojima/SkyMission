@@ -16,17 +16,17 @@ namespace Engine {
 
 		// GPU使用中の領域を上書きしないよう、フレーム別にアロケータを持つ
 		for (UINT i = 0; i < RenderDevice::FrameCount; i++) {
-			ThrowIfFailed(
-				device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i])));
+			ThrowIfFailed(device->CreateCommandAllocator(
+				D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i])));
 		}
 
 		// 生成直後のリストを閉じ、BeginFrameから記録できる状態にする
-		ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[0].Get(),
-												nullptr, IID_PPV_ARGS(&m_commandList)));
+		ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+			m_commandAllocators[0].Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 		ThrowIfFailed(m_commandList->Close());
 
-		ThrowIfFailed(
-			device->CreateFence(m_fenceValues[m_currentFrameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+		ThrowIfFailed(device->CreateFence(
+			m_fenceValues[m_currentFrameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 		m_fenceValues[m_currentFrameIndex]++;
 
 		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -48,8 +48,8 @@ namespace Engine {
 	}
 
 	// 用途切り替え用の状態遷移バリアを全サブリソースに記録する
-	void CommandContext::TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore,
-											D3D12_RESOURCE_STATES stateAfter) {
+	void CommandContext::TransitionResource(
+		ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) {
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Transition.pResource = resource;

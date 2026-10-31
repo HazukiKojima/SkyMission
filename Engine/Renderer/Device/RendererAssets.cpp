@@ -32,8 +32,8 @@ namespace Engine {
 			if (!model->Load(device.GetDevice(), context.GetCommandList(), &device, definition.file.wstring(),
 					definition.options)) {
 				const auto path = definition.file.u8string();
-				throw std::runtime_error("Failed to load required model '" + definition.id + "': " +
-					std::string(reinterpret_cast<const char*>(path.data()), path.size()));
+				throw std::runtime_error("Failed to load required model '" + definition.id +
+					"': " + std::string(reinterpret_cast<const char*>(path.data()), path.size()));
 			}
 			return model;
 		}

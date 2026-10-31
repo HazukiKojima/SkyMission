@@ -14,13 +14,14 @@ namespace Engine {
 			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 		RECT rc{0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
 		AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-		m_hwnd = CreateWindowExW(0, wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-								 rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, this);
+		m_hwnd = CreateWindowExW(0, wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+			CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, this);
 		if (!m_hwnd)
 			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 
 		// 前面時のみ受信し、ウィンドウ操作やAlt+F4用の従来メッセージは残す
-		const RAWINPUTDEVICE devices[] = {{0x01, 0x06, RIDEV_DEVNOTIFY, m_hwnd}, {0x01, 0x02, RIDEV_DEVNOTIFY, m_hwnd}};
+		const RAWINPUTDEVICE devices[] = {
+			{0x01, 0x06, RIDEV_DEVNOTIFY, m_hwnd}, {0x01, 0x02, RIDEV_DEVNOTIFY, m_hwnd}};
 		if (!RegisterRawInputDevices(devices, _countof(devices), sizeof(RAWINPUTDEVICE))) {
 			const HRESULT error = HRESULT_FROM_WIN32(GetLastError());
 			DestroyWindow(m_hwnd);
@@ -60,7 +61,8 @@ namespace Engine {
 		if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
 			return;
 		std::vector<RAWINPUTDEVICE> registered(count), remove;
-		if (count && GetRegisteredRawInputDevices(registered.data(), &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
+		if (count &&
+			GetRegisteredRawInputDevices(registered.data(), &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
 			return;
 		for (const auto& device : registered) {
 			if (device.hwndTarget == m_hwnd && device.usUsagePage == 0x01 &&
@@ -90,13 +92,15 @@ namespace Engine {
 			return;
 		}
 		const auto& raw = *reinterpret_cast<const RAWINPUT*>(storage.data());
-		if (raw.header.dwType == RIM_TYPEKEYBOARD && bytes >= offsetof(RAWINPUT, data) + sizeof(RAWKEYBOARD)) {
+		if (raw.header.dwType == RIM_TYPEKEYBOARD &&
+			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWKEYBOARD)) {
 			m_input.ProcessKeyboard(raw.header.hDevice, raw.data.keyboard);
-		} else if (raw.header.dwType == RIM_TYPEMOUSE && bytes >= offsetof(RAWINPUT, data) + sizeof(RAWMOUSE)) {
+		} else if (raw.header.dwType == RIM_TYPEMOUSE &&
+			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWMOUSE)) {
 			const bool virtualDesktop = (raw.data.mouse.usFlags & MOUSE_VIRTUAL_DESKTOP) != 0;
 			m_input.ProcessMouse(raw.header.hDevice, raw.data.mouse,
-								 GetSystemMetrics(virtualDesktop ? SM_CXVIRTUALSCREEN : SM_CXSCREEN),
-								 GetSystemMetrics(virtualDesktop ? SM_CYVIRTUALSCREEN : SM_CYSCREEN));
+				GetSystemMetrics(virtualDesktop ? SM_CXVIRTUALSCREEN : SM_CXSCREEN),
+				GetSystemMetrics(virtualDesktop ? SM_CYVIRTUALSCREEN : SM_CYSCREEN));
 			// Raw Inputは非クライアント領域の操作中にも届く
 			// 標準の移動・リサイズ操作が所有するキャプチャには触らない
 			if (!m_input.IsRightMouseDown())

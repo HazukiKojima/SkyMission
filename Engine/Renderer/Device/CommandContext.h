@@ -23,8 +23,8 @@ namespace Engine {
 			m_currentFrameIndex = device.GetFrameIndex();
 		}
 
-		void TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore,
-								D3D12_RESOURCE_STATES stateAfter);
+		void TransitionResource(
+			ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
 
 		ID3D12GraphicsCommandList* GetCommandList() const {
 			return m_commandList.Get();

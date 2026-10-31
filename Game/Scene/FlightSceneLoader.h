@@ -30,7 +30,8 @@ namespace Game {
 		Engine::RendererDefinition BuildRendererDefinition() const {
 			return {environment,
 				{{PlayerModelId, playerAircraft.model, playerAircraft.modelImport},
-					{EnemyModelId, enemyAircraft.model, enemyAircraft.modelImport}, playerWeapon.ammunition, playerRocket.ammunition}};
+					{EnemyModelId, enemyAircraft.model, enemyAircraft.modelImport}, playerWeapon.ammunition,
+					playerRocket.ammunition}};
 		}
 	};
 	class FlightSceneLoader {

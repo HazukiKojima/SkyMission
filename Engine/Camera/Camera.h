@@ -27,7 +27,10 @@ namespace Engine {
 	  private:
 		void UpdateProjection();
 		DirectX::XMFLOAT3 m_position{0, 10, -10};
-		float m_fovY = DirectX::XM_PIDIV4, m_aspect = 16.0f / 9.0f, m_nearZ = 0.1f, m_farZ = 1000.0f;
+		float m_fovY = DirectX::XM_PIDIV4;
+		float m_aspect = 16.0f / 9.0f;
+		float m_nearZ = 0.1f;
+		float m_farZ = 1000.0f;
 		DirectX::XMMATRIX m_view = DirectX::XMMatrixIdentity();
 		DirectX::XMMATRIX m_proj = DirectX::XMMatrixIdentity();
 	};

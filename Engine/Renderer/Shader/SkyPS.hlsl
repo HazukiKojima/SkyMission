@@ -1,6 +1,6 @@
 #include "CommonLighting.hlsli"
 
-// Constant Buffer
+// CPUから受け取る描画定数
 
 cbuffer MatrixBuffer : register(b0)
 {
@@ -17,12 +17,12 @@ cbuffer MatrixBuffer : register(b0)
     float pad3;
 };
 
-// Resources
+// 参照するテクスチャとサンプラー
 
 Texture2D gSkyTexture : register(t0);
 SamplerState gSampler : register(s0);
 
-// Input
+// 頂点シェーダーから受け取る値
 
 struct PS_INPUT
 {
@@ -31,11 +31,11 @@ struct PS_INPUT
     float3 worldPos : TEXCOORD1;
 };
 
-// Pixel Shader
+// 画素の色を計算する
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    // Lighting
+    // 照明パラメーターを組み立てる
 
     CommonLightingParameters lighting;
 
@@ -46,103 +46,55 @@ float4 PS(PS_INPUT input) : SV_TARGET
     lighting.ambientColor = ambientColor;
     lighting.padding = 0.0f;
 
-    // HDR Sky
+    // HDRの空テクスチャを参照する
 
-    float3 hdrColor = gSkyTexture.Sample(
-        gSampler,
-        input.texcoord
-    ).rgb;
+    float3 hdrColor = gSkyTexture.Sample(gSampler, input.texcoord).rgb;
 
-    // Exposure
+    // 露出を調整する
 
     const float exposure = 1.1f;
 
     float3 color = hdrColor * exposure;
 
-    // Atmospheric Horizon
+    // 地平線付近の大気散乱
 
-    float3 skyDirection = SafeNormalize(
-        input.worldPos - cameraPos
-    );
+    float3 skyDirection = SafeNormalize(input.worldPos - cameraPos);
 
     float height = saturate(skyDirection.y);
 
     // 地平線付近だけ少し大気色を混ぜる
-    float horizonFactor = pow(
-        1.0f - height,
-        3.0f
-    );
+    float horizonFactor = pow(1.0f - height, 3.0f);
 
-    float3 atmosphericColor = GetSkyColor(
-        skyDirection,
-        lighting
-    );
+    float3 atmosphericColor = GetSkyColor(skyDirection, lighting);
 
     // HDRテクスチャと大気色を合成し、空の明暗差を抑える
     const float hdrBlend = 0.65f;
 
-    color = lerp(
-        atmosphericColor,
-        color,
-        hdrBlend
-    );
+    color = lerp(atmosphericColor, color, hdrBlend);
 
-    color = lerp(
-        color,
-        color * 0.72f + atmosphericColor * 0.28f,
-        horizonFactor
-    );
+    color = lerp(color, color * 0.72f + atmosphericColor * 0.28f, horizonFactor);
 
-    // Horizon Brightening
+    // 地平線付近を明るくする
 
-    float horizonGlow = pow(
-        saturate(
-            1.0f - abs(skyDirection.y)
-        ),
-        7.0f
-    );
+    float horizonGlow = pow(saturate(1.0f - abs(skyDirection.y)), 7.0f);
 
-    color += float3(
-        0.025f,
-        0.035f,
-        0.045f
-    ) * horizonGlow;
+    color += float3(0.025f, 0.035f, 0.045f) * horizonGlow;
 
-    // Sun Disk
+    // 太陽の円盤を描く
 
-    float sunDot = saturate(
-        dot(
-            skyDirection,
-            SafeNormalize(lighting.sunDirection)
-        )
-    );
+    float sunDot = saturate(dot(skyDirection, SafeNormalize(lighting.sunDirection)));
 
-    float sunDisk = pow(
-        sunDot,
-        18000.0f
-    );
+    float sunDisk = pow(sunDot, 18000.0f);
 
-    float sunGlow = pow(
-        sunDot,
-        180.0f
-    );
+    float sunGlow = pow(sunDot, 180.0f);
 
-    color +=
-        lighting.sunColor *
-        lighting.sunIntensity *
-        (
-            sunDisk * 0.65f +
-            sunGlow * 0.035f
-        );
+    color += lighting.sunColor * lighting.sunIntensity * (sunDisk * 0.65f + sunGlow * 0.035f);
 
-    // Tone Mapping
+    // HDR色を表示範囲へ圧縮する
 
     color = ToneMapReinhard(color);
 
-    // Gamma / Final
+    // ガンマ補正して出力する
 
-    return float4(
-        max(color, 0.0f),
-        1.0f
-    );
+    return float4(max(color, 0.0f), 1.0f);
 }

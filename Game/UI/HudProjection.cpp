@@ -13,9 +13,11 @@ namespace Game {
 		using namespace DirectX;
 		const auto clip =
 			XMVector4Transform(XMVectorSet(point.x, point.y, point.z, 1), XMLoadFloat4x4(&m_viewProjection));
-		const float w = XMVectorGetW(clip), divisor = std::max(std::abs(w), 1e-5f);
-		const float x = XMVectorGetX(clip) / divisor, y = XMVectorGetY(clip) / divisor,
-					z = XMVectorGetZ(clip) / divisor;
+		const float w = XMVectorGetW(clip);
+		const float divisor = std::max(std::abs(w), 1e-5f);
+		const float x = XMVectorGetX(clip) / divisor;
+		const float y = XMVectorGetY(clip) / divisor;
+		const float z = XMVectorGetZ(clip) / divisor;
 		return {{(x + 1) * m_width * 0.5f, (1 - y) * m_height * 0.5f},
 			w > 0 && std::abs(x) <= 1 && std::abs(y) <= 1 && z >= 0 && z <= 1, w <= 0};
 	}
