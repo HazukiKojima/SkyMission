@@ -85,6 +85,7 @@ namespace Game {
 		void RefreshCombatSnapshot();
 		std::vector<CollisionTarget> BuildCollisionTargets();
 		void ApplyHits();
+		void UpdateGunEffects();
 		void UpdateRockets(const CombatInput& input, float dt, std::span<const CollisionTarget> targets);
 		void UpdateEnemyWeapons(float dt);
 		// 初回更新直前の状態を保持し、アセットを共有したまま再挑戦する。

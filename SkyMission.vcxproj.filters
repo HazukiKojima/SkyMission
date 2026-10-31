@@ -573,6 +573,18 @@
     <ClCompile Include="Game\Weapons\RocketSystem.cpp">
       <Filter>Game\Weapons</Filter>
     </ClCompile>
+    <ClCompile Include="Game\Effects\GunEffectPresenter.cpp">
+      <Filter>Game\Effects</Filter>
+    </ClCompile>
+    <ClInclude Include="Tests\GunEffectTests.h">
+      <Filter>Tests</Filter>
+    </ClInclude>
+    <None Include="Docs\Design\GunFireEffects.md">
+      <Filter>Docs\Design</Filter>
+    </None>
+    <ClInclude Include="Game\Weapons\GunShotEvent.h">
+      <Filter>Game\Weapons</Filter>
+    </ClInclude>
     <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp">
       <Filter>Game\Effects</Filter>
     </ClCompile>

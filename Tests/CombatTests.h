@@ -417,6 +417,22 @@ void TestHudRendering(const fs::path& fixture) {
 			effects.impacts.assign(64, {{0, 0, 250}, 0});
 			effects.rocketSmoke.assign(RocketEffectSettings::maxSmokeCount, {{0, 0, 250}, 0.1f});
 			effects.rocketExhausts.assign(RocketEffectSettings::maxExhaustCount, {{0, 0, 250}, {0, 0, -1}});
+			effects.gunSmoke.assign(GunEffectSettings::maxSmokeCount, {{0, 0, 100}, {20, 0, 0}, 0.1f});
+			effects.gunTracers.assign(GunEffectSettings::maxTracerCount, {{30, 10, 250}, {10, 0, 200}});
+			for (size_t muzzle = 0; muzzle < 4; ++muzzle)
+				effects.gunFlashes.push_back({muzzle, {float(muzzle) * 5, 0, 100}, {0, 0, 1}, 0.02f, muzzle});
+			list.Reset(view.width, view.height);
+			CombatEffectPresenter{}.Build(effects, view, list);
+			Require(list.GetVertices().size() <=
+					Engine::HudDrawList::MaxVertices - EffectDrawSettings::hudReservedVertices,
+				"Combined effects consumed reserved HUD vertices");
+			const auto crowdedVertices = list.GetVertices().size();
+			auto withoutSmoke = effects;
+			withoutSmoke.gunSmoke.clear();
+			list.Reset(view.width, view.height);
+			CombatEffectPresenter{}.Build(withoutSmoke, view, list);
+			Require(list.GetVertices().size() == crowdedVertices,
+				"Crowded effects did not omit optional gun smoke first");
 			buildFrame();
 			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices,
 				"Combined effects overflowed HUD");
@@ -424,6 +440,9 @@ void TestHudRendering(const fs::path& fixture) {
 			effects.impacts.clear();
 			effects.rocketSmoke.clear();
 			effects.rocketExhausts.clear();
+			effects.gunSmoke.clear();
+			effects.gunTracers.clear();
+			effects.gunFlashes.clear();
 			for (float age : {0.0f, 0.04f, 0.2f, 0.42f}) {
 				effects.impacts = {{{0, 0, 100}, age}};
 				buildFrame();
@@ -446,6 +465,13 @@ void TestHudRendering(const fs::path& fixture) {
 			for (int smoke = 0; smoke < 20; ++smoke)
 				effects.rocketSmoke.push_back({{60, 0, 200 + smoke * 5.0f}, smoke * 0.025f});
 			snapshot.selected = 1;
+			// 両解像度の読み戻し画像に発射演出を含め、照準との重なりを確認する
+			for (size_t muzzle = 0; muzzle < 4; ++muzzle) {
+				const float x = -18 + float(muzzle) * 12;
+				effects.gunFlashes.push_back({muzzle, {x, -10, 90}, {0, 0, 1}, 0.01f, muzzle});
+				effects.gunSmoke.push_back({{x, -10, 90}, {20, 0, 0}, 0.15f});
+				effects.gunTracers.push_back({{x + 3, -5, 170}, {x, -10, 100}});
+			}
 			buildFrame();
 			context.BeginFrame();
 			auto* commands = context.GetCommandList();

@@ -120,6 +120,7 @@ namespace Game {
 						m_player.GetVelocity(), age, assistance, targets, dt))
 					++m_combat.firedVolleys;
 		}
+		UpdateGunEffects();
 		UpdateRockets(combatInput, dt, targets);
 
 		// 命中と撃破を反映してから、HUDとカメラへ最終状態を渡す
@@ -130,6 +131,25 @@ namespace Game {
 		RefreshCombatSnapshot();
 		UpdateCamera(input, dt, cameraInput);
 		ApplyRenderStates();
+	}
+
+	void FlightScene::UpdateGunEffects() {
+		for (const auto& shot : m_projectiles.TakeShotEvents())
+			m_effects.SpawnGunShot(shot);
+		m_effects.SetGunTracers(m_projectiles.TakeTracers());
+		const auto* aircraft = m_scene.FindObject(m_playerId);
+		if (!m_weaponConfigured || !aircraft) {
+			m_effects.ClearGunFlashes();
+			return;
+		}
+		// 閃光だけを現在の銃口に追従させ、放出した煙と実弾は独立して動かす
+		std::array<DirectX::XMFLOAT3, 4> positions{};
+		for (size_t index = 0; index < positions.size(); ++index) {
+			DirectX::XMStoreFloat3(&positions[index],
+				DirectX::XMVector3TransformCoord(DirectX::XMLoadFloat3(&m_gun.GetMuzzles()[index]),
+					DirectX::XMLoadFloat4x4(&aircraft->worldTransform)));
+		}
+		m_effects.SetGunMuzzlePose(positions, m_player.GetForward());
 	}
 
 	void FlightScene::ConfigurePlayerRocket(
@@ -446,7 +466,9 @@ namespace Game {
 		std::erase_if(m_enemies, [id](const EnemyAircraft& e) {
 			return e.objectId == id;
 		});
-		if (m_playerId == id)
+		if (m_playerId == id) {
 			m_playerId = Engine::InvalidObjectId;
+			m_effects.ClearGunFlashes();
+		}
 	}
 } // namespace Game
