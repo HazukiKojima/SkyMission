@@ -161,6 +161,31 @@ namespace Game {
 		}
 
 		void ValidateAIParameters(const AircraftAIParameters& parameters) {
+			if (!std::isfinite(parameters.reactionSeconds) || parameters.reactionSeconds <= 0)
+				throw std::runtime_error("reactionSeconds must be positive and finite");
+			if (!std::isfinite(parameters.maneuverSeconds) || parameters.maneuverSeconds <= 0)
+				throw std::runtime_error("maneuverSeconds must be positive and finite");
+			if (!std::isfinite(parameters.disengageDistance) || parameters.disengageDistance <= 0)
+				throw std::runtime_error("disengageDistance must be positive and finite");
+			if (!std::isfinite(parameters.threatDistance) || parameters.threatDistance <= 0)
+				throw std::runtime_error("threatDistance must be positive and finite");
+			if (!std::isfinite(parameters.attackDistance) || parameters.attackDistance <= 0)
+				throw std::runtime_error("attackDistance must be positive and finite");
+			if (!std::isfinite(parameters.aimAngleDegrees) || parameters.aimAngleDegrees <= 0)
+				throw std::runtime_error("aimAngleDegrees must be positive and finite");
+			if (!std::isfinite(parameters.aimHoldSeconds) || parameters.aimHoldSeconds <= 0)
+				throw std::runtime_error("aimHoldSeconds must be positive and finite");
+			if (!std::isfinite(parameters.burstSeconds) || parameters.burstSeconds <= 0)
+				throw std::runtime_error("burstSeconds must be positive and finite");
+			if (!std::isfinite(parameters.burstPauseSeconds) || parameters.burstPauseSeconds <= 0)
+				throw std::runtime_error("burstPauseSeconds must be positive and finite");
+			if (!std::isfinite(parameters.openingGraceSeconds) || parameters.openingGraceSeconds <= 0)
+				throw std::runtime_error("openingGraceSeconds must be positive and finite");
+			if (!std::isfinite(parameters.aimErrorDegrees) || parameters.aimErrorDegrees <= 0)
+				throw std::runtime_error("aimErrorDegrees must be positive and finite");
+			if (parameters.aimAngleDegrees > 45 || parameters.aimErrorDegrees > parameters.aimAngleDegrees ||
+				parameters.disengageDistance >= parameters.attackDistance)
+				throw std::runtime_error("Invalid enemy aim or distance ranges");
 			if (!std::isfinite(parameters.directionChangeSeconds) ||
 				parameters.directionChangeSeconds <= 0.0f ||
 				!std::isfinite(parameters.altitudeChangeSeconds) ||
@@ -284,11 +309,33 @@ namespace Game {
 		JsonDocumentCache documents;
 		JsonAssetReader reader(documents);
 		JsonParametersLoader parameters(documents);
+		const auto weaponPath = paths.enemyAircraft.parent_path() / "weapon.json";
+		GunSettings enemyGun;
+		enemyGun.muzzleNames = {"L1", "L2", "R1", "R2"};
+		enemyGun.fireInterval = reader.ResolveFloat(weaponPath, "fireInterval");
+		enemyGun.muzzleSpeed = reader.ResolveFloat(weaponPath, "muzzleSpeed");
+		enemyGun.lifetime = reader.ResolveFloat(weaponPath, "lifetime");
+		const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
+		if (!std::isfinite(capacity) || capacity < 4 || capacity > 4096 || std::floor(capacity) != capacity)
+			throw std::runtime_error("Enemy maxProjectiles must be an integer within [4,4096]");
+		enemyGun.maxProjectiles = static_cast<size_t>(capacity);
+		ValidateGunSettings(enemyGun);
+		std::array<DirectX::XMFLOAT3, 4> enemyMuzzles;
+		const char* muzzleKeys[] = {"muzzleL1", "muzzleL2", "muzzleR1", "muzzleR2"};
+		for (size_t i = 0; i < 4; ++i) {
+			const auto offset = reader.ResolveFloatArray(weaponPath, muzzleKeys[i]);
+			if (offset.size() != 3 || !std::isfinite(offset[0]) || !std::isfinite(offset[1]) ||
+				!std::isfinite(offset[2]))
+				throw std::runtime_error("Enemy muzzle offset must contain three finite components");
+			enemyMuzzles[i] = {offset[0], offset[1], offset[2]};
+		}
 		return {.environment = LoadEnvironment(paths, reader, parameters),
 			.playerAircraft = LoadAircraftDefinition(reader, parameters, paths.playerAircraft),
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
 			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
+			.enemyGun = enemyGun,
+			.enemyMuzzles = enemyMuzzles,
 			.playerRocket = LoadRocket(reader, paths.playerAircraft),
 			.combat = LoadCombatSettings(
 				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),

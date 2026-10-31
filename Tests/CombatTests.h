@@ -6,6 +6,51 @@
 #include "Game/UI/CombatHudPresenter.h"
 #include "Game/Effects/CombatEffectPresenter.h"
 
+void TestEnemyCombatAI() {
+	using namespace DirectX;
+	AircraftFlightModel aircraft;
+	aircraft.SetPosition({0, 300, 0});
+	AircraftAIParameters p;
+	const XMFLOAT3 forward{0, 0, -1};
+	AircraftAITarget target{{0, 300, -600}, {0, 0, -60}, forward};
+	AircraftAIController controller;
+	bool fired = false, paused = false, resumed = false;
+	for (int i = 0; i < 700; ++i) {
+		const auto decision = controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, true);
+		if (i < 299)
+			Require(!decision.fire, "Enemy fired during opening grace");
+		if (decision.fire) {
+			if (paused)
+				resumed = true;
+			fired = true;
+		} else if (fired)
+			paused = true;
+	}
+	Require(fired && paused && resumed, "Enemy burst/pause/reacquisition did not cycle");
+	Require(!controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, false).fire,
+		"Reserved enemy kept firing");
+	AircraftAIController pursue, disengage, evade, recover;
+	const auto settle = [&](AircraftAIController& ai, AircraftAITarget t) {
+		AircraftAIDecision result;
+		for (int i = 0; i < 10; ++i)
+			result = ai.ReadCombatInput(aircraft, t, forward, 0.1f, p, 0, true);
+		return result;
+	};
+	settle(pursue, {{0, 300, -2000}, {}, forward});
+	Require(pursue.GetMode() == AircraftCombatMode::Pursuit, "Distant target was not pursued");
+	settle(disengage, {{0, 300, -100}, {}, forward});
+	Require(
+		disengage.GetMode() == AircraftCombatMode::Disengage, "Close target did not trigger disengagement");
+	const auto evasive = settle(evade, {{0, 300, 400}, {}, forward});
+	Require(evade.GetMode() == AircraftCombatMode::Evade && evasive.flight.highGTurn,
+		"Pursuer on tail did not trigger evasive turn");
+	aircraft.SetPosition({0, 50, 0});
+	const auto recovery = settle(recover, target);
+	Require(recover.GetMode() == AircraftCombatMode::Recover && recovery.flight.pitch > 0,
+		"Low altitude did not trigger climb");
+	std::cout << "PASS: enemy pursuit, evasion, separation, recovery, grace and burst timing\n";
+}
+
 void TestCombatMath() {
 	using namespace DirectX;
 	RawInputState raw;
@@ -160,6 +205,99 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			for (int frame = 0; frame < 14; ++frame)
 				scene.Update({}, 0.25f);
 			Require(effectState.explosions.empty(), "Explosion did not expire");
+			for (int retry = 0; retry < 3; ++retry) {
+				Require(state.result == CombatResult::Victory, "Last enemy kill did not produce victory");
+				CombatInput input;
+				input.retry = true;
+				scene.Update({}, 0.01f, {}, input);
+				Require(state.result == CombatResult::Active && state.enemies.size() == 1 &&
+						scene.GetProjectileCount() == 0 && scene.GetRocketCount() == 0 &&
+						state.lockState == LockState::None,
+					"Victory retry retained weapons, targets or result");
+				scene.Update({}, 0.25f, {}, {{true}});
+			}
+		}
+		// 同じフレームの相討ちは、命中イベントの処理順にかかわらず撃墜扱い。
+		{
+			FlightScene duel;
+			duel.Initialize(1, 1, 10000);
+			auto combat = definition.combat;
+			combat.playerHealth = 4;
+			combat.bulletDamage = 120;
+			duel.ConfigureCombat(combat);
+			auto flight = definition.playerAircraft.flightParameters;
+			flight.gravity = flight.drag = flight.acceleration = flight.turnDrag = flight.highGDrag = 0;
+			flight.pitchRateRadians = flight.turnRateRadians = flight.yawRateRadians = 0;
+			duel.SetPlayerAircraftFlightParameters(flight);
+			duel.SetPlayerAircraftPosition({0, 300, 0});
+			duel.AddPlayerObject(player);
+			duel.ConfigurePlayerWeapon(definition.playerWeapon, player);
+			auto ai = definition.enemyAIParameters;
+			ai.lowAltitude = 0;
+			ai.threatDistance = ai.disengageDistance = 1;
+			ai.aimAngleDegrees = 180;
+			ai.reactionSeconds = ai.aimHoldSeconds = ai.openingGraceSeconds = 0.01f;
+			duel.AddEnemyAircraft(enemy, {0, 300, -160}, 5, flight, ai, 120);
+			std::array<XMFLOAT3, 4> offsets;
+			const auto playerCenter = player->GetLocalBounds()->Center();
+			offsets.fill({playerCenter.x, playerCenter.y, playerCenter.z + 177});
+			duel.ConfigureEnemyWeapon(definition.enemyGun, offsets, player, {0, 1, 0});
+			duel.Update({}, 0.02f);
+			duel.Update({}, 0.25f, {}, {{true}});
+			Require(duel.GetCombatSnapshot().enemies.empty() && duel.GetCombatSnapshot().playerHealth == 0 &&
+					duel.GetCombatSnapshot().result == CombatResult::Defeat,
+				("Simultaneous kill was not a defeat: enemies=" +
+					std::to_string(duel.GetCombatSnapshot().enemies.size()) +
+					" health=" + std::to_string(duel.GetCombatSnapshot().playerHealth))
+					.c_str());
+		}
+		// 敵射撃は自機だけを対象とし、勝敗後の再挑戦はアセットを再利用する。
+		{
+			FlightScene battle;
+			battle.Initialize(1, 1, 10000);
+			auto combat = definition.combat;
+			combat.playerHealth = 4;
+			battle.ConfigureCombat(combat);
+			battle.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
+			battle.SetPlayerAircraftPosition({0, 300, 0});
+			battle.AddPlayerObject(enemy);
+			auto ai = definition.enemyAIParameters;
+			ai.openingGraceSeconds = 0.01f;
+			ai.aimHoldSeconds = 0.01f;
+			ai.lowAltitude = 0;
+			ai.disengageDistance = 1;
+			ai.aimAngleDegrees = 45;
+			ai.reactionSeconds = 0.01f;
+			for (int i = 0; i < 3; ++i)
+				battle.AddEnemyAircraft(
+					enemy, {0, 300, 300}, 1, definition.playerAircraft.flightParameters, ai, 120);
+			battle.ConfigureEnemyWeapon(definition.enemyGun, {}, player, {0, 1, 0});
+			for (int retry = 0; retry < 3; ++retry) {
+				for (int frame = 0; frame < 150 && battle.GetCombatSnapshot().result == CombatResult::Active;
+					++frame) {
+					const auto before = battle.GetObjects().size();
+					battle.Update({}, 0.05f);
+					Require(battle.GetObjects().size() <= before + 8, "More than two enemies fired together");
+				}
+				Require(battle.GetCombatSnapshot().result == CombatResult::Defeat &&
+						battle.GetCombatSnapshot().playerHealth == 0,
+					"Enemy bullets did not defeat player");
+				Require(battle.GetCombatSnapshot().enemies.size() == 3 &&
+						std::all_of(battle.GetCombatSnapshot().enemies.begin(),
+							battle.GetCombatSnapshot().enemies.end(),
+							[](const CombatTarget& target) {
+								return target.health == 120;
+							}),
+					"Enemy bullets damaged friendly aircraft");
+				battle.OnResize(1024, 768);
+				CombatInput retryInput;
+				retryInput.retry = true;
+				battle.Update({}, 0.01f, {}, retryInput);
+				Require(battle.GetCombatSnapshot().result == CombatResult::Active &&
+						battle.GetCombatSnapshot().playerHealth == 4 && battle.GetObjects().size() == 4 &&
+						battle.GetEffectSnapshot().explosions.empty(),
+					"Retry retained damage, bullets or effects");
+			}
 		}
 		GunSettings gun = definition.playerWeapon.gun;
 		gun.muzzleSpeed = 900;

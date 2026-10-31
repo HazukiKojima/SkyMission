@@ -7,12 +7,13 @@ namespace Game {
 		WeaponInput weapon;
 		bool nextTarget = false;
 		unsigned rocketPressCount = 0;
+		bool retry = false;
 	};
 	class CombatController {
 	  public:
 		CombatInput ReadInput(const Engine::InputSnapshot& input) const {
 			return {WeaponController{}.ReadInput(input), input.WasKeyPressed(VK_TAB),
-				input.GetKeyPressCount('F')};
+				input.GetKeyPressCount('F'), input.WasKeyPressed('R')};
 		}
 	};
 } // namespace Game

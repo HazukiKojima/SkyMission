@@ -7,9 +7,23 @@
     "maintainAngleDegrees": 35,
     "lossGraceSeconds": 0.25,
     "assistAngleDegrees": 3,
-    "enemyHealth": 100,
+    "enemyHealth": 120,
     "bulletDamage": 10,
-    "enemyPosition1": [0, 300, -1200],
-    "enemyPosition2": [-450, 350, -1700],
-    "enemyPosition3": [500, 400, -2000]
+    "enemyPosition1": [
+        0,
+        300,
+        -1200
+    ],
+    "enemyPosition2": [
+        -450,
+        350,
+        -1700
+    ],
+    "enemyPosition3": [
+        500,
+        400,
+        -2000
+    ],
+    "playerHealth": 100,
+    "enemyBulletDamage": 4
 }

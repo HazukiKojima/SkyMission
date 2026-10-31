@@ -26,6 +26,15 @@ namespace Game {
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
 
+	void FlightScene::ConfigureEnemyWeapon(const GunSettings& settings,
+		const std::array<DirectX::XMFLOAT3, 4>& muzzles, std::shared_ptr<Engine::Model> ammunition,
+		const DirectX::XMFLOAT3& modelForward) {
+		m_enemyProjectiles.Configure(settings, std::move(ammunition), modelForward);
+		m_enemyGunSettings = settings;
+		m_enemyMuzzles = muzzles;
+		m_enemyWeaponConfigured = true;
+	}
+
 	void FlightScene::ConfigurePlayerWeapon(
 		const WeaponDefinition& definition, std::shared_ptr<Engine::Model> ammunition) {
 		try {
@@ -51,12 +60,31 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0)
 			return;
 		dt = std::min(dt, 0.25f);
-
-		// 既存の演出を進めてから、このフレームの新しい演出を生成する
-		m_effects.Update(dt);
+		m_combat.playerHitSeconds = std::max(0.0f, m_combat.playerHitSeconds - dt);
 		m_combat.hitSeconds = std::max(0.0f, m_combat.hitSeconds - dt);
 		m_combat.destroyedSeconds = std::max(0.0f, m_combat.destroyedSeconds - dt);
 		m_combat.allDownSeconds = std::max(0.0f, m_combat.allDownSeconds - dt);
+		if (!m_initialState)
+			m_initialState = std::make_shared<FlightScene>(*this);
+		if (m_combat.result != CombatResult::Active) {
+			if (combatInput.retry) {
+				const auto initial = m_initialState;
+				const auto width = m_width, height = m_height;
+				*this = *initial;
+				m_initialState = initial;
+				OnResize(width, height);
+				ApplyRenderStates();
+				RefreshCombatSnapshot();
+				UpdateCamera({}, dt, {});
+			} else
+				m_effects.Update(dt);
+			return;
+		}
+		m_battleSeconds += dt;
+		m_previousPlayerPosition = m_player.GetPosition();
+
+		// 既存の演出を進めてから、このフレームの新しい演出を生成する
+		m_effects.Update(dt);
 
 		// 更新後の機体位置・姿勢をカメラと描画状態へ反映する
 		UpdatePlayer(input, dt);
@@ -95,6 +123,7 @@ namespace Game {
 		UpdateRockets(combatInput, dt, targets);
 
 		// 命中と撃破を反映してから、HUDとカメラへ最終状態を渡す
+		UpdateEnemyWeapons(dt);
 		ApplyHits();
 		RefreshCombatSnapshot();
 		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, false, 0);
@@ -158,8 +187,25 @@ namespace Game {
 		for (auto& enemy : m_enemies) {
 			if (!m_scene.FindObject(enemy.objectId))
 				continue;
-			const auto input = enemy.controller.ReadInput(
-				enemy.flightModel, m_player.GetMaximumSpeed(), dt, enemy.aiParameters);
+			const AircraftAITarget target{
+				m_player.GetPosition(), m_player.GetVelocity(), m_player.GetForward()};
+			const CombatTarget combatTarget{
+				m_playerId, target.position, target.velocity, "PLAYER", m_combat.playerHealth};
+			const auto aim = SolveGunAim(enemy.flightModel.GetPosition(), enemy.flightModel.GetVelocity(),
+				combatTarget, m_enemyGunSettings.muzzleSpeed, m_enemyGunSettings.lifetime);
+			const auto position = enemy.flightModel.GetPosition();
+			DirectX::XMFLOAT3 direction;
+			DirectX::XMStoreFloat3(&direction,
+				DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(
+					DirectX::XMLoadFloat3(&target.position), DirectX::XMLoadFloat3(&position))));
+			if (aim)
+				direction = aim->direction;
+			const size_t reserveSlot = static_cast<size_t>(m_battleSeconds / 6) % m_enemies.size();
+			const bool allowed = m_enemies.size() <= 2 || &enemy != &m_enemies[reserveSlot];
+			const auto decision = enemy.controller.ReadCombatInput(
+				enemy.flightModel, target, direction, dt, enemy.aiParameters, enemy.slot, allowed);
+			const auto input = decision.flight;
+			enemy.fire = decision.fire && aim.has_value();
 			enemy.previousPosition = enemy.flightModel.GetPosition();
 			enemy.flightModel.Update(input, dt);
 			enemy.propellerAngle = AdvancePropeller(enemy.propellerAngle, enemy.flightModel.GetSpeed(), dt);
@@ -188,6 +234,8 @@ namespace Game {
 	}
 
 	void FlightScene::OnResize(UINT width, UINT height) {
+		m_width = width;
+		m_height = height;
 		m_cameraController.OnResize(width, height);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
@@ -207,6 +255,7 @@ namespace Game {
 		enemy.flightModel.SetFlightParameters(flight);
 		enemy.flightModel.SetPosition(position);
 		enemy.aiParameters = ai;
+		enemy.slot = m_enemySequence;
 		enemy.visualScale = scale;
 		enemy.objectId = m_scene.AddObject(std::move(model));
 		enemy.previousPosition = position;
@@ -220,10 +269,13 @@ namespace Game {
 
 	void FlightScene::ConfigureCombat(const CombatSettings& settings) {
 		if (!std::isfinite(settings.enemyHealth) || settings.enemyHealth <= 0 ||
-			!std::isfinite(settings.bulletDamage) || settings.bulletDamage <= 0)
-			throw std::invalid_argument("enemyHealth and bulletDamage must be positive and finite");
+			!std::isfinite(settings.bulletDamage) || settings.bulletDamage <= 0 ||
+			!std::isfinite(settings.playerHealth) || settings.playerHealth <= 0 ||
+			!std::isfinite(settings.enemyBulletDamage) || settings.enemyBulletDamage <= 0)
+			throw std::invalid_argument("Combat health and damage must be positive and finite");
 		m_targeting.Configure(settings.targeting);
 		m_combatSettings = settings;
+		m_combat.playerHealth = m_combat.playerMaxHealth = settings.playerHealth;
 	}
 
 	std::vector<CollisionTarget> FlightScene::BuildCollisionTargets() {
@@ -298,9 +350,37 @@ namespace Game {
 		}
 	}
 
+	void FlightScene::UpdateEnemyWeapons(float dt) {
+		if (!m_enemyWeaponConfigured)
+			return;
+		std::vector<CollisionTarget> targets;
+		if (const auto* player = m_scene.FindObject(m_playerId); player && player->model->GetLocalBounds())
+			targets.push_back({m_playerId, *player->model->GetLocalBounds(), m_previousPlayerPosition,
+				player->worldTransform});
+		m_enemyProjectiles.Update(m_scene, dt, targets);
+		for (auto& enemy : m_enemies) {
+			if (!enemy.fire || targets.empty()) {
+				enemy.gunCooldown = std::max(0.0f, enemy.gunCooldown - dt);
+				continue;
+			}
+			const auto pose = enemy.flightModel.GetWorldTransform();
+			// 銃口は機体ローカルのメートル指定。発射後の弾は直進する。
+			for (size_t volley = 0; enemy.gunCooldown <= dt && volley < m_enemyGunSettings.maxProjectiles / 4;
+				++volley) {
+				const float age = dt - enemy.gunCooldown;
+				m_enemyProjectiles.FireVolley(m_scene, m_enemyMuzzles, pose, pose,
+					enemy.flightModel.GetForward(), enemy.flightModel.GetVelocity(), age, {}, targets, dt);
+				enemy.gunCooldown += m_enemyGunSettings.fireInterval;
+			}
+			enemy.gunCooldown = std::max(0.0f, enemy.gunCooldown - dt);
+		}
+	}
+
 	void FlightScene::ApplyHits() {
 		// 武器ごとの命中をまとめ、フレーム内の接触時刻順にダメージを反映する
 		auto hits = m_projectiles.TakeHits();
+		const auto enemyHits = m_enemyProjectiles.TakeHits();
+		hits.insert(hits.end(), enemyHits.begin(), enemyHits.end());
 		const auto rocketHits = m_rockets.TakeHits();
 		hits.insert(hits.end(), rocketHits.begin(), rocketHits.end());
 		std::stable_sort(hits.begin(), hits.end(), [](const HitEvent& a, const HitEvent& b) {
@@ -308,6 +388,20 @@ namespace Game {
 		});
 		std::vector<Engine::ObjectId> destroyed;
 		for (const auto& hit : hits) {
+			if (hit.target == m_playerId) {
+				if (m_combat.playerHealth <= 0)
+					continue;
+				m_combat.playerHealth =
+					std::max(0.0f, m_combat.playerHealth - m_combatSettings.enemyBulletDamage);
+				m_combat.playerHitSeconds = 0.7f;
+				m_combat.playerHitDirection = {-hit.direction.x, -hit.direction.y, -hit.direction.z};
+				m_effects.SpawnImpact(hit, m_player.GetVelocity());
+				if (m_combat.playerHealth <= 0) {
+					if (const auto* object = m_scene.FindObject(m_playerId))
+						m_effects.SpawnExplosion(*object, m_player.GetVelocity(), m_playerVisualScale);
+				}
+				continue;
+			}
 			auto enemy = std::find_if(m_enemies.begin(), m_enemies.end(), [&](const EnemyAircraft& e) {
 				return e.objectId == hit.target;
 			});
@@ -338,6 +432,11 @@ namespace Game {
 		// 命中の走査中は敵を削除せず、後続の命中でも耐久値を参照できるようにする
 		for (const auto id : destroyed)
 			RemoveObject(id);
+		if (m_combat.playerHealth <= 0) {
+			RemoveObject(m_playerId);
+			m_combat.result = CombatResult::Defeat;
+		} else if (!destroyed.empty() && m_enemies.empty())
+			m_combat.result = CombatResult::Victory;
 		if (!destroyed.empty() && m_enemies.empty())
 			m_combat.allDownSeconds = 3;
 	}

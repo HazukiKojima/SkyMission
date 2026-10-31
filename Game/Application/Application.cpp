@@ -57,6 +57,7 @@ namespace Game {
 		environment.ambientIntensity = assets.environment.sky.ambientIntensity;
 		environment.ambientColor = assets.environment.sky.ambientColor;
 		m_scene->SetEnvironment(environment);
+		m_scene->SetPlayerAircraftPosition({0, 300, 0});
 		m_scene->SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		m_scene->SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
 		m_scene->AddPlayerObject(m_renderer->GetModel(PlayerModelId));
@@ -67,9 +68,12 @@ namespace Game {
 
 		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
 		m_scene->ConfigurePlayerRocket(assets.playerRocket, m_renderer->GetModel(RocketModelId));
+		m_scene->ConfigureEnemyWeapon(assets.enemyGun, assets.enemyMuzzles,
+			m_renderer->GetModel(AmmunitionModelId), assets.playerWeapon.modelForward);
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
-			assets.playerWeapon.gun.maxProjectiles + assets.playerRocket.settings.maxRockets);
+			assets.playerWeapon.gun.maxProjectiles + assets.enemyGun.maxProjectiles +
+			assets.playerRocket.settings.maxRockets);
 	}
 
 	void Application::ConfigureResizeHandling() {

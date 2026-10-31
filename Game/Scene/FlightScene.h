@@ -17,6 +17,9 @@ namespace Game {
 		void Update(const AircraftInput& input, float deltaSeconds,
 			const Engine::InputSnapshot& cameraInput = {}, CombatInput combatInput = {});
 		void ConfigureCombat(const CombatSettings& settings);
+		void ConfigureEnemyWeapon(const GunSettings& settings,
+			const std::array<DirectX::XMFLOAT3, 4>& muzzles, std::shared_ptr<Engine::Model> ammunition,
+			const DirectX::XMFLOAT3& modelForward);
 		void ConfigurePlayerRocket(const RocketDefinition& definition, std::shared_ptr<Engine::Model> model);
 		size_t GetRocketCount() const {
 			return m_rockets.GetCount();
@@ -42,6 +45,9 @@ namespace Game {
 		void SetEnvironment(const Engine::SceneEnvironment& environment) {
 			m_scene.SetEnvironment(environment);
 		}
+		void SetPlayerAircraftPosition(const DirectX::XMFLOAT3& position) {
+			m_player.SetPosition(position);
+		}
 		void SetPlayerAircraftVisualScale(float scale) {
 			m_playerVisualScale = scale;
 		}
@@ -66,6 +72,9 @@ namespace Game {
 			float visualScale = 1;
 			float propellerAngle = 0;
 			float health = 100;
+			size_t slot = 0;
+			bool fire = false;
+			float gunCooldown = 0;
 			std::string name;
 			DirectX::XMFLOAT3 previousPosition{};
 		};
@@ -77,6 +86,16 @@ namespace Game {
 		std::vector<CollisionTarget> BuildCollisionTargets();
 		void ApplyHits();
 		void UpdateRockets(const CombatInput& input, float dt, std::span<const CollisionTarget> targets);
+		void UpdateEnemyWeapons(float dt);
+		// 初回更新直前の状態を保持し、アセットを共有したまま再挑戦する。
+		std::shared_ptr<const FlightScene> m_initialState;
+		UINT m_width = 800, m_height = 600;
+		float m_battleSeconds = 0;
+		DirectX::XMFLOAT3 m_previousPlayerPosition{};
+		ProjectileSystem m_enemyProjectiles;
+		GunSettings m_enemyGunSettings;
+		std::array<DirectX::XMFLOAT3, 4> m_enemyMuzzles{};
+		bool m_enemyWeaponConfigured = false;
 		Engine::Scene m_scene;
 		AircraftCameraController m_cameraController;
 		AircraftFlightModel m_player;

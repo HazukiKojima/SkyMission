@@ -20,6 +20,27 @@ namespace Game {
 		const auto drawLabel = [&](float x, float y, std::string_view text) {
 			list.Text({offsetX + x * scale, offsetY + y * scale}, text, fontSize, color);
 		};
+		drawLabel(80, 820,
+			"HULL " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
+				std::to_string(static_cast<int>(snapshot.playerMaxHealth)));
+		if (snapshot.result != CombatResult::Active) {
+			drawLabel(740, 380, snapshot.result == CombatResult::Victory ? "VICTORY" : "SHOT DOWN");
+			drawLabel(740, 440, "R: RETRY");
+		}
+		if (snapshot.playerHitSeconds > 0) {
+			const auto& d = snapshot.playerHitDirection;
+			const auto& f = snapshot.forward;
+			const float bearing = std::atan2(-f.z * d.x + f.x * d.z, f.x * d.x + f.z * d.z);
+			const float x = std::sin(bearing), y = -std::cos(bearing);
+			const XMFLOAT2 center{view.width * 0.5f, view.height * 0.5f};
+			const XMFLOAT4 warning{1, 0.2f, 0.15f, 1};
+			const XMFLOAT2 tip{center.x + x * 160 * scale, center.y + y * 160 * scale};
+			list.Line(tip, {tip.x - x * 25 * scale - y * 12 * scale, tip.y - y * 25 * scale + x * 12 * scale},
+				lineWidth * 2, warning);
+			list.Line(tip, {tip.x - x * 25 * scale + y * 12 * scale, tip.y - y * 25 * scale - x * 12 * scale},
+				lineWidth * 2, warning);
+			drawLabel(820, 800, "TAKING FIRE");
+		}
 		// 照準は弾道予測とは独立し、機関砲の軸に追従する
 		XMFLOAT3 sightWorldPosition;
 		XMStoreFloat3(&sightWorldPosition,

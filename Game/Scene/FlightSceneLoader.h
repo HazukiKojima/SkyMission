@@ -24,6 +24,8 @@ namespace Game {
 		AircraftDefinition playerAircraft, enemyAircraft;
 		AircraftAIParameters enemyAIParameters;
 		WeaponDefinition playerWeapon;
+		GunSettings enemyGun;
+		std::array<DirectX::XMFLOAT3, 4> enemyMuzzles;
 		RocketDefinition playerRocket;
 		CombatSettings combat;
 		Engine::HudSettings hud;

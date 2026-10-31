@@ -8,5 +8,16 @@
   "pitchGain": 1.5,
   "speedMatchGain": 0.015,
   "highGManeuverIntervalSeconds": 24.0,
-  "highGManeuverDurationSeconds": 3.0
+  "highGManeuverDurationSeconds": 3.0,
+  "reactionSeconds": 0.3,
+  "maneuverSeconds": 1.8,
+  "disengageDistance": 200,
+  "threatDistance": 700,
+  "attackDistance": 900,
+  "aimAngleDegrees": 3,
+  "aimHoldSeconds": 0.4,
+  "burstSeconds": 0.7,
+  "burstPauseSeconds": 1.2,
+  "openingGraceSeconds": 3,
+  "aimErrorDegrees": 0.65
 }
