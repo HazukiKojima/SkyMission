@@ -212,7 +212,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -346,6 +346,7 @@
   <ItemGroup>
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\**\*.cs" Exclude="$(SolutionDir)External\REDoxWrapper\bin\**;$(SolutionDir)External\REDoxWrapper\obj\**" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" />
+    <REDoxWrapperPublishInput Include="$(SolutionDir)global.json" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json" Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
     <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
@@ -461,5 +462,9 @@
     <None Include="Assets\Aircraft\N1K2JShidenKai\rocketWeapon.json" />
     <None Include="Assets\Ammunition\Rocket\ammunition.json" />
     <None Include="Assets\Ammunition\Rocket\modelImport.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="global.json" />
+    <ClInclude Include="Tests\EnvironmentSettingsTests.h"></ClInclude>
   </ItemGroup>
 </Project>

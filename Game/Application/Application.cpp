@@ -91,11 +91,23 @@ namespace Game {
 	// メインループ（メッセージ処理と更新/描画）
 	int Application::Run() {
 		MSG msg = {};
+		bool suspended = false;
 		while (msg.message != WM_QUIT) {
 			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
+			} else if (IsIconic(m_window->GetHandle()) || m_window->GetWidth() == 0 || m_window->GetHeight() == 0) {
+				// 最小化中は描画とシミュレーションを止め、メッセージ到着までCPUを休ませる
+				suspended = true;
+				WaitMessage();
 			} else {
+				if (suspended) {
+					// 復帰時に最小化中の時間を持ち込まず、機体や演出の急な進行を防ぐ
+					m_lastTime = std::chrono::steady_clock::now();
+					m_fpsTimer = 0;
+					m_fpsFrameCount = 0;
+					suspended = false;
+				}
 				Update();
 				Render();
 			}

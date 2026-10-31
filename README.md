@@ -1,180 +1,141 @@
 # SkyMission
 
-**C++ / DirectX 12 を使用した、航空機と自然環境のリアルタイム3Dレンダリングプロジェクト**
+C++20 / DirectX 12で、航空機の操縦・空戦・海洋環境を実装したWindows向けの技術デモです。
+プレイヤー機は紫電改（N1K2-J）、敵機はF4U-4 Corsairを使用します。
 
-SkyMissionは、C++とDirectX 12を使用して開発している3Dグラフィックスプロジェクトです。
+## 実装している機能
 
-戦闘機 F-16 と、空・雲・海洋からなる自然環境の描画を通じて、リアルタイムレンダリング、シェーダープログラミング、GPUリソース管理などのグラフィックス技術を実践的に学びながら開発しています。
+- クォータニオン姿勢、推力・揚力・抗力を使った航空機の移動、敵機の巡回AI
+- 左クリックによる4門の20mm機関砲、Fキーによる左右交互発射の軽追尾ロケット
+- 敵の選択・ロックオン、未来位置照準、移動OBBとの区間衝突判定、ダメージと撃破
+- HDRテクスチャを使ったスカイスフィア、波・法線マップ・霧を使った海洋描画
+- レトロフィルムの色調補正、照準・敵枠・武器状態のHUD、着弾と撃破の演出
+- Raw Inputによる入力スナップショット、JSON設定、C++ / C# Native AOT間の連携
 
-また、レンダリング処理とアセット管理の責務を分離し、JSONによる設定管理や外部ライブラリとの連携を取り入れることで、拡張性と保守性を意識した設計を進めています。
+雲はHDR空テクスチャに含まれる表現です。ボリュメトリッククラウドは実装していません。
+現在は敵3機との戦闘デモで、敵の再出現・反撃・ミッション選択はありません。
 
-## Features
+## ビルド環境
 
-### Real-Time 3D Rendering
+| 項目 | 必要な構成 |
+| --- | --- |
+| OS | Windows 10 / Windows 11、x64 |
+| IDE / C++ | Visual Studio 2026（18.x）、デスクトップC++ワークロード、MSVC v145 |
+| Windows SDK | Windows 10 / 11 SDK（DirectX 12・FXCを含む） |
+| .NET | .NET 10 SDKとNative AOTに必要なC++ビルドツール |
+| GPU | DirectX 12対応GPU。利用できない場合はWARPへフォールバック |
 
-* C++ / DirectX 12 による3Dグラフィックスの描画
-* 頂点シェーダー（VS）とピクセルシェーダー（PS）を使用した描画処理
-* 3Dモデルの読み込みと描画
-* テクスチャを利用したマテリアル表現
-* ライティングによるモデルの陰影表現
+Debug / Releaseのツールセットはv145に統一しています。動作確認の対象はx64です。
+`global.json` は.NET 10 SDKを選び、インストール済みの10.0系の最新feature bandへロールフォワードします。
+.NET 8 / 9 SDKだけの環境ではビルドできません。`dotnet --version` で10.0系が選ばれることを確認してください。
 
-### Environment Rendering
+## 初回ビルドと起動
 
-* スカイスフィアによる空の描画
-* ボリュメトリッククラウドによる雲の表現
-* 法線マップを利用した海洋表面の表現
-* 太陽光と環境光を考慮したライティング
-* 広大な海洋環境を対象とした描画処理の調整
+1. リポジトリを取得し、Visual Studio 2026で `SkyMission.slnx` を開きます。
+2. ソリューションのNuGetパッケージを復元します。C++側は `packages.config`、C#側は `External/REDoxWrapper/REDoxWrapper.csproj` の依存関係を使います。
+3. スタートアッププロジェクトを `SkyMission`、プラットフォームを `x64` に設定します。
+4. 最初に `Debug` をビルドし、Visual Studioから起動します。`Release` も同じv145構成でビルドできます。
 
-### Asset Management
+ビルド時にはJSONバインディングを生成し、REDoxWrapperをNative AOTのDLLとして発行して実行ファイルの横へコピーします。
+シェーダーもCSOへコンパイルします。生成ファイルを手作業で編集する必要はありません。
 
-* JSONによるアセット設定の管理
-* 空・海洋・航空機の設定を用途ごとに整理
-* アセットパスの解決処理をレンダラーから分離
-* 専用のクラスを通じたシーンアセット情報の受け渡し
+パッケージ復元をコマンドで行う場合は、NuGet CLIと.NET SDKを用意した上で、リポジトリ直下から実行します。
 
-### REDox Integration
+```powershell
+nuget restore packages.config -PackagesDirectory packages
+dotnet restore External/REDoxWrapper/REDoxWrapper.csproj
+```
 
-* RE:Doxを利用したJSON処理のC++プロジェクトへの統合
-* C++と.NET Native AOTでビルドしたDLLとの連携
-* JSONを利用したアセット設定の読み込み処理の実装
+Visual Studio 2026のDeveloper PowerShellでは、以下でもビルドできます。
 
-※ 一部の機能は現在も開発・改善を進めています。
+```powershell
+MSBuild SkyMission.slnx /m /p:Configuration=Debug /p:Platform=x64
+MSBuild SkyMission.slnx /m /p:Configuration=Release /p:Platform=x64
+```
 
-## Technology Stack
+実行時は `Assets` と出力先の `x64/Debug` または `x64/Release` の相対配置を維持してください。
+EXEだけを別の場所へ移動すると、アセットと外部DLLを読み込めません。初回はテクスチャ処理に時間がかかる場合があります。
 
-| Category                   | Technology            |
-| -------------------------- | --------------------- |
-| Programming Language       | C++                   |
-| Graphics API               | DirectX 12            |
-| Shader Language            | HLSL                  |
-| Development Environment    | Visual Studio 2022    |
-| Configuration Format       | JSON                  |
-| JSON Processing            | RE:Dox / REDoxWrapper |
-| Native Library Integration | .NET Native AOT       |
+## 操作
 
-## Architecture
+| 入力 | 操作 |
+| --- | --- |
+| W / S | ピッチ操作 |
+| A / D | 旋回 |
+| Q / E | ヨー操作 |
+| Ctrl / Space | 加速 / 減速 |
+| Ctrl + Space | ハイG旋回入力 |
+| 左クリック長押し | 4門の20mm機関砲を連射 |
+| Tab | 選択する敵を切り替え |
+| F押下 | L1 → R1の順でロケットを1発発射 |
 
-レンダリング処理、デバイス管理、シーンアセットの読み込みなどの責務を分離し、各機能を独立して管理できる構成を目指しています。
+機首を敵へ向けて0.5秒捕捉するとロックが成立します。機関砲は未来位置照準へ向けて狙い、条件内では小さな射撃補正が働きます。
+ロケットは発射時のロック対象を保持して緩く追尾し、ロックなし・対象消失時は直進します。
+L1 / R1には独立した3秒のクールタイムがあり、HUD左下で次の銃口とREADY / 残り秒数を確認できます。
 
-主なコンポーネントは以下のとおりです。
+フォーカスを失うと入力を解除します。最小化中はシミュレーションと描画を停止し、復帰時に経過時間をリセットします。
 
-| Component         | Responsibility       |
-| ----------------- | -------------------- |
-| Application       | アプリケーション全体の初期化と処理の管理 |
-| Renderer          | 描画処理全体の管理            |
-| RenderDevice      | DirectX 12のデバイス関連処理  |
-| CommandContext    | コマンドリストなど、描画コマンドの管理  |
-| SceneLoader       | シーンに必要なアセット情報の読み込み   |
-| AssetPathResolver | JSON設定を利用したアセットパスの解決 |
-| SkySphere         | 空の描画                 |
-| Model             | 3Dモデルの読み込みと描画        |
+## 構成と主な責務
 
-※ クラス構成は開発状況に応じて変更される場合があります。
+| コンポーネント | 担当 |
+| --- | --- |
+| Application | 初期化、ウィンドウのメッセージ処理、更新と描画の呼び出し |
+| FlightScene / FlightSceneLoader | 戦闘シーンの更新順、設定・アセット定義の読み込み |
+| AircraftFlightModel / AircraftAIController | 飛行モデルと敵機の操縦入力 |
+| TargetingSystem / GunAimSolver | 対象選択・ロック状態と迎撃位置の計算 |
+| AircraftGun / ProjectileSystem | 機関砲の発射タイミング、弾の移動と命中収集 |
+| RocketLauncher / RocketSystem | 銃口別クールタイム、追尾、ロケットの移動と命中収集 |
+| CombatEffectSystem / CombatEffectPresenter | 演出の生成・寿命管理と描画データの作成 |
+| CombatHudPresenter / HudRenderer | 戦闘情報の表示とGPUへの描画 |
+| Renderer / RenderDevice / CommandContext | 描画パス、D3D12リソース、コマンド記録とGPU同期 |
+| JsonAssetReader / JsonParametersLoader | JSONからのパス・値の取得と型付き設定の受け渡し |
 
-## Development Focus
+`Engine` には描画・リソース・入力などを、`Game` には航空機・武器・戦闘・表示を配置しています。
 
-### 1. Real-Time Graphics Programming
+## 技術上の工夫
 
-DirectX 12を使用し、GPUによる描画処理やシェーダーの実装を通じて、3Dグラフィックスの仕組みを理解しながら開発しています。
+- 永続参照にはObjectIdを使い、オブジェクト追加・削除で無効になるポインターを保持しません。
+- 命中を収集してからフレーム内時刻順にダメージを反映し、走査途中の敵削除や撃破通知の重複を防ぎます。
+- モデル・海・空の静的メッシュはDEFAULTヒープへ転送し、GPU完了後にUPLOAD用リソースを解放します。
+- フレーム別のコマンドアロケータ・定数バッファとフェンスで、GPU使用中の領域の再利用を制御します。
+- JSONとモデルの読み込みを発射処理から分離し、弾の上限に合わせて描画容量を先に確保します。
+- C++ヘッダーからC#の設定バインディングと配置検証用static_assertを生成し、Native AOTとのデータ配置を検証します。
+- 海と空の設定は読み込み時に範囲を検証し、不正な項目名とファイルパスをエラーへ含めます。
 
-特に、航空機のマテリアル表現、ライティング、海洋表面の描画など、シーン全体の視覚的な品質向上に取り組んでいます。
+## 設定ファイル
 
-### 2. Environment Rendering
+| 対象 | 設定場所 |
+| --- | --- |
+| プレイヤー機 | `Assets/Aircraft/N1K2JShidenKai/` |
+| 敵機・AI | `Assets/Aircraft/F4U4Corsair/` |
+| 機関砲 / ロケット | 機体フォルダーの `weapon.json` / `rocketWeapon.json` |
+| 弾薬モデル | `Assets/Ammunition/20mmAmmo/` / `Assets/Ammunition/Rocket/` |
+| 敵配置・耐久値・ロック条件 | `Assets/Combat/targeting.json` |
+| HUD | `Assets/UI/combatHud.json` |
+| 海・空・フィルム効果 | `Assets/Environment/` |
 
-空・雲・海洋を組み合わせた広大な自然環境の描画に取り組んでいます。
+モデルの表示サイズは各 `modelImport.json` の `normalizedExtent` で指定します。変更後はアプリを再起動してください。
+演出の寿命・本数・描画上限は `Game/Effects/CombatEffectSettings.h` にまとめています。
+詳細は [機関砲の設計](Docs/Design/PlayerAircraftGun.md) と [ロックオン・HUDの設計](Docs/Design/TargetLockCombatHud.md) を参照してください。
 
-海洋では法線マップやライティングを利用した表面表現を、雲ではボリュメトリックな手法による立体的な表現を試行し、描画品質とパフォーマンスの両立を目指しています。
+## テスト
 
-### 3. Resource Management and Performance
+Debug x64を一度ビルドしてNative AOT DLLを生成した後、リポジトリ直下で実行します。
 
-DirectX 12のリソース管理を意識し、テクスチャや3Dモデルの読み込み、GPUリソースの使用量、描画処理の負荷などを調査・改善しています。
+```powershell
+./Tests/RunRegressionTests.ps1
+```
 
-### 4. Extensible Asset Pipeline
+テストは一時ディレクトリでC++とHLSLをコンパイルします。主な検証対象は、飛行モデル、Raw Input、フォーカス喪失、ウィンドウ操作、武器の発射間隔・クールタイム境界、追尾・命中・撃破、設定の不正値、テクスチャ、GPU読み戻し、HUDの投影・リサイズ、描画パスです。
+実アセットの読み込み検証と、固定条件での武器挙動検証を分けています。
 
-アセットのパスや設定値をJSONで管理し、アセットの読み込み処理とレンダリング処理の分離を進めています。
+## 使用ライブラリと現在の制約
 
-また、RE:Doxを利用したJSON処理をC++側へ統合し、外部ライブラリとの連携や処理性能の検証にも取り組んでいます。
+Assimpによるモデル読み込み、DirectXTexによる画像処理、RE:Dox / REDoxWrapperによるJSON処理を利用しています。
+モデル・画像は `Assets` に配置しています。
 
-## Build Environment
-
-* Windows 10 / Windows 11
-* Visual Studio 2022
-* C++対応のVisual Studioワークロード
-* DirectX 12に対応したGPUおよびドライバー
-* Windows SDK
-* プロジェクトで使用するNuGetパッケージ
-
-## Build Instructions
-
-1. リポジトリをクローンします。
-
-   ```bash
-   git clone https://github.com/HazukiKojima/SkyMission.git
-   ```
-
-2. Visual Studio 2022でソリューションファイルを開きます。
-
-3. 必要なNuGetパッケージを復元します。
-
-4. ビルド構成を選択します。
-
-   * Configuration: `Debug` または `Release`
-   * Platform: `x64`
-
-5. プロジェクトをビルドして実行します。
-
-※ REDoxWrapperなどの外部DLLや各種アセットが必要な構成では、それらの配置・ビルドも必要です。リポジトリの最新の構成に従ってください。
-
-## 機関砲の操作と設定
-
-- 左クリックを押している間、プレイヤー機の4門から20mm弾を同時連射します。
-- Tabで敵を切り替え、機首を向けて0.5秒捕捉するとロックが成立します。緑の予測照準に機首を近づけると小さな射撃補正が働きます。
-- 弾は機体速度を引き継いで直進し、命中・寿命・基準海面到達で消滅します。敵3機を撃破でき、再出現はしません。
-- `Assets/Combat/targeting.json` で捕捉条件・配置・耐久値・ダメージ、`Assets/UI/combatHud.json` でHUDの色・線幅・文字サイズを調整できます。
-- ロックオンとHUDの設計は [TargetLockCombatHud.md](Docs/Design/TargetLockCombatHud.md) を参照してください。
-- `Assets/Aircraft/N1K2JShidenKai/weapon.json` で発射間隔・弾速・寿命・上限を調整できます。
-- 設計は [PlayerAircraftGun.md](Docs/Design/PlayerAircraftGun.md) を参照してください。
-
-## 開発状況
-
-SkyMissionは現在開発中です。
-
-レンダリング機能の拡張、描画品質の改善、GPUリソース管理の見直し、アセット管理の整理などを継続して進めています。
-
-## 入力と静的メッシュの転送
-
-- メインウィンドウがキーボードとマウスの Raw Input を登録し、`WM_INPUT` の make/break と移動パケットから入力状態を更新します。バックグラウンド入力は登録せず、フォーカス喪失時に押下状態とマウス移動量を解除します。デバイスを外した場合も押下が残らないようにします。
-- `Window::ConsumeInput` はフレームのスナップショットを返し、Application が機体とカメラへ同じ状態を渡します。押下状態は維持し、右ドラッグ中の移動量は1フレームだけ消費します。フライカメラを含め、キー・カーソル状態のポーリングは行いません。
-- モデル・海・スカイスフィアの頂点とインデックスは DEFAULT ヒープに保持します。初期化時の UPLOAD バッファは Renderer がまとめて送信し、GPU 完了を待ってから解放します。定数バッファなど、CPU が更新するデータは引き続き UPLOAD ヒープを使用します。
-- `Tests/RunRegressionTests.ps1` には、Raw Input の押下・解放、左右 Ctrl、複数デバイス、フォーカス喪失、入力登録の寿命、および海・空の DEFAULT ヒープと GPU 読み戻しの確認を含みます。
-
-Raw Input の登録とメッセージ後処理は Microsoft の [RegisterRawInputDevices](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerrawinputdevices) と [WM_INPUT](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-input) の仕様に従います。
-
-## 戦闘フィードバック
-
-- 実際に発射した斉射で機関砲音、有効な命中で金属的な命中音を再生します。同一フレームの複数発は一音にまとめます。
-- 音は初期化時に合成し、XAudio2の12音声プールで再生します。音声デバイスを利用できない場合もゲームは継続します。
-- 着弾時に短い閃光、入射方向へ跳ね返る不規則な金属片、薄い灰色の煙を表示し、0.45秒で消えます。金属片と煙は命中した機体の速度を引き継ぎます。最大64件を保持します。既存HUD描画経路による投影表示のため、3D物体による遮蔽は行いません。
-
-## 撃破時の爆発
-
-- 敵機のHPが0以下になると、機体中心で短い閃光、乱流模様を持つ不規則な火球、24本の燃える破片と煙の軌跡、上昇する黒煙を表示します。
-- 爆発は敵機の削除後も3.5秒間残り、機体サイズと撃破時の速度を反映します。同時表示は最大4件です。
-- 着弾と同じ投影描画経路を使用します。3D物体による遮蔽は行いません。
-
-## エフェクトの構成
-
-- `Game/Effects/CombatEffectSystem` が着弾・爆発の生成、寿命、同時表示件数を管理します。戦闘状態とは別の `CombatEffectSnapshot` を描画側へ渡します。
-- `CombatEffectPresenter` が着弾と爆発を描画し、`CombatHudPresenter` は照準と文字を描画します。描画リストはApplicationで一度だけ初期化し、エフェクト、HUDの順に追記します。
-- `EffectDrawContext` が座標投影、煙、閃光、二層の軌跡、頂点数の予約を共通化します。`HudProjector` の合成行列とカメラの右方向はフレーム内で共有します。
-- 寿命・本数・速度・描画上限などの調整値は `Game/Effects/CombatEffectSettings.h` にまとめています。
-
-## ロケットの操作と設定
-
-- Fを押すたびに `GunMuzzle_L1`、`GunMuzzle_R1` の順に1発ずつ発射します。長押しでは連射せず、同一フレーム内の二度押しも保持します。
-- 各銃口は発射から3秒で再使用可能です。次の銃口がクールタイム中の場合は発射せず、順番を維持します。弾数は無制限です。HUD左下の `>` が次の銃口を示し、READYまたは残り秒数を表示します。
-- 発射時にロックが成立している場合、その敵だけを毎秒30度までの緩い旋回で追尾します。Tab切替やロック解除では追尾先を変えず、対象消失後やロックなしの発射では直進します。
-- 初速度は自機速度＋機首方向×1200、寿命8秒、最大16発です。直撃100ダメージで、標準HPの敵を1発で撃破します。爆風ダメージや自機判定はありません。
-- 敵・海面への接触で爆発し、寿命切れでは爆発しません。後端に噴射炎を描き、放出済みの煙は0.8秒残ります。
-- `Assets/Aircraft/N1K2JShidenKai/rocketWeapon.json` で発射・追尾・ダメージを、`Assets/Ammunition/Rocket/` のJSONでモデル・向き・表示サイズを調整できます。既存の機関砲、ロックオン、Tab切替も併用できます。
+- 飛行モデルはゲーム向けの近似です。
+- 命中判定は機体全体を囲むOBB近似で、メッシュ単位ではありません。
+- 爆発・煙・着弾はHUD描画経路による投影表示で、3D物体による遮蔽は行いません。
+- ロケットは直撃ダメージのみで、爆風ダメージと自機判定はありません。
+- WARPへのフォールバックは機能確認用で、実機GPUと同じ性能は保証しません。

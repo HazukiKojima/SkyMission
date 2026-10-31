@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
+#include <stdexcept>
 
 namespace Engine {
 	namespace {
@@ -70,6 +71,10 @@ namespace Engine {
 	}
 
 	float OceanGeometry::CalculateWaveHeight(float x, float z, float time, float wavelength, float steepness) {
+		if (!std::isfinite(wavelength) || wavelength <= 0)
+			throw std::invalid_argument("wavelength must be positive and finite");
+		if (!std::isfinite(steepness) || steepness < 0)
+			throw std::invalid_argument("steepness must be nonnegative and finite");
 		const float baseWindX = 1.0f / std::sqrt(1.0f + 0.6f * 0.6f);
 		const float baseWindZ = 0.6f / std::sqrt(1.0f + 0.6f * 0.6f);
 		float height = 0.0f;

@@ -589,4 +589,8 @@
   <ItemGroup>
     <Filter Include="Assets\Ammunition\Rocket"><UniqueIdentifier>{f2394500-71ec-413d-a188-7058516f2c02}</UniqueIdentifier></Filter>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="global.json" />
+    <ClInclude Include="Tests\EnvironmentSettingsTests.h"><Filter>Tests</Filter></ClInclude>
+  </ItemGroup>
 </Project>

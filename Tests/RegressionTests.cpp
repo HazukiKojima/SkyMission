@@ -31,6 +31,7 @@ void Require(bool condition, const char* description) {
 #include "CombatTests.h"
 #include "CombatEffectTests.h"
 #include "RocketTests.h"
+#include "EnvironmentSettingsTests.h"
 
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
@@ -580,6 +581,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestRocketInputAndFlight();
 		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);
+		TestEnvironmentSettings(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
 		TestRocketLauncherAndAssets(argv[1],fixture);

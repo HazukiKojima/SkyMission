@@ -115,6 +115,8 @@ namespace Game {
 		const CombatInput& input, float dt, std::span<const CollisionTarget> targets) {
 		if (!m_rocketConfigured)
 			return;
+		// 入力を判定する前に経過時間を反映し、クールタイム終了直後の押下を保持する
+		m_rocketLauncher.Update(dt);
 		if (const auto* aircraft = m_scene.FindObject(m_playerId)) {
 			// オブジェクト追加で集合が変わるため、銃口変換は値で保持する
 			const auto world = aircraft->worldTransform;
@@ -129,7 +131,6 @@ namespace Game {
 					m_rocketLauncher.CommitShot();
 			}
 		}
-		m_rocketLauncher.Update(dt);
 		m_combat.rocket = m_rocketLauncher.GetState();
 		m_rockets.Update(m_scene, dt, targets, m_combat.enemies);
 		for (const auto& sample : m_rockets.TakeTrail())

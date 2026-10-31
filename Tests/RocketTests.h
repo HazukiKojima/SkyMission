@@ -162,8 +162,11 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 		.playerAircraft = assets / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = assets / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 		.retroFilm = assets / L"Environment/retroFilm.json"});
-	Require(definition.playerRocket.settings.cooldownSeconds == 3 &&
-			definition.playerRocket.ammunition.options.normalizedExtent == 12 &&
+	const JsonAssetReader reader;
+	const auto rocketConfig = assets / L"Aircraft/N1K2JShidenKai/rocketWeapon.json";
+	const float expectedExtent = reader.ResolveFloat(reader.Resolve(reader.Resolve(rocketConfig,"ammunition"),"modelImport"),"normalizedExtent");
+	Require(definition.playerRocket.settings.cooldownSeconds == reader.ResolveFloat(rocketConfig,"cooldownSeconds") &&
+			definition.playerRocket.ammunition.options.normalizedExtent == expectedExtent &&
 			definition.playerRocket.modelForward.x == 1,
 		"Rocket configuration did not load");
 	const HWND window = CreateWindowW(L"STATIC", L"Rocket asset test", WS_OVERLAPPEDWINDOW, 0, 0, 64, 64,
@@ -184,11 +187,17 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 					definition.playerRocket.ammunition.options),
 			"Actual rocket model failed to load");
 		const auto bounds = rocket->GetLocalBounds();
-		Require(bounds && std::abs(bounds->maximum.x - bounds->minimum.x - 12) < 0.01f &&
+		Require(bounds && std::abs(bounds->maximum.x - bounds->minimum.x - expectedExtent) < 0.01f &&
 				std::abs(bounds->Center().x) < 0.01f,
 			"Rocket bounds center or display length incorrect");
+		// 挙動の検証には固定条件を使い、実アセットの表示サイズ調整とは切り離す
+		RocketDefinition fixtureRocket = definition.playerRocket;
+		fixtureRocket.settings = RocketSettings{};
+		const CombatSettings fixtureCombat;
+		const AircraftFlightParameters fixtureFlight;
+		const AircraftAIParameters fixtureAI;
 		RocketLauncher launcher;
-		launcher.Configure(definition.playerRocket.settings, *aircraft);
+		launcher.Configure(fixtureRocket.settings, *aircraft);
 		Require(launcher.GetNextMuzzle().has_value() && launcher.GetState().nextMuzzle == 0,
 			"Launcher initial port was not L1");
 		launcher.CommitShot();
@@ -208,7 +217,7 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 		const auto state = launcher.GetState();
 		launcher.Update(std::numeric_limits<float>::quiet_NaN());
 		Require(launcher.GetState().cooldowns == state.cooldowns, "Invalid delta changed launcher cooldown");
-		auto bad = definition.playerRocket.settings;
+		auto bad = fixtureRocket.settings;
 		bad.muzzleNames[0] = "missing";
 		bool rejected = false;
 		try {
@@ -220,12 +229,12 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 		// 複数ロケットが同じ敵へ当たっても、撃破通知は一度だけ発生する
 		FlightScene scene;
 		scene.Initialize(1, 1, 10000);
-		scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
-		scene.ConfigureCombat(definition.combat);
+		scene.SetPlayerAircraftFlightParameters(fixtureFlight);
+		scene.ConfigureCombat(fixtureCombat);
 		scene.AddPlayerObject(aircraft);
-		scene.ConfigurePlayerRocket(definition.playerRocket, rocket);
-		scene.AddEnemyAircraft(rocket, {0, 15, -160}, 5, definition.enemyAircraft.flightParameters,
-			definition.enemyAIParameters, 100, "TARGET");
+		scene.ConfigurePlayerRocket(fixtureRocket, rocket);
+		scene.AddEnemyAircraft(rocket, {0, 15, -160}, 5, fixtureFlight,
+			fixtureAI, 100, "TARGET");
 		scene.Update({}, 0.25f, {}, {{}, false, 2});
 		Require(scene.GetCombatSnapshot().enemies.empty() && scene.GetCombatSnapshot().hitCount == 1,
 			"Rocket direct hit did not destroy standard enemy");
@@ -240,13 +249,13 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 			"Removed player kept firing or rocket smoke never expired");
 		FlightScene mixed;
 		mixed.Initialize(1, 1, 10000);
-		mixed.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
-		mixed.ConfigureCombat(definition.combat);
+		mixed.SetPlayerAircraftFlightParameters(fixtureFlight);
+		mixed.ConfigureCombat(fixtureCombat);
 		mixed.AddPlayerObject(aircraft);
 		mixed.ConfigurePlayerWeapon(definition.playerWeapon, aircraft);
-		mixed.ConfigurePlayerRocket(definition.playerRocket, rocket);
-		mixed.AddEnemyAircraft(rocket, {0, 15, -160}, 5, definition.enemyAircraft.flightParameters,
-			definition.enemyAIParameters, 200, "MIXED");
+		mixed.ConfigurePlayerRocket(fixtureRocket, rocket);
+		mixed.AddEnemyAircraft(rocket, {0, 15, -160}, 5, fixtureFlight,
+			fixtureAI, 200, "MIXED");
 		mixed.Update({}, 0.25f, {}, {{true}, false, 1});
 		Require(mixed.GetCombatSnapshot().enemies.empty() && mixed.GetCombatSnapshot().hitCount > 1 &&
 				mixed.GetEffectSnapshot().explosions.size() == 2,
@@ -254,13 +263,24 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 		FlightScene full;
 		full.Initialize(1, 1, 10000);
 		full.AddPlayerObject(aircraft);
-		auto single = definition.playerRocket;
+		auto single = fixtureRocket;
 		single.settings.maxRockets = 1;
 		full.ConfigurePlayerRocket(single, rocket);
 		full.Update({}, 0.01f, {}, {{}, false, 2});
 		Require(full.GetRocketCount() == 1 && full.GetCombatSnapshot().rocket.nextMuzzle == 1 &&
 				full.GetCombatSnapshot().rocket.cooldowns[1] == 0,
 			"Capacity failure consumed R1 cooldown or alternation");
+		FlightScene boundary;
+		boundary.Initialize(1,1,10000); boundary.AddPlayerObject(aircraft);
+		boundary.ConfigurePlayerRocket(fixtureRocket,rocket);
+		boundary.Update({},0.01f,{},{{},false,2});
+		for (int frame=0;frame<20 && boundary.GetCombatSnapshot().rocket.cooldowns[0]>0.10001f;++frame)
+			boundary.Update({},std::min(0.25f,boundary.GetCombatSnapshot().rocket.cooldowns[0]-0.1f));
+		const auto beforeBoundary=boundary.GetRocketCount();
+		boundary.Update({},0.2f,{},{{},false,1});
+		Require(boundary.GetRocketCount()==beforeBoundary+1 && boundary.GetCombatSnapshot().rocket.nextMuzzle==1 &&
+			boundary.GetCombatSnapshot().rocket.cooldowns[0]==fixtureRocket.settings.cooldownSeconds,
+			"F press crossing cooldown end was dropped or new shot lost cooldown time");
 		context.EndFrame();
 		context.WaitForGpu();
 	}
