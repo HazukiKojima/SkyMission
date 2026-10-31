@@ -7,7 +7,8 @@ namespace Game {
 	using namespace DirectX;
 	void CombatEffectPresenter::DrawExplosion(
 		const ExplosionEffect& effect, EffectDrawContext& context, float fragmentScale) const {
-		const float ageSeconds = effect.age, radiusScale = effect.radius;
+		const float ageSeconds = effect.age;
+		const float radiusScale = effect.radius;
 		const auto origin = XMLoadFloat3(&effect.position);
 		const auto drift = XMLoadFloat3(&effect.velocity) * (0.18f * (1 - std::exp(-ageSeconds * 2)));
 		const auto drawCloud = [&](XMVECTOR location, float radius, XMFLOAT4 color, unsigned seed) {
@@ -16,8 +17,8 @@ namespace Game {
 		};
 		// 大きさと上昇速度の異なる煙塊を重ねて乱流を表現する
 		for (int i = 0; i < ExplosionEffectSettings::smokeCount; ++i) {
-			const float phase = i * EffectDrawSettings::goldenAngleRadians,
-						variation = 0.55f + (i % 7) * 0.11f;
+			const float phase = i * EffectDrawSettings::goldenAngleRadians;
+			const float variation = 0.55f + (i % 7) * 0.11f;
 			const float spread = radiusScale * (0.2f + (1 - std::exp(-ageSeconds * 1.4f)) * 1.3f) * variation;
 			const auto location = origin + drift +
 				XMVectorSet(std::cos(phase) * spread,
@@ -34,11 +35,12 @@ namespace Game {
 		// 火炎の塊ごとに着火時刻と燃焼時間を変え、輪郭を崩す
 		for (int i = 0; i < ExplosionEffectSettings::fireCount; ++i) {
 			const float delay = i == 0 ? 0 : (i % 5) * 0.025f;
-			const float particleAgeSeconds = ageSeconds - delay, lifetimeSeconds = 0.48f + (i % 5) * 0.095f;
+			const float particleAgeSeconds = ageSeconds - delay;
+			const float lifetimeSeconds = 0.48f + (i % 5) * 0.095f;
 			if (particleAgeSeconds < 0 || particleAgeSeconds >= lifetimeSeconds)
 				continue;
-			const float heat = 1 - particleAgeSeconds / lifetimeSeconds,
-						phase = i * EffectDrawSettings::goldenAngleRadians;
+			const float heat = 1 - particleAgeSeconds / lifetimeSeconds;
+			const float phase = i * EffectDrawSettings::goldenAngleRadians;
 			const float spread = radiusScale * (0.15f + particleAgeSeconds * 1.15f) * (i == 0 ? 0 : 0.9f);
 			const auto location = origin + drift +
 				XMVectorSet(std::cos(phase) * spread,
@@ -59,8 +61,10 @@ namespace Game {
 			const float lifetimeSeconds = 1.1f + (i % 7) * 0.22f;
 			if (ageSeconds >= lifetimeSeconds)
 				continue;
-			const float phase = i * EffectDrawSettings::goldenAngleRadians, y = std::sin(i * 17.31f) * 0.85f;
-			const float radial = std::sqrt(1 - y * y), speed = radiusScale * (0.8f + (i % 9) * 0.21f);
+			const float phase = i * EffectDrawSettings::goldenAngleRadians;
+			const float y = std::sin(i * 17.31f) * 0.85f;
+			const float radial = std::sqrt(1 - y * y);
+			const float speed = radiusScale * (0.8f + (i % 9) * 0.21f);
 			const auto velocity =
 				XMVectorSet(std::cos(phase) * radial * speed, y * speed, std::sin(phase) * radial * speed, 0);
 			const auto positionAt = [&](float particleAgeSeconds) {

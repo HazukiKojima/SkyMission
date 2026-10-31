@@ -8,7 +8,9 @@ namespace Engine {
 	class RendererFrameUpdater {
 	  public:
 		void Configure(const OceanSettings& settings);
-		RenderView GetRenderView() const { return m_renderView; }
+		RenderView GetRenderView() const {
+			return m_renderView;
+		}
 		void Update(const Scene& scene, float elapsedTime, const RetroFilmParameters& filmParameters,
 			RendererConstantBuffers& constantBuffers, ID3D12Device* device, CommandContext* context);
 

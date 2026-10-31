@@ -26,10 +26,7 @@ PS_INPUT VS(VS_INPUT input)
 
     float3 worldPos = input.position + cameraPos;
 
-    output.position = mul(
-        float4(worldPos, 1.0f),
-        mvp
-    );
+    output.position = mul(float4(worldPos, 1.0f), mvp);
 
     output.worldPos = worldPos;
     output.texcoord = input.texcoord;

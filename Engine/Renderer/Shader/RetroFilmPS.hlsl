@@ -55,17 +55,19 @@ float FilmDust(float2 pixel, float time)
     float frame = floor(time * dustFrameRate);
     float chance = Hash(cell + frame * 13.7f + float2(17.1f, 9.2f));
 
-    if (chance < dustThreshold)
-        return 0.0f;
+    float dustAmount = 0.0f;
+    if (chance >= dustThreshold)
+    {
 
-    float2 localPixel = frac(pixel / cellSize);
-    float2 center = float2(
-        Hash(cell + frame * 19.3f + float2(3.1f, 8.7f)),
-        Hash(cell + frame * 23.1f + float2(5.2f, 4.6f)));
+        float2 localPixel = frac(pixel / cellSize);
+        float2 center = float2(
+            Hash(cell + frame * 19.3f + float2(3.1f, 8.7f)), Hash(cell + frame * 23.1f + float2(5.2f, 4.6f)));
 
-    float distanceToDust = length((localPixel - center) * cellSize);
-    float radius = lerp(minimumDustRadius, maximumDustRadius, Hash(cell + frame * 29.7f));
-    return (1.0f - smoothstep(radius * 0.5f, radius, distanceToDust)) * dustOpacity;
+        float distanceToDust = length((localPixel - center) * cellSize);
+        float radius = lerp(minimumDustRadius, maximumDustRadius, Hash(cell + frame * 29.7f));
+        dustAmount = (1.0f - smoothstep(radius * 0.5f, radius, distanceToDust)) * dustOpacity;
+    }
+    return dustAmount;
 }
 
 float FilmScratch(float2 pixel, float time)
@@ -83,15 +85,18 @@ float FilmScratch(float2 pixel, float time)
     float column = floor(pixel.x / scratchSpacing);
     float chance = Hash(float2(column, frame));
 
-    if (chance < scratchThreshold)
-        return 0.0f;
+    float scratchResult = 0.0f;
+    if (chance >= scratchThreshold)
+    {
 
-    float position = frac(pixel.x / scratchSpacing);
-    float width = lerp(minimumScratchWidth, maximumScratchWidth, Hash(float2(column, frame + 7.3f)));
-    float scratchAmount = 1.0f - smoothstep(width, width + scratchSoftness, position);
-    float verticalFade = lerp(minimumVerticalFade, 1.0f, Hash(float2(column, frame + 13.1f)));
+        float position = frac(pixel.x / scratchSpacing);
+        float width = lerp(minimumScratchWidth, maximumScratchWidth, Hash(float2(column, frame + 7.3f)));
+        float scratchAmount = 1.0f - smoothstep(width, width + scratchSoftness, position);
+        float verticalFade = lerp(minimumVerticalFade, 1.0f, Hash(float2(column, frame + 13.1f)));
 
-    return scratchAmount * verticalFade * scratchOpacity;
+        scratchResult = scratchAmount * verticalFade * scratchOpacity;
+    }
+    return scratchResult;
 }
 
 float FilmFlicker(float time)
@@ -120,18 +125,15 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float2 pixel = input.position.xy;
 
-    float2 jitter = float2(
-        sin(time * horizontalJitterFrequency) * horizontalJitterAmount,
+    float2 jitter = float2(sin(time * horizontalJitterFrequency) * horizontalJitterAmount,
         cos(time * verticalJitterFrequency) * verticalJitterAmount);
 
     float2 uv = saturate(input.texcoord + jitter);
     float3 color = gSceneColor.SampleLevel(gSampler, uv, 0).rgb;
 
     // 昭和の映画をイメージした色調補正
-    float luminance = dot(color, float3(
-        highlightAddLuminanceR.w,
-        luminanceGBVignette.x,
-        luminanceGBVignette.y));
+    float luminance =
+        dot(color, float3(highlightAddLuminanceR.w, luminanceGBVignette.x, luminanceGBVignette.y));
     color = lerp(color, luminance.xxx, desaturation);
     color *= colorTint;
     color = color * colorGain + colorOffset;
@@ -153,9 +155,10 @@ float4 PS(PS_INPUT input) : SV_TARGET
     color += FilmGrain(pixel, time);
 
     // フィルム上の埃と傷
-    float dust = FilmDust(pixel, time);
-    float scratch = FilmScratch(pixel, time);
-    color = lerp(color, color + float3(scratchFlicker.w, overlayColor.xy), saturate(dust + scratch));
+    float dustAmount = FilmDust(pixel, time);
+    float scratchAmount = FilmScratch(pixel, time);
+    color =
+        lerp(color, color + float3(scratchFlicker.w, overlayColor.xy), saturate(dustAmount + scratchAmount));
 
     return float4(saturate(color), 1.0f);
 }

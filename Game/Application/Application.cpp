@@ -12,11 +12,9 @@
 namespace Game {
 	using namespace Engine;
 
-	Application::Application(HINSTANCE hInstance) : m_hInstance(hInstance) {
-	}
+	Application::Application(HINSTANCE hInstance) : m_hInstance(hInstance) {}
 
-	Application::~Application() {
-	}
+	Application::~Application() {}
 
 	// アプリケーション初期化処理
 	void Application::Initialize() {
@@ -62,15 +60,16 @@ namespace Game {
 		m_scene->SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		m_scene->SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
 		m_scene->AddPlayerObject(m_renderer->GetModel(PlayerModelId));
-		for (size_t i=0; i<assets.combat.enemyPositions.size(); ++i)
+		for (size_t i = 0; i < assets.combat.enemyPositions.size(); ++i)
 			m_scene->AddEnemyAircraft(m_renderer->GetModel(EnemyModelId), assets.combat.enemyPositions[i],
 				assets.enemyAircraft.visualScale, assets.enemyAircraft.flightParameters,
-				assets.enemyAIParameters, assets.combat.enemyHealth, "ENEMY 0"+std::to_string(i+1));
+				assets.enemyAIParameters, assets.combat.enemyHealth, "ENEMY 0" + std::to_string(i + 1));
 
 		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
-		m_scene->ConfigurePlayerRocket(assets.playerRocket,m_renderer->GetModel(RocketModelId));
+		m_scene->ConfigurePlayerRocket(assets.playerRocket, m_renderer->GetModel(RocketModelId));
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
-		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() + assets.playerWeapon.gun.maxProjectiles + assets.playerRocket.settings.maxRockets);
+		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
+			assets.playerWeapon.gun.maxProjectiles + assets.playerRocket.settings.maxRockets);
 	}
 
 	void Application::ConfigureResizeHandling() {
@@ -96,7 +95,8 @@ namespace Game {
 			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
-			} else if (IsIconic(m_window->GetHandle()) || m_window->GetWidth() == 0 || m_window->GetHeight() == 0) {
+			} else if (IsIconic(m_window->GetHandle()) || m_window->GetWidth() == 0 ||
+				m_window->GetHeight() == 0) {
 				// 最小化中は描画とシミュレーションを止め、メッセージ到着までCPUを休ませる
 				suspended = true;
 				WaitMessage();
@@ -136,11 +136,10 @@ namespace Game {
 		if (m_scene) {
 			const InputSnapshot input = m_window->ConsumeInput();
 			const auto combat = CombatController{}.ReadInput(input);
-			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input,
-				combat);
+			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount);
-			const auto view=m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
+			const auto view = m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
 			m_hud.Reset(view.width, view.height);
 			m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);

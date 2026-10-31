@@ -35,10 +35,12 @@ namespace Engine {
 			bool isRotatingNode;
 		};
 
-		// メッシュと補助ノードに同じ原点補正・縮尺を適用する。
+		// メッシュと補助ノードに同じ原点補正・縮尺を適用する
 		struct ModelNormalization {
-			aiVector3D minimum, maximum;
-			float scale, groundOffset;
+			aiVector3D minimum;
+			aiVector3D maximum;
+			float scale;
+			float groundOffset;
 			ModelOrigin origin;
 			DirectX::XMFLOAT3 Transform(const aiVector3D& position) const {
 				return {(position.x - (minimum.x + maximum.x) * 0.5f) * scale,
@@ -222,8 +224,8 @@ namespace Engine {
 				Log("Model::Load - model has no valid dimensions\n");
 				return {};
 			}
-			const ModelNormalization normalization{
-				boundsMin, boundsMax, options.normalizedExtent / extent, options.groundOffset, options.origin};
+			const ModelNormalization normalization{boundsMin, boundsMax, options.normalizedExtent / extent,
+				options.groundOffset, options.origin};
 			CollectNodePositions(*scene.mRootNode, aiMatrix4x4(), normalization, positions);
 			std::vector<MeshGeometry> geometries;
 			for (const auto& instance : meshInstances) {
@@ -265,7 +267,8 @@ namespace Engine {
 		const auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
 		if (geometries.empty())
 			return false;
-		Bounds3 bounds{geometries.front().vertices.front().position, geometries.front().vertices.front().position};
+		Bounds3 bounds{
+			geometries.front().vertices.front().position, geometries.front().vertices.front().position};
 		for (const auto& geometry : geometries)
 			for (const auto& vertex : geometry.vertices) {
 				bounds.minimum.x = std::min(bounds.minimum.x, vertex.position.x);

@@ -4,7 +4,8 @@
 namespace Game {
 	struct HudProjection {
 		DirectX::XMFLOAT2 pixel;
-		bool visible = false, behind = false;
+		bool visible = false;
+		bool behind = false;
 	};
 
 	class HudProjector {
@@ -14,7 +15,8 @@ namespace Game {
 
 	  private:
 		DirectX::XMFLOAT4X4 m_viewProjection;
-		unsigned m_width, m_height;
+		unsigned m_width;
+		unsigned m_height;
 	};
 
 	HudProjection ProjectHudPoint(const DirectX::XMFLOAT3& point, const Engine::RenderView& view);

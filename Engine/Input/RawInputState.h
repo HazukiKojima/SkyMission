@@ -12,8 +12,12 @@ namespace Engine {
 		std::array<bool, 256> keys{};
 		std::array<bool, 256> pressedKeys{};
 		std::array<std::uint16_t, 256> keyPressCounts{};
-		unsigned GetKeyPressCount(UINT key) const { return active && key < keyPressCounts.size() ? keyPressCounts[key] : 0; }
-		bool WasKeyPressed(UINT key) const { return active && key < pressedKeys.size() && pressedKeys[key]; }
+		unsigned GetKeyPressCount(UINT key) const {
+			return active && key < keyPressCounts.size() ? keyPressCounts[key] : 0;
+		}
+		bool WasKeyPressed(UINT key) const {
+			return active && key < pressedKeys.size() && pressedKeys[key];
+		}
 		bool rightMouseDown = false;
 		bool leftMouseDown = false;
 		std::int64_t mouseDeltaX = 0;
@@ -48,12 +52,15 @@ namespace Engine {
 		}
 		void ClearMouse() {
 			m_mice.clear();
-			m_deltaX = m_deltaY = 0;
+			m_deltaX = 0;
+			m_deltaY = 0;
 		}
 		void ForgetDevice(HANDLE device) {
 			m_keyboards.erase(device);
-			if (m_mice.erase(device))
-				m_deltaX = m_deltaY = 0;
+			if (m_mice.erase(device)) {
+				m_deltaX = 0;
+				m_deltaY = 0;
+			}
 		}
 		void ProcessKeyboard(HANDLE device, const RAWKEYBOARD& keyboard) {
 			// 疑似キー・入力超過通知の0xffは押下状態に含めない
@@ -77,7 +84,8 @@ namespace Engine {
 			if (down && !wasDown) {
 				m_pressedKeys[key] = true;
 				// 同じフレーム内の再押下も保持し、OSのキーリピートは数えない
-				if (m_keyPressCounts[key] < std::numeric_limits<std::uint16_t>::max()) ++m_keyPressCounts[key];
+				if (m_keyPressCounts[key] < std::numeric_limits<std::uint16_t>::max())
+					++m_keyPressCounts[key];
 			}
 			m_keyboards[device][key] = down;
 		}
@@ -100,8 +108,8 @@ namespace Engine {
 				const LONG x = static_cast<LONG>(std::int64_t(mouse.lLastX) * (desktopWidth - 1) / 65535);
 				const LONG y = static_cast<LONG>(std::int64_t(mouse.lLastY) * (desktopHeight - 1) / 65535);
 				const bool virtualDesktop = (mouse.usFlags & MOUSE_VIRTUAL_DESKTOP) != 0;
-				if (state.hasAbsolute && state.virtualDesktop == virtualDesktop && state.width == desktopWidth &&
-					state.height == desktopHeight) {
+				if (state.hasAbsolute && state.virtualDesktop == virtualDesktop &&
+					state.width == desktopWidth && state.height == desktopHeight) {
 					dx = std::int64_t(x) - state.absolute.x;
 					dy = std::int64_t(y) - state.absolute.y;
 				} else
@@ -143,7 +151,8 @@ namespace Engine {
 				snapshot.mouseDeltaX = m_deltaX;
 				snapshot.mouseDeltaY = m_deltaY;
 			}
-			m_deltaX = m_deltaY = 0;
+			m_deltaX = 0;
+			m_deltaY = 0;
 			m_pressedKeys.fill(false);
 			m_keyPressCounts.fill(0);
 			return snapshot;
@@ -155,7 +164,8 @@ namespace Engine {
 			bool leftDown = false;
 			bool hasAbsolute = false;
 			bool virtualDesktop = false;
-			int width = 0, height = 0;
+			int width = 0;
+			int height = 0;
 			POINT absolute{};
 		};
 		bool m_active = false;

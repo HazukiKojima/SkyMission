@@ -11,15 +11,16 @@ void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture
 		fs::copy_options::overwrite_existing);
 	fs::copy_file(
 		assets / L"UI/combatHud.json", root / L"UI/combatHud.json", fs::copy_options::overwrite_existing);
-	const auto oceanPath = root / L"Environment/ocean.json", skyPath = root / L"Environment/sky.json";
+	const auto oceanPath = root / L"Environment/ocean.json";
+	const auto skyPath = root / L"Environment/sky.json";
 	const auto environmentPath = root / L"Environment/environment.json";
 	std::ofstream(environmentPath) << R"({"ocean":"ocean.json","sky":"sky.json"})";
 	const auto read = [](const fs::path& path) {
 		std::ifstream file(path);
 		return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
 	};
-	const auto originalOcean = read(assets / L"Environment/Ocean/Ocean.json"),
-			   originalSky = read(assets / L"Environment/Sky/sky.json");
+	const auto originalOcean = read(assets / L"Environment/Ocean/Ocean.json");
+	const auto originalSky = read(assets / L"Environment/Sky/sky.json");
 	const auto load = [&]() {
 		return FlightSceneLoader{}.Load({.environment = environmentPath,
 			.playerAircraft = assets / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",

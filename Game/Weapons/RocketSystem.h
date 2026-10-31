@@ -7,7 +7,8 @@ namespace Game {
 	struct RocketState {
 		Engine::ObjectId objectId = Engine::InvalidObjectId, targetId = Engine::InvalidObjectId;
 		DirectX::XMFLOAT3 position{}, velocity{};
-		float remainingLifetime = 0, trailCountdown = 0;
+		float remainingLifetime = 0;
+		float trailCountdown = 0;
 	};
 	class RocketSystem {
 	  public:
@@ -29,8 +30,12 @@ namespace Game {
 			return result;
 		}
 		std::vector<RocketExhaust> GetExhausts() const;
-		const std::vector<RocketState>& GetRockets() const { return m_rockets; }
-		size_t GetCount() const { return m_rockets.size(); }
+		const std::vector<RocketState>& GetRockets() const {
+			return m_rockets;
+		}
+		size_t GetCount() const {
+			return m_rockets.size();
+		}
 		static DirectX::XMFLOAT3 Steer(const DirectX::XMFLOAT3& velocity,
 			const DirectX::XMFLOAT3& desiredDirection, float maximumRadians);
 

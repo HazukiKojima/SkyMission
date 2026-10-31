@@ -12,4 +12,4 @@ namespace Engine {
 		float edgeFadeStart;
 		float edgeFadeWidth;
 	};
-}
+} // namespace Engine

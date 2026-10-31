@@ -3,7 +3,6 @@
 
 namespace Engine {
 
-
 	void RenderDevice::Initialize(HWND hwnd, UINT width, UINT height) {
 		CreateDevice();
 		CreateCommandQueue();
@@ -139,7 +138,6 @@ namespace Engine {
 		}
 	}
 
-
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetSceneRtvHandle() const {
 		D3D12_CPU_DESCRIPTOR_HANDLE handle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
@@ -156,7 +154,6 @@ namespace Engine {
 		return handle;
 	}
 
-
 	void RenderDevice::Present() {
 		ThrowIfFailed(m_swapChain->Present(1, 0));
 	}
@@ -168,7 +165,6 @@ namespace Engine {
 
 		return rtvHandle;
 	}
-
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::AllocateSrvDescriptor(UINT* outIndex) {
 		if (m_srvDescriptorCount >= SrvDescriptorCapacity) {
@@ -196,7 +192,6 @@ namespace Engine {
 		return handle;
 	}
 
-
 	void RenderDevice::Resize(UINT width, UINT height) {
 		if (width == 0 || height == 0 || (width == m_width && height == m_height)) {
 			return;
@@ -214,17 +209,16 @@ namespace Engine {
 
 		m_sceneDepth.Reset();
 
-
 		ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
 
-		// BackBuffer RTV
+		// バックバッファの描画先
 
 		CreateBackBufferViews();
 
 		CreateSceneResources();
 	}
 
-	// Scene Resources
+	// シーン描画用のリソース
 
 	void RenderDevice::CreateSceneResources() {
 		CreateSceneRenderTargets();
@@ -235,7 +229,7 @@ namespace Engine {
 	void RenderDevice::CreateSceneRenderTargets() {
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 
-		// Scene Color
+		// シーンのカラー画像
 
 		for (UINT i = 0; i < FrameCount; ++i) {
 			CD3DX12_RESOURCE_DESC colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -249,7 +243,7 @@ namespace Engine {
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clearValue,
 				IID_PPV_ARGS(&m_sceneRenderTargets[i])));
 
-			// Scene RTV
+			// シーン画像の描画先
 			D3D12_CPU_DESCRIPTOR_HANDLE rtv = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
 
 			rtv.ptr += static_cast<SIZE_T>(FrameCount + i) * m_rtvDescriptorSize;
@@ -271,7 +265,7 @@ namespace Engine {
 
 	void RenderDevice::CreateSceneDepth() {
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-		// Scene Depth
+		// シーンの深度画像
 
 		CD3DX12_RESOURCE_DESC depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 			DXGI_FORMAT_R32_TYPELESS, m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);

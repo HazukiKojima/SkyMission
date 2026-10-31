@@ -10,7 +10,9 @@ namespace Game {
 	}
 
 	AircraftInput AircraftController::ReadInput(const Engine::InputSnapshot& input) const {
-		const auto down = [&](UINT key) { return input.IsKeyDown(key); };
+		const auto down = [&](UINT key) {
+			return input.IsKeyDown(key);
+		};
 		return MapInput({down('W'), down('S'), down('A'), down('D'), down('Q'), down('E'), down(VK_CONTROL),
 			down(VK_SPACE)});
 	}

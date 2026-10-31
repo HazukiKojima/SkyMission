@@ -25,9 +25,10 @@ struct PS_INPUT
     float3 tangent : TANGENT;
 };
 
-// Gerstner Wave
+// ゲルストナー波の変位
 
-float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, float3 p, inout float3 tangent, inout float3 binormal, float phaseOffset)
+float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, float3 p, inout float3 tangent,
+    inout float3 binormal, float phaseOffset)
 {
     float k = 2.0f * 3.14159265359f / wavelength;
     float c = sqrt(9.8f / k);
@@ -39,26 +40,16 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
     float sinf = sin(f);
     float cosf = cos(f);
 
-    tangent += float3(
-        -d.x * d.x * (steepness * sinf),
-         d.x * (steepness * cosf),
-        -d.x * d.y * (steepness * sinf)
-    );
+    tangent +=
+        float3(-d.x * d.x * (steepness * sinf), d.x * (steepness * cosf), -d.x * d.y * (steepness * sinf));
 
-    binormal += float3(
-        -d.x * d.y * (steepness * sinf),
-         d.y * (steepness * cosf),
-        -d.y * d.y * (steepness * sinf)
-    );
+    binormal +=
+        float3(-d.x * d.y * (steepness * sinf), d.y * (steepness * cosf), -d.y * d.y * (steepness * sinf));
 
-    return float3(
-        d.x * (a * cosf),
-        a * sinf,
-        d.y * (a * cosf)
-    );
+    return float3(d.x * (a * cosf), a * sinf, d.y * (a * cosf));
 }
 
-// Vertex Shader
+// 頂点の変形と座標変換
 
 PS_INPUT VS(VS_INPUT input)
 {
@@ -68,12 +59,12 @@ PS_INPUT VS(VS_INPUT input)
 
     float3 pos = wavePos;
 
-    // Tangent / Binormal
+    // 接線と従法線
 
     float3 tangent = float3(1.0f, 0.0f, 0.0f);
     float3 binormal = float3(0.0f, 0.0f, 1.0f);
 
-    // Wave Settings
+    // 波の設定
 
     float2 baseWindDir = normalize(float2(1.0f, 0.6f));
     float wavelength = 30.0f;
@@ -81,47 +72,33 @@ PS_INPUT VS(VS_INPUT input)
 
     const int NUM_WAVES = 6;
 
-    // Gerstner Waves
+    // 複数の波を重ねる
 
     for (int i = 0; i < NUM_WAVES; ++i)
     {
-        float phaseOffset = (float) i * 21.53f;
-        float randomAngle = sin((float) i * 7.3f) * 1.1f;
+        float phaseOffset = (float)i * 21.53f;
+        float randomAngle = sin((float)i * 7.3f) * 1.1f;
 
         float s_rot = sin(randomAngle);
         float c_rot = cos(randomAngle);
 
-        float2 waveDir = mul(
-            float2x2(
-                c_rot, -s_rot,
-                s_rot, c_rot
-            ),
-            baseWindDir
-        );
+        float2 waveDir = mul(float2x2(c_rot, -s_rot, s_rot, c_rot), baseWindDir);
 
-        pos += CalculateGerstnerWave(
-            waveDir,
-            steepness,
-            wavelength,
-            wavePos,
-            tangent,
-            binormal,
-            phaseOffset
-        );
+        pos += CalculateGerstnerWave(waveDir, steepness, wavelength, wavePos, tangent, binormal, phaseOffset);
 
         wavelength *= 0.82f;
         steepness *= 0.72f;
     }
 
-    // Normal
+    // 法線を計算する
 
     float3 normal = normalize(cross(binormal, tangent));
 
-    // World Position
+    // ワールド座標へ変換する
 
     float3 worldPos = pos;
 
-    // Output
+    // 描画に必要な値を出力する
 
     result.position = mul(float4(worldPos, 1.0f), mvp);
     result.worldPos = worldPos;

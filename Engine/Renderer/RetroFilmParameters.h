@@ -25,4 +25,4 @@ namespace Engine {
 	static_assert(std::is_trivially_copyable_v<RetroFilmParameters>);
 	static_assert(sizeof(DirectX::XMFLOAT4) == sizeof(float) * 4);
 	static_assert(sizeof(RetroFilmParameters) == sizeof(float) * 52);
-}
+} // namespace Engine

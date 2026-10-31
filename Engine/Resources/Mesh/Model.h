@@ -23,10 +23,12 @@ namespace Engine {
 		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 			float nodeRotationAngle = 0.0f) const;
 		void ReleaseUploadResources();
-		// 同名ノードが複数ある場合も曖昧な位置を返さない。
+		// 同名ノードが複数ある場合も曖昧な位置を返さない
 		std::optional<DirectX::XMFLOAT3> FindNodePosition(std::string_view name) const;
 		size_t CountNodes(std::string_view name) const;
-		const std::optional<Bounds3>& GetLocalBounds() const { return m_localBounds; }
+		const std::optional<Bounds3>& GetLocalBounds() const {
+			return m_localBounds;
+		}
 		bool IsLoaded() const {
 			return !m_meshes.empty();
 		}

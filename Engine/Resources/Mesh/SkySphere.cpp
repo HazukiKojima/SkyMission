@@ -2,8 +2,8 @@
 #include "../Buffer/BufferUtilities.h"
 
 namespace Engine {
-	void SkySphere::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius, UINT slices,
-							   UINT stacks) {
+	void SkySphere::Initialize(
+		ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius, UINT slices, UINT stacks) {
 		using namespace DirectX;
 
 		std::vector<Vertex> vertices;
@@ -55,12 +55,13 @@ namespace Engine {
 		const UINT64 vertexBytes = vertices.size() * sizeof(Vertex);
 		const UINT64 indexBytes = indices.size() * sizeof(uint32_t);
 		m_vertexBuffer = CreateStaticBuffer(device, commands, vertices.data(), vertexBytes,
-											D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_vertexUpload);
-		m_indexBuffer = CreateStaticBuffer(device, commands, indices.data(), indexBytes,
-										   D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
-		m_vertexBufferView = {m_vertexBuffer->GetGPUVirtualAddress(), static_cast<UINT>(vertexBytes), sizeof(Vertex)};
-		m_indexBufferView = {m_indexBuffer->GetGPUVirtualAddress(), static_cast<UINT>(indexBytes),
-							 DXGI_FORMAT_R32_UINT};
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_vertexUpload);
+		m_indexBuffer = CreateStaticBuffer(
+			device, commands, indices.data(), indexBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
+		m_vertexBufferView = {
+			m_vertexBuffer->GetGPUVirtualAddress(), static_cast<UINT>(vertexBytes), sizeof(Vertex)};
+		m_indexBufferView = {
+			m_indexBuffer->GetGPUVirtualAddress(), static_cast<UINT>(indexBytes), DXGI_FORMAT_R32_UINT};
 	}
 
 	void SkySphere::ReleaseUploadResources() {

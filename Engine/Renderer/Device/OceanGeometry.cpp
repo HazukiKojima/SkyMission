@@ -18,7 +18,8 @@ namespace Engine {
 		};
 	} // namespace
 
-	void OceanGeometry::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize) {
+	void OceanGeometry::Initialize(
+		ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize) {
 		std::vector<OceanVertex> vertices;
 		std::vector<uint32_t> indices;
 
@@ -54,10 +55,10 @@ namespace Engine {
 		m_indexCount = static_cast<UINT>(indices.size());
 		m_vertexBuffer = std::make_unique<VertexBuffer>();
 		m_vertexBuffer->Initialize(device, commands, vertices.data(),
-								   static_cast<UINT>(sizeof(OceanVertex) * vertices.size()), sizeof(OceanVertex));
+			static_cast<UINT>(sizeof(OceanVertex) * vertices.size()), sizeof(OceanVertex));
 
-		m_indexBuffer = CreateStaticBuffer(device, commands, indices.data(), sizeof(uint32_t) * indices.size(),
-										   D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
+		m_indexBuffer = CreateStaticBuffer(device, commands, indices.data(),
+			sizeof(uint32_t) * indices.size(), D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
 
 		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
 		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
@@ -70,7 +71,8 @@ namespace Engine {
 		m_indexUpload.Reset();
 	}
 
-	float OceanGeometry::CalculateWaveHeight(float x, float z, float time, float wavelength, float steepness) {
+	float OceanGeometry::CalculateWaveHeight(
+		float x, float z, float time, float wavelength, float steepness) {
 		if (!std::isfinite(wavelength) || wavelength <= 0)
 			throw std::invalid_argument("wavelength must be positive and finite");
 		if (!std::isfinite(steepness) || steepness < 0)

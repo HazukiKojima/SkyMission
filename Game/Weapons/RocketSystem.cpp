@@ -58,7 +58,8 @@ namespace Game {
 	}
 	XMFLOAT3 RocketSystem::Steer(
 		const XMFLOAT3& velocity, const XMFLOAT3& desiredDirection, float maximumRadians) {
-		const auto value = XMLoadFloat3(&velocity), desired = XMLoadFloat3(&desiredDirection);
+		const auto value = XMLoadFloat3(&velocity);
+		const auto desired = XMLoadFloat3(&desiredDirection);
 		if (XMVectorGetX(XMVector3LengthSq(desired)) < 1e-8f ||
 			XMVectorGetX(XMVector3LengthSq(value)) < 1e-8f)
 			return velocity;
@@ -75,14 +76,17 @@ namespace Game {
 			const float step = std::min({kStepSeconds, deltaSeconds - elapsed, rocket.remainingLifetime});
 			if (step <= 0)
 				break;
-			const auto target = std::find_if(targets.begin(), targets.end(),
-				[&](const CombatTarget& item) { return item.id == rocket.targetId && item.health > 0; });
+			const auto target = std::find_if(targets.begin(), targets.end(), [&](const CombatTarget& item) {
+				return item.id == rocket.targetId && item.health > 0;
+			});
 			if (rocket.targetId != Engine::InvalidObjectId && target == targets.end())
 				rocket.targetId = Engine::InvalidObjectId;
 			if (target != targets.end()) {
 				auto center = XMLoadFloat3(&target->center);
-				const auto box = std::find_if(collisions.begin(), collisions.end(),
-					[&](const CollisionTarget& item) { return item.id == target->id; });
+				const auto box =
+					std::find_if(collisions.begin(), collisions.end(), [&](const CollisionTarget& item) {
+						return item.id == target->id;
+					});
 				if (box != collisions.end()) {
 					const auto movement = XMVectorSet(box->world._41 - box->previousPosition.x,
 						box->world._42 - box->previousPosition.y, box->world._43 - box->previousPosition.z,
@@ -94,7 +98,8 @@ namespace Game {
 				rocket.velocity = Steer(
 					rocket.velocity, desired, XMConvertToRadians(m_settings.turnDegreesPerSecond) * step);
 			}
-			const auto start = rocket.position, startTail = Tail(rocket);
+			const auto start = rocket.position;
+			const auto startTail = Tail(rocket);
 			float valid = step;
 			bool sea = rocket.position.y <= 0;
 			if (rocket.velocity.y < 0 && rocket.position.y + rocket.velocity.y * step <= 0) {

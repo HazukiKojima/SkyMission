@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
+    <ClCompile Include="Game\Audio\CombatAudio.cpp" />
     <ClCompile Include="Game\Application\Application.cpp" />
     <ClCompile Include="Game\Aircraft\AircraftController.cpp" />
     <ClCompile Include="Engine\Camera\Camera.cpp" />
@@ -323,6 +324,11 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <FxCompile>
+      <AdditionalOptions>/WX %(AdditionalOptions)</AdditionalOptions>
+    </FxCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

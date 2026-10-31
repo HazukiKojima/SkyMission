@@ -14,16 +14,24 @@ namespace Game {
 	class FlightScene {
 	  public:
 		void Initialize(float aspect, float nearZ, float farZ);
-		void Update(
-			const AircraftInput& input, float deltaSeconds, const Engine::InputSnapshot& cameraInput = {},
-			CombatInput combatInput = {});
+		void Update(const AircraftInput& input, float deltaSeconds,
+			const Engine::InputSnapshot& cameraInput = {}, CombatInput combatInput = {});
 		void ConfigureCombat(const CombatSettings& settings);
 		void ConfigurePlayerRocket(const RocketDefinition& definition, std::shared_ptr<Engine::Model> model);
-		size_t GetRocketCount() const { return m_rockets.GetCount(); }
-		const CombatSnapshot& GetCombatSnapshot() const { return m_combat; }
-		const CombatEffectSnapshot& GetEffectSnapshot() const { return m_effects.GetSnapshot(); }
-		void ConfigurePlayerWeapon(const WeaponDefinition& definition, std::shared_ptr<Engine::Model> ammunition);
-		size_t GetProjectileCount() const { return m_projectiles.GetCount(); }
+		size_t GetRocketCount() const {
+			return m_rockets.GetCount();
+		}
+		const CombatSnapshot& GetCombatSnapshot() const {
+			return m_combat;
+		}
+		const CombatEffectSnapshot& GetEffectSnapshot() const {
+			return m_effects.GetSnapshot();
+		}
+		void ConfigurePlayerWeapon(
+			const WeaponDefinition& definition, std::shared_ptr<Engine::Model> ammunition);
+		size_t GetProjectileCount() const {
+			return m_projectiles.GetCount();
+		}
 		void OnResize(UINT width, UINT height);
 		const Engine::Scene& GetRenderScene() const {
 			return m_scene;
@@ -55,7 +63,8 @@ namespace Game {
 			AircraftAIController controller;
 			AircraftAIParameters aiParameters;
 			Engine::ObjectId objectId = Engine::InvalidObjectId;
-			float visualScale = 1, propellerAngle = 0;
+			float visualScale = 1;
+			float propellerAngle = 0;
 			float health = 100;
 			std::string name;
 			DirectX::XMFLOAT3 previousPosition{};
@@ -72,7 +81,8 @@ namespace Game {
 		AircraftCameraController m_cameraController;
 		AircraftFlightModel m_player;
 		Engine::ObjectId m_playerId = Engine::InvalidObjectId;
-		float m_playerVisualScale = 1, m_playerPropellerAngle = 0;
+		float m_playerVisualScale = 1;
+		float m_playerPropellerAngle = 0;
 		std::vector<EnemyAircraft> m_enemies;
 		AircraftGun m_gun;
 		ProjectileSystem m_projectiles;
