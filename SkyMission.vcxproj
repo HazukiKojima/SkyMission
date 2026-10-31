@@ -464,6 +464,10 @@
     <ClInclude Include="Game\Weapons\RocketSystem.h" />
     <ClCompile Include="Game\Weapons\RocketSystem.cpp" />
     <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\GunEffectPresenter.cpp" />
+    <ClInclude Include="Game\Weapons\GunShotEvent.h" />
+    <ClInclude Include="Tests\GunEffectTests.h" />
+    <None Include="Docs\Design\GunFireEffects.md" />
     <ClInclude Include="Tests\RocketTests.h" />
     <None Include="Assets\Aircraft\N1K2JShidenKai\rocketWeapon.json" />
     <None Include="Assets\Ammunition\Rocket\ammunition.json" />

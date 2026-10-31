@@ -76,6 +76,7 @@ namespace Game {
 		void RefreshCombatSnapshot();
 		std::vector<CollisionTarget> BuildCollisionTargets();
 		void ApplyHits();
+		void UpdateGunEffects();
 		void UpdateRockets(const CombatInput& input, float dt, std::span<const CollisionTarget> targets);
 		Engine::Scene m_scene;
 		AircraftCameraController m_cameraController;

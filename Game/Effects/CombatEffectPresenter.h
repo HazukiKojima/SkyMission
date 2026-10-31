@@ -15,5 +15,7 @@ namespace Game {
 			const ExplosionEffect& effect, EffectDrawContext& context, float fragmentScale) const;
 		void DrawRocketEffects(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
 		void DrawImpact(const ImpactEffect& effect, EffectDrawContext& context) const;
+		void DrawGunSmoke(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
+		void DrawGunFire(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
 	};
 } // namespace Game

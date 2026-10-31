@@ -34,6 +34,7 @@ void Require(bool condition, const char* description) {
 #include "CombatEffectTests.h"
 #include "RocketTests.h"
 #include "EnvironmentSettingsTests.h"
+#include "GunEffectTests.h"
 
 void TestCombatAudioLifecycle() {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -586,6 +587,22 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		Game::CombatHudPresenter presenter;
 		for (int i = 0; i < 6; ++i) {
 			scene.Update({}, 0.05f, {}, {{true}, false, i == 0 ? 2u : 0u});
+			if (scene.GetCombatSnapshot().firedVolleys > 0) {
+				Require(!scene.GetEffectSnapshot().gunFlashes.empty(),
+					"FlightScene did not forward gun shot effects");
+				const auto& player = scene.GetObjects().front();
+				for (const auto& flash : scene.GetEffectSnapshot().gunFlashes) {
+					const auto local = player.model->FindNodePosition(
+						definition.playerWeapon.gun.muzzleNames[flash.muzzleIndex]);
+					DirectX::XMFLOAT3 expected;
+					DirectX::XMStoreFloat3(&expected,
+						DirectX::XMVector3TransformCoord(
+							DirectX::XMLoadFloat3(&*local), DirectX::XMLoadFloat4x4(&player.worldTransform)));
+					Require(std::abs(flash.position.x - expected.x) < 0.001f &&
+							std::abs(flash.position.z - expected.z) < 0.001f,
+						"Real-asset muzzle flash did not follow the aircraft transform");
+				}
+			}
 			const auto view = renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
 			hud.Reset(view.width, view.height);
 			CombatEffectPresenter{}.Build(scene.GetEffectSnapshot(), view, hud);
@@ -607,6 +624,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		presenter.Build(scene.GetCombatSnapshot(), resizedView, hud);
 		renderer.Render(96, 96, scene.GetRenderScene(), &hud);
 		scene.RemoveObject(scene.GetObjects()[0].id);
+		Require(scene.GetEffectSnapshot().gunFlashes.empty(), "Player removal retained muzzle flashes");
 		for (int i = 0; i < 14; ++i)
 			scene.Update({}, 0.25f, {}, {{true}});
 		Require(scene.GetProjectileCount() == 0,
@@ -630,6 +648,8 @@ int wmain(int argc, wchar_t** argv) {
 		TestCombatAudioLifecycle();
 		TestCombatMath();
 		TestCombatEffectLifetime();
+		TestGunFireEffects();
+		TestGunSegmentClipping();
 		TestRocketInputAndFlight();
 		TestRawInput();
 		TestPathsAndJson(argv[1], fixture);

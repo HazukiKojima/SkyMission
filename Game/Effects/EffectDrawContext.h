@@ -24,6 +24,7 @@ namespace Game {
 	  public:
 		EffectDrawContext(const Engine::RenderView& view, Engine::HudDrawList& list);
 		bool HasVertexBudget(size_t requiredVertices) const;
+		void SetAdditionalReservedVertices(size_t vertices);
 		float GetScale() const;
 		void DrawCloud(DirectX::FXMVECTOR position, float radius, float rotation, unsigned seed,
 			DirectX::XMFLOAT4 color, EffectClipMode clipMode = EffectClipMode::BoundsVisible);
@@ -31,6 +32,8 @@ namespace Game {
 			EffectClipMode clipMode = EffectClipMode::BoundsVisible);
 		std::optional<ProjectedEffectSegment> ProjectSegment(
 			DirectX::FXMVECTOR head, DirectX::FXMVECTOR tail) const;
+		std::optional<ProjectedEffectSegment> ProjectClippedSegment(
+			const DirectX::XMFLOAT3& head, const DirectX::XMFLOAT3& tail) const;
 		void DrawStreak(const ProjectedEffectSegment& segment, float outerWidth, DirectX::XMFLOAT4 outerColor,
 			float innerWidth, DirectX::XMFLOAT4 innerColor);
 
@@ -45,5 +48,6 @@ namespace Game {
 		Engine::HudDrawList& m_list;
 		HudProjector m_projector;
 		DirectX::XMFLOAT3 m_cameraRight;
+		size_t m_additionalReservedVertices = 0;
 	};
 } // namespace Game

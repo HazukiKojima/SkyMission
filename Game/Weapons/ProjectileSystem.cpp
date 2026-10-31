@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "Game/Combat/GunAimSolver.h"
 #include "Game/Combat/ProjectileCollision.h"
+#include "Game/Effects/CombatEffectSettings.h"
 
 namespace Game {
 	using namespace DirectX;
@@ -29,6 +30,38 @@ namespace Game {
 		m_model = std::move(model);
 		m_settings = settings;
 		m_projectiles.reserve(settings.maxProjectiles);
+		m_volleySequence = 0;
+		m_shotEvents.clear();
+		m_tracers.clear();
+	}
+
+	std::vector<GunShotEvent> ProjectileSystem::TakeShotEvents() {
+		auto events = std::move(m_shotEvents);
+		m_shotEvents.clear();
+		return events;
+	}
+
+	std::vector<GunTracerSegment> ProjectileSystem::TakeTracers() {
+		auto tracers = std::move(m_tracers);
+		m_tracers.clear();
+		return tracers;
+	}
+
+	void ProjectileSystem::AddTracer(const Projectile& projectile, const XMFLOAT3& head) {
+		if (!projectile.isTracer || m_tracers.size() >= GunEffectSettings::maxTracerCount)
+			return;
+		const auto velocity = XMLoadFloat3(&projectile.velocity);
+		const float speed = XMVectorGetX(XMVector3Length(velocity));
+		const float distance =
+			XMVectorGetX(XMVector3Length(XMLoadFloat3(&head) - XMLoadFloat3(&projectile.birthPosition)));
+		const float length = std::min(
+			{distance, speed * GunEffectSettings::tracerSeconds, GunEffectSettings::tracerMaxLength});
+		if (!std::isfinite(length) || length <= 0 || speed <= 0)
+			return;
+		GunTracerSegment segment;
+		segment.head = head;
+		XMStoreFloat3(&segment.tail, XMLoadFloat3(&head) - velocity * (length / speed));
+		m_tracers.push_back(segment);
 	}
 
 	void ProjectileSystem::Advance(Projectile& projectile, float dt) {
@@ -65,8 +98,11 @@ namespace Game {
 			XMFLOAT3 direction;
 			XMStoreFloat3(&direction, XMVector3Normalize(XMLoadFloat3(&projectile.velocity)));
 			m_hits.push_back({hit, frameOffset + *first * valid, position, direction});
+			// 接触点を終端にして、敵を貫く光の筋を残さない
+			AddTracer(projectile, position);
 			return false;
 		}
+		AddTracer(projectile, projectile.position);
 		return valid >= duration && projectile.remainingLifetime > 0 && projectile.position.y > 0;
 	}
 
@@ -74,6 +110,9 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0)
 			return;
 		dt = std::min(dt, 0.25f);
+		// 前フレームの通知と、消滅した弾の描画区間を持ち越さない
+		m_shotEvents.clear();
+		m_tracers.clear();
 		std::erase_if(m_projectiles, [&](Projectile& projectile) {
 			const bool alive = MoveAndCollide(projectile, dt, 0, dt, targets);
 			auto* object = scene.FindObject(projectile.objectId);
@@ -96,7 +135,8 @@ namespace Game {
 			return false;
 		auto aircraftRotation = XMLoadFloat4x4(&aircraftPose);
 		aircraftRotation.r[3] = XMVectorSet(0, 0, 0, 1);
-		for (const auto& muzzle : muzzles) {
+		for (size_t muzzleIndex = 0; muzzleIndex < muzzles.size(); ++muzzleIndex) {
+			const auto& muzzle = muzzles[muzzleIndex];
 			Projectile projectile{};
 			XMStoreFloat3(&projectile.position,
 				XMVector3TransformCoord(XMLoadFloat3(&muzzle), XMLoadFloat4x4(&aircraftWorld)));
@@ -110,6 +150,12 @@ namespace Game {
 			XMStoreFloat3(&projectile.velocity,
 				XMLoadFloat3(&aircraftVelocity) + XMLoadFloat3(&direction) * m_settings.muzzleSpeed);
 			projectile.remainingLifetime = m_settings.lifetime;
+			projectile.birthPosition = projectile.position;
+			// L1・R2とL2・R1を交互に光らせ、4門が同時に消える周期を作らない
+			const unsigned phase = muzzleIndex == 0 || muzzleIndex == 3 ? 0u : 1u;
+			projectile.isTracer = (m_volleySequence + phase) % 2 == 0;
+			m_shotEvents.push_back(
+				{muzzleIndex, projectile.position, aircraftVelocity, direction, age, m_volleySequence});
 			if (!MoveAndCollide(projectile, age, std::max(0.0f, frameSeconds - age), frameSeconds, targets))
 				continue;
 			// ロールを維持しつつ、弾モデルの機首方向を補正後の射線へ合わせる
@@ -126,6 +172,7 @@ namespace Game {
 			projectile.objectId = scene.AddObject(m_model, transform);
 			m_projectiles.push_back(projectile);
 		}
+		++m_volleySequence;
 		return true;
 	}
 } // namespace Game
