@@ -21,8 +21,12 @@ static_assert(offsetof(Game::AircraftAIParameters, threatDistance) == 13 * sizeo
 static_assert(offsetof(Game::AircraftAIParameters, attackDistance) == 14 * sizeof(float));
 static_assert(offsetof(Game::AircraftAIParameters, aimAngleDegrees) == 15 * sizeof(float));
 static_assert(offsetof(Game::AircraftAIParameters, aimHoldSeconds) == 16 * sizeof(float));
-static_assert(offsetof(Game::AircraftAIParameters, burstSeconds) == 17 * sizeof(float));
-static_assert(offsetof(Game::AircraftAIParameters, burstPauseSeconds) == 18 * sizeof(float));
-static_assert(offsetof(Game::AircraftAIParameters, openingGraceSeconds) == 19 * sizeof(float));
-static_assert(offsetof(Game::AircraftAIParameters, aimErrorDegrees) == 20 * sizeof(float));
-static_assert(sizeof(Game::AircraftAIParameters) == 21 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, openingGraceSeconds) == 17 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, aimErrorDegrees) == 18 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, cruiseSpeed) == 19 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, attackSpeed) == 20 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, escapeSpeed) == 21 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, reengageDistance) == 22 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, attackRunSeconds) == 23 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, separationLookAheadSeconds) == 24 * sizeof(float));
+static_assert(sizeof(Game::AircraftAIParameters) == 25 * sizeof(float));

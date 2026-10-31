@@ -1,29 +1,28 @@
 {
-    "selectionDistance": 6000,
-    "acquireDistance": 2500,
-    "acquireAngleDegrees": 25,
-    "acquireSeconds": 0.5,
-    "maintainDistance": 2750,
-    "maintainAngleDegrees": 35,
-    "lossGraceSeconds": 0.25,
-    "assistAngleDegrees": 3,
-    "enemyHealth": 120,
-    "bulletDamage": 10,
-    "enemyPosition1": [
-        0,
-        300,
-        -1200
-    ],
-    "enemyPosition2": [
-        -450,
-        350,
-        -1700
-    ],
-    "enemyPosition3": [
-        500,
-        400,
-        -2000
-    ],
-    "playerHealth": 100,
-    "enemyBulletDamage": 4
+  "selectionDistance": 22000,
+  "acquireDistance": 10000,
+  "acquireAngleDegrees": 25,
+  "acquireSeconds": 2,
+  "maintainDistance": 12000,
+  "maintainAngleDegrees": 35,
+  "lossGraceSeconds": 0.15,
+  "assistAngleDegrees": 3,
+  "enemyHealth": 120,
+  "bulletDamage": 10,
+  "enemyPosition1": [
+    -4500,
+    1200,
+    -14500
+  ],
+  "enemyPosition2": [
+    7000,
+    1800,
+    -16000
+  ],
+  "enemyPosition3": [
+    -13000,
+    1600,
+    7000
+  ],
+  "playerHealth": 100
 }

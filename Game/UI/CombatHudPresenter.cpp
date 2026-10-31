@@ -41,6 +41,34 @@ namespace Game {
 				lineWidth * 2, warning);
 			drawLabel(820, 800, "TAKING FIRE");
 		}
+		if (snapshot.threatWarning != ThreatWarning::None) {
+			const bool missile = snapshot.threatWarning == ThreatWarning::Missile;
+			const XMFLOAT4 warning = missile ? XMFLOAT4{1, 0.15f, 0.12f, 1} : XMFLOAT4{1, 0.65f, 0.15f, 1};
+			const std::string label = missile
+				? "MISSILE ALERT  " + std::to_string(snapshot.incomingMissiles.size())
+				: "LOCK WARNING  " + std::to_string(snapshot.lockingEnemyCount);
+			list.Text({offsetX + 650 * scale, offsetY + 160 * scale}, label, fontSize * 1.35f, warning);
+			const auto& d = snapshot.threatDirection;
+			const auto& f = snapshot.forward;
+			const float bearing = std::atan2(-f.z * d.x + f.x * d.z, f.x * d.x + f.z * d.z);
+			const float x = std::sin(bearing), y = -std::cos(bearing);
+			const XMFLOAT2 tip{view.width * 0.5f + x * 220 * scale, view.height * 0.5f + y * 220 * scale};
+			list.Line(tip, {tip.x - x * 30 * scale - y * 15 * scale, tip.y - y * 30 * scale + x * 15 * scale},
+				lineWidth * 2, warning);
+			list.Line(tip, {tip.x - x * 30 * scale + y * 15 * scale, tip.y - y * 30 * scale - x * 15 * scale},
+				lineWidth * 2, warning);
+			if (!missile)
+				list.Circle({view.width * 0.5f, offsetY + 240 * scale}, 20 * scale,
+					snapshot.enemyLockProgress, lineWidth * 2, warning);
+			for (const auto& threat : snapshot.incomingMissiles) {
+				const auto point = projector.Project(threat.position);
+				if (point.visible) {
+					list.Circle(point.pixel, 18 * scale, 1, lineWidth * 2, warning);
+					list.Text({point.pixel.x + 24 * scale, point.pixel.y},
+						"MSL " + std::to_string(static_cast<int>(threat.distance)) + "M", fontSize, warning);
+				}
+			}
+		}
 		// 照準は弾道予測とは独立し、機関砲の軸に追従する
 		XMFLOAT3 sightWorldPosition;
 		XMStoreFloat3(&sightWorldPosition,

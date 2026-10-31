@@ -111,8 +111,8 @@ namespace Game {
 			return definition;
 		}
 
-		RocketDefinition LoadRocket(
-			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
+		RocketDefinition LoadRocket(const JsonAssetReader& reader, const std::filesystem::path& aircraftPath,
+			const char* modelId = RocketModelId) {
 			const auto weaponPath = reader.Resolve(aircraftPath, "rocketWeapon");
 			RocketDefinition definition;
 			definition.sourcePath = weaponPath;
@@ -126,6 +126,7 @@ namespace Game {
 				settings.turnDegreesPerSecond = reader.ResolveFloat(weaponPath, "turnDegreesPerSecond");
 				settings.lifetimeSeconds = reader.ResolveFloat(weaponPath, "lifetimeSeconds");
 				settings.damage = reader.ResolveFloat(weaponPath, "damage");
+				settings.seekerAngleDegrees = reader.ResolveFloat(weaponPath, "seekerAngleDegrees");
 				const float capacity = reader.ResolveFloat(weaponPath, "maxRockets");
 				if (!std::isfinite(capacity) || capacity < 1 || capacity > 1024 ||
 					std::floor(capacity) != capacity)
@@ -134,7 +135,7 @@ namespace Game {
 				ValidateRocketSettings(settings);
 				source = reader.Resolve(weaponPath, "ammunition");
 				definition.ammunition = {
-					RocketModelId, reader.Resolve(source, "model"), LoadModelOptions(reader, source)};
+					modelId, reader.Resolve(source, "model"), LoadModelOptions(reader, source)};
 				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
 				const auto axis = reader.ResolveString(source, "modelForward");
 				if (axis == "+X")
@@ -161,6 +162,15 @@ namespace Game {
 		}
 
 		void ValidateAIParameters(const AircraftAIParameters& parameters) {
+			for (const float value : {parameters.cruiseSpeed, parameters.attackSpeed, parameters.escapeSpeed,
+					 parameters.reengageDistance, parameters.attackRunSeconds,
+					 parameters.separationLookAheadSeconds})
+				if (!std::isfinite(value) || value <= 0)
+					throw std::runtime_error("Invalid enemy attack-run parameter");
+			if (parameters.attackSpeed >= parameters.cruiseSpeed ||
+				parameters.cruiseSpeed >= parameters.escapeSpeed ||
+				parameters.reengageDistance <= parameters.attackDistance)
+				throw std::runtime_error("Invalid enemy speed/distance ordering");
 			if (!std::isfinite(parameters.reactionSeconds) || parameters.reactionSeconds <= 0)
 				throw std::runtime_error("reactionSeconds must be positive and finite");
 			if (!std::isfinite(parameters.maneuverSeconds) || parameters.maneuverSeconds <= 0)
@@ -175,10 +185,6 @@ namespace Game {
 				throw std::runtime_error("aimAngleDegrees must be positive and finite");
 			if (!std::isfinite(parameters.aimHoldSeconds) || parameters.aimHoldSeconds <= 0)
 				throw std::runtime_error("aimHoldSeconds must be positive and finite");
-			if (!std::isfinite(parameters.burstSeconds) || parameters.burstSeconds <= 0)
-				throw std::runtime_error("burstSeconds must be positive and finite");
-			if (!std::isfinite(parameters.burstPauseSeconds) || parameters.burstPauseSeconds <= 0)
-				throw std::runtime_error("burstPauseSeconds must be positive and finite");
 			if (!std::isfinite(parameters.openingGraceSeconds) || parameters.openingGraceSeconds <= 0)
 				throw std::runtime_error("openingGraceSeconds must be positive and finite");
 			if (!std::isfinite(parameters.aimErrorDegrees) || parameters.aimErrorDegrees <= 0)
@@ -309,33 +315,13 @@ namespace Game {
 		JsonDocumentCache documents;
 		JsonAssetReader reader(documents);
 		JsonParametersLoader parameters(documents);
-		const auto weaponPath = paths.enemyAircraft.parent_path() / "weapon.json";
-		GunSettings enemyGun;
-		enemyGun.muzzleNames = {"L1", "L2", "R1", "R2"};
-		enemyGun.fireInterval = reader.ResolveFloat(weaponPath, "fireInterval");
-		enemyGun.muzzleSpeed = reader.ResolveFloat(weaponPath, "muzzleSpeed");
-		enemyGun.lifetime = reader.ResolveFloat(weaponPath, "lifetime");
-		const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
-		if (!std::isfinite(capacity) || capacity < 4 || capacity > 4096 || std::floor(capacity) != capacity)
-			throw std::runtime_error("Enemy maxProjectiles must be an integer within [4,4096]");
-		enemyGun.maxProjectiles = static_cast<size_t>(capacity);
-		ValidateGunSettings(enemyGun);
-		std::array<DirectX::XMFLOAT3, 4> enemyMuzzles;
-		const char* muzzleKeys[] = {"muzzleL1", "muzzleL2", "muzzleR1", "muzzleR2"};
-		for (size_t i = 0; i < 4; ++i) {
-			const auto offset = reader.ResolveFloatArray(weaponPath, muzzleKeys[i]);
-			if (offset.size() != 3 || !std::isfinite(offset[0]) || !std::isfinite(offset[1]) ||
-				!std::isfinite(offset[2]))
-				throw std::runtime_error("Enemy muzzle offset must contain three finite components");
-			enemyMuzzles[i] = {offset[0], offset[1], offset[2]};
-		}
+
 		return {.environment = LoadEnvironment(paths, reader, parameters),
 			.playerAircraft = LoadAircraftDefinition(reader, parameters, paths.playerAircraft),
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
 			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
-			.enemyGun = enemyGun,
-			.enemyMuzzles = enemyMuzzles,
+			.enemyMissile = LoadRocket(reader, paths.enemyAircraft, EnemyMissileModelId),
 			.playerRocket = LoadRocket(reader, paths.playerAircraft),
 			.combat = LoadCombatSettings(
 				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),

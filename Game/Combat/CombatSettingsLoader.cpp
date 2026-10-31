@@ -32,7 +32,6 @@ namespace Game {
 			TargetingSystem{}.Configure(t);
 			settings.enemyHealth = Positive(reader, path, "enemyHealth");
 			settings.playerHealth = Positive(reader, path, "playerHealth");
-			settings.enemyBulletDamage = Positive(reader, path, "enemyBulletDamage");
 			settings.bulletDamage = Positive(reader, path, "bulletDamage");
 			for (size_t i = 0; i < 3; ++i) {
 				const auto key = "enemyPosition" + std::to_string(i + 1);

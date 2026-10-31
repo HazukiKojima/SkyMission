@@ -9,6 +9,7 @@ namespace Game {
 		float turnDegreesPerSecond = 30;
 		float lifetimeSeconds = 8;
 		float damage = 100;
+		float seekerAngleDegrees = 180;
 		size_t maxRockets = 16;
 	};
 	inline void ValidateRocketSettings(const RocketSettings& settings) {
@@ -18,6 +19,9 @@ namespace Game {
 				std::pair{"lifetimeSeconds", settings.lifetimeSeconds}, std::pair{"damage", settings.damage}})
 			if (!std::isfinite(value) || value <= 0)
 				throw std::invalid_argument(std::string(name) + " must be positive and finite");
+		if (!std::isfinite(settings.seekerAngleDegrees) || settings.seekerAngleDegrees <= 0 ||
+			settings.seekerAngleDegrees > 180)
+			throw std::invalid_argument("seekerAngleDegrees must be within (0,180]");
 		if (settings.maxRockets < 1 || settings.maxRockets > 1024)
 			throw std::invalid_argument("maxRockets must be between 1 and 1024");
 		if (settings.muzzleNames[0].empty() || settings.muzzleNames[1].empty() ||

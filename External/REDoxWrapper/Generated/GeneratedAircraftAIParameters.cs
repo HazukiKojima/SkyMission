@@ -2,7 +2,7 @@ namespace REDoxWrapper.Generated;
 
 public sealed class GeneratedAircraftAIParameters
 {
-    public const int FieldCount = 21;
+    public const int FieldCount = 25;
     public static readonly string[] FieldNames =
     {
         "directionChangeSeconds",
@@ -22,13 +22,21 @@ public sealed class GeneratedAircraftAIParameters
         "attackDistance",
         "aimAngleDegrees",
         "aimHoldSeconds",
-        "burstSeconds",
-        "burstPauseSeconds",
         "openingGraceSeconds",
         "aimErrorDegrees",
+        "cruiseSpeed",
+        "attackSpeed",
+        "escapeSpeed",
+        "reengageDistance",
+        "attackRunSeconds",
+        "separationLookAheadSeconds",
     };
     public static readonly int[] FieldLengths =
     {
+        1,
+        1,
+        1,
+        1,
         1,
         1,
         1,
@@ -69,10 +77,14 @@ public sealed class GeneratedAircraftAIParameters
     public float attackDistance { get; set; }
     public float aimAngleDegrees { get; set; }
     public float aimHoldSeconds { get; set; }
-    public float burstSeconds { get; set; }
-    public float burstPauseSeconds { get; set; }
     public float openingGraceSeconds { get; set; }
     public float aimErrorDegrees { get; set; }
+    public float cruiseSpeed { get; set; }
+    public float attackSpeed { get; set; }
+    public float escapeSpeed { get; set; }
+    public float reengageDistance { get; set; }
+    public float attackRunSeconds { get; set; }
+    public float separationLookAheadSeconds { get; set; }
 
     public float[] ToFloatArray() => new float[]
     {
@@ -93,9 +105,13 @@ public sealed class GeneratedAircraftAIParameters
         attackDistance,
         aimAngleDegrees,
         aimHoldSeconds,
-        burstSeconds,
-        burstPauseSeconds,
         openingGraceSeconds,
         aimErrorDegrees,
+        cruiseSpeed,
+        attackSpeed,
+        escapeSpeed,
+        reengageDistance,
+        attackRunSeconds,
+        separationLookAheadSeconds,
     };
 }

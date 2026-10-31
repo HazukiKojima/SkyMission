@@ -99,7 +99,7 @@ namespace Game {
 				XM_2PI);
 		}
 
-		const bool pitchInputActive = std::abs(input.pitch) > 0.01f;
+		const bool pitchInputActive = std::abs(input.pitch) > 0.01f && !input.autoLevelRoll;
 		const bool turnInputActive = std::abs(input.turn) > 0.01f;
 		state.autoRollCorrection = !pitchInputActive && !turnInputActive;
 		const float levelRoll = std::cos(m_pitch) < 0.0f ? XM_PI : 0.0f;

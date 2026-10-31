@@ -56,6 +56,9 @@ void TestCombatAudioLifecycle() {
 				audio.Update(1, 1);
 				audio.Initialize();
 				audio.Update(2, 3);
+				audio.Update(0, 0, true, false, 0.1f);
+				audio.Update(0, 0, false, true, 0.25f);
+				audio.Update(0, 0, false, false, 0.1f);
 				audio.Initialize();
 				audio.Update(1, 1);
 			}

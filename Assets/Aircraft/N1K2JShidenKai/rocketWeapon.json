@@ -1,11 +1,12 @@
 {
-    "muzzleL1": "GunMuzzle_L1",
-    "muzzleR1": "GunMuzzle_R1",
-    "cooldownSeconds": 3,
-    "speed": 1200,
-    "turnDegreesPerSecond": 30,
-    "lifetimeSeconds": 8,
-    "damage": 100,
-    "maxRockets": 16,
-    "ammunition": "../../Ammunition/Rocket/ammunition.json"
+  "muzzleL1": "GunMuzzle_L1",
+  "muzzleR1": "GunMuzzle_R1",
+  "cooldownSeconds": 3,
+  "speed": 2400,
+  "turnDegreesPerSecond": 40,
+  "lifetimeSeconds": 14,
+  "damage": 100,
+  "maxRockets": 16,
+  "ammunition": "../../Ammunition/Rocket/ammunition.json",
+  "seekerAngleDegrees": 180
 }

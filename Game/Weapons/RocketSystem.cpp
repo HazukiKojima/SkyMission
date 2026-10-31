@@ -76,11 +76,22 @@ namespace Game {
 			const float step = std::min({kStepSeconds, deltaSeconds - elapsed, rocket.remainingLifetime});
 			if (step <= 0)
 				break;
-			const auto target = std::find_if(targets.begin(), targets.end(), [&](const CombatTarget& item) {
+			auto target = std::find_if(targets.begin(), targets.end(), [&](const CombatTarget& item) {
 				return item.id == rocket.targetId && item.health > 0;
 			});
 			if (rocket.targetId != Engine::InvalidObjectId && target == targets.end())
 				rocket.targetId = Engine::InvalidObjectId;
+			// シーカーの視野外へ逃げた対象は再捕捉しない。旋回上限と合わせて回避を成立させる。
+			if (target != targets.end() && m_settings.seekerAngleDegrees < 180) {
+				const auto desired = XMLoadFloat3(&target->center) - XMLoadFloat3(&rocket.position);
+				if (XMVectorGetX(XMVector3LengthSq(desired)) > 1e-8f &&
+					XMVectorGetX(XMVector3Dot(
+						XMVector3Normalize(XMLoadFloat3(&rocket.velocity)), XMVector3Normalize(desired))) <
+						std::cos(XMConvertToRadians(m_settings.seekerAngleDegrees))) {
+					rocket.targetId = Engine::InvalidObjectId;
+					target = targets.end();
+				}
+			}
 			if (target != targets.end()) {
 				auto center = XMLoadFloat3(&target->center);
 				const auto box =

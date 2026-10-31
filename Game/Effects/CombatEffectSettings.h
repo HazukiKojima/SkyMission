@@ -63,7 +63,7 @@ namespace Game {
 		static constexpr float smokeLifetimeSeconds = 0.8f;
 		static constexpr float emissionIntervalSeconds = 0.025f;
 		static constexpr size_t maxSmokeCount = 1024;
-		static constexpr size_t maxExhaustCount = 16;
+		static constexpr size_t maxExhaustCount = 20;
 	};
 
 	struct CombatEffectSettings {

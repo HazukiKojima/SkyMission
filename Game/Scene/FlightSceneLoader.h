@@ -10,6 +10,7 @@ namespace Game {
 	inline constexpr const char* EnemyModelId = "enemy";
 	inline constexpr const char* AmmunitionModelId = "20mmAmmo";
 	inline constexpr const char* RocketModelId = "rocket";
+	inline constexpr const char* EnemyMissileModelId = "enemyMissile";
 	struct SceneSourcePaths {
 		std::filesystem::path environment, playerAircraft, enemyAircraft, retroFilm;
 	};
@@ -24,8 +25,7 @@ namespace Game {
 		AircraftDefinition playerAircraft, enemyAircraft;
 		AircraftAIParameters enemyAIParameters;
 		WeaponDefinition playerWeapon;
-		GunSettings enemyGun;
-		std::array<DirectX::XMFLOAT3, 4> enemyMuzzles;
+		RocketDefinition enemyMissile;
 		RocketDefinition playerRocket;
 		CombatSettings combat;
 		Engine::HudSettings hud;
@@ -33,7 +33,7 @@ namespace Game {
 			return {environment,
 				{{PlayerModelId, playerAircraft.model, playerAircraft.modelImport},
 					{EnemyModelId, enemyAircraft.model, enemyAircraft.modelImport}, playerWeapon.ammunition,
-					playerRocket.ammunition}};
+					playerRocket.ammunition, enemyMissile.ammunition}};
 		}
 	};
 	class FlightSceneLoader {

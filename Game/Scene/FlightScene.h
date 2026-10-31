@@ -17,9 +17,10 @@ namespace Game {
 		void Update(const AircraftInput& input, float deltaSeconds,
 			const Engine::InputSnapshot& cameraInput = {}, CombatInput combatInput = {});
 		void ConfigureCombat(const CombatSettings& settings);
-		void ConfigureEnemyWeapon(const GunSettings& settings,
-			const std::array<DirectX::XMFLOAT3, 4>& muzzles, std::shared_ptr<Engine::Model> ammunition,
-			const DirectX::XMFLOAT3& modelForward);
+		void ConfigureEnemyMissile(const RocketDefinition& definition, std::shared_ptr<Engine::Model> model);
+		size_t GetEnemyMissileCount() const {
+			return m_enemyMissiles.GetCount();
+		}
 		void ConfigurePlayerRocket(const RocketDefinition& definition, std::shared_ptr<Engine::Model> model);
 		size_t GetRocketCount() const {
 			return m_rockets.GetCount();
@@ -57,7 +58,8 @@ namespace Game {
 		Engine::ObjectId AddPlayerObject(std::shared_ptr<Engine::Model> model);
 		Engine::ObjectId AddEnemyAircraft(std::shared_ptr<Engine::Model> model,
 			const DirectX::XMFLOAT3& position, float scale, const AircraftFlightParameters& flight,
-			const AircraftAIParameters& ai, float health = 100, std::string name = "");
+			const AircraftAIParameters& ai, float health = 100, std::string name = "",
+			bool facePlayer = false);
 		Engine::ObjectId AddObject(std::shared_ptr<Engine::Model> model) {
 			return m_scene.AddObject(std::move(model));
 		}
@@ -74,7 +76,9 @@ namespace Game {
 			float health = 100;
 			size_t slot = 0;
 			bool fire = false;
-			float gunCooldown = 0;
+			float missileCooldown = 0;
+			bool locking = false;
+			float lockProgress = 0;
 			std::string name;
 			DirectX::XMFLOAT3 previousPosition{};
 		};
@@ -93,10 +97,10 @@ namespace Game {
 		UINT m_width = 800, m_height = 600;
 		float m_battleSeconds = 0;
 		DirectX::XMFLOAT3 m_previousPlayerPosition{};
-		ProjectileSystem m_enemyProjectiles;
-		GunSettings m_enemyGunSettings;
-		std::array<DirectX::XMFLOAT3, 4> m_enemyMuzzles{};
-		bool m_enemyWeaponConfigured = false;
+		RocketSystem m_enemyMissiles;
+		RocketSettings m_enemyMissileSettings;
+		bool m_enemyMissileConfigured = false;
+		void RefreshThreatWarning();
 		Engine::Scene m_scene;
 		AircraftCameraController m_cameraController;
 		AircraftFlightModel m_player;
