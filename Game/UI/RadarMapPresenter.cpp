@@ -1,4 +1,5 @@
 #include "RadarMapPresenter.h"
+#include "HudStyle.h"
 #include <algorithm>
 #include <cmath>
 
@@ -37,14 +38,14 @@ namespace Game {
 		if (layout.scale <= 0)
 			return;
 		const float scale = layout.scale, lineWidth = std::max(1.0f, 1.4f * scale);
-		const XMFLOAT4 border{0.2f, 0.65f, 0.35f, 0.75f};
-		const XMFLOAT4 grid{0.12f, 0.55f, 0.26f, 0.23f};
-		const XMFLOAT4 labelColor{0.32f, 0.85f, 0.48f, 0.9f};
-		const XMFLOAT4 enemyColor{0.3f, 1, 0.6f, 1}, selectedColor{1, 0.85f, 0.25f, 1};
+		const auto border = HudStyle::Ink;
+		const auto grid = HudStyle::Faded(border, 0.23f);
+		const auto labelColor = border;
+		const auto enemyColor = border, selectedColor = HudStyle::Selected;
 		const auto panelPoint = [&](float x, float y) {
 			return XMFLOAT2{layout.origin.x + x * scale, layout.origin.y + y * scale};
 		};
-		list.FilledRect(layout.origin, {layout.size, layout.size}, {0.015f, 0.075f, 0.03f, 0.86f});
+		list.FilledRect(layout.origin, {layout.size, layout.size}, {0.035f, 0.038f, 0.033f, 0.65f});
 		for (float inset : {0.0f, 12.0f}) {
 			const XMFLOAT2 corners[] = {panelPoint(inset, inset), panelPoint(320 - inset, inset),
 				panelPoint(320 - inset, 320 - inset), panelPoint(inset, 320 - inset)};
@@ -61,7 +62,7 @@ namespace Game {
 		const float northFont = std::max(10.0f, 20 * scale);
 		const float rangeFont = std::max(10.0f, 18 * scale);
 		list.Text(
-			{layout.center.x - northFont / 3, layout.origin.y + 14 * scale}, "N", northFont, labelColor);
+			{layout.center.x - northFont / 2, layout.origin.y + 14 * scale}, "北", northFont, labelColor);
 		list.Text({layout.origin.x + 22 * scale, layout.origin.y + layout.size - 14 * scale - rangeFont},
 			"10 km", rangeFont, labelColor);
 		list.Text(panelPoint(166, 218), "5 km", std::max(9.0f, 16 * scale), labelColor);
@@ -114,8 +115,8 @@ namespace Game {
 				{point.pixel.x + radius, point.pixel.y}, {point.pixel.x, point.pixel.y + radius},
 				{point.pixel.x - radius, point.pixel.y}};
 			for (size_t i = 0; i < std::size(corners); ++i)
-				list.Line(corners[i], corners[(i + 1) % std::size(corners)], lineWidth, {1, 0.22f, 0.15f, 1});
+				list.Line(corners[i], corners[(i + 1) % std::size(corners)], lineWidth, HudStyle::Alert);
 		}
-		aircraft(layout.center, snapshot.playerHeading, 9 * scale, {0.92f, 1, 0.95f, 1});
+		aircraft(layout.center, snapshot.playerHeading, 9 * scale, border);
 	}
 } // namespace Game

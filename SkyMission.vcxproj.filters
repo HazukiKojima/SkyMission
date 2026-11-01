@@ -300,6 +300,9 @@
     <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h">
       <Filter>Engine\Renderer\Hud</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Renderer\Hud\HudFont.h">
+      <Filter>Engine\Renderer\Hud</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\Renderer\Hud\HudRenderer.h">
       <Filter>Engine\Renderer\Hud</Filter>
     </ClInclude>
@@ -418,6 +421,9 @@
       <Filter>Game\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Game\UI\CombatHudPresenter.h">
+      <Filter>Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\UI\HudStyle.h">
       <Filter>Game\UI</Filter>
     </ClInclude>
     <ClInclude Include="Game\UI\RadarMapPresenter.h">

@@ -1,4 +1,5 @@
 #include "HudRenderer.h"
+#include "HudFont.h"
 #include "Engine/ExecutablePath.h"
 #include "Engine/Resources/Buffer/BufferUtilities.h"
 #include <d3dcompiler.h>
@@ -12,45 +13,57 @@ namespace Engine {
 				throw std::runtime_error("Could not create HUD font DC");
 			BITMAPINFO info{};
 			info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-			info.bmiHeader.biWidth = 512;
-			info.bmiHeader.biHeight = -384;
+			info.bmiHeader.biWidth = HudFont::Width;
+			info.bmiHeader.biHeight = -LONG(HudFont::Height);
 			info.bmiHeader.biPlanes = 1;
 			info.bmiHeader.biBitCount = 32;
 			void* pixels = nullptr;
 			const auto bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
-			const auto font = CreateFontW(-36, 20, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH, L"Consolas");
-			if (!bitmap || !font) {
+			const auto font = CreateFontW(-36, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, SHIFTJIS_CHARSET,
+				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH, L"游明朝");
+			const auto japaneseFont = CreateFontW(-36, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+				SHIFTJIS_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH,
+				L"UD デジタル 教科書体 N");
+			if (!bitmap || !font || !japaneseFont) {
 				if (font)
 					DeleteObject(font);
 				if (bitmap)
 					DeleteObject(bitmap);
+				if (japaneseFont)
+					DeleteObject(japaneseFont);
 				DeleteDC(dc);
 				throw std::runtime_error("Could not create HUD font bitmap");
 			}
 			const auto oldBitmap = SelectObject(dc, bitmap);
 			const auto oldFont = SelectObject(dc, font);
-			std::memset(pixels, 0, 512 * 384 * 4);
+			std::memset(pixels, 0, HudFont::Width * HudFont::Height * 4);
 			SetTextColor(dc, RGB(255, 255, 255));
 			SetBkColor(dc, RGB(0, 0, 0));
 			SetBkMode(dc, TRANSPARENT);
-			for (int c = 32; c <= 126; ++c) {
-				const wchar_t text = wchar_t(c);
-				TextOutW(dc, (c - 32) % 16 * 32 + 2, (c - 32) / 16 * 48 + 3, &text, 1);
+			for (unsigned glyph = 0; glyph < HudFont::GlyphCount; ++glyph) {
+				const bool ascii = glyph < HudFont::AsciiCount;
+				const wchar_t text =
+					wchar_t(ascii ? glyph + 32 : HudFont::Japanese[glyph - HudFont::AsciiCount]);
+				SelectObject(dc, ascii || text == L'▶' ? font : japaneseFont);
+				const int x = int(glyph % HudFont::Columns * HudFont::Cell);
+				const int y = int(glyph / HudFont::Columns * HudFont::Cell);
+				const RECT cell{x, y, x + LONG(HudFont::GlyphWidth(glyph)), y + LONG(HudFont::Cell)};
+				ExtTextOutW(dc, x + 2, y + 3, ETO_CLIPPED, &cell, &text, 1, nullptr);
 			}
 			GdiFlush();
-			std::vector<uint8_t> rgba(512 * 384 * 4);
+			std::vector<uint8_t> rgba(HudFont::Width * HudFont::Height * 4);
 			const auto* source = static_cast<const uint8_t*>(pixels);
 			for (size_t i = 0; i < rgba.size(); i += 4) {
 				rgba[i] = rgba[i + 1] = rgba[i + 2] = 255;
 				rgba[i + 3] = source[i];
 			}
-			for (int y = 376; y < 384; ++y)
-				for (int x = 504; x < 512; ++x)
-					rgba[(y * 512 + x) * 4 + 3] = 255;
+			for (unsigned y = HudFont::Height - 8; y < HudFont::Height; ++y)
+				for (unsigned x = HudFont::Width - 8; x < HudFont::Width; ++x)
+					rgba[(y * HudFont::Width + x) * 4 + 3] = 255;
 			SelectObject(dc, oldFont);
 			SelectObject(dc, oldBitmap);
 			DeleteObject(font);
+			DeleteObject(japaneseFont);
 			DeleteObject(bitmap);
 			DeleteDC(dc);
 			return rgba;
@@ -59,7 +72,7 @@ namespace Engine {
 	void HudRenderer::Initialize(RenderDevice& device, ID3D12GraphicsCommandList* commands) {
 		auto* gpu = device.GetDevice();
 		const auto pixels = CreateFontAtlas();
-		m_atlas.CreateFromRgba(gpu, commands, 512, 384, pixels);
+		m_atlas.CreateFromRgba(gpu, commands, HudFont::Width, HudFont::Height, pixels);
 		m_atlas.CreateShaderResourceView(gpu, device.AllocateSrvDescriptor(&m_srv));
 		CD3DX12_DESCRIPTOR_RANGE range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 		CD3DX12_ROOT_PARAMETER parameter;

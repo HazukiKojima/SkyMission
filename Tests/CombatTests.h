@@ -779,11 +779,11 @@ void TestHudRendering(const fs::path& fixture) {
 				const float scale = std::min(float(width) / 1920, float(height) / 1080);
 				const float offsetX = (width - 1920 * scale) * 0.5f;
 				const float offsetY = (height - 1080 * scale) * 0.5f;
-				const float textWidth = 40 * (float(text.size() - 1) * 0.5f + 2.0f / 3.0f);
+				const float textWidth = Engine::HudDrawList::MeasureTextWidth(text, 48);
 				Engine::HudDrawList expected;
 				expected.Reset(width, height);
-				expected.Text({offsetX + (right - 12 - textWidth) * scale, offsetY + 432 * scale}, text,
-					40 * scale, Engine::HudSettings{}.color);
+				expected.Text({offsetX + (right - textWidth) * scale, offsetY + 376 * scale}, text,
+					48 * scale, Engine::HudSettings{}.color);
 				const auto sameVertex = [](const Engine::HudVertex& a, const Engine::HudVertex& b) {
 					return std::abs(a.position.x - b.position.x) < 0.00001f &&
 						std::abs(a.position.y - b.position.y) < 0.00001f && a.uv.x == b.uv.x &&
@@ -794,11 +794,11 @@ void TestHudRendering(const fs::path& fixture) {
 							expected.GetVertices().end(), sameVertex) != vertices.end(),
 					"Flight HUD conversion, rounding or right alignment failed");
 			};
-			requireFlightText(324, "360");
-			requireFlightText(1820, "1543");
+			requireFlightText(332, "360");
+			requireFlightText(1782, "1543");
 			snapshot.playerSpeedMetersPerSecond = 0;
 			buildFrame();
-			requireFlightText(324, "0");
+			requireFlightText(332, "0");
 			snapshot.playerSpeedMetersPerSecond = 100;
 			buildFrame();
 			Require(
@@ -887,57 +887,90 @@ void TestHudRendering(const fs::path& fixture) {
 			snapshot.lockingEnemyPositions = {{-5000, 0, 100}};
 			buildFrame();
 			Require(list.GetVertices().size() > withoutWarning, "Incoming missile warning was invisible");
-			context.BeginFrame();
-			auto* commands = context.GetCommandList();
-			auto* target = device.GetCurrentRenderTarget();
-			context.TransitionResource(
-				target, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-			const auto rtv = device.GetCurrentRtvHandle();
-			const float background[] = {0.015f, 0.025f, 0.035f, 1};
-			commands->ClearRenderTargetView(rtv, background, 0, nullptr);
-			commands->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
-			const D3D12_VIEWPORT viewport{0, 0, float(width), float(height), 0, 1};
-			const D3D12_RECT scissor{0, 0, LONG(width), LONG(height)};
-			commands->RSSetViewports(1, &viewport);
-			commands->RSSetScissorRects(1, &scissor);
-			renderer.Record(device, commands, list);
-			context.TransitionResource(
-				target, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
-			D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
-			UINT64 bytes = 0;
-			const auto desc = target->GetDesc();
-			device.GetDevice()->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, nullptr, nullptr, &bytes);
-			ComPtr<ID3D12Resource> readback;
-			const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_READBACK);
-			const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(bytes);
-			ThrowIfFailed(device.GetDevice()->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &buffer,
-				D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readback)));
-			const CD3DX12_TEXTURE_COPY_LOCATION source(target, 0), destination(readback.Get(), footprint);
-			commands->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
-			context.TransitionResource(
-				target, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_PRESENT);
-			context.EndFrame();
-			context.WaitForGpu();
-			void* mapped = nullptr;
-			const CD3DX12_RANGE range(0, SIZE_T(bytes));
-			ThrowIfFailed(readback->Map(0, &range, &mapped));
-			ScratchImage image;
-			ThrowIfFailed(image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
-			const auto* pixels = image.GetImage(0, 0, 0);
-			size_t green = 0;
-			for (UINT y = 0; y < height; ++y) {
-				const auto* row = static_cast<const uint8_t*>(mapped) + footprint.Offset +
-					size_t(y) * footprint.Footprint.RowPitch;
-				std::memcpy(pixels->pixels + y * pixels->rowPitch, row, size_t(width) * 4);
-				for (UINT x = 0; x < width; ++x)
-					if (row[x * 4 + 1] > 80 && row[x * 4 + 1] > row[x * 4] * 2)
-						++green;
-			}
-			const CD3DX12_RANGE noWrites(0, 0);
-			readback->Unmap(0, &noWrites);
-			Require(green > 100, "HUD did not produce visible green pixels");
-			const auto path = fixture / ("hud-" + std::to_string(width) + ".png");
-			ThrowIfFailed(SaveToWICFile(*pixels, WIC_FLAGS_NONE, GUID_ContainerFormatPng, path.c_str()));
+			const auto saveFrame = [&](std::string_view suffix) {
+				context.BeginFrame();
+				auto* commands = context.GetCommandList();
+				auto* target = device.GetCurrentRenderTarget();
+				context.TransitionResource(
+					target, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+				const auto rtv = device.GetCurrentRtvHandle();
+				const float background[] = {0.015f, 0.025f, 0.035f, 1};
+				commands->ClearRenderTargetView(rtv, background, 0, nullptr);
+				commands->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+				const D3D12_VIEWPORT viewport{0, 0, float(width), float(height), 0, 1};
+				const D3D12_RECT scissor{0, 0, LONG(width), LONG(height)};
+				commands->RSSetViewports(1, &viewport);
+				commands->RSSetScissorRects(1, &scissor);
+				renderer.Record(device, commands, list);
+				context.TransitionResource(
+					target, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
+				D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
+				UINT64 bytes = 0;
+				const auto desc = target->GetDesc();
+				device.GetDevice()->GetCopyableFootprints(
+					&desc, 0, 1, 0, &footprint, nullptr, nullptr, &bytes);
+				ComPtr<ID3D12Resource> readback;
+				const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_READBACK);
+				const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(bytes);
+				ThrowIfFailed(device.GetDevice()->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE,
+					&buffer, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readback)));
+				const CD3DX12_TEXTURE_COPY_LOCATION source(target, 0), destination(readback.Get(), footprint);
+				commands->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
+				context.TransitionResource(
+					target, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_PRESENT);
+				context.EndFrame();
+				context.WaitForGpu();
+				void* mapped = nullptr;
+				const CD3DX12_RANGE range(0, SIZE_T(bytes));
+				ThrowIfFailed(readback->Map(0, &range, &mapped));
+				ScratchImage image;
+				ThrowIfFailed(image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
+				const auto* pixels = image.GetImage(0, 0, 0);
+				size_t parchment = 0, japaneseInk = 0;
+				const float scale = std::min(float(width) / 1920, float(height) / 1080);
+				const float offsetX = (width - 1920 * scale) * 0.5f;
+				const float offsetY = (height - 1080 * scale) * 0.5f;
+				for (UINT y = 0; y < height; ++y) {
+					const auto* row = static_cast<const uint8_t*>(mapped) + footprint.Offset +
+						size_t(y) * footprint.Footprint.RowPitch;
+					std::memcpy(pixels->pixels + y * pixels->rowPitch, row, size_t(width) * 4);
+					for (UINT x = 0; x < width; ++x)
+						if (row[x * 4] > 80 && row[x * 4 + 1] > 60 && row[x * 4 + 2] > 40 &&
+							row[x * 4] >= row[x * 4 + 1] && row[x * 4 + 1] >= row[x * 4 + 2]) {
+							++parchment;
+							if (x > offsetX + 122 * scale && x < offsetX + 198 * scale &&
+								y > offsetY + 315 * scale && y < offsetY + 341 * scale)
+								++japaneseInk;
+						}
+				}
+				const CD3DX12_RANGE noWrites(0, 0);
+				readback->Unmap(0, &noWrites);
+				Require(parchment > 100, "HUD did not produce parchment-colored pixels");
+				Require(japaneseInk > 10, "Japanese speed label did not produce visible glyph pixels");
+				const auto path = fixture / ("hud-" + std::to_string(width) + std::string(suffix) + ".png");
+				ThrowIfFailed(SaveToWICFile(*pixels, WIC_FLAGS_NONE, GUID_ContainerFormatPng, path.c_str()));
+			};
+			saveFrame("");
+			snapshot.threatWarning = ThreatWarning::LockOn;
+			snapshot.incomingMissiles.clear();
+			buildFrame();
+			saveFrame("-lock");
+			snapshot.threatWarning = ThreatWarning::None;
+			snapshot.lockingEnemyPositions.clear();
+			snapshot.lockState = LockState::Selected;
+			snapshot.hitSeconds = 0;
+			buildFrame();
+			saveFrame("-normal");
+			snapshot.result = CombatResult::Victory;
+			snapshot.allDownSeconds = 3;
+			buildFrame();
+			saveFrame("-victory");
+			snapshot.result = CombatResult::Defeat;
+			snapshot.allDownSeconds = 0;
+			snapshot.playerHealth = 0;
+			snapshot.playerHitSeconds = 0.5f;
+			buildFrame();
+			saveFrame("-defeat");
 		}
 	}
 	DestroyWindow(window);

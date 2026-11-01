@@ -416,6 +416,7 @@
   <ItemGroup>
     <ClInclude Include="Engine\Scene\Bounds3.h" />
     <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h" />
+    <ClInclude Include="Engine\Renderer\Hud\HudFont.h" />
     <ClCompile Include="Engine\Renderer\Hud\HudDrawList.cpp" />
     <ClInclude Include="Engine\Renderer\Hud\HudRenderer.h" />
     <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp" />
@@ -430,6 +431,7 @@
     <ClInclude Include="Game\Combat\CombatSettingsLoader.h" />
     <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp" />
     <ClInclude Include="Game\UI\CombatHudPresenter.h" />
+    <ClInclude Include="Game\UI\HudStyle.h" />
     <ClInclude Include="Game\UI\RadarMapPresenter.h" />
     <ClCompile Include="Game\UI\RadarMapPresenter.cpp" />
     <ClCompile Include="Game\UI\CombatHudPresenter.cpp" />

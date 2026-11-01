@@ -1,5 +1,6 @@
 #include "CombatHudPresenter.h"
 #include "RadarMapPresenter.h"
+#include "HudStyle.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -15,10 +16,11 @@ namespace Game {
 		const float lineWidth = std::max(1.0f, m_settings.lineWidth * scale);
 		const float fontSize = m_settings.fontSize * scale;
 		const auto color = m_settings.color;
+		HudStyle::DrawFrame(view, list, color);
 		RadarMapPresenter{}.Build(snapshot, view, list);
 		const auto radar = RadarMapPresenter::Layout(view);
-		const auto drawStatus = [&](float y, std::string_view text) {
-			list.Text({radar.statusOrigin.x, radar.statusOrigin.y + y * scale}, text, fontSize, color);
+		const auto drawStatus = [&](float y, std::string_view text, float size) {
+			list.Text({radar.statusOrigin.x, radar.statusOrigin.y + y * scale}, text, size * scale, color);
 		};
 		const HudProjector projector(view);
 		const float offsetX = (view.width - 1920 * scale) * 0.5f;
@@ -53,32 +55,34 @@ namespace Game {
 					tip.y - unitY * 20 * scale - unitX * 9 * scale},
 				lineWidth, tint);
 		};
-		const auto drawFlightValue = [&](float x, bool pointsRight, std::string_view label, float value) {
-			constexpr float top = 420, width = 240, height = 64, tipWidth = 16;
-			const auto point = [&](float dx, float dy) {
-				return XMFLOAT2{offsetX + (x + dx) * scale, offsetY + (top + dy) * scale};
-			};
-			const float left = pointsRight ? 0.0f : tipWidth;
-			const float right = pointsRight ? width - tipWidth : width;
-			const XMFLOAT2 outline[] = {point(left, 0), point(right, 0),
-				point(width, pointsRight ? height * 0.5f : 0), point(right, height), point(left, height),
-				point(0, pointsRight ? height : height * 0.5f)};
-			for (size_t i = 0; i < std::size(outline); ++i)
-				list.Line(outline[i], outline[(i + 1) % std::size(outline)], lineWidth, color);
-			drawLabel(x + left, top - m_settings.fontSize - 8, label);
+		const auto drawFlightValue = [&](float x, std::string_view label, float value) {
+			constexpr float top = 370, width = 240, height = 60;
+			const XMFLOAT2 corners[] = {{offsetX + x * scale, offsetY + top * scale},
+				{offsetX + (x + width) * scale, offsetY + top * scale},
+				{offsetX + (x + width) * scale, offsetY + (top + height) * scale},
+				{offsetX + x * scale, offsetY + (top + height) * scale}};
+			for (size_t i = 0; i < std::size(corners); ++i)
+				list.Line(corners[i], corners[(i + 1) % std::size(corners)], lineWidth, color);
+			list.Text(
+				{offsetX + (x + 8) * scale, offsetY + (top - 60) * scale}, label, fontSize * 1.1f, color);
 			const auto text = std::to_string(std::lround(value));
-			// Text uses a half-height advance and a two-thirds-height glyph quad.
-			const float textWidth = m_settings.fontSize * (float(text.size() - 1) * 0.5f + 2.0f / 3.0f);
-			drawLabel(x + right - 12 - textWidth, top + (height - m_settings.fontSize) * 0.5f, text);
+			const float numberSize = m_settings.fontSize * 1.2f;
+			const float textWidth = Engine::HudDrawList::MeasureTextWidth(text, numberSize);
+			list.Text({offsetX + (x + width - 18 - textWidth) * scale,
+						  offsetY + (top + (height - numberSize) * 0.5f) * scale},
+				text, numberSize * scale, color);
 		};
-		drawFlightValue(100, true, "SPEED", snapshot.playerSpeedMetersPerSecond * 3.6f);
-		drawFlightValue(1580, false, "ALT", snapshot.playerAltitudeMeters);
-		drawStatus(108,
-			"HULL " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
-				std::to_string(static_cast<int>(snapshot.playerMaxHealth)));
+		drawFlightValue(110, "速度", snapshot.playerSpeedMetersPerSecond * 3.6f);
+		drawFlightValue(1560, "高度", snapshot.playerAltitudeMeters);
+		drawStatus(124,
+			"機体 " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
+				std::to_string(static_cast<int>(snapshot.playerMaxHealth)),
+			m_settings.fontSize);
+		list.Line({radar.statusOrigin.x, radar.statusOrigin.y + 172 * scale},
+			{radar.statusOrigin.x + 300 * scale, radar.statusOrigin.y + 172 * scale}, lineWidth, color);
 		if (snapshot.result != CombatResult::Active) {
-			drawLabel(740, 380, snapshot.result == CombatResult::Victory ? "VICTORY" : "SHOT DOWN");
-			drawLabel(740, 440, "R: RETRY");
+			drawLabel(740, 380, snapshot.result == CombatResult::Victory ? "任務達成" : "自機撃墜");
+			drawLabel(740, 440, "R：再挑戦");
 		}
 		if (snapshot.playerHitSeconds > 0) {
 			const auto& d = snapshot.playerHitDirection;
@@ -86,23 +90,29 @@ namespace Game {
 			const float bearing = std::atan2(-f.z * d.x + f.x * d.z, f.x * d.x + f.z * d.z);
 			const float x = std::sin(bearing), y = -std::cos(bearing);
 			const XMFLOAT2 center{view.width * 0.5f, view.height * 0.5f};
-			const XMFLOAT4 warning{1, 0.2f, 0.15f, 1};
+			const auto warning = HudStyle::Alert;
 			const XMFLOAT2 tip{center.x + x * 160 * scale, center.y + y * 160 * scale};
 			list.Line(tip, {tip.x - x * 25 * scale - y * 12 * scale, tip.y - y * 25 * scale + x * 12 * scale},
 				lineWidth * 2, warning);
 			list.Line(tip, {tip.x - x * 25 * scale + y * 12 * scale, tip.y - y * 25 * scale - x * 12 * scale},
 				lineWidth * 2, warning);
-			drawLabel(820, 800, "TAKING FIRE");
+			drawLabel(820, 800, "被弾");
 		}
 		if (snapshot.threatWarning != ThreatWarning::None) {
 			const bool missile = snapshot.threatWarning == ThreatWarning::Missile;
-			const XMFLOAT4 warning = missile ? XMFLOAT4{1, 0.15f, 0.12f, 1} : XMFLOAT4{1, 0.65f, 0.15f, 1};
-			const std::string label = missile
-				? "MISSILE ALERT  " + std::to_string(snapshot.incomingMissiles.size())
-				: "LOCK WARNING  " + std::to_string(snapshot.lockingEnemyCount);
-			list.Text({offsetX + 650 * scale, offsetY + 160 * scale}, label, fontSize * 1.35f, warning);
+			const auto warning = color;
+			const std::string_view label = missile ? "ミサイル接近" : "敵機接近";
+			const float titleSize = m_settings.fontSize * 1.8f;
+			const float width = Engine::HudDrawList::MeasureTextWidth(label, titleSize);
+			const float titleX = (1920 - width) * 0.5f;
+			list.Text({offsetX + titleX * scale, offsetY + 56 * scale}, label, titleSize * scale, warning);
+			const float barY = offsetY + 100 * scale;
+			list.Line({offsetX + (titleX - 170) * scale, barY}, {offsetX + (titleX - 50) * scale, barY},
+				lineWidth, color);
+			list.Line({offsetX + (titleX + width + 50) * scale, barY},
+				{offsetX + (titleX + width + 170) * scale, barY}, lineWidth, color);
 			if (!missile) {
-				list.Circle({view.width * 0.5f, offsetY + 240 * scale}, 20 * scale,
+				list.Circle({view.width * 0.5f, offsetY + 180 * scale}, 20 * scale,
 					snapshot.enemyLockProgress, lineWidth * 2, warning);
 			}
 		}
@@ -128,18 +138,17 @@ namespace Game {
 			const auto impact = projector.Project(*leadPoint);
 			if (impact.visible) {
 				const auto centerPixel = impact.pixel;
-				const XMFLOAT4 sightColor{0.65f, 1.0f, 0.65f, color.w};
-				list.Circle(centerPixel, 34 * scale, 1, lineWidth, sightColor);
-				list.Circle(centerPixel, 25 * scale, 1, lineWidth, sightColor);
-				list.Circle(centerPixel, 5 * scale, 1, lineWidth, sightColor);
-				for (int i = 0; i < 12; ++i) {
-					const float angle = XM_2PI * i / 12;
+				const auto sightColor = color;
+				list.Circle(centerPixel, 28 * scale, 1, lineWidth, sightColor);
+				list.Circle(centerPixel, 19 * scale, 1, lineWidth, sightColor);
+				list.Circle(centerPixel, 3 * scale, 1, lineWidth, sightColor);
+				for (int i = 0; i < 4; ++i) {
+					const float angle = XM_2PI * i / 4;
 					const float x = std::cos(angle);
 					const float y = std::sin(angle);
 					list.Line({centerPixel.x + x * 31 * scale, centerPixel.y + y * 31 * scale},
-						{centerPixel.x + x * (i % 3 == 0 ? 40 : 37) * scale,
-							centerPixel.y + y * (i % 3 == 0 ? 40 : 37) * scale},
-						lineWidth, sightColor);
+						{centerPixel.x + x * 40 * scale, centerPixel.y + y * 40 * scale}, lineWidth,
+						sightColor);
 				}
 				for (const XMFLOAT2 axis : {XMFLOAT2{1, 0}, XMFLOAT2{-1, 0}, XMFLOAT2{0, 1}, XMFLOAT2{0, -1}})
 					list.Line({centerPixel.x + axis.x * 10 * scale, centerPixel.y + axis.y * 10 * scale},
@@ -163,57 +172,61 @@ namespace Game {
 				if (selected) {
 					const auto distance = int(XMVectorGetX(
 						XMVector3Length(XMLoadFloat3(&enemy.center) - XMLoadFloat3(&snapshot.muzzle))));
+					const auto name =
+						enemy.name.starts_with("ENEMY ") ? "敵機 " + enemy.name.substr(6) : enemy.name;
+					const auto label = name + "  " + std::to_string(distance);
+					const float labelWidth = Engine::HudDrawList::MeasureTextWidth(label, fontSize);
 					list.Text({std::clamp(centerPixel.x + radius + 8 * scale, 0.0f,
-								   std::max(0.0f, view.width - 260 * scale)),
+								   std::max(0.0f, view.width - labelWidth - 16 * scale)),
 								  std::clamp(centerPixel.y + radius + 8 * scale, 0.0f,
 									  std::max(0.0f, view.height - 2 * fontSize))},
-						enemy.name + "  " + std::to_string(distance), fontSize, color);
+						label, fontSize, color);
 					if (snapshot.lockState == LockState::Acquiring)
 						list.Circle(
 							centerPixel, radius + 8 * scale, snapshot.acquireProgress, lineWidth, color);
 					if (snapshot.lockState == LockState::Locked)
 						list.Text({centerPixel.x - radius,
 									  std::max(0.0f, centerPixel.y - radius - fontSize - 4 * scale)},
-							"LOCK", fontSize, color);
+							"照準", fontSize, color);
 				}
 			} else if (selected) {
 				drawOffscreenIndicator(projected, color);
 			}
 		}
 		if (snapshot.selected == Engine::InvalidObjectId)
-			drawLabel(80, 80, "NO TARGET");
+			drawLabel(80, 80, "目標なし");
 		else if (!snapshot.aim)
-			drawLabel(80, 80, "OUT OF RANGE");
+			drawLabel(80, 80, "射程外");
 		if (snapshot.destroyedSeconds > 0)
-			drawLabel(800, 720, "DESTROYED");
+			drawLabel(800, 720, "撃墜");
 		else if (snapshot.hitSeconds > 0)
-			drawLabel(920, 640, "HIT");
+			drawLabel(920, 640, "命中");
 		if (snapshot.rocket.configured) {
 			for (size_t port = 0; port < 2; ++port) {
 				std::ostringstream text;
-				text << (snapshot.rocket.nextMuzzle == port ? "> " : "  ") << "RKT "
+				text << (snapshot.rocket.nextMuzzle == port ? "▶ " : "   ") << "ロケット "
 					 << (port == 0 ? "L1 " : "R1 ");
 				if (snapshot.rocket.cooldowns[port] <= 1e-6f)
-					text << "READY";
+					text << "使用可";
 				else
 					text << std::fixed << std::setprecision(1)
-						 << std::ceil(snapshot.rocket.cooldowns[port] * 10) / 10 << "s";
-				drawStatus(188 + float(port) * 48, text.str());
+						 << std::ceil(snapshot.rocket.cooldowns[port] * 10) / 10 << "秒";
+				drawStatus(210 + float(port) * 56, text.str(), m_settings.fontSize * 0.85f);
 			}
 		}
 		if (snapshot.allDownSeconds > 0)
-			drawLabel(760, 180, "ALL TARGETS DOWN");
+			drawLabel(760, 240, "全目標撃墜");
 		// ロック中の敵と飛来ミサイルは、同じ画面端配置を色で区別する。
 		for (const auto& position : snapshot.lockingEnemyPositions)
-			drawOffscreenIndicator(projector.Project(position), {1, 0.65f, 0.15f, 1});
+			drawOffscreenIndicator(projector.Project(position), HudStyle::Caution);
 		if (snapshot.threatWarning == ThreatWarning::Missile)
 			for (const auto& threat : snapshot.incomingMissiles) {
 				const auto projected = projector.Project(threat.position);
 				if (projected.visible)
 					list.Circle(
-						projected.pixel, std::max(10.0f, 22 * scale), 1, lineWidth * 2, {1, 0.15f, 0.12f, 1});
+						projected.pixel, std::max(10.0f, 22 * scale), 1, lineWidth * 2, HudStyle::Alert);
 				else
-					drawOffscreenIndicator(projected, {1, 0.15f, 0.12f, 1});
+					drawOffscreenIndicator(projected, HudStyle::Alert);
 			}
 	}
 } // namespace Game

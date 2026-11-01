@@ -1,4 +1,5 @@
 #include "HudDrawList.h"
+#include "HudFont.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -22,7 +23,7 @@ namespace Engine {
 			return;
 		const DirectX::XMFLOAT2 p[] = {position, {position.x + size.x, position.y},
 			{position.x + size.x, position.y + size.y}, {position.x, position.y + size.y}};
-		Quad(p, {511.5f / 512, 383.5f / 384}, {511.5f / 512, 383.5f / 384}, color);
+		Quad(p, HudFont::SolidUv, HudFont::SolidUv, color);
 	}
 	void HudDrawList::Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color) {
 		const float dx = b.x - a.x;
@@ -34,7 +35,7 @@ namespace Engine {
 		const float y = dx / length * width * 0.5f;
 		const DirectX::XMFLOAT2 p[] = {
 			{a.x + x, a.y + y}, {b.x + x, b.y + y}, {b.x - x, b.y - y}, {a.x - x, a.y - y}};
-		Quad(p, {511.5f / 512, 383.5f / 384}, {511.5f / 512, 383.5f / 384}, color);
+		Quad(p, HudFont::SolidUv, HudFont::SolidUv, color);
 	}
 	void HudDrawList::CloudPuff(
 		DirectX::XMFLOAT2 center, float radius, float rotation, unsigned seed, DirectX::XMFLOAT4 color) {
@@ -57,7 +58,7 @@ namespace Engine {
 		constexpr int segments = 24;
 		if (m_vertices.size() + segments * 3 > MaxVertices)
 			throw std::length_error("HUD vertex capacity exceeded");
-		const DirectX::XMFLOAT2 uv{511.5f / 512, 383.5f / 384};
+		const auto uv = HudFont::SolidUv;
 		const auto vertex = [&](DirectX::XMFLOAT2 point, float alpha) {
 			auto tint = color;
 			tint.w *= alpha;
@@ -82,15 +83,26 @@ namespace Engine {
 	}
 	void HudDrawList::Text(
 		DirectX::XMFLOAT2 position, std::string_view text, float height, DirectX::XMFLOAT4 color) {
-		for (const unsigned char character : text) {
-			const unsigned glyph = character >= 32 && character <= 126 ? character - 32 : '?' - 32;
-			const float x = float(glyph % 16) * 32;
-			const float y = float(glyph / 16) * 48;
-			const float width = height * 32 / 48;
+		while (!text.empty()) {
+			const unsigned glyph = HudFont::Glyph(HudFont::Next(text));
+			const float x = float(glyph % HudFont::Columns) * HudFont::Cell;
+			const float y = float(glyph / HudFont::Columns) * HudFont::Cell;
+			const float width = height * HudFont::GlyphWidth(glyph) / HudFont::Cell;
 			const DirectX::XMFLOAT2 p[] = {{position.x, position.y}, {position.x + width, position.y},
 				{position.x + width, position.y + height}, {position.x, position.y + height}};
-			Quad(p, {x / 512, y / 384}, {(x + 32) / 512, (y + 48) / 384}, color);
-			position.x += height * 24 / 48;
+			Quad(p, {x / HudFont::Width, y / HudFont::Height},
+				{(x + HudFont::GlyphWidth(glyph)) / HudFont::Width, (y + HudFont::Cell) / HudFont::Height},
+				color);
+			position.x += height * HudFont::Advance(glyph) / HudFont::Cell;
 		}
+	}
+	float HudDrawList::MeasureTextWidth(std::string_view text, float height) {
+		float advance = 0, width = 0;
+		while (!text.empty()) {
+			const unsigned glyph = HudFont::Glyph(HudFont::Next(text));
+			width = advance + height * HudFont::GlyphWidth(glyph) / HudFont::Cell;
+			advance += height * HudFont::Advance(glyph) / HudFont::Cell;
+		}
+		return width;
 	}
 } // namespace Engine
