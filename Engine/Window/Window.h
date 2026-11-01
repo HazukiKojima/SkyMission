@@ -34,7 +34,8 @@ namespace Engine {
 		void ProcessRawInput(HRAWINPUT handle);
 		void DeactivateInput();
 		void UnregisterRawInput();
-		void EndCameraDrag();
+		void BeginCameraLook();
+		void EndCameraLook();
 
 		RawInputState m_input;
 		HWND m_hwnd = nullptr;

@@ -413,6 +413,7 @@ namespace Game {
 		using namespace DirectX;
 		m_combat.threatWarning = ThreatWarning::None;
 		m_combat.lockingEnemyCount = 0;
+		m_combat.lockingEnemyPositions.clear();
 		m_combat.enemyLockProgress = 0;
 		m_combat.incomingMissiles.clear();
 		m_combat.threatDirection = {};
@@ -425,6 +426,7 @@ namespace Game {
 				++m_combat.lockingEnemyCount;
 				m_combat.enemyLockProgress = std::max(m_combat.enemyLockProgress, enemy.lockProgress);
 				const auto position = enemy.flightModel.GetPosition();
+				m_combat.lockingEnemyPositions.push_back(position);
 				const auto delta = XMLoadFloat3(&position) - XMLoadFloat3(&player);
 				const float distance = XMVectorGetX(XMVector3Length(delta));
 				if (distance < nearest) {

@@ -7,26 +7,35 @@ void TestRocketInputAndFlight() {
 	RawInputState raw;
 	raw.SetActive(true);
 	const auto device = reinterpret_cast<HANDLE>(std::uintptr_t(41));
-	const auto key = [&](USHORT flags) {
-		RAWKEYBOARD packet{};
-		packet.VKey = 'F';
-		packet.MakeCode = 0x21;
-		packet.Flags = flags;
-		raw.ProcessKeyboard(device, packet);
+	const auto click = [&](USHORT flags) {
+		RAWMOUSE packet{};
+		packet.usButtonFlags = flags;
+		raw.ProcessMouse(device, packet, 1920, 1080);
 	};
-	key(RI_KEY_MAKE);
-	key(RI_KEY_MAKE);
-	key(RI_KEY_BREAK);
-	key(RI_KEY_MAKE);
+	click(RI_MOUSE_RIGHT_BUTTON_DOWN);
+	click(RI_MOUSE_RIGHT_BUTTON_DOWN);
+	click(RI_MOUSE_RIGHT_BUTTON_UP);
+	click(RI_MOUSE_RIGHT_BUTTON_DOWN);
 	const auto input = CombatController{}.ReadInput(raw.ConsumeFrame());
-	Require(input.rocketPressCount == 2 && !input.weapon.fire, "F double press or repeat handling failed");
+	Require(input.rocketPressCount == 2 && !input.weapon.fire,
+		"Right double click or repeated down handling failed");
 	Require(CombatController{}.ReadInput(raw.ConsumeFrame()).rocketPressCount == 0,
-		"Held F repeated rocket fire");
-	key(RI_KEY_BREAK);
-	key(RI_KEY_MAKE);
+		"Held right mouse repeated rocket fire");
+	click(RI_MOUSE_RIGHT_BUTTON_UP);
+	click(RI_MOUSE_RIGHT_BUTTON_DOWN | RI_MOUSE_RIGHT_BUTTON_UP);
+	Require(
+		CombatController{}.ReadInput(raw.ConsumeFrame()).rocketPressCount == 1, "Short right click was lost");
+	RAWKEYBOARD key{};
+	key.VKey = 'F';
+	key.MakeCode = 0x21;
+	raw.ProcessKeyboard(device, key);
+	Require(CombatController{}.ReadInput(raw.ConsumeFrame()).rocketPressCount == 0,
+		"Old F binding still fired rocket");
+	click(RI_MOUSE_RIGHT_BUTTON_DOWN);
 	raw.SetActive(false);
 	raw.SetActive(true);
-	Require(raw.ConsumeFrame().GetKeyPressCount('F') == 0, "Focus loss retained rocket press");
+	Require(CombatController{}.ReadInput(raw.ConsumeFrame()).rocketPressCount == 0,
+		"Focus loss retained rocket click");
 	RocketSettings settings;
 	for (float invalid :
 		{0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()}) {
@@ -162,7 +171,8 @@ void TestRocketInputAndFlight() {
 	limited.Update(limitedScene, 0.25f);
 	Require(limited.GetCount() == 0 && limited.TakeHits().empty(),
 		"Rocket lifetime caused detonation or retained model");
-	std::cout << "PASS: rocket F edges, double tap, guidance, target loss, inherited speed, swept collision, "
+	std::cout << "PASS: rocket right-click edges, double click, guidance, target loss, inherited speed, "
+				 "swept collision, "
 				 "smoke cadence, lifetime, sea and cap\n";
 }
 

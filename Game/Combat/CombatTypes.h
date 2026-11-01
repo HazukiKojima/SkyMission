@@ -73,6 +73,7 @@ namespace Game {
 		unsigned enemyMissilesLaunched = 0;
 		ThreatWarning threatWarning = ThreatWarning::None;
 		unsigned lockingEnemyCount = 0;
+		std::vector<DirectX::XMFLOAT3> lockingEnemyPositions;
 		float enemyLockProgress = 0;
 		std::vector<MissileThreat> incomingMissiles;
 		DirectX::XMFLOAT3 threatDirection{};

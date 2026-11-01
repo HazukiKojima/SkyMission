@@ -42,7 +42,7 @@ namespace Game {
 
 	  private:
 		void UpdateView();
-		void UpdateFollow(float deltaSeconds);
+		void UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input);
 
 		DirectX::XMFLOAT3 m_position = {0.0f, 10.0f, -10.0f};
 		float m_yaw = 0.0f;			// ラジアン
@@ -59,6 +59,8 @@ namespace Game {
 		float m_followMaximumSpeed = 800.0f;
 		float m_followCameraYaw = 0.0f;
 		float m_followCameraPitch = 0.0f;
+		float m_lookYaw = 0, m_lookPitch = 0;
+		float m_lookReturnRate = 6.0f;
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
 		float m_followDistance = 250.0f;
 		float m_maxFollowDistance = 450.0f;

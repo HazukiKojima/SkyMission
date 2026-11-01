@@ -44,10 +44,18 @@ namespace Engine {
 
 	void Window::DeactivateInput() {
 		m_input.SetActive(false);
-		EndCameraDrag();
+		EndCameraLook();
 	}
 
-	void Window::EndCameraDrag() {
+	void Window::BeginCameraLook() {
+		// 標準のウィンドウ移動・サイズ変更が所有するキャプチャは奪わない。
+		if (m_cameraMouseCaptured || GetCapture() != nullptr)
+			return;
+		SetCapture(m_hwnd);
+		m_cameraMouseCaptured = GetCapture() == m_hwnd;
+	}
+
+	void Window::EndCameraLook() {
 		if (!m_cameraMouseCaptured)
 			return;
 		m_cameraMouseCaptured = false;
@@ -95,16 +103,16 @@ namespace Engine {
 		if (raw.header.dwType == RIM_TYPEKEYBOARD &&
 			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWKEYBOARD)) {
 			m_input.ProcessKeyboard(raw.header.hDevice, raw.data.keyboard);
+			if (m_input.IsKeyDown('Z'))
+				BeginCameraLook();
+			else
+				EndCameraLook();
 		} else if (raw.header.dwType == RIM_TYPEMOUSE &&
 			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWMOUSE)) {
 			const bool virtualDesktop = (raw.data.mouse.usFlags & MOUSE_VIRTUAL_DESKTOP) != 0;
 			m_input.ProcessMouse(raw.header.hDevice, raw.data.mouse,
 				GetSystemMetrics(virtualDesktop ? SM_CXVIRTUALSCREEN : SM_CXSCREEN),
 				GetSystemMetrics(virtualDesktop ? SM_CYVIRTUALSCREEN : SM_CYSCREEN));
-			// Raw Inputは非クライアント領域の操作中にも届く
-			// 標準の移動・リサイズ操作が所有するキャプチャには触らない
-			if (!m_input.IsRightMouseDown())
-				EndCameraDrag();
 		}
 	}
 
@@ -117,14 +125,23 @@ namespace Engine {
 		}
 		if (self) {
 			switch (message) {
+			case WM_KEYDOWN:
+				if (wParam == 'Z') {
+					self->BeginCameraLook();
+					return 0;
+				}
+				break;
+			case WM_KEYUP:
+				if (wParam == 'Z') {
+					if (!self->m_input.IsKeyDown('Z'))
+						self->EndCameraLook();
+					return 0;
+				}
+				break;
 			case WM_RBUTTONDOWN:
-				// 画面内で開始したカメラ操作だけ、画面外までドラッグを継続する
-				SetCapture(hwnd);
-				self->m_cameraMouseCaptured = GetCapture() == hwnd;
-				return 0;
 			case WM_RBUTTONUP:
-				if (!self->m_input.IsRightMouseDown())
-					self->EndCameraDrag();
+			case WM_CONTEXTMENU:
+				// 発射はRaw Inputの押下エッジで処理し、カメラのキャプチャには使わない。
 				return 0;
 			case WM_INPUT:
 				if (GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT)
@@ -144,19 +161,19 @@ namespace Engine {
 			case WM_INPUT_DEVICE_CHANGE:
 				if (wParam == GIDC_REMOVAL) {
 					self->m_input.ForgetDevice(reinterpret_cast<HANDLE>(lParam));
-					if (!self->m_input.IsRightMouseDown())
-						self->EndCameraDrag();
+					if (!self->m_input.IsKeyDown('Z'))
+						self->EndCameraLook();
 				}
 				return 0;
 			case WM_CAPTURECHANGED:
 				if (reinterpret_cast<HWND>(lParam) != hwnd && self->m_cameraMouseCaptured) {
 					self->m_cameraMouseCaptured = false;
-					self->m_input.ClearMouse();
+					self->m_input.Clear();
 				}
 				break;
 			case WM_CANCELMODE:
-				self->m_input.ClearMouse();
-				self->EndCameraDrag();
+				self->m_input.Clear();
+				self->EndCameraLook();
 				break;
 			case WM_SIZE:
 				self->m_width = LOWORD(lParam);

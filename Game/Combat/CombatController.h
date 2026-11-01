@@ -13,7 +13,7 @@ namespace Game {
 	  public:
 		CombatInput ReadInput(const Engine::InputSnapshot& input) const {
 			return {WeaponController{}.ReadInput(input), input.WasKeyPressed(VK_TAB),
-				input.GetKeyPressCount('F'), input.WasKeyPressed('R')};
+				input.active ? input.rightMousePressCount : 0u, input.WasKeyPressed('R')};
 		}
 	};
 } // namespace Game

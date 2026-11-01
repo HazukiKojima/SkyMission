@@ -52,6 +52,92 @@ void TestEnemyCombatAI() {
 	std::cout << "PASS: enemy pursuit, evasion, separation, recovery, grace and missile lock acquisition\n";
 }
 
+void TestMissileEdgeIndicators() {
+	using namespace DirectX;
+	for (const XMFLOAT2 size : {XMFLOAT2{800, 600}, XMFLOAT2{1920, 1080}})
+		for (float yaw : {0.0f, XM_PIDIV2}) {
+			Engine::RenderView view;
+			view.width = static_cast<unsigned>(size.x);
+			view.height = static_cast<unsigned>(size.y);
+			XMStoreFloat4x4(&view.view, XMMatrixRotationY(yaw));
+			XMStoreFloat4x4(&view.projection, XMMatrixPerspectiveFovLH(XM_PIDIV4, size.x / size.y, 1, 10000));
+			const auto cameraWorld = XMMatrixInverse(nullptr, XMLoadFloat4x4(&view.view));
+			const auto world = [&](XMFLOAT3 local) {
+				XMFLOAT3 result;
+				XMStoreFloat3(&result, XMVector3TransformCoord(XMLoadFloat3(&local), cameraWorld));
+				return result;
+			};
+			CombatSnapshot missile;
+			missile.threatWarning = ThreatWarning::Missile;
+			Engine::HudDrawList empty;
+			empty.Reset(view.width, view.height);
+			CombatHudPresenter{}.Build(missile, view, empty);
+			const size_t emptyCount = empty.GetVertices().size();
+			missile.incomingMissiles = {{77, world({0, 0, 100}), 100}};
+			Engine::HudDrawList list;
+			list.Reset(view.width, view.height);
+			CombatHudPresenter{}.Build(missile, view, list);
+			const size_t visibleCount = list.GetVertices().size();
+			Require(visibleCount > emptyCount + 12, "Visible missile was not circled");
+			for (const XMFLOAT3 local : {XMFLOAT3{5000, 0, 100}, XMFLOAT3{-5000, 0, 100},
+					 XMFLOAT3{0, 5000, 100}, XMFLOAT3{0, -5000, 100}, XMFLOAT3{0, 0, -100}}) {
+				const auto position = world(local);
+				missile.incomingMissiles.front().position = position;
+				list.Reset(view.width, view.height);
+				CombatHudPresenter{}.Build(missile, view, list);
+				Require(list.GetVertices().size() == emptyCount + 12,
+					"Offscreen missile did not add exactly one edge arrow");
+				const auto& vertices = list.GetVertices();
+				CombatSnapshot enemy;
+				enemy.selected = 1;
+				enemy.enemies = {{1, position, {}, "ENEMY", 100}};
+				Engine::HudDrawList enemyList;
+				enemyList.Reset(view.width, view.height);
+				CombatHudPresenter{}.Build(enemy, view, enemyList);
+				bool same = false;
+				for (size_t first = 0; first + 12 <= enemyList.GetVertices().size(); ++first) {
+					bool matches = true;
+					for (size_t n = 0; n < 12; ++n) {
+						const auto a = vertices[vertices.size() - 12 + n].position,
+								   b = enemyList.GetVertices()[first + n].position;
+						matches &= std::abs(a.x - b.x) < 0.01f && std::abs(a.y - b.y) < 0.01f;
+					}
+					same |= matches;
+				}
+				Require(same, "Enemy and missile edge indicators used different placement or shape");
+				CombatSnapshot lock;
+				lock.threatWarning = ThreatWarning::LockOn;
+				lock.lockingEnemyCount = 1;
+				lock.enemyLockProgress = 0.5f;
+				lock.lockingEnemyPositions = {world({0, 0, 100})};
+				Engine::HudDrawList yellow;
+				yellow.Reset(view.width, view.height);
+				CombatHudPresenter{}.Build(lock, view, yellow);
+				const auto yellowVisibleCount = yellow.GetVertices().size();
+				lock.lockingEnemyPositions = {position};
+				yellow.Reset(view.width, view.height);
+				CombatHudPresenter{}.Build(lock, view, yellow);
+				Require(yellow.GetVertices().size() == yellowVisibleCount + 12,
+					"Yellow lock arrow was not restricted to screen edges");
+				for (size_t n = 0; n < 12; ++n) {
+					const auto redVertex = vertices[vertices.size() - 12 + n];
+					const auto yellowVertex = yellow.GetVertices()[yellow.GetVertices().size() - 12 + n];
+					Require(std::abs(redVertex.position.x - yellowVertex.position.x) < 0.01f &&
+							std::abs(redVertex.position.y - yellowVertex.position.y) < 0.01f,
+						"Yellow/red warning arrows used different placement");
+				}
+			}
+			missile.incomingMissiles.front().position = world({0, 0, 100});
+			list.Reset(view.width, view.height);
+			CombatHudPresenter{}.Build(missile, view, list);
+			Require(list.GetVertices().size() == visibleCount,
+				"Visible missile did not switch from edge arrow to circle");
+		}
+	std::cout << "PASS: identical enemy/lock/missile edge arrows, front/rear/sides, camera rotation and "
+				 "visible circle "
+				 "suppression\n";
+}
+
 void TestCombatMath() {
 	using namespace DirectX;
 	RawInputState raw;
@@ -343,6 +429,8 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 					}
 					incoming |= state.threatWarning == ThreatWarning::Missile;
 					launches += state.enemyMissilesLaunched;
+					Require(state.lockingEnemyCount == state.lockingEnemyPositions.size(),
+						"Lock warning positions were stale or missing");
 					Require(state.lockingEnemyCount <= 2 && state.enemyMissilesLaunched <= 2,
 						"More than two enemy missile locks/launches");
 				}
@@ -550,7 +638,8 @@ void TestHudRendering(const fs::path& fixture) {
 			buildFrame();
 			Require(list.GetVertices().size() > withoutWarning, "Lock warning was invisible");
 			snapshot.threatWarning = ThreatWarning::Missile;
-			snapshot.incomingMissiles = {{88, {0, 0, 250}, 250}};
+			snapshot.incomingMissiles = {{88, {0, 0, 250}, 250}, {89, {5000, 0, 100}, 5001}};
+			snapshot.lockingEnemyPositions = {{-5000, 0, 100}};
 			buildFrame();
 			Require(list.GetVertices().size() > withoutWarning, "Incoming missile warning was invisible");
 			context.BeginFrame();
