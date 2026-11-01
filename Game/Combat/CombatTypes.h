@@ -28,6 +28,7 @@ namespace Game {
 		DirectX::XMFLOAT3 center{}, velocity{};
 		std::string name;
 		float health = 100;
+		DirectX::XMFLOAT3 heading{0, 0, -1};
 	};
 	enum class LockState { None, Selected, Acquiring, Locked };
 	struct AimSolution {
@@ -64,10 +65,13 @@ namespace Game {
 		float distance;
 	};
 	struct CombatSnapshot {
+		float playerSpeedMetersPerSecond = 0;
+		float playerAltitudeMeters = 0;
+		DirectX::XMFLOAT3 playerPosition{}, playerHeading{0, 0, -1};
 		float playerHealth = 100, playerMaxHealth = 100, playerHitSeconds = 0;
 		DirectX::XMFLOAT3 playerHitDirection{};
 		CombatResult result = CombatResult::Active;
-		static constexpr float gunSightDistance = 500.0f;
+		static constexpr float gunSightDistance = 1500.0f;
 		std::vector<CombatTarget> enemies;
 		unsigned firedVolleys = 0;
 		unsigned enemyMissilesLaunched = 0;

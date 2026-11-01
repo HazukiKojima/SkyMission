@@ -164,12 +164,16 @@ namespace Game {
 		void ValidateAIParameters(const AircraftAIParameters& parameters) {
 			for (const float value : {parameters.cruiseSpeed, parameters.attackSpeed, parameters.escapeSpeed,
 					 parameters.reengageDistance, parameters.attackRunSeconds,
-					 parameters.separationLookAheadSeconds})
+					 parameters.separationLookAheadSeconds, parameters.tailDistance, parameters.flankDistance,
+					 parameters.pursuitPredictionSeconds, parameters.maximumDisengageSeconds,
+					 parameters.repositionSeconds})
 				if (!std::isfinite(value) || value <= 0)
 					throw std::runtime_error("Invalid enemy attack-run parameter");
 			if (parameters.attackSpeed >= parameters.cruiseSpeed ||
 				parameters.cruiseSpeed >= parameters.escapeSpeed ||
-				parameters.reengageDistance <= parameters.attackDistance)
+				parameters.disengageDistance >= parameters.tailDistance ||
+				parameters.tailDistance >= parameters.reengageDistance ||
+				parameters.reengageDistance >= parameters.attackDistance)
 				throw std::runtime_error("Invalid enemy speed/distance ordering");
 			if (!std::isfinite(parameters.reactionSeconds) || parameters.reactionSeconds <= 0)
 				throw std::runtime_error("reactionSeconds must be positive and finite");

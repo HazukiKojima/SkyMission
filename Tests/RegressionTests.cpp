@@ -31,6 +31,8 @@ void Require(bool condition, const char* description) {
 
 #include "WeaponTests.h"
 #include "CombatTests.h"
+#include "RadarTests.h"
+#include "HudStyleTests.h"
 #include "CombatEffectTests.h"
 #include "RocketTests.h"
 #include "EnvironmentSettingsTests.h"
@@ -729,12 +731,15 @@ int wmain(int argc, wchar_t** argv) {
 		TestRawInput();
 		TestFollowCameraLook();
 		TestPathsAndJson(argv[1], fixture);
+		TestAIParameters(argv[1], fixture);
 		TestEnvironmentSettings(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
 		TestRocketLauncherAndAssets(argv[1], fixture);
 		TestCombatDamage(argv[1], fixture);
 		TestHudRendering(fixture);
+		TestHudTypography();
+		TestRadarMap();
 		TestRendererSmoke(argv[1], fixture);
 		CoUninitialize();
 		return 0;

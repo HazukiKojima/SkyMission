@@ -10,8 +10,8 @@ namespace Engine {
 		unsigned height = 0;
 	};
 	struct HudSettings {
-		DirectX::XMFLOAT4 color{0.15f, 1.0f, 0.35f, 0.8f};
-		float lineWidth = 2.5f;
+		DirectX::XMFLOAT4 color{230.0f / 255, 205.0f / 255, 164.0f / 255, 0.95f};
+		float lineWidth = 2.0f;
 		float fontSize = 40;
 	};
 	struct HudVertex {
@@ -31,12 +31,14 @@ namespace Engine {
 			m_height = height;
 		}
 		void Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color);
+		void FilledRect(DirectX::XMFLOAT2 position, DirectX::XMFLOAT2 size, DirectX::XMFLOAT4 color);
 		void CloudPuff(
 			DirectX::XMFLOAT2 center, float radius, float rotation, unsigned seed, DirectX::XMFLOAT4 color);
 		void SoftDisc(DirectX::XMFLOAT2 center, float radius, DirectX::XMFLOAT4 color);
 		void Circle(
 			DirectX::XMFLOAT2 center, float radius, float progress, float width, DirectX::XMFLOAT4 color);
 		void Text(DirectX::XMFLOAT2 position, std::string_view text, float height, DirectX::XMFLOAT4 color);
+		static float MeasureTextWidth(std::string_view text, float height);
 		const std::vector<HudVertex>& GetVertices() const {
 			return m_vertices;
 		}
