@@ -2,7 +2,7 @@ namespace REDoxWrapper.Generated;
 
 public sealed class GeneratedAircraftAIParameters
 {
-    public const int FieldCount = 25;
+    public const int FieldCount = 30;
     public static readonly string[] FieldNames =
     {
         "directionChangeSeconds",
@@ -30,9 +30,19 @@ public sealed class GeneratedAircraftAIParameters
         "reengageDistance",
         "attackRunSeconds",
         "separationLookAheadSeconds",
+        "tailDistance",
+        "flankDistance",
+        "pursuitPredictionSeconds",
+        "maximumDisengageSeconds",
+        "repositionSeconds",
     };
     public static readonly int[] FieldLengths =
     {
+        1,
+        1,
+        1,
+        1,
+        1,
         1,
         1,
         1,
@@ -85,6 +95,11 @@ public sealed class GeneratedAircraftAIParameters
     public float reengageDistance { get; set; }
     public float attackRunSeconds { get; set; }
     public float separationLookAheadSeconds { get; set; }
+    public float tailDistance { get; set; }
+    public float flankDistance { get; set; }
+    public float pursuitPredictionSeconds { get; set; }
+    public float maximumDisengageSeconds { get; set; }
+    public float repositionSeconds { get; set; }
 
     public float[] ToFloatArray() => new float[]
     {
@@ -113,5 +128,10 @@ public sealed class GeneratedAircraftAIParameters
         reengageDistance,
         attackRunSeconds,
         separationLookAheadSeconds,
+        tailDistance,
+        flankDistance,
+        pursuitPredictionSeconds,
+        maximumDisengageSeconds,
+        repositionSeconds,
     };
 }

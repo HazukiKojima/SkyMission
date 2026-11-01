@@ -398,6 +398,7 @@ namespace Game {
 			if (m_enemyMissiles.Fire(m_scene, {0, -5, -15}, pose, enemy.flightModel.GetForward(),
 					enemy.flightModel.GetVelocity(), m_playerId)) {
 				++m_combat.enemyMissilesLaunched;
+				enemy.controller.NotifyWeaponFired();
 				enemy.missileCooldown = m_enemyMissileSettings.cooldownSeconds;
 				enemy.locking = false;
 				enemy.lockProgress = 0;

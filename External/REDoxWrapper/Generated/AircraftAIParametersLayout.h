@@ -29,4 +29,9 @@ static_assert(offsetof(Game::AircraftAIParameters, escapeSpeed) == 21 * sizeof(f
 static_assert(offsetof(Game::AircraftAIParameters, reengageDistance) == 22 * sizeof(float));
 static_assert(offsetof(Game::AircraftAIParameters, attackRunSeconds) == 23 * sizeof(float));
 static_assert(offsetof(Game::AircraftAIParameters, separationLookAheadSeconds) == 24 * sizeof(float));
-static_assert(sizeof(Game::AircraftAIParameters) == 25 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, tailDistance) == 25 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, flankDistance) == 26 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, pursuitPredictionSeconds) == 27 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, maximumDisengageSeconds) == 28 * sizeof(float));
+static_assert(offsetof(Game::AircraftAIParameters, repositionSeconds) == 29 * sizeof(float));
+static_assert(sizeof(Game::AircraftAIParameters) == 30 * sizeof(float));

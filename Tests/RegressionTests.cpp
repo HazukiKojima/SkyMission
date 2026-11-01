@@ -729,6 +729,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestRawInput();
 		TestFollowCameraLook();
 		TestPathsAndJson(argv[1], fixture);
+		TestAIParameters(argv[1], fixture);
 		TestEnvironmentSettings(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);

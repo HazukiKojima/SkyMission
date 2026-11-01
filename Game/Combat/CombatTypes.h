@@ -69,7 +69,7 @@ namespace Game {
 		float playerHealth = 100, playerMaxHealth = 100, playerHitSeconds = 0;
 		DirectX::XMFLOAT3 playerHitDirection{};
 		CombatResult result = CombatResult::Active;
-		static constexpr float gunSightDistance = 500.0f;
+		static constexpr float gunSightDistance = 1500.0f;
 		std::vector<CombatTarget> enemies;
 		unsigned firedVolleys = 0;
 		unsigned enemyMissilesLaunched = 0;

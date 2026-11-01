@@ -2,7 +2,7 @@
   "muzzleL1": "GunMuzzle_L1",
   "muzzleR1": "GunMuzzle_R1",
   "cooldownSeconds": 3,
-  "speed": 2400,
+  "speed": 3600.0,
   "turnDegreesPerSecond": 40,
   "lifetimeSeconds": 14,
   "damage": 100,
