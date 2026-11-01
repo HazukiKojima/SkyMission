@@ -217,8 +217,8 @@ void TestMissileEdgeIndicators() {
 				missile.incomingMissiles.front().position = position;
 				list.Reset(view.width, view.height);
 				CombatHudPresenter{}.Build(missile, view, list);
-				Require(list.GetVertices().size() == emptyCount + 12,
-					"Offscreen missile did not add exactly one edge arrow");
+				Require(list.GetVertices().size() == emptyCount + 12 + 24,
+					"Offscreen missile did not add one edge arrow and one radar marker");
 				const auto& vertices = list.GetVertices();
 				CombatSnapshot enemy;
 				enemy.selected = 1;
@@ -556,6 +556,13 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				definition.enemyAIParameters, 100, "ENEMY 01");
 			scene.Update({}, 0.25f, {}, {{true}});
 			const auto& state = scene.GetCombatSnapshot();
+			const auto& playerWorld = scene.GetObjects().front().worldTransform;
+			Require(std::abs(state.playerPosition.x - playerWorld._41) < 0.001f &&
+					std::abs(state.playerPosition.y - playerWorld._42) < 0.001f &&
+					std::abs(state.playerPosition.z - playerWorld._43) < 0.001f &&
+					std::abs(state.playerHeading.y) < 0.001f &&
+					std::abs(std::hypot(state.playerHeading.x, state.playerHeading.z) - 1) < 0.001f,
+				"Radar player snapshot does not match the aircraft position and horizontal heading");
 			const auto& effectState = scene.GetEffectSnapshot();
 			Require(state.enemies.empty() && state.destroyedSeconds > 0 && state.allDownSeconds > 0,
 				"Projectile damage did not destroy enemy and notify all-down");
@@ -588,6 +595,9 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 							definition.playerAircraft.flightParameters.initialSpeed) < 0.001f &&
 						std::abs(state.playerAltitudeMeters) < 0.001f,
 					"Retry did not restore flight HUD values");
+				Require(std::hypot(state.playerPosition.x, state.playerPosition.z) < 0.001f &&
+						std::abs(state.playerHeading.x) < 0.001f && state.playerHeading.z < -0.99f,
+					"Retry did not restore the radar player position and heading");
 				Require(state.result == CombatResult::Active && state.enemies.size() == 1 &&
 						scene.GetProjectileCount() == 0 && scene.GetRocketCount() == 0 &&
 						state.lockState == LockState::None,
@@ -729,7 +739,7 @@ void TestHudRendering(const fs::path& fixture) {
 		context.EndFrame();
 		context.WaitForGpu();
 		renderer.ReleaseUploadResources();
-		for (const auto size : {XMFLOAT2{800, 600}, XMFLOAT2{1920, 1080}}) {
+		for (const auto size : {XMFLOAT2{800, 600}, XMFLOAT2{1920, 1080}, XMFLOAT2{2560, 1080}}) {
 			const UINT width = UINT(size.x);
 			const UINT height = UINT(size.y);
 			context.WaitForGpu();
@@ -744,11 +754,14 @@ void TestHudRendering(const fs::path& fixture) {
 			CombatSnapshot snapshot;
 			snapshot.playerSpeedMetersPerSecond = 100;
 			snapshot.playerAltitudeMeters = 1542.6f;
-			snapshot.enemies = {{1, {0, 30, 1000}, {}, "ENEMY 01", 100},
-				{2, {-200, 50, 1500}, {}, "ENEMY 02", 100}, {3, {5000, 0, 1000}, {}, "ENEMY 03", 100}};
+			snapshot.enemies = {{1, {0, 30, 1000}, {}, "ENEMY 01", 100, {0, 0, 1}},
+				{2, {-2500, 50, 4000}, {}, "ENEMY 02", 100, {0.7f, 0, -0.7f}},
+				{3, {15000, 0, 1000}, {}, "ENEMY 03", 100, {-1, 0, 0}},
+				{4, {4500, 400, -3000}, {}, "ENEMY 04", 100, {-0.7f, 0, 0.7f}}};
 			snapshot.selected = 1;
 			snapshot.lockState = LockState::Locked;
 			snapshot.forward = {0, 0, 1};
+			snapshot.playerHeading = {0, 0, 1};
 			snapshot.gunImpactPoint = XMFLOAT3{20, 10, 1000};
 			snapshot.rocket = {true, {0, 2.4f}, 0};
 			snapshot.aim = AimSolution{{0.05f, 0, 1}, {60, 50, 1100}, 1};
@@ -928,5 +941,5 @@ void TestHudRendering(const fs::path& fixture) {
 		}
 	}
 	DestroyWindow(window);
-	std::cout << "PASS: native HUD atlas, projection, GPU readback, 800x600/1920x1080 and resize\n";
+	std::cout << "PASS: native HUD/radar, projection, GPU readback, 800x600/1920x1080/2560x1080 and resize\n";
 }

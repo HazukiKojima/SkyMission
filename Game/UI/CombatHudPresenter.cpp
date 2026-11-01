@@ -1,4 +1,5 @@
 #include "CombatHudPresenter.h"
+#include "RadarMapPresenter.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -14,6 +15,11 @@ namespace Game {
 		const float lineWidth = std::max(1.0f, m_settings.lineWidth * scale);
 		const float fontSize = m_settings.fontSize * scale;
 		const auto color = m_settings.color;
+		RadarMapPresenter{}.Build(snapshot, view, list);
+		const auto radar = RadarMapPresenter::Layout(view);
+		const auto drawStatus = [&](float y, std::string_view text) {
+			list.Text({radar.statusOrigin.x, radar.statusOrigin.y + y * scale}, text, fontSize, color);
+		};
 		const HudProjector projector(view);
 		const float offsetX = (view.width - 1920 * scale) * 0.5f;
 		const float offsetY = (view.height - 1080 * scale) * 0.5f;
@@ -55,8 +61,8 @@ namespace Game {
 			const float left = pointsRight ? 0.0f : tipWidth;
 			const float right = pointsRight ? width - tipWidth : width;
 			const XMFLOAT2 outline[] = {point(left, 0), point(right, 0),
-				point(width, pointsRight ? height * 0.5f : 0), point(right, height),
-				point(left, height), point(0, pointsRight ? height : height * 0.5f)};
+				point(width, pointsRight ? height * 0.5f : 0), point(right, height), point(left, height),
+				point(0, pointsRight ? height : height * 0.5f)};
 			for (size_t i = 0; i < std::size(outline); ++i)
 				list.Line(outline[i], outline[(i + 1) % std::size(outline)], lineWidth, color);
 			drawLabel(x + left, top - m_settings.fontSize - 8, label);
@@ -67,7 +73,7 @@ namespace Game {
 		};
 		drawFlightValue(100, true, "SPEED", snapshot.playerSpeedMetersPerSecond * 3.6f);
 		drawFlightValue(1580, false, "ALT", snapshot.playerAltitudeMeters);
-		drawLabel(80, 820,
+		drawStatus(108,
 			"HULL " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
 				std::to_string(static_cast<int>(snapshot.playerMaxHealth)));
 		if (snapshot.result != CombatResult::Active) {
@@ -192,7 +198,7 @@ namespace Game {
 				else
 					text << std::fixed << std::setprecision(1)
 						 << std::ceil(snapshot.rocket.cooldowns[port] * 10) / 10 << "s";
-				drawLabel(80, 900 + float(port) * 48, text.str());
+				drawStatus(188 + float(port) * 48, text.str());
 			}
 		}
 		if (snapshot.allDownSeconds > 0)

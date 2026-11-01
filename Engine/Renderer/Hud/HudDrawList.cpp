@@ -16,6 +16,14 @@ namespace Engine {
 				{{positions[index].x * 2 / m_width - 1, 1 - positions[index].y * 2 / m_height}, uv[index],
 					color});
 	}
+	void HudDrawList::FilledRect(
+		DirectX::XMFLOAT2 position, DirectX::XMFLOAT2 size, DirectX::XMFLOAT4 color) {
+		if (size.x <= 0 || size.y <= 0 || color.w <= 0)
+			return;
+		const DirectX::XMFLOAT2 p[] = {position, {position.x + size.x, position.y},
+			{position.x + size.x, position.y + size.y}, {position.x, position.y + size.y}};
+		Quad(p, {511.5f / 512, 383.5f / 384}, {511.5f / 512, 383.5f / 384}, color);
+	}
 	void HudDrawList::Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color) {
 		const float dx = b.x - a.x;
 		const float dy = b.y - a.y;

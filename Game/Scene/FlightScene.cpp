@@ -312,6 +312,8 @@ namespace Game {
 	void FlightScene::RefreshCombatSnapshot() {
 		m_combat.playerSpeedMetersPerSecond = m_player.GetSpeed();
 		m_combat.playerAltitudeMeters = m_player.GetPosition().y;
+		m_combat.playerPosition = m_player.GetPosition();
+		m_combat.playerHeading = m_player.GetHeading();
 		RefreshThreatWarning();
 		using namespace DirectX;
 		m_combat.enemies.clear();
@@ -324,8 +326,8 @@ namespace Game {
 			XMFLOAT3 worldCenter;
 			XMStoreFloat3(&worldCenter,
 				XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&object->worldTransform)));
-			m_combat.enemies.push_back(
-				{enemy.objectId, worldCenter, enemy.flightModel.GetVelocity(), enemy.name, enemy.health});
+			m_combat.enemies.push_back({enemy.objectId, worldCenter, enemy.flightModel.GetVelocity(),
+				enemy.name, enemy.health, enemy.flightModel.GetHeading()});
 		}
 		m_combat.forward = m_player.GetForward();
 		m_combat.muzzle = m_player.GetPosition();
