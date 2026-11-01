@@ -310,6 +310,8 @@ namespace Game {
 	}
 
 	void FlightScene::RefreshCombatSnapshot() {
+		m_combat.playerSpeedMetersPerSecond = m_player.GetSpeed();
+		m_combat.playerAltitudeMeters = m_player.GetPosition().y;
 		RefreshThreatWarning();
 		using namespace DirectX;
 		m_combat.enemies.clear();

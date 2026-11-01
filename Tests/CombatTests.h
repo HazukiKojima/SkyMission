@@ -384,6 +384,10 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				CombatInput input;
 				input.retry = true;
 				scene.Update({}, 0.01f, {}, input);
+				Require(std::abs(state.playerSpeedMetersPerSecond -
+						definition.playerAircraft.flightParameters.initialSpeed) < 0.001f &&
+						std::abs(state.playerAltitudeMeters) < 0.001f,
+					"Retry did not restore flight HUD values");
 				Require(state.result == CombatResult::Active && state.enemies.size() == 1 &&
 						scene.GetProjectileCount() == 0 && scene.GetRocketCount() == 0 &&
 						state.lockState == LockState::None,
@@ -538,6 +542,8 @@ void TestHudRendering(const fs::path& fixture) {
 			XMStoreFloat4x4(
 				&view.projection, XMMatrixPerspectiveFovLH(XM_PIDIV4, float(width) / height, 1, 10000));
 			CombatSnapshot snapshot;
+			snapshot.playerSpeedMetersPerSecond = 100;
+			snapshot.playerAltitudeMeters = 1542.6f;
 			snapshot.enemies = {{1, {0, 30, 1000}, {}, "ENEMY 01", 100},
 				{2, {-200, 50, 1500}, {}, "ENEMY 02", 100}, {3, {5000, 0, 1000}, {}, "ENEMY 03", 100}};
 			snapshot.selected = 1;
@@ -555,6 +561,32 @@ void TestHudRendering(const fs::path& fixture) {
 				CombatEffectPresenter{}.Build(effects, view, list);
 				CombatHudPresenter{}.Build(snapshot, view, list);
 			};
+			buildFrame();
+			const auto requireFlightText = [&](float right, std::string_view text) {
+				const float scale = std::min(float(width) / 1920, float(height) / 1080);
+				const float offsetX = (width - 1920 * scale) * 0.5f;
+				const float offsetY = (height - 1080 * scale) * 0.5f;
+				const float textWidth = 40 * (float(text.size() - 1) * 0.5f + 2.0f / 3.0f);
+				Engine::HudDrawList expected;
+				expected.Reset(width, height);
+				expected.Text({offsetX + (right - 12 - textWidth) * scale, offsetY + 432 * scale},
+					text, 40 * scale, Engine::HudSettings{}.color);
+				const auto sameVertex = [](const Engine::HudVertex& a, const Engine::HudVertex& b) {
+					return std::abs(a.position.x - b.position.x) < 0.00001f &&
+						std::abs(a.position.y - b.position.y) < 0.00001f &&
+						a.uv.x == b.uv.x && a.uv.y == b.uv.y;
+				};
+				const auto& vertices = list.GetVertices();
+				Require(std::search(vertices.begin(), vertices.end(), expected.GetVertices().begin(),
+							expected.GetVertices().end(), sameVertex) != vertices.end(),
+					"Flight HUD conversion, rounding or right alignment failed");
+			};
+			requireFlightText(324, "360");
+			requireFlightText(1820, "1543");
+			snapshot.playerSpeedMetersPerSecond = 0;
+			buildFrame();
+			requireFlightText(324, "0");
+			snapshot.playerSpeedMetersPerSecond = 100;
 			buildFrame();
 			Require(
 				!list.GetVertices().empty() && list.GetVertices().size() < Engine::HudDrawList::MaxVertices,

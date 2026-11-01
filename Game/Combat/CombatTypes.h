@@ -64,6 +64,8 @@ namespace Game {
 		float distance;
 	};
 	struct CombatSnapshot {
+		float playerSpeedMetersPerSecond = 0;
+		float playerAltitudeMeters = 0;
 		float playerHealth = 100, playerMaxHealth = 100, playerHitSeconds = 0;
 		DirectX::XMFLOAT3 playerHitDirection{};
 		CombatResult result = CombatResult::Active;

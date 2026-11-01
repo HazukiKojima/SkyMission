@@ -47,6 +47,26 @@ namespace Game {
 					tip.y - unitY * 20 * scale - unitX * 9 * scale},
 				lineWidth, tint);
 		};
+		const auto drawFlightValue = [&](float x, bool pointsRight, std::string_view label, float value) {
+			constexpr float top = 420, width = 240, height = 64, tipWidth = 16;
+			const auto point = [&](float dx, float dy) {
+				return XMFLOAT2{offsetX + (x + dx) * scale, offsetY + (top + dy) * scale};
+			};
+			const float left = pointsRight ? 0.0f : tipWidth;
+			const float right = pointsRight ? width - tipWidth : width;
+			const XMFLOAT2 outline[] = {point(left, 0), point(right, 0),
+				point(width, pointsRight ? height * 0.5f : 0), point(right, height),
+				point(left, height), point(0, pointsRight ? height : height * 0.5f)};
+			for (size_t i = 0; i < std::size(outline); ++i)
+				list.Line(outline[i], outline[(i + 1) % std::size(outline)], lineWidth, color);
+			drawLabel(x + left, top - m_settings.fontSize - 8, label);
+			const auto text = std::to_string(std::lround(value));
+			// Text uses a half-height advance and a two-thirds-height glyph quad.
+			const float textWidth = m_settings.fontSize * (float(text.size() - 1) * 0.5f + 2.0f / 3.0f);
+			drawLabel(x + right - 12 - textWidth, top + (height - m_settings.fontSize) * 0.5f, text);
+		};
+		drawFlightValue(100, true, "SPEED", snapshot.playerSpeedMetersPerSecond * 3.6f);
+		drawFlightValue(1580, false, "ALT", snapshot.playerAltitudeMeters);
 		drawLabel(80, 820,
 			"HULL " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
 				std::to_string(static_cast<int>(snapshot.playerMaxHealth)));
