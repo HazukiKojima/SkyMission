@@ -5,6 +5,9 @@
 #include "Game/Weapons/RocketDefinition.h"
 #include "Game/Combat/CombatTypes.h"
 #include "Engine/Renderer/Hud/HudDrawList.h"
+namespace Engine {
+	class JsonAssetReader;
+}
 namespace Game {
 	inline constexpr const char* PlayerModelId = "player";
 	inline constexpr const char* EnemyModelId = "enemy";
@@ -13,6 +16,7 @@ namespace Game {
 	inline constexpr const char* EnemyMissileModelId = "enemyMissile";
 	struct SceneSourcePaths {
 		std::filesystem::path environment, playerAircraft, enemyAircraft, retroFilm;
+		std::filesystem::path ships;
 	};
 	struct AircraftDefinition {
 		std::filesystem::path model;
@@ -20,6 +24,15 @@ namespace Game {
 		AircraftFlightParameters flightParameters;
 		Engine::ModelLoadOptions modelImport;
 	};
+	struct ShipDefinition {
+		Engine::ModelAssetDefinition asset;
+		DirectX::XMFLOAT3 position{}, rotationDegrees{};
+		float size = 1;
+		float waterlineOffset = 0;
+		DirectX::XMFLOAT4X4 BuildTransform() const;
+	};
+	std::vector<ShipDefinition> LoadShipDefinitions(
+		const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	struct FlightSceneDefinition {
 		Engine::RenderEnvironmentDefinition environment;
 		AircraftDefinition playerAircraft, enemyAircraft;
@@ -29,11 +42,15 @@ namespace Game {
 		RocketDefinition playerRocket;
 		CombatSettings combat;
 		Engine::HudSettings hud;
+		std::vector<ShipDefinition> ships;
 		Engine::RendererDefinition BuildRendererDefinition() const {
-			return {environment,
+			Engine::RendererDefinition result{environment,
 				{{PlayerModelId, playerAircraft.model, playerAircraft.modelImport},
 					{EnemyModelId, enemyAircraft.model, enemyAircraft.modelImport}, playerWeapon.ammunition,
 					playerRocket.ammunition, enemyMissile.ammunition}};
+			for (const auto& ship : ships)
+				result.models.push_back(ship.asset);
+			return result;
 		}
 	};
 	class FlightSceneLoader {

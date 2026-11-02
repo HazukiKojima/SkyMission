@@ -27,7 +27,8 @@ namespace Game {
 		const SceneSourcePaths scenePaths = {.environment = assetsDir / L"Environment/environment.json",
 			.playerAircraft = assetsDir / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 			.enemyAircraft = assetsDir / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-			.retroFilm = assetsDir / L"Environment/retroFilm.json"};
+			.retroFilm = assetsDir / L"Environment/retroFilm.json",
+			.ships = assetsDir / L"Ships/ships.json"};
 		const FlightSceneDefinition assets = sceneLoader.Load(scenePaths);
 
 		m_renderer = std::make_unique<Renderer>();
@@ -69,6 +70,8 @@ namespace Game {
 		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
 		m_scene->ConfigurePlayerRocket(assets.playerRocket, m_renderer->GetModel(RocketModelId));
 		m_scene->ConfigureEnemyMissile(assets.enemyMissile, m_renderer->GetModel(EnemyMissileModelId));
+		for (const auto& ship : assets.ships)
+			m_scene->AddObject(m_renderer->GetModel(ship.asset.id), ship.BuildTransform());
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.enemyMissile.settings.maxRockets +

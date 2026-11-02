@@ -63,6 +63,10 @@ namespace Game {
 		Engine::ObjectId AddObject(std::shared_ptr<Engine::Model> model) {
 			return m_scene.AddObject(std::move(model));
 		}
+		Engine::ObjectId AddObject(
+			std::shared_ptr<Engine::Model> model, const DirectX::XMFLOAT4X4& transform) {
+			return m_scene.AddObject(std::move(model), transform);
+		}
 		void RemoveObject(Engine::ObjectId id);
 
 	  private:

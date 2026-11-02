@@ -554,6 +554,12 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			scene.ConfigurePlayerWeapon(definition.playerWeapon, player);
 			scene.AddEnemyAircraft(enemy, {0, 15, -160}, 5, definition.enemyAircraft.flightParameters,
 				definition.enemyAIParameters, 100, "ENEMY 01");
+			ShipDefinition staticShip;
+			staticShip.position = {2200, 0, -9000};
+			staticShip.size = 5400;
+			staticShip.waterlineOffset = -195;
+			const auto shipTransform = staticShip.BuildTransform();
+			const auto shipId = scene.AddObject(enemy, shipTransform);
 			scene.Update({}, 0.25f, {}, {{true}});
 			const auto& state = scene.GetCombatSnapshot();
 			const auto& playerWorld = scene.GetObjects().front().worldTransform;
@@ -591,6 +597,13 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				CombatInput input;
 				input.retry = true;
 				scene.Update({}, 0.01f, {}, input);
+				const auto shipObject = std::find_if(
+					scene.GetObjects().begin(), scene.GetObjects().end(), [&](const auto& object) {
+						return object.id == shipId;
+					});
+				Require(shipObject != scene.GetObjects().end() &&
+						std::memcmp(&shipObject->worldTransform, &shipTransform, sizeof(shipTransform)) == 0,
+					"Retry did not preserve static ship transform");
 				Require(std::abs(state.playerSpeedMetersPerSecond -
 							definition.playerAircraft.flightParameters.initialSpeed) < 0.001f &&
 						std::abs(state.playerAltitudeMeters) < 0.001f,

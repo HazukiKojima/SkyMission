@@ -121,6 +121,13 @@ L1 / R1には独立した3秒のクールタイムがあり、HUD左下で次の
 | 敵配置・耐久値・ロック条件 | `Assets/Combat/targeting.json` |
 | HUD | `Assets/UI/combatHud.json` |
 | 海・空・フィルム効果 | `Assets/Environment/` |
+| 海上の艦船配置 | `Assets/Ships/ships.json` |
+
+艦船は開始地点の前方に各1隻を静止配置します。`ships.json` の `shipCount` と
+`ship1` ～ `shipN` の各項目で変更できます。`Model` はこのJSONからの相対パス、
+`Position` はワールド座標、`RotationDegrees` はX・Y・Z軸の回転角（度）です。
+`Size` はモデルの最長辺を正規化した後のワールドサイズ、`WaterlineOffset` は配置Yへの加算値です。
+船底を海面下へ沈める場合は `WaterlineOffset` を負にします。変更は次回起動時に反映されます。
 
 モデルの表示サイズは各 `modelImport.json` の `normalizedExtent` で指定します。変更後はアプリを再起動してください。
 演出の寿命・本数・描画上限は `Game/Effects/CombatEffectSettings.h` にまとめています。

@@ -166,7 +166,12 @@ namespace Engine {
 
 			const char8_t* pathUtf8 = reinterpret_cast<const char8_t*>(texturePath.C_Str());
 			const std::filesystem::path relativePath(std::u8string(pathUtf8, pathUtf8 + texturePath.length));
-			return MaterialTexturePaths::FindTexturePath(modelDirectory, relativePath, options);
+			const auto resolved =
+				MaterialTexturePaths::FindTexturePath(modelDirectory, relativePath, options);
+			if (resolved.empty())
+				Log(L"Model::Load - missing texture '{}' in '{}'\n", relativePath.wstring(),
+					modelDirectory.wstring());
+			return resolved;
 		}
 
 		const aiScene* ImportScene(Assimp::Importer& importer, const std::string& importerPath) {
