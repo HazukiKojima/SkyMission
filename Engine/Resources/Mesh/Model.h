@@ -11,6 +11,8 @@ struct aiMaterial;
 #include <optional>
 #include <string_view>
 #include <unordered_map>
+#include <array>
+#include <algorithm>
 #include "Engine/Scene/Bounds3.h"
 
 namespace Engine {
@@ -21,7 +23,25 @@ namespace Engine {
 		bool Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 			const std::wstring& filePath, const ModelLoadOptions& options = {});
 		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
-			float nodeRotationAngle = 0.0f) const;
+			float nodeRotationAngle = 0.0f, unsigned lod = 0) const;
+		unsigned GetLodCount() const {
+			return m_lodCount;
+		}
+		size_t GetMeshCount(unsigned lod = 0) const {
+			return m_lodMeshes[std::min(lod, m_lodCount - 1)].size();
+		}
+		size_t GetTriangleCount(unsigned lod = 0) const {
+			size_t count = 0;
+			for (const auto& mesh : m_lodMeshes[std::min(lod, m_lodCount - 1)])
+				count += mesh.indexCount / 3;
+			return count;
+		}
+		float GetCullingRadius() const {
+			return m_cullingRadius;
+		}
+		size_t GetSourceMeshCount() const {
+			return m_sourceMeshCount;
+		}
 		void ReleaseUploadResources();
 		// 同名ノードが複数ある場合も曖昧な位置を返さない
 		std::optional<DirectX::XMFLOAT3> FindNodePosition(std::string_view name) const;
@@ -30,7 +50,7 @@ namespace Engine {
 			return m_localBounds;
 		}
 		bool IsLoaded() const {
-			return !m_meshes.empty();
+			return !m_lodMeshes[0].empty();
 		}
 
 	  private:
@@ -70,7 +90,10 @@ namespace Engine {
 		std::unique_ptr<Texture> m_fallbackMetallicTexture;
 		std::unique_ptr<Texture> m_fallbackRoughnessTexture;
 		std::unique_ptr<Texture> m_fallbackNormalTexture;
-		std::vector<Mesh> m_meshes;
+		std::array<std::vector<Mesh>, 3> m_lodMeshes;
+		unsigned m_lodCount = 1;
+		float m_cullingRadius = 0;
+		size_t m_sourceMeshCount = 0;
 		std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>> m_nodePositions;
 		std::optional<Bounds3> m_localBounds;
 	};

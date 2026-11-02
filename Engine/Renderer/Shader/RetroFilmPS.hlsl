@@ -18,8 +18,8 @@ cbuffer RetroFilmConstants : register(b0)
     float4 overlayColor;
 };
 
-Texture2D gSceneColor : register(t0);
-SamplerState gSampler : register(s0);
+#define FOG_CONSTANT_REGISTER b1
+#include "OceanFog.hlsli"
 
 struct PS_INPUT
 {
@@ -129,7 +129,9 @@ float4 PS(PS_INPUT input) : SV_TARGET
         cos(time * verticalJitterFrequency) * verticalJitterAmount);
 
     float2 uv = saturate(input.texcoord + jitter);
-    float3 color = gSceneColor.SampleLevel(gSampler, uv, 0).rgb;
+    uint sceneWidth, sceneHeight;
+    gSceneColor.GetDimensions(sceneWidth, sceneHeight);
+    float3 color = ApplyOceanFog(uv, 1.0f / max((float)sceneHeight, 1.0f)).rgb;
 
     // 昭和の映画をイメージした色調補正
     float luminance =

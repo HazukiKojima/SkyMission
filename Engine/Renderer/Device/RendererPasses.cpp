@@ -67,7 +67,8 @@ namespace Engine {
 		commandList->DrawIndexedInstanced(geometry.GetIndexCount(), 1, 0, 0, 0);
 	}
 
-	void ModelRenderPass::Record(const FrameContext& frame, const Scene& scene) const {
+	void ModelRenderPass::Record(const FrameContext& frame, const Scene& scene,
+		std::span<const ModelDrawDecision> decisions, RenderStatistics& statistics) const {
 		auto* commandList = frame.commandList;
 		auto* device = frame.device;
 		auto& pipelines = frame.pipelines;
@@ -81,32 +82,24 @@ namespace Engine {
 			commandList->SetDescriptorHeaps(_countof(modelHeaps), modelHeaps);
 			for (size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex) {
 				const SceneObject& object = objects[objectIndex];
+				const auto decision = decisions[objectIndex];
+				if (!decision.visible) {
+					++statistics.culledObjects;
+					continue;
+				}
 				if (!object.model || !object.model->IsLoaded()) {
 					continue;
 				}
 
 				commandList->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
 					constantBuffers.GetModelResource(frameIndex, objectIndex)->GetGPUVirtualAddress());
-				object.model->Draw(commandList, device, object.nodeRotationRadians);
+				++statistics.visibleObjects;
+				++statistics.lodObjects[decision.lod];
+				statistics.modelDrawCalls += object.model->GetMeshCount(decision.lod);
+				statistics.modelTriangles += object.model->GetTriangleCount(decision.lod);
+				object.model->Draw(commandList, device, object.nodeRotationRadians, decision.lod);
 			}
 		}
-	}
-
-	void OceanFogRenderPass::Record(const FrameContext& frame) const {
-		auto* commandList = frame.commandList;
-		auto* device = frame.device;
-		auto& pipelines = frame.pipelines;
-		auto& constantBuffers = frame.constantBuffers;
-		commandList->SetGraphicsRootSignature(pipelines.GetOceanFog()->GetRootSignature());
-		commandList->SetPipelineState(pipelines.GetOceanFog()->GetPSO());
-		ID3D12DescriptorHeap* heaps[] = {device->GetSrvDescriptorHeap()};
-		commandList->SetDescriptorHeaps(_countof(heaps), heaps);
-		commandList->SetGraphicsRootDescriptorTable(
-			RootBinding::TextureTable, device->GetSrvGpuHandle(device->GetSceneColorSrvIndex()));
-		commandList->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
-			constantBuffers.GetOceanFogResource(frame.frameIndex)->GetGPUVirtualAddress());
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		commandList->DrawInstanced(3, 1, 0, 0);
 	}
 
 	void RetroFilmRenderPass::Record(const FrameContext& frame) const {
@@ -119,10 +112,12 @@ namespace Engine {
 		ID3D12DescriptorHeap* heaps[] = {device->GetSrvDescriptorHeap()};
 		commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 		commandList->SetGraphicsRootDescriptorTable(
-			RootBinding::TextureTable, device->GetSrvGpuHandle(device->GetPostProcessSrvIndex()));
+			RootBinding::TextureTable, device->GetSrvGpuHandle(device->GetSceneColorSrvIndex()));
 		const UINT frameIndex = frame.frameIndex;
 		commandList->SetGraphicsRootConstantBufferView(
 			RootBinding::FrameConstants, constantBuffers.GetFilmResource(frameIndex)->GetGPUVirtualAddress());
+		commandList->SetGraphicsRootConstantBufferView(RootBinding::FogConstants,
+			constantBuffers.GetOceanFogResource(frameIndex)->GetGPUVirtualAddress());
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commandList->DrawInstanced(3, 1, 0, 0);
 	}

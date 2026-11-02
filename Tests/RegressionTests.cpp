@@ -38,6 +38,7 @@ void Require(bool condition, const char* description) {
 #include "EnvironmentSettingsTests.h"
 #include "GunEffectTests.h"
 #include "ShipTests.h"
+#include "RenderOptimizationTests.h"
 
 void TestCombatAudioLifecycle() {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -567,8 +568,8 @@ void TestGpuTextures(const fs::path& fixture) {
 	RequireDefaultBufferContent(device.Get(), commands.Get(), sky.GetIndexBufferResource(),
 		D3D12_RESOURCE_STATE_INDEX_BUFFER, skyIndices, sizeof(skyIndices), submit);
 	const float oceanVertex[]{-1000, 0, -1000, 0, 0};
-	const std::uint32_t oceanIndices[]{0, 1, 1000, 1, 1001, 1000};
-	Require(proceduralOcean.GetIndexCount() == 999 * 999 * 6, "Ocean index count changed");
+	const std::uint32_t oceanIndices[]{0, 1, 257, 1, 258, 257};
+	Require(proceduralOcean.GetIndexCount() == 256 * 256 * 6, "Ocean index count changed");
 	RequireDefaultBufferContent(device.Get(), commands.Get(), proceduralOcean.GetVertexBufferResource(),
 		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, oceanVertex, sizeof(oceanVertex), submit);
 	RequireDefaultBufferContent(device.Get(), commands.Get(), proceduralOcean.GetIndexBufferResource(),
@@ -631,6 +632,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 							"o Propeller\nv -1 0 -1\nv 1 0 -1\nv 0 1 -1\nf 4 5 6\n";
 	definition.playerAircraft.model = definition.enemyAircraft.model = model;
 	definition.playerAircraft.model = fixture / L"muzzles.dae";
+	// Same-material static parts may merge, while the existing propeller fixture stays independent.
 	definition.environment.skyTexture = definition.environment.oceanTexture =
 		definition.environment.oceanNormalTexture = definition.environment.oceanNormalTexture2 =
 			fixture / L"機体.png";
@@ -662,7 +664,16 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		<< "PASS: missing player/ammunition and invalid enemy models reject initialization with ID/path\n";
 	{
 		Renderer renderer;
-		renderer.Initialize(window, 64, 64, definition.BuildRendererDefinition());
+		auto renderDefinition = definition.BuildRendererDefinition();
+		renderDefinition.models.push_back({"staticBatchTest", model, {}});
+		renderer.Initialize(window, 64, 64, renderDefinition);
+		const auto merged = renderer.GetModel("staticBatchTest");
+		Require(merged->GetSourceMeshCount() == 2 && merged->GetMeshCount() == 1 &&
+				merged->GetTriangleCount() == 2,
+			"Static mesh batching changed triangles or failed to merge identical materials");
+		Require(renderer.GetModel(EnemyModelId)->GetMeshCount() == 2,
+			"Propeller geometry was merged into the static body");
+		TestRenderVisibility(merged);
 		FlightScene scene;
 		scene.Initialize(1.0f, 1.0f, definition.environment.ocean.size);
 		scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
@@ -675,6 +686,10 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		for (const auto& ship : definition.ships) {
 			const auto shipModel = renderer.GetModel(ship.asset.id);
 			Require(shipModel && shipModel->IsLoaded(), "Real ship FBX did not load");
+			Require(shipModel->GetLodCount() == 3 &&
+					shipModel->GetTriangleCount(1) < shipModel->GetTriangleCount(0) &&
+					shipModel->GetTriangleCount(2) <= shipModel->GetTriangleCount(1),
+				"Ship LODs did not reduce triangles");
 			shipIds.push_back(scene.AddObject(shipModel, ship.BuildTransform()));
 		}
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
@@ -708,6 +723,11 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 			renderer.Render(64, 64, scene.GetRenderScene(), &hud);
 		}
 		Require(scene.GetProjectileCount() >= 12, "Scene did not integrate continuous weapon fire");
+		const auto& timing = renderer.GetGpuTimings();
+		Require(timing.valid && std::isfinite(timing.TotalMs()) && timing.TotalMs() > 0,
+			"Asynchronous GPU timestamp results were not delivered");
+		Require(renderer.GetRenderStatistics().oceanTriangles == 256 * 256 * 2,
+			"Renderer is not using the reduced ocean grid");
 		for (size_t i = 0; i < shipIds.size(); ++i) {
 			const auto found =
 				std::find_if(scene.GetObjects().begin(), scene.GetObjects().end(), [&](const auto& object) {
@@ -767,6 +787,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestAIParameters(argv[1], fixture);
 		TestEnvironmentSettings(argv[1], fixture);
 		TestShips(argv[1], fixture);
+		TestRenderOptimizationMath();
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
 		TestRocketLauncherAndAssets(argv[1], fixture);

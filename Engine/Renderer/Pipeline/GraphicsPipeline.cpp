@@ -21,8 +21,12 @@ namespace {
 		if (nodeRotation)
 			rootParams[Binding::NodeRotation].InitAsConstants(
 				Binding::NodeRotationDwords, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
-		const UINT parameterCount =
-			nodeRotation ? Binding::NodeRotationParameterCount : Binding::TexturedParameterCount;
+		const bool postProcess = layout == Engine::RootSignatureLayout::PostProcess;
+		if (postProcess)
+			rootParams[Binding::FogConstants].InitAsConstantBufferView(
+				1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		const UINT parameterCount = (nodeRotation || postProcess) ? Binding::NodeRotationParameterCount
+																  : Binding::TexturedParameterCount;
 
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;

@@ -22,6 +22,8 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <array>
+#include <unordered_map>
 
 namespace Engine {
 	namespace {
@@ -137,6 +139,98 @@ namespace Engine {
 					result.nodeRotationAxis = {0.0f, 1.0f, 0.0f};
 				}
 			}
+			return result;
+		}
+
+		MeshGeometry SimplifyGeometry(const MeshGeometry& source, float extent, unsigned lod) {
+			if (lod == 0 || source.isRotatingNode)
+				return source;
+			auto low = source.vertices.front().position, high = low;
+			for (const auto& v : source.vertices) {
+				low.x = std::min(low.x, v.position.x);
+				low.y = std::min(low.y, v.position.y);
+				low.z = std::min(low.z, v.position.z);
+				high.x = std::max(high.x, v.position.x);
+				high.y = std::max(high.y, v.position.y);
+				high.z = std::max(high.z, v.position.z);
+			}
+			const float componentSize = std::max({high.x - low.x, high.y - low.y, high.z - low.z});
+			if (componentSize < extent * (lod == 1 ? 0.006f : 0.018f))
+				return {};
+			struct Key {
+				std::array<int, 7> values;
+				bool operator==(const Key&) const = default;
+			};
+			struct Hash {
+				size_t operator()(const Key& key) const {
+					size_t hash = 14695981039346656037ULL;
+					for (int value : key.values) {
+						hash ^= static_cast<unsigned>(value);
+						hash *= 1099511628211ULL;
+					}
+					return hash;
+				}
+			};
+			const float cell = extent / (lod == 1 ? 128.0f : 48.0f);
+			MeshGeometry result;
+			result.source = source.source;
+			std::unordered_map<Key, uint32_t, Hash> clusters;
+			std::vector<uint32_t> remap(source.vertices.size()), counts;
+			for (size_t i = 0; i < source.vertices.size(); ++i) {
+				const auto& v = source.vertices[i];
+				const float n[] = {v.normal.x, v.normal.y, v.normal.z};
+				int axis = 0;
+				if (std::abs(n[1]) > std::abs(n[axis]))
+					axis = 1;
+				if (std::abs(n[2]) > std::abs(n[axis]))
+					axis = 2;
+				const Key key{{int(std::floor(v.position.x / cell)), int(std::floor(v.position.y / cell)),
+					int(std::floor(v.position.z / cell)),
+					int(std::floor(std::clamp(v.texcoord.x, -1e6f, 1e6f) * 32)),
+					int(std::floor(std::clamp(v.texcoord.y, -1e6f, 1e6f) * 32)),
+					axis * 2 + (n[axis] < 0 ? 1 : 0), v.tangent.w < 0 ? 1 : 0}};
+				const auto [entry, inserted] =
+					clusters.emplace(key, static_cast<uint32_t>(result.vertices.size()));
+				remap[i] = entry->second;
+				if (inserted) {
+					result.vertices.push_back(v);
+					counts.push_back(1);
+				} else {
+					auto& target = result.vertices[entry->second];
+					target.position.x += v.position.x;
+					target.position.y += v.position.y;
+					target.position.z += v.position.z;
+					target.texcoord.x += v.texcoord.x;
+					target.texcoord.y += v.texcoord.y;
+					++counts[entry->second];
+				}
+			}
+			for (size_t i = 0; i < result.vertices.size(); ++i) {
+				const float scale = 1.0f / counts[i];
+				auto& v = result.vertices[i];
+				v.position.x *= scale;
+				v.position.y *= scale;
+				v.position.z *= scale;
+				v.texcoord.x *= scale;
+				v.texcoord.y *= scale;
+			}
+			for (size_t i = 0; i < source.indices.size(); i += 3) {
+				const auto a = remap[source.indices[i]], b = remap[source.indices[i + 1]],
+						   c = remap[source.indices[i + 2]];
+				if (a != b && b != c && a != c)
+					result.indices.insert(result.indices.end(), {a, b, c});
+			}
+			// Discard vertices no longer referenced by surviving triangles.
+			std::vector<ModelVertex> compact;
+			std::vector<uint32_t> used(result.vertices.size(), UINT32_MAX);
+			for (auto& index : result.indices) {
+				if (used[index] == UINT32_MAX) {
+					used[index] = static_cast<uint32_t>(compact.size());
+					compact.push_back(result.vertices[index]);
+				}
+				index = used[index];
+			}
+			result.vertices = std::move(compact);
 			return result;
 		}
 
@@ -315,7 +409,10 @@ namespace Engine {
 
 	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 		const std::wstring& filePath, const ModelLoadOptions& options) {
-		m_meshes.clear();
+		for (auto& meshes : m_lodMeshes)
+			meshes.clear();
+		m_lodCount = options.generateLods ? 3u : 1u;
+		m_cullingRadius = 0;
 		m_nodePositions.clear();
 		m_localBounds.reset();
 		m_vertexBuffer.Reset();
@@ -336,6 +433,7 @@ namespace Engine {
 		if (!scene)
 			return false;
 		auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
+		m_sourceMeshCount = geometries.size();
 		if (geometries.empty())
 			return false;
 		Bounds3 bounds{
@@ -351,63 +449,104 @@ namespace Engine {
 			}
 		m_localBounds = bounds;
 
+		const auto center = bounds.Center();
+		const auto distance = [](const DirectX::XMFLOAT3& a, const DirectX::XMFLOAT3& b) {
+			return std::sqrt(
+				(a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
+		};
+		for (const auto& geometry : geometries)
+			for (const auto& vertex : geometry.vertices)
+				m_cullingRadius = std::max(m_cullingRadius,
+					geometry.isRotatingNode ? distance(center, geometry.nodeRotationPivot) +
+							distance(vertex.position, geometry.nodeRotationPivot)
+											: distance(center, vertex.position));
 		InitializeFallbackTextures(device, commandList);
-
-		const std::filesystem::path modelDirectory = modelPath.parent_path();
-		m_meshes.reserve(geometries.size());
-		std::vector<TextureDescriptorSet> textureDescriptorSets;
-		std::vector<ModelVertex> allVertices;
-		std::vector<uint32_t> allIndices;
-		uint64_t totalVertices = 0;
-		uint64_t totalIndices = 0;
-		uint64_t totalVertexBufferBytes = 0;
-		uint64_t totalIndexBufferBytes = 0;
-		for (const auto& geometry : geometries) {
-			totalVertices += geometry.vertices.size();
-			totalIndices += geometry.indices.size();
-		}
-		allVertices.reserve(static_cast<size_t>(totalVertices));
-		allIndices.reserve(static_cast<size_t>(totalIndices));
-		for (auto& geometry : geometries) {
-			const aiMesh* sourceMesh = geometry.source;
-			const auto& vertices = geometry.vertices;
-			const auto& indices = geometry.indices;
+		const auto modelDirectory = modelPath.parent_path();
+		struct Batch {
 			Mesh mesh;
-			mesh.isRotatingNode = geometry.isRotatingNode;
-			mesh.nodeRotationPivot = geometry.nodeRotationPivot;
-			mesh.nodeRotationAxis = geometry.nodeRotationAxis;
-			mesh.vertexBufferView.BufferLocation = allVertices.size() * sizeof(ModelVertex);
-			mesh.indexBufferView.BufferLocation = allIndices.size() * sizeof(uint32_t);
-			allVertices.insert(allVertices.end(), vertices.begin(), vertices.end());
-			allIndices.insert(allIndices.end(), indices.begin(), indices.end());
-			mesh.vertexBufferView.SizeInBytes = static_cast<UINT>(vertices.size() * sizeof(ModelVertex));
-			mesh.vertexBufferView.StrideInBytes = sizeof(ModelVertex);
-			mesh.indexBufferView.SizeInBytes = static_cast<UINT>(indices.size() * sizeof(uint32_t));
-			mesh.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-			mesh.indexCount = static_cast<UINT>(indices.size());
-			totalVertexBufferBytes += vertices.size() * sizeof(ModelVertex);
-			totalIndexBufferBytes += indices.size() * sizeof(uint32_t);
-			// Keep one combined CPU copy instead of retaining every per-mesh copy during texture decoding.
+			std::vector<ModelVertex> vertices;
+			std::vector<uint32_t> indices;
+		};
+		std::array<std::vector<Batch>, 3> batches;
+		std::vector<TextureDescriptorSet> textureDescriptorSets;
+		std::unordered_map<unsigned, Mesh> materials;
+		const float extent = std::max({bounds.maximum.x - bounds.minimum.x,
+			bounds.maximum.y - bounds.minimum.y, bounds.maximum.z - bounds.minimum.z});
+		for (auto& geometry : geometries) {
+			const auto materialIndex = geometry.source->mMaterialIndex;
+			auto [material, inserted] = materials.try_emplace(materialIndex);
+			if (inserted) {
+				if (materialIndex < scene->mNumMaterials)
+					LoadMaterialTextures(material->second, scene->mMaterials[materialIndex], modelDirectory,
+						options, device, commandList);
+				AssignMaterialDescriptors(material->second, device, renderDevice, textureDescriptorSets);
+			}
+			for (unsigned lod = 0; lod < m_lodCount; ++lod) {
+				// Full detail is moved last, so simplification can still read its original topology.
+				const unsigned level = m_lodCount - 1 - lod;
+				auto reduced = level == 0 ? MeshGeometry{} : SimplifyGeometry(geometry, extent, level);
+				auto& data = level == 0 ? geometry : reduced;
+				if (data.indices.empty())
+					continue;
+				auto& list = batches[level];
+				auto batch = list.end();
+				if (options.mergeStaticMeshes && !geometry.isRotatingNode)
+					batch = std::find_if(list.begin(), list.end(), [&](const Batch& item) {
+						return !item.mesh.isRotatingNode &&
+							item.mesh.textureSrvIndex == material->second.textureSrvIndex;
+					});
+				if (batch == list.end()) {
+					Mesh mesh = material->second;
+					mesh.isRotatingNode = geometry.isRotatingNode;
+					mesh.nodeRotationPivot = geometry.nodeRotationPivot;
+					mesh.nodeRotationAxis = geometry.nodeRotationAxis;
+					list.push_back({std::move(mesh), {}, {}});
+					batch = std::prev(list.end());
+				}
+				const auto offset = static_cast<uint32_t>(batch->vertices.size());
+				for (auto index : data.indices)
+					batch->indices.push_back(index + offset);
+				batch->vertices.insert(batch->vertices.end(), data.vertices.begin(), data.vertices.end());
+			}
 			std::vector<ModelVertex>().swap(geometry.vertices);
 			std::vector<uint32_t>().swap(geometry.indices);
-
-			if (sourceMesh->mMaterialIndex < scene->mNumMaterials)
-				LoadMaterialTextures(mesh, scene->mMaterials[sourceMesh->mMaterialIndex], modelDirectory,
-					options, device, commandList);
-
-			AssignMaterialDescriptors(mesh, device, renderDevice, textureDescriptorSets);
-			m_meshes.push_back(std::move(mesh));
 		}
-
-		if (m_meshes.empty())
+		std::vector<ModelVertex> vertices;
+		std::vector<uint32_t> indices;
+		size_t vertexCount = 0, indexCount = 0;
+		for (const auto& level : batches)
+			for (const auto& batch : level) {
+				vertexCount += batch.vertices.size();
+				indexCount += batch.indices.size();
+			}
+		if (vertexCount > UINT_MAX / sizeof(ModelVertex) || indexCount > UINT_MAX / sizeof(uint32_t))
+			throw std::runtime_error("Combined model buffers exceed D3D12 view limits");
+		vertices.reserve(vertexCount);
+		indices.reserve(indexCount);
+		for (unsigned level = 0; level < m_lodCount; ++level) {
+			for (auto& batch : batches[level]) {
+				auto& mesh = batch.mesh;
+				mesh.vertexBufferView = {vertices.size() * sizeof(ModelVertex),
+					static_cast<UINT>(batch.vertices.size() * sizeof(ModelVertex)), sizeof(ModelVertex)};
+				mesh.indexBufferView = {indices.size() * sizeof(uint32_t),
+					static_cast<UINT>(batch.indices.size() * sizeof(uint32_t)), DXGI_FORMAT_R32_UINT};
+				mesh.indexCount = static_cast<UINT>(batch.indices.size());
+				vertices.insert(vertices.end(), batch.vertices.begin(), batch.vertices.end());
+				indices.insert(indices.end(), batch.indices.begin(), batch.indices.end());
+				std::vector<ModelVertex>().swap(batch.vertices);
+				std::vector<uint32_t>().swap(batch.indices);
+				m_lodMeshes[level].push_back(std::move(mesh));
+			}
+			if (m_lodMeshes[level].empty() && level > 0)
+				m_lodMeshes[level] = m_lodMeshes[level - 1];
+		}
+		if (!IsLoaded())
 			return false;
-		UploadGeometry(device, commandList, allVertices.data(), allVertices.size() * sizeof(ModelVertex),
-			allIndices.data(), allIndices.size() * sizeof(uint32_t));
-		Log("Model loaded: {} meshes, {} vertices, {} indices, {:.2f} MiB static geometry\n", m_meshes.size(),
-			totalVertices, totalIndices,
-			static_cast<double>(totalVertexBufferBytes + totalIndexBufferBytes) / (1024.0 * 1024.0));
-
-		return !m_meshes.empty();
+		UploadGeometry(device, commandList, vertices.data(), vertices.size() * sizeof(ModelVertex),
+			indices.data(), indices.size() * sizeof(uint32_t));
+		Log("Model batches {}, triangles {}/{}/{}\n", GetMeshCount(), GetTriangleCount(0),
+			GetTriangleCount(1), GetTriangleCount(2));
+		return true;
 	}
 
 	size_t Model::CountNodes(std::string_view name) const {
@@ -459,10 +598,11 @@ namespace Engine {
 			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_vertexUpload);
 		m_indexBuffer = CreateStaticBuffer(
 			device, commandList, indices, indexBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
-		for (auto& mesh : m_meshes) {
-			mesh.vertexBufferView.BufferLocation += m_vertexBuffer->GetGPUVirtualAddress();
-			mesh.indexBufferView.BufferLocation += m_indexBuffer->GetGPUVirtualAddress();
-		}
+		for (auto& meshes : m_lodMeshes)
+			for (auto& mesh : meshes) {
+				mesh.vertexBufferView.BufferLocation += m_vertexBuffer->GetGPUVirtualAddress();
+				mesh.indexBufferView.BufferLocation += m_indexBuffer->GetGPUVirtualAddress();
+			}
 	}
 
 	void Model::InitializeFallbackTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commands) {
@@ -562,8 +702,8 @@ namespace Engine {
 		}
 	}
 
-	void Model::Draw(
-		ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice, float nodeRotationAngle) const {
+	void Model::Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
+		float nodeRotationAngle, unsigned lod) const {
 		struct NodeRotationConstants {
 			float angle;
 			DirectX::XMFLOAT3 pivot;
@@ -572,7 +712,7 @@ namespace Engine {
 		};
 		static_assert(sizeof(NodeRotationConstants) == RootBinding::NodeRotationDwords * sizeof(UINT));
 
-		for (const Mesh& mesh : m_meshes) {
+		for (const Mesh& mesh : m_lodMeshes[std::min(lod, m_lodCount - 1)]) {
 			const NodeRotationConstants nodeRotationConstants = {nodeRotationAngle, mesh.nodeRotationPivot,
 				mesh.nodeRotationAxis, mesh.isRotatingNode ? 1u : 0u};
 			commandList->SetGraphicsRoot32BitConstants(
@@ -605,22 +745,23 @@ namespace Engine {
 			m_fallbackNormalTexture->ReleaseUploadResources();
 		}
 
-		for (Mesh& mesh : m_meshes) {
-			if (mesh.diffuseTexture) {
-				mesh.diffuseTexture->ReleaseUploadResources();
-			}
+		for (auto& meshes : m_lodMeshes)
+			for (Mesh& mesh : meshes) {
+				if (mesh.diffuseTexture) {
+					mesh.diffuseTexture->ReleaseUploadResources();
+				}
 
-			if (mesh.metallicTexture) {
-				mesh.metallicTexture->ReleaseUploadResources();
-			}
+				if (mesh.metallicTexture) {
+					mesh.metallicTexture->ReleaseUploadResources();
+				}
 
-			if (mesh.roughnessTexture) {
-				mesh.roughnessTexture->ReleaseUploadResources();
-			}
+				if (mesh.roughnessTexture) {
+					mesh.roughnessTexture->ReleaseUploadResources();
+				}
 
-			if (mesh.normalTexture) {
-				mesh.normalTexture->ReleaseUploadResources();
+				if (mesh.normalTexture) {
+					mesh.normalTexture->ReleaseUploadResources();
+				}
 			}
-		}
 	}
 } // namespace Engine

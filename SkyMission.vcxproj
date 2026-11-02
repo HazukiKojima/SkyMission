@@ -23,6 +23,9 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClInclude Include="Engine\Precompiled.h" />
+    <ClInclude Include="Engine\Renderer\Device\RenderVisibility.h" />
+    <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h" />
+    <None Include="Engine\Renderer\Shader\OceanFog.hlsli" />
     <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
     <ClCompile Include="Game\Audio\CombatAudio.cpp" />
     <ClCompile Include="Game\Application\Application.cpp" />

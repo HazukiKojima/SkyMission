@@ -9,6 +9,7 @@
 #include "RendererAssets.h"
 #include "RendererFrameUpdater.h"
 #include "RendererPasses.h"
+#include "GpuFrameProfiler.h"
 #include "Engine/Renderer/Hud/HudRenderer.h"
 
 namespace Engine {
@@ -17,6 +18,18 @@ namespace Engine {
 
 	class Renderer {
 	  public:
+		void SetVerticalSync(bool enabled) {
+			m_device->SetVerticalSync(enabled);
+		}
+		bool IsVerticalSyncEnabled() const {
+			return m_device->IsVerticalSyncEnabled();
+		}
+		const GpuFrameTimings& GetGpuTimings() const {
+			return m_gpuProfiler.Latest();
+		}
+		const RenderStatistics& GetRenderStatistics() const {
+			return m_statistics;
+		}
 		Renderer() = default;
 		~Renderer() noexcept;
 
@@ -41,7 +54,6 @@ namespace Engine {
 
 	  private:
 		void RecordScenePass(const Scene& scene);
-		void RecordOceanFogPass();
 		void RecordRetroFilmPass();
 
 		std::unique_ptr<RenderDevice> m_device;
@@ -55,7 +67,8 @@ namespace Engine {
 		SkyRenderPass m_skyPass;
 		OceanRenderPass m_oceanPass;
 		ModelRenderPass m_modelPass;
-		OceanFogRenderPass m_oceanFogPass;
+		GpuFrameProfiler m_gpuProfiler;
+		RenderStatistics m_statistics;
 		RetroFilmRenderPass m_retroFilmPass;
 		HudRenderer m_hudRenderer;
 

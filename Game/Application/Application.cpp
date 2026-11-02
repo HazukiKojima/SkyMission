@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 #include <chrono>
 #include <filesystem>
+#include <format>
 #include "Engine/ExecutablePath.h"
 #include "Game/Weapons/WeaponController.h"
 #include "Game/Combat/CombatController.h"
@@ -132,6 +133,11 @@ namespace Game {
 		if (m_fpsTimer >= 0.25f) {
 			const float fps = static_cast<float>(m_fpsFrameCount) / m_fpsTimer;
 			std::wstring title = m_windowTitle + L" | FPS: " + std::to_wstring(static_cast<int>(fps + 0.5f));
+			title += m_renderer->IsVerticalSyncEnabled() ? L" | VSync ON [F10]" : L" | VSync OFF [F10]";
+			const auto& gpu = m_renderer->GetGpuTimings();
+			if (gpu.valid)
+				title += std::format(L" | GPU {:.2f} ms (Sea {:.2f}, Models {:.2f}, Post {:.2f})",
+					gpu.TotalMs(), gpu.oceanMs, gpu.modelsMs, gpu.postProcessMs);
 			SetWindowTextW(m_window->GetHandle(), title.c_str());
 			m_fpsTimer = 0.0f;
 			m_fpsFrameCount = 0;
@@ -141,6 +147,8 @@ namespace Game {
 
 		if (m_scene) {
 			const InputSnapshot input = m_window->ConsumeInput();
+			if (input.WasKeyPressed(VK_F10))
+				m_renderer->SetVerticalSync(!m_renderer->IsVerticalSyncEnabled());
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();

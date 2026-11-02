@@ -4,6 +4,8 @@
 #include "RendererConstantBuffers.h"
 #include "OceanGeometry.h"
 #include "../RetroFilmParameters.h"
+#include "RenderVisibility.h"
+#include <span>
 
 namespace Engine {
 	class Scene;
@@ -27,12 +29,8 @@ namespace Engine {
 
 	class ModelRenderPass {
 	  public:
-		void Record(const FrameContext& frame, const Scene& scene) const;
-	};
-
-	class OceanFogRenderPass {
-	  public:
-		void Record(const FrameContext& frame) const;
+		void Record(const FrameContext& frame, const Scene& scene,
+			std::span<const ModelDrawDecision> decisions, RenderStatistics& statistics) const;
 	};
 
 	class RetroFilmRenderPass {

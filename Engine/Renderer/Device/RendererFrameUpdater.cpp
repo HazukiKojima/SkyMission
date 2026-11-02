@@ -48,6 +48,8 @@ namespace Engine {
 		const UINT index = context->GetFrameIndex();
 		buffers.EnsureModelCapacity(device, context, scene.GetObjects().size());
 		const auto frame = BuildFrameView(scene, elapsedTime);
+		m_drawDecisions =
+			BuildModelDrawDecisions(scene, frame.view, frame.projection, context->GetRenderHeight());
 		DirectX::XMStoreFloat4x4(&m_renderView.view, frame.view);
 		DirectX::XMStoreFloat4x4(&m_renderView.projection, frame.projection);
 		const auto& lighting = scene.GetEnvironment();
@@ -120,6 +122,8 @@ namespace Engine {
 		const auto& objects = scene.GetObjects();
 
 		for (size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex) {
+			if (!m_drawDecisions[objectIndex].visible)
+				continue;
 			const SceneObject& object = objects[objectIndex];
 			ModelConstantBufferData* modelData = constantBuffers.GetModelData(frameIndex, objectIndex);
 			const XMMATRIX objectWorld = XMLoadFloat4x4(&object.worldTransform);

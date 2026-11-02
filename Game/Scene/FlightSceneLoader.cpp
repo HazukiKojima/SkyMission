@@ -353,6 +353,7 @@ namespace Game {
 				ship.asset.options.normalizedExtent = 1;
 				ship.asset.options.groundOffset = 0;
 				ship.asset.options.maxTextureDimension = static_cast<unsigned>(textureLimit);
+				ship.asset.options.generateLods = true;
 				ship.position = vector("Position");
 				ship.rotationDegrees = vector("RotationDegrees");
 				ship.size = reader.ResolveFloat(path, prefix + "Size");

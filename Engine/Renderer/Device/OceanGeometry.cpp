@@ -10,13 +10,19 @@
 namespace Engine {
 	namespace {
 		constexpr float kPi = std::numbers::pi_v<float>;
-		constexpr int kGridSize = 1000;
+		constexpr int kGridSize = OceanGeometry::GridResolution;
 
 		struct OceanVertex {
 			float pos[3];
 			float uv[2];
 		};
 	} // namespace
+
+	float OceanGeometry::GridCoordinate(int index, float size) {
+		const float t = float(index) / (GridResolution - 1) * 2 - 1;
+		// Continuous distance LOD: dense near the camera, sparse towards the horizon, no patch seams.
+		return std::copysign(std::expm1(std::abs(t) * 5.5f) / std::expm1(5.5f), t) * size * 0.5f;
+	}
 
 	void OceanGeometry::Initialize(
 		ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize) {
@@ -28,10 +34,10 @@ namespace Engine {
 
 		for (int z = 0; z < kGridSize; ++z) {
 			for (int x = 0; x < kGridSize; ++x) {
-				const float px = static_cast<float>(x) / (kGridSize - 1) * oceanSize - oceanSize * 0.5f;
-				const float pz = static_cast<float>(z) / (kGridSize - 1) * oceanSize - oceanSize * 0.5f;
-				const float u = static_cast<float>(x) / (kGridSize - 1);
-				const float v = static_cast<float>(z) / (kGridSize - 1);
+				const float px = GridCoordinate(x, oceanSize);
+				const float pz = GridCoordinate(z, oceanSize);
+				const float u = px / oceanSize + 0.5f;
+				const float v = pz / oceanSize + 0.5f;
 
 				vertices.push_back({{px, 0.0f, pz}, {u, v}});
 			}

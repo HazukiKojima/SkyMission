@@ -5,6 +5,8 @@
 namespace Engine {
 	class OceanGeometry {
 	  public:
+		static constexpr int GridResolution = 257;
+		static float GridCoordinate(int index, float size);
 		void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize);
 		// 転送コマンドの GPU 完了後に呼ぶ
 		void ReleaseUploadResources();
