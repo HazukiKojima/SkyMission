@@ -1,0 +1,18 @@
+{
+    "shipCount": 3,
+    "ship1Model": "USSHornetCV8/USSHornetCV8.fbx",
+    "ship1Position": [0, 0, -8500],
+    "ship1RotationDegrees": [0, 0, 0],
+    "ship1Size": 5000,
+    "ship1WaterlineOffset": -175,
+    "ship2Model": "USSNorthCarolinaBB55/USSNorthCarolinaBB55.fbx",
+    "ship2Position": [-2200, 0, -9000],
+    "ship2RotationDegrees": [0, 180, 0],
+    "ship2Size": 4400,
+    "ship2WaterlineOffset": -195,
+    "ship3Model": "USSNewJerseyBB62/USSNewJerseyBB62.fbx",
+    "ship3Position": [2200, 0, -9000],
+    "ship3RotationDegrees": [0, 180, 0],
+    "ship3Size": 5400,
+    "ship3WaterlineOffset": -195
+}

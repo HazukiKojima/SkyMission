@@ -37,6 +37,7 @@ void Require(bool condition, const char* description) {
 #include "RocketTests.h"
 #include "EnvironmentSettingsTests.h"
 #include "GunEffectTests.h"
+#include "ShipTests.h"
 
 void TestCombatAudioLifecycle() {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -608,7 +609,8 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	auto definition = FlightSceneLoader{}.Load({.environment = config / L"Environment/environment.json",
 		.playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-		.retroFilm = config / L"Environment/retroFilm.json"});
+		.retroFilm = config / L"Environment/retroFilm.json",
+		.ships = config / L"Ships/ships.json"});
 	const auto model = fixture / L"triangles.obj";
 	std::ofstream(model) << "o Body\nv -1 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"
 							"o Propeller\nv -1 0 -1\nv 1 0 -1\nv 0 1 -1\nf 4 5 6\n";
@@ -654,6 +656,12 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
 		scene.ConfigurePlayerWeapon(definition.playerWeapon, renderer.GetModel(AmmunitionModelId));
 		scene.ConfigurePlayerRocket(definition.playerRocket, renderer.GetModel(RocketModelId));
+		std::vector<Engine::ObjectId> shipIds;
+		for (const auto& ship : definition.ships) {
+			const auto shipModel = renderer.GetModel(ship.asset.id);
+			Require(shipModel && shipModel->IsLoaded(), "Real ship FBX did not load");
+			shipIds.push_back(scene.AddObject(shipModel, ship.BuildTransform()));
+		}
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
 		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles +
 			definition.playerRocket.settings.maxRockets);
@@ -685,6 +693,16 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 			renderer.Render(64, 64, scene.GetRenderScene(), &hud);
 		}
 		Require(scene.GetProjectileCount() >= 12, "Scene did not integrate continuous weapon fire");
+		for (size_t i = 0; i < shipIds.size(); ++i) {
+			const auto found =
+				std::find_if(scene.GetObjects().begin(), scene.GetObjects().end(), [&](const auto& object) {
+					return object.id == shipIds[i];
+				});
+			const auto expected = definition.ships[i].BuildTransform();
+			Require(found != scene.GetObjects().end() &&
+					std::memcmp(&found->worldTransform, &expected, sizeof(expected)) == 0,
+				"Simulation changed a static ship transform");
+		}
 		Require(
 			renderer.GetModelCapacity() == reserved, "Firing grew GPU constant buffers despite reservation");
 
@@ -733,6 +751,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestPathsAndJson(argv[1], fixture);
 		TestAIParameters(argv[1], fixture);
 		TestEnvironmentSettings(argv[1], fixture);
+		TestShips(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
 		TestRocketLauncherAndAssets(argv[1], fixture);

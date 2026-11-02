@@ -13,9 +13,18 @@ namespace Engine::MaterialTexturePaths {
 			texturesDirectory / texturePath, texturesDirectory / texturePath.filename()};
 
 		for (const auto& candidate : candidates) {
-			if (std::filesystem::exists(candidate)) {
+			if (std::filesystem::is_regular_file(candidate)) {
 				return candidate;
 			}
+		}
+		// Some FBX exports retain .jpg references when the supplied image is .jpeg.
+		auto extension = texturePath.extension().wstring();
+		std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
+		if (extension == L".jpg" || extension == L".jpeg") {
+			auto alternate = texturesDirectory / texturePath.filename();
+			alternate.replace_extension(extension == L".jpg" ? L".jpeg" : L".jpg");
+			if (std::filesystem::is_regular_file(alternate))
+				return alternate;
 		}
 
 		return {};

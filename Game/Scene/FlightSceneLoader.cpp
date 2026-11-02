@@ -315,6 +315,59 @@ namespace Game {
 				retroFilmParameters};
 		}
 	} // namespace
+	DirectX::XMFLOAT4X4 ShipDefinition::BuildTransform() const {
+		using namespace DirectX;
+		XMFLOAT4X4 transform;
+		XMStoreFloat4x4(&transform,
+			XMMatrixScaling(size, size, size) *
+				XMMatrixRotationRollPitchYaw(XMConvertToRadians(rotationDegrees.x),
+					XMConvertToRadians(rotationDegrees.y), XMConvertToRadians(rotationDegrees.z)) *
+				XMMatrixTranslation(position.x, position.y + waterlineOffset, position.z));
+		return transform;
+	}
+
+	std::vector<ShipDefinition> LoadShipDefinitions(
+		const JsonAssetReader& reader, const std::filesystem::path& path) {
+		try {
+			const float count = reader.ResolveFloat(path, "shipCount");
+			if (!std::isfinite(count) || count < 0 || count > 1024 || std::floor(count) != count)
+				throw std::runtime_error("shipCount must be an integer in [0,1024]");
+			std::vector<ShipDefinition> ships;
+			for (int i = 1; i <= static_cast<int>(count); ++i) {
+				const auto prefix = "ship" + std::to_string(i);
+				const auto vector = [&](const char* suffix) {
+					const auto key = prefix + suffix;
+					const auto values = reader.ResolveFloatArray(path, key);
+					if (values.size() != 3 || !std::isfinite(values[0]) || !std::isfinite(values[1]) ||
+						!std::isfinite(values[2]))
+						throw std::runtime_error(key + " must contain three finite numbers");
+					return DirectX::XMFLOAT3{values[0], values[1], values[2]};
+				};
+				ShipDefinition ship;
+				ship.asset.id = prefix;
+				ship.asset.file = reader.Resolve(path, prefix + "Model");
+				ship.asset.options.normalizedExtent = 1;
+				ship.asset.options.groundOffset = 0;
+				ship.position = vector("Position");
+				ship.rotationDegrees = vector("RotationDegrees");
+				ship.size = reader.ResolveFloat(path, prefix + "Size");
+				ship.waterlineOffset = reader.ResolveFloat(path, prefix + "WaterlineOffset");
+				if (!std::isfinite(ship.size) || ship.size <= 0)
+					throw std::runtime_error(prefix + "Size must be positive and finite");
+				if (!std::isfinite(ship.waterlineOffset))
+					throw std::runtime_error(prefix + "WaterlineOffset must be finite");
+				const auto transform = ship.BuildTransform();
+				for (const auto& row : transform.m)
+					for (float value : row)
+						if (!std::isfinite(value))
+							throw std::runtime_error(prefix + " transform exceeds finite range");
+				ships.push_back(std::move(ship));
+			}
+			return ships;
+		} catch (const std::exception& error) {
+			throw std::runtime_error(path.string() + ": " + error.what());
+		}
+	}
 	FlightSceneDefinition FlightSceneLoader::Load(const SceneSourcePaths& paths) const {
 		JsonDocumentCache documents;
 		JsonAssetReader reader(documents);
@@ -329,7 +382,9 @@ namespace Game {
 			.playerRocket = LoadRocket(reader, paths.playerAircraft),
 			.combat = LoadCombatSettings(
 				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),
-			.hud = LoadHudSettings(
-				reader, paths.environment.parent_path().parent_path() / L"UI/combatHud.json")};
+			.hud =
+				LoadHudSettings(reader, paths.environment.parent_path().parent_path() / L"UI/combatHud.json"),
+			.ships = paths.ships.empty() ? std::vector<ShipDefinition>{}
+										 : LoadShipDefinitions(reader, paths.ships)};
 	}
 } // namespace Game
