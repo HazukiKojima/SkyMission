@@ -792,11 +792,11 @@ void TestHudRendering(const fs::path& fixture) {
 				const float scale = std::min(float(width) / 1920, float(height) / 1080);
 				const float offsetX = (width - 1920 * scale) * 0.5f;
 				const float offsetY = (height - 1080 * scale) * 0.5f;
-				const float textWidth = Engine::HudDrawList::MeasureTextWidth(text, 48);
+				const float textWidth = Engine::HudDrawList::MeasureTextWidth(text, 40);
 				Engine::HudDrawList expected;
 				expected.Reset(width, height);
-				expected.Text({offsetX + (right - textWidth) * scale, offsetY + 376 * scale}, text,
-					48 * scale, Engine::HudSettings{}.color);
+				expected.Text({offsetX + (right - textWidth) * scale, offsetY + 432 * scale}, text,
+					40 * scale, Engine::HudSettings{}.color);
 				const auto sameVertex = [](const Engine::HudVertex& a, const Engine::HudVertex& b) {
 					return std::abs(a.position.x - b.position.x) < 0.00001f &&
 						std::abs(a.position.y - b.position.y) < 0.00001f && a.uv.x == b.uv.x &&
@@ -807,11 +807,11 @@ void TestHudRendering(const fs::path& fixture) {
 							expected.GetVertices().end(), sameVertex) != vertices.end(),
 					"Flight HUD conversion, rounding or right alignment failed");
 			};
-			requireFlightText(332, "360");
-			requireFlightText(1782, "1543");
+			requireFlightText(312, "360");
+			requireFlightText(1808, "1543");
 			snapshot.playerSpeedMetersPerSecond = 0;
 			buildFrame();
-			requireFlightText(332, "0");
+			requireFlightText(312, "0");
 			snapshot.playerSpeedMetersPerSecond = 100;
 			buildFrame();
 			Require(
@@ -939,7 +939,7 @@ void TestHudRendering(const fs::path& fixture) {
 				ScratchImage image;
 				ThrowIfFailed(image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
 				const auto* pixels = image.GetImage(0, 0, 0);
-				size_t parchment = 0, japaneseInk = 0;
+				size_t parchment = 0, englishInk = 0;
 				const float scale = std::min(float(width) / 1920, float(height) / 1080);
 				const float offsetX = (width - 1920 * scale) * 0.5f;
 				const float offsetY = (height - 1080 * scale) * 0.5f;
@@ -951,15 +951,15 @@ void TestHudRendering(const fs::path& fixture) {
 						if (row[x * 4] > 80 && row[x * 4 + 1] > 60 && row[x * 4 + 2] > 40 &&
 							row[x * 4] >= row[x * 4 + 1] && row[x * 4 + 1] >= row[x * 4 + 2]) {
 							++parchment;
-							if (x > offsetX + 122 * scale && x < offsetX + 198 * scale &&
-								y > offsetY + 315 * scale && y < offsetY + 341 * scale)
-								++japaneseInk;
+							if (x > offsetX + 100 * scale && x < offsetX + 215 * scale &&
+								y > offsetY + 372 * scale && y < offsetY + 414 * scale)
+								++englishInk;
 						}
 				}
 				const CD3DX12_RANGE noWrites(0, 0);
 				readback->Unmap(0, &noWrites);
 				Require(parchment > 100, "HUD did not produce parchment-colored pixels");
-				Require(japaneseInk > 10, "Japanese speed label did not produce visible glyph pixels");
+				Require(englishInk > 10, "English SPEED label did not produce visible glyph pixels");
 				const auto path = fixture / ("hud-" + std::to_string(width) + std::string(suffix) + ".png");
 				ThrowIfFailed(SaveToWICFile(*pixels, WIC_FLAGS_NONE, GUID_ContainerFormatPng, path.c_str()));
 			};
