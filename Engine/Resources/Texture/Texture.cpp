@@ -22,7 +22,7 @@ namespace Engine {
 
 		std::filesystem::path GetDiskCachePath(
 			const std::wstring& filePath, const TextureLoadOptions& options) {
-			const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat] = options;
+			const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 			std::error_code error;
 			const auto fileSize = std::filesystem::file_size(filePath, error);
 			if (error) {
@@ -62,6 +62,8 @@ namespace Engine {
 			mix(useSrgb ? 1 : 0);
 			mix(generateMipmaps ? 1 : 0);
 			mix(invertNormalGreen ? 1 : 0);
+			if (maxDimension != 0)
+				mix(maxDimension);
 
 			error.clear();
 			const std::filesystem::path tempDirectory = std::filesystem::temp_directory_path(error);
@@ -75,7 +77,7 @@ namespace Engine {
 
 	std::shared_ptr<Texture> Texture::LoadCached(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
 		const std::wstring& filePath, const TextureLoadOptions& options) {
-		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat] = options;
+		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 		std::error_code error;
 		std::filesystem::path normalizedPath = std::filesystem::absolute(filePath, error);
 		if (error) {
@@ -89,6 +91,7 @@ namespace Engine {
 		cacheKey += generateMipmaps ? L"|m1" : L"|m0";
 		cacheKey += invertNormalGreen ? L"|n1" : L"|n0";
 		cacheKey += L"|f" + std::to_wstring(static_cast<unsigned int>(targetFormat));
+		cacheKey += L"|max" + std::to_wstring(maxDimension);
 
 		static std::mutex cacheMutex;
 		static std::unordered_map<std::wstring, std::weak_ptr<Texture>> cache;
@@ -127,6 +130,8 @@ namespace Engine {
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options))
 			return false;
 		CorrectNormalGreen(options.invertNormalGreen);
+		if (!ResizeToLimit(options.maxDimension))
+			return false;
 		// BC圧縮形式はミップ生成に非対応のため、生成後に圧縮する
 		if (!GenerateMipChain(options.generateMipmaps) || !ConvertFormat(options.targetFormat, filePath))
 			return false;
@@ -176,11 +181,12 @@ namespace Engine {
 	}
 
 	bool Texture::DecompressForProcessing(const TextureLoadOptions& options) {
-		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat] = options;
+		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 		HRESULT hr = E_FAIL;
 		if (DirectX::IsCompressed(m_meta.format) &&
 			(invertNormalGreen || (generateMipmaps && m_meta.mipLevels == 1) ||
-				m_meta.format != targetFormat)) {
+				m_meta.format != targetFormat ||
+				(maxDimension != 0 && std::max(m_meta.width, m_meta.height) > maxDimension))) {
 			DirectX::ScratchImage decompressed;
 			hr = DirectX::Decompress(m_image.GetImages(), m_image.GetImageCount(), m_meta,
 				DXGI_FORMAT_R8G8B8A8_UNORM, decompressed);
@@ -192,6 +198,24 @@ namespace Engine {
 			m_image = std::move(decompressed);
 			m_meta = m_image.GetMetadata();
 		}
+		return true;
+	}
+
+	bool Texture::ResizeToLimit(UINT maxDimension) {
+		const size_t extent = std::max(m_meta.width, m_meta.height);
+		if (maxDimension == 0 || extent <= maxDimension)
+			return true;
+		if (m_meta.dimension != DirectX::TEX_DIMENSION_TEXTURE2D)
+			return false;
+		const size_t width = std::max<size_t>(1, m_meta.width * maxDimension / extent);
+		const size_t height = std::max<size_t>(1, m_meta.height * maxDimension / extent);
+		DirectX::ScratchImage resized;
+		const auto hr = DirectX::Resize(m_image.GetImages(), m_image.GetImageCount(), m_meta, width, height,
+			DirectX::TEX_FILTER_DEFAULT, resized);
+		if (FAILED(hr))
+			return false;
+		m_image = std::move(resized);
+		m_meta = m_image.GetMetadata();
 		return true;
 	}
 

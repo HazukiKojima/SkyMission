@@ -332,6 +332,10 @@ namespace Game {
 			const float count = reader.ResolveFloat(path, "shipCount");
 			if (!std::isfinite(count) || count < 0 || count > 1024 || std::floor(count) != count)
 				throw std::runtime_error("shipCount must be an integer in [0,1024]");
+			const float textureLimit = reader.ResolveFloat(path, "maxTextureDimension");
+			if (!std::isfinite(textureLimit) || textureLimit < 4 || textureLimit > 16384 ||
+				std::floor(textureLimit) != textureLimit)
+				throw std::runtime_error("maxTextureDimension must be an integer in [4,16384]");
 			std::vector<ShipDefinition> ships;
 			for (int i = 1; i <= static_cast<int>(count); ++i) {
 				const auto prefix = "ship" + std::to_string(i);
@@ -348,6 +352,7 @@ namespace Game {
 				ship.asset.file = reader.Resolve(path, prefix + "Model");
 				ship.asset.options.normalizedExtent = 1;
 				ship.asset.options.groundOffset = 0;
+				ship.asset.options.maxTextureDimension = static_cast<unsigned>(textureLimit);
 				ship.position = vector("Position");
 				ship.rotationDegrees = vector("RotationDegrees");
 				ship.size = reader.ResolveFloat(path, prefix + "Size");

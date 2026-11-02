@@ -5,6 +5,9 @@
 #include "../../Log.h"
 #include "../../Renderer/Device/RenderDevice.h"
 #include <assimp/Importer.hpp>
+#include <assimp/Exporter.hpp>
+#include <assimp/version.h>
+#include <assimp/config.h>
 #include <assimp/matrix3x3.h>
 #include <assimp/material.h>
 #include <assimp/postprocess.h>
@@ -174,14 +177,77 @@ namespace Engine {
 			return resolved;
 		}
 
+		std::filesystem::path ModelSceneCachePath(const std::filesystem::path& source, unsigned flags) {
+			auto extension = source.extension().wstring();
+			std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
+			// FBX contains its geometry and material definitions; OBJ can depend on an external MTL.
+			if (extension != L".fbx")
+				return {};
+			std::error_code error;
+			const auto canonical = std::filesystem::weakly_canonical(source, error);
+			if (error)
+				return {};
+			const auto size = std::filesystem::file_size(source, error);
+			if (error)
+				return {};
+			const auto modified = std::filesystem::last_write_time(source, error);
+			if (error)
+				return {};
+			const auto pathText = canonical.u8string();
+			const auto key = std::string(reinterpret_cast<const char*>(pathText.data()), pathText.size()) +
+				"|scene-v2-static|" + std::to_string(size) + "|" +
+				std::to_string(modified.time_since_epoch().count()) + "|" + std::to_string(flags) + "|" +
+				std::to_string(aiGetVersionMajor()) + "." + std::to_string(aiGetVersionMinor()) + "." +
+				std::to_string(aiGetVersionRevision());
+			uint64_t hash = 14695981039346656037ULL;
+			for (unsigned char value : key) {
+				hash ^= value;
+				hash *= 1099511628211ULL;
+			}
+			const auto temp = std::filesystem::temp_directory_path(error);
+			return error ? std::filesystem::path{}
+						 : temp / L"SkyMissionModelCache" / (std::to_wstring(hash) + L".assbin");
+		}
+
 		const aiScene* ImportScene(Assimp::Importer& importer, const std::string& importerPath) {
-			const aiScene* scene = importer.ReadFile(importerPath,
-				aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_ImproveCacheLocality |
-					aiProcess_ConvertToLeftHanded | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
+			// Animation is driven by FlightScene/node rotation; imported animation tracks are never used.
+			importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_ANIMATIONS, false);
+			importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_CAMERAS, false);
+			importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_LIGHTS, false);
+			constexpr unsigned flags = aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
+				aiProcess_ImproveCacheLocality | aiProcess_ConvertToLeftHanded | aiProcess_GenSmoothNormals |
+				aiProcess_CalcTangentSpace;
+			const auto source = std::filesystem::path(
+				std::u8string(reinterpret_cast<const char8_t*>(importerPath.data()), importerPath.size()));
+			const auto cache = ModelSceneCachePath(source, flags);
+			const auto utf8 = [](const std::filesystem::path& path) {
+				const auto text = path.u8string();
+				return std::string(reinterpret_cast<const char*>(text.data()), text.size());
+			};
+			std::error_code error;
+			if (!cache.empty() && std::filesystem::is_regular_file(cache, error)) {
+				const auto* cached = importer.ReadFile(utf8(cache), 0);
+				if (cached && cached->HasMeshes() && cached->mRootNode) {
+					Log("Model scene cache hit: {}\n", importerPath);
+					return cached;
+				}
+			}
+			const aiScene* scene = importer.ReadFile(importerPath, flags);
 			if (!scene || !scene->HasMeshes() || !scene->mRootNode) {
 				Log("{}", importer.GetErrorString());
 				Log("\n");
 				return nullptr;
+			}
+			if (!cache.empty()) {
+				std::filesystem::create_directories(cache.parent_path(), error);
+				if (!error) {
+					auto temporary = cache;
+					temporary += L"." + std::to_wstring(GetCurrentProcessId()) + L".tmp";
+					Assimp::Exporter exporter;
+					if (exporter.Export(scene, "assbin", utf8(temporary)) == AI_SUCCESS)
+						MoveFileExW(temporary.c_str(), cache.c_str(), MOVEFILE_REPLACE_EXISTING);
+					std::filesystem::remove(temporary, error);
+				}
 			}
 
 			return scene;
@@ -269,7 +335,7 @@ namespace Engine {
 		const aiScene* scene = ImportScene(importer, importerPath);
 		if (!scene)
 			return false;
-		const auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
+		auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
 		if (geometries.empty())
 			return false;
 		Bounds3 bounds{
@@ -297,6 +363,12 @@ namespace Engine {
 		uint64_t totalVertexBufferBytes = 0;
 		uint64_t totalIndexBufferBytes = 0;
 		for (const auto& geometry : geometries) {
+			totalVertices += geometry.vertices.size();
+			totalIndices += geometry.indices.size();
+		}
+		allVertices.reserve(static_cast<size_t>(totalVertices));
+		allIndices.reserve(static_cast<size_t>(totalIndices));
+		for (auto& geometry : geometries) {
 			const aiMesh* sourceMesh = geometry.source;
 			const auto& vertices = geometry.vertices;
 			const auto& indices = geometry.indices;
@@ -313,10 +385,11 @@ namespace Engine {
 			mesh.indexBufferView.SizeInBytes = static_cast<UINT>(indices.size() * sizeof(uint32_t));
 			mesh.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 			mesh.indexCount = static_cast<UINT>(indices.size());
-			totalVertices += vertices.size();
-			totalIndices += indices.size();
 			totalVertexBufferBytes += vertices.size() * sizeof(ModelVertex);
 			totalIndexBufferBytes += indices.size() * sizeof(uint32_t);
+			// Keep one combined CPU copy instead of retaining every per-mesh copy during texture decoding.
+			std::vector<ModelVertex>().swap(geometry.vertices);
+			std::vector<uint32_t>().swap(geometry.indices);
 
 			if (sourceMesh->mMaterialIndex < scene->mNumMaterials)
 				LoadMaterialTextures(mesh, scene->mMaterials[sourceMesh->mMaterialIndex], modelDirectory,
@@ -441,7 +514,8 @@ namespace Engine {
 				{.useSrgb = true,
 					.generateMipmaps = true,
 					.invertNormalGreen = false,
-					.targetFormat = DXGI_FORMAT_BC3_UNORM_SRGB});
+					.targetFormat = DXGI_FORMAT_BC3_UNORM_SRGB,
+					.maxDimension = options.maxTextureDimension});
 		}
 
 		const auto loadScalarMap = [&](aiTextureType type, const std::wstring& suffix, DXGI_FORMAT format) {
@@ -452,7 +526,10 @@ namespace Engine {
 			if (path.empty())
 				return std::shared_ptr<Texture>{};
 			return Texture::LoadCached(device, commandList, path.wstring(),
-				{.useSrgb = false, .generateMipmaps = true, .targetFormat = format});
+				{.useSrgb = false,
+					.generateMipmaps = true,
+					.targetFormat = format,
+					.maxDimension = options.maxTextureDimension});
 		};
 		mesh.metallicTexture =
 			loadScalarMap(aiTextureType_METALNESS, options.metallicSuffix, DXGI_FORMAT_BC4_UNORM);
@@ -480,7 +557,8 @@ namespace Engine {
 				{.useSrgb = false,
 					.generateMipmaps = true,
 					.invertNormalGreen = invertNormalGreen,
-					.targetFormat = DXGI_FORMAT_BC5_UNORM});
+					.targetFormat = DXGI_FORMAT_BC5_UNORM,
+					.maxDimension = options.maxTextureDimension});
 		}
 	}
 

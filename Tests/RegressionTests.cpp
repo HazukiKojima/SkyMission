@@ -510,6 +510,21 @@ void TestGpuTextures(const fs::path& fixture) {
 		}
 	}
 	Texture noExtension;
+	// A resolution cap must preserve aspect ratio, rebuild mips, and have a distinct cache key.
+	for (int load = 0; load < 2; ++load) {
+		auto limited = Texture::LoadCached(device.Get(), commands.Get(), png.wstring(),
+			{.targetFormat = DXGI_FORMAT_BC3_UNORM_SRGB, .maxDimension = 8});
+		Require(limited && limited->GetResource()->GetDesc().Width == 8 &&
+				limited->GetResource()->GetDesc().Height == 8 &&
+				limited->GetResource()->GetDesc().MipLevels == 4,
+			"Texture cap or capped disk cache lost dimensions/mips");
+		submit();
+	}
+	auto fullSize = Texture::LoadCached(
+		device.Get(), commands.Get(), png.wstring(), {.targetFormat = DXGI_FORMAT_BC3_UNORM_SRGB});
+	Require(fullSize && fullSize->GetResource()->GetDesc().Width == 16,
+		"Capped texture cache contaminated full-resolution texture");
+	submit();
 	Require(noExtension.LoadFromFile(device.Get(), commands.Get(), extensionless.wstring()),
 		"Extensionless WIC image failed");
 	Require(noExtension.GetResource()->GetDesc().MipLevels == 5, "Extensionless image lost mip levels");
