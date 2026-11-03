@@ -393,6 +393,8 @@ namespace Game {
 				mission.finalFighterCount = count("finalFighterCount", 8);
 				mission.maxHostileProjectiles = count("maxHostileProjectiles", 512);
 				mission.bombReloadSeconds = reader.ResolveFloat(paths.mission, "bombReloadSeconds");
+				mission.carrierHealth = reader.ResolveFloat(paths.mission, "carrierHealth");
+				mission.bombDamage = reader.ResolveFloat(paths.mission, "bombDamage");
 				mission.commanderHealthMultiplier =
 					reader.ResolveFloat(paths.mission, "commanderHealthMultiplier");
 				mission.enemyGunSpeed = reader.ResolveFloat(paths.mission, "enemyGunSpeed");

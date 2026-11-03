@@ -15,6 +15,7 @@ namespace Game {
 			throw std::invalid_argument(
 				"Configure mission with loaded models before adding enemies/updating");
 		m_missionSettings = settings;
+		m_mission = MissionState(settings.carrierHealth);
 		m_missionEnemyModel = std::move(enemyModel);
 		m_bombModel = std::move(bombModel);
 		m_missionEnemyFlight = flight;
@@ -121,18 +122,28 @@ namespace Game {
 				break;
 			}
 		}
-		if (m_mission.IsDeckDisabled()) {
-			m_deckSmokeSeconds -= dt;
-			if (m_deckSmokeSeconds <= 0) {
-				if (const auto deck = GetDeckTarget()) {
-					XMFLOAT3 point;
-					const auto center = deck->bounds.Center();
-					XMStoreFloat3(
-						&point, XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&deck->world)));
-					m_effects.SpawnDeckSmoke(point);
-				}
-				m_deckSmokeSeconds = 0.12f;
-			}
+		UpdateCarrierSmoke(dt);
+	}
+
+	std::optional<XMFLOAT3> FlightScene::GetCarrierCenter() {
+		const auto* carrier = m_scene.FindObject(m_carrierId);
+		if (!carrier || !carrier->model->GetLocalBounds())
+			return std::nullopt;
+		const auto center = carrier->model->GetLocalBounds()->Center();
+		XMFLOAT3 point;
+		XMStoreFloat3(
+			&point, XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&carrier->worldTransform)));
+		return point;
+	}
+
+	void FlightScene::UpdateCarrierSmoke(float dt) {
+		if (!m_missionEnabled || !m_mission.IsDeckDisabled())
+			return;
+		m_deckSmokeSeconds -= dt;
+		if (m_deckSmokeSeconds <= 0) {
+			if (const auto center = GetCarrierCenter())
+				m_effects.SpawnDeckSmoke(*center);
+			m_deckSmokeSeconds = CarrierEffectSettings::smokeIntervalSeconds;
 		}
 	}
 

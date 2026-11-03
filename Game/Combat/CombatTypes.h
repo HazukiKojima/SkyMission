@@ -80,6 +80,8 @@ namespace Game {
 		bool missionEnabled = false;
 		MissionPhase missionPhase = MissionPhase::Patrol;
 		bool deckDisabled = false;
+		bool carrierPresent = false;
+		float carrierHealth = 0, carrierMaxHealth = 0;
 		float bombCooldown = 0;
 		std::optional<DirectX::XMFLOAT3> bombImpactPoint;
 		DirectX::XMFLOAT3 objectivePosition{};

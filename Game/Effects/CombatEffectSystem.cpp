@@ -31,7 +31,7 @@ namespace Game {
 		m_snapshot.gunTracers.clear();
 		AdvanceEffects(m_snapshot.impacts, step, ImpactEffectSettings::lifetimeSeconds);
 		AdvanceEffects(m_snapshot.rocketSmoke, step, RocketEffectSettings::smokeLifetimeSeconds);
-		AdvanceEffects(m_snapshot.deckSmoke, step, 4.0f);
+		AdvanceEffects(m_snapshot.deckSmoke, step, CarrierEffectSettings::smokeLifetimeSeconds);
 		AdvanceEffects(m_snapshot.explosions, step, ExplosionEffectSettings::lifetimeSeconds);
 	}
 
@@ -80,8 +80,13 @@ namespace Game {
 		AddBoundedEffect(
 			m_snapshot.rocketSmoke, RocketTrailSample{position, age}, RocketEffectSettings::maxSmokeCount);
 	}
+	void CombatEffectSystem::SpawnCarrierExplosion(const DirectX::XMFLOAT3& position) {
+		AddExplosion({position, {}, 0, CarrierEffectSettings::explosionRadius});
+	}
+
 	void CombatEffectSystem::SpawnDeckSmoke(const DirectX::XMFLOAT3& position) {
-		AddBoundedEffect(m_snapshot.deckSmoke, RocketTrailSample{position, 0}, 32);
+		AddBoundedEffect(
+			m_snapshot.deckSmoke, RocketTrailSample{position, 0}, CarrierEffectSettings::maxSmokeCount);
 	}
 
 	void CombatEffectSystem::SetRocketExhausts(std::vector<RocketExhaust> exhausts) {

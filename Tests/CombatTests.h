@@ -997,6 +997,8 @@ void TestHudRendering(const fs::path& fixture) {
 			snapshot.playerHitSeconds = 0;
 			snapshot.rocket = {};
 			snapshot.missionEnabled = true;
+			snapshot.carrierPresent = true;
+			snapshot.carrierHealth = snapshot.carrierMaxHealth = 300;
 			snapshot.missionMessageSeconds = 6;
 			snapshot.missionPhase = MissionPhase::Patrol;
 			buildFrame();
@@ -1010,6 +1012,16 @@ void TestHudRendering(const fs::path& fixture) {
 			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices,
 				"Mission objective and bomb HUD overflowed");
 			saveFrame("-mission-bombing");
+			snapshot.carrierHealth = 100;
+			buildFrame();
+			saveFrame("-carrier-damaged");
+			snapshot.carrierHealth = 0;
+			effects.impacts.clear();
+			for (int puff = 0; puff < 32; ++puff)
+				effects.deckSmoke.push_back({{0, -100, 1500}, puff * 0.25f});
+			buildFrame();
+			saveFrame("-carrier-destroyed");
+			effects.deckSmoke.clear();
 			snapshot.missionPhase = MissionPhase::Commander;
 			snapshot.deckDisabled = true;
 			snapshot.enemies = {{1, {0, 30, 1000}, {}, "SQUADRON LEADER", 180}};

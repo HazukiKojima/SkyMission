@@ -9,11 +9,16 @@ namespace Game {
 		for (const auto& smoke : snapshot.deckSmoke) {
 			if (!context.HasVertexBudget(6))
 				break;
-			const auto location =
-				XMLoadFloat3(&smoke.position) + XMVectorSet(smoke.age * 12, smoke.age * 65, 0, 0);
+			const auto location = XMLoadFloat3(&smoke.position) +
+				XMVectorSet(smoke.age * 12, smoke.age * CarrierEffectSettings::smokeRiseSpeed, 0, 0);
 			const EffectRandom random(smoke.position);
-			context.DrawCloud(location, 25 + smoke.age * 32, random.Sample(0) * XM_2PI, 17,
-				{0.18f, 0.17f, 0.16f, std::clamp(1 - smoke.age / 4, 0.0f, 1.0f) * 0.6f});
+			context.DrawCloud(location,
+				CarrierEffectSettings::smokeStartRadius +
+					smoke.age * CarrierEffectSettings::smokeGrowthPerSecond,
+				random.Sample(0) * XM_2PI, 17,
+				{0.18f, 0.17f, 0.16f,
+					std::clamp(1 - smoke.age / CarrierEffectSettings::smokeLifetimeSeconds, 0.0f, 1.0f) *
+						0.6f});
 		}
 		// 放出済みの煙は機体から独立して残し、時間とともに広げて消す
 		for (const auto& smoke : snapshot.rocketSmoke) {

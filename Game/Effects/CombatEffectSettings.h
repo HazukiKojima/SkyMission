@@ -59,6 +59,15 @@ namespace Game {
 		static constexpr float fragmentVelocityInheritance = 0.2f;
 	};
 
+	struct CarrierEffectSettings {
+		static constexpr float explosionRadius = 220;
+		static constexpr float smokeLifetimeSeconds = 10;
+		static constexpr float smokeIntervalSeconds = 0.15f;
+		static constexpr float smokeStartRadius = 70, smokeGrowthPerSecond = 22;
+		static constexpr float smokeRiseSpeed = 65;
+		static constexpr size_t maxSmokeCount = 96;
+	};
+
 	struct RocketEffectSettings {
 		static constexpr float smokeLifetimeSeconds = 0.8f;
 		static constexpr float emissionIntervalSeconds = 0.025f;

@@ -121,6 +121,8 @@ namespace Game {
 		void UpdateCamera(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput);
 		void ApplyRenderStates();
 		void RefreshCombatSnapshot();
+		std::optional<DirectX::XMFLOAT3> GetCarrierCenter();
+		void UpdateCarrierSmoke(float dt);
 		std::vector<CollisionTarget> BuildCollisionTargets();
 		void ApplyHits();
 		void UpdateGunEffects();

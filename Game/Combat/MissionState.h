@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <algorithm>
 #include <initializer_list>
 #include <cmath>
 #include <stdexcept>
@@ -9,6 +10,7 @@ namespace Game {
 	struct MissionSettings {
 		size_t patrolCount = 2, finalFighterCount = 2;
 		float bombReloadSeconds = 10;
+		float carrierHealth = 300, bombDamage = 100;
 		float commanderHealthMultiplier = 1.5f;
 		float enemyGunSpeed = 1800;
 		float enemyGunInterval = 0.18f, commanderGunInterval = 0.10f;
@@ -19,9 +21,9 @@ namespace Game {
 			if (patrolCount < 1 || patrolCount > 8 || finalFighterCount < 1 || finalFighterCount > 8 ||
 				maxHostileProjectiles < 4 || maxHostileProjectiles > 512)
 				throw std::invalid_argument("Mission aircraft/projectile counts outside valid ranges");
-			for (float value : {bombReloadSeconds, commanderHealthMultiplier, enemyGunSpeed, enemyGunInterval,
-					 commanderGunInterval, aaRange, aaInterval, deckHeightFraction, deckWidthFraction,
-					 deckLengthFraction})
+			for (float value : {carrierHealth, bombDamage, bombReloadSeconds, commanderHealthMultiplier,
+					 enemyGunSpeed, enemyGunInterval, commanderGunInterval, aaRange, aaInterval,
+					 deckHeightFraction, deckWidthFraction, deckLengthFraction})
 				if (!std::isfinite(value) || value <= 0)
 					throw std::invalid_argument("Mission settings must be positive and finite");
 			if (deckHeightFraction > 1 || deckWidthFraction > 1 || deckLengthFraction > 1)
@@ -31,18 +33,32 @@ namespace Game {
 		}
 	};
 
-	// Only live aircraft and confirmed deck hits drive progression; no rendering dependencies.
+	// 母艦の耐久値と敵機の残数で進行を管理し、描画には依存しない。
 	class MissionState {
 	  public:
+		explicit MissionState(float carrierHealth = 300)
+			: m_carrierHealth(carrierHealth), m_carrierMaxHealth(carrierHealth) {
+			if (!std::isfinite(carrierHealth) || carrierHealth <= 0)
+				throw std::invalid_argument("Carrier health must be positive and finite");
+		}
+		float GetCarrierHealth() const {
+			return m_carrierHealth;
+		}
+		float GetCarrierMaxHealth() const {
+			return m_carrierMaxHealth;
+		}
 		MissionPhase GetPhase() const {
 			return m_phase;
 		}
 		bool IsDeckDisabled() const {
-			return m_deckDisabled;
+			return m_carrierHealth <= 0;
 		}
-		void ConfirmDeckHit() {
-			if (m_phase == MissionPhase::CarrierAttack)
-				m_deckDisabled = true;
+		bool ApplyCarrierDamage(float damage) {
+			if (m_phase != MissionPhase::CarrierAttack || IsDeckDisabled() || !std::isfinite(damage) ||
+				damage <= 0)
+				return false;
+			m_carrierHealth = std::max(0.0f, m_carrierHealth - damage);
+			return true;
 		}
 		bool Advance(size_t remainingAircraft, bool playerAlive) {
 			if (m_phase == MissionPhase::Complete || m_phase == MissionPhase::Failed)
@@ -52,7 +68,7 @@ namespace Game {
 				m_phase = MissionPhase::Failed;
 			else if (m_phase == MissionPhase::Patrol && remainingAircraft == 0)
 				m_phase = MissionPhase::CarrierAttack;
-			else if (m_phase == MissionPhase::CarrierAttack && m_deckDisabled)
+			else if (m_phase == MissionPhase::CarrierAttack && IsDeckDisabled())
 				m_phase = MissionPhase::FinalFighters;
 			else if (m_phase == MissionPhase::FinalFighters && remainingAircraft == 0)
 				m_phase = MissionPhase::Commander;
@@ -63,6 +79,6 @@ namespace Game {
 
 	  private:
 		MissionPhase m_phase = MissionPhase::Patrol;
-		bool m_deckDisabled = false;
+		float m_carrierHealth, m_carrierMaxHealth;
 	};
 } // namespace Game

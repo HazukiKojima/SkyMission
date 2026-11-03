@@ -85,8 +85,10 @@ namespace Game {
 				m_combat.audio.restarted = true;
 				m_combat.audio.flying = true;
 				UpdateCamera({}, dt, {});
-			} else
+			} else {
 				m_effects.Update(dt);
+				UpdateCarrierSmoke(dt);
+			}
 			return;
 		}
 		m_battleSeconds += dt;
@@ -343,6 +345,9 @@ namespace Game {
 		m_combat.missionEnabled = m_missionEnabled;
 		m_combat.missionPhase = m_mission.GetPhase();
 		m_combat.deckDisabled = m_mission.IsDeckDisabled();
+		m_combat.carrierPresent = m_missionEnabled && m_scene.FindObject(m_carrierId);
+		m_combat.carrierHealth = m_mission.GetCarrierHealth();
+		m_combat.carrierMaxHealth = m_mission.GetCarrierMaxHealth();
 		m_combat.bombCooldown = m_bombCooldown;
 		m_combat.missionMessageSeconds = m_missionMessageSeconds;
 		m_combat.bombImpactPoint.reset();
@@ -525,9 +530,13 @@ namespace Game {
 		for (const auto& hit : hits) {
 			if (m_missionEnabled && hit.target == m_carrierId && hit.kind == ProjectileKind::Bomb) {
 				if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
-					m_mission.ConfirmDeckHit();
-					++m_combat.audio.shipExplosions;
-					m_effects.SpawnExplosion(hit.position, {});
+					m_mission.ApplyCarrierDamage(m_missionSettings.bombDamage);
+					if (m_mission.IsDeckDisabled()) {
+						++m_combat.audio.shipExplosions;
+						if (const auto center = GetCarrierCenter())
+							m_effects.SpawnCarrierExplosion(*center);
+					} else
+						m_effects.SpawnExplosion(hit.position, {});
 				}
 				continue;
 			}

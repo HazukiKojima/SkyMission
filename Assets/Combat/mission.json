@@ -2,6 +2,8 @@
   "patrolCount": 2,
   "finalFighterCount": 2,
   "bombReloadSeconds": 10,
+  "carrierHealth": 300,
+  "bombDamage": 100,
   "commanderHealthMultiplier": 1.5,
   "enemyGunSpeed": 1800,
   "enemyGunInterval": 0.18,

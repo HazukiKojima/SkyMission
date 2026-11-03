@@ -27,6 +27,28 @@ namespace Game {
 		const auto drawLabel = [&](float x, float y, std::string_view text) {
 			list.Text({offsetX + x * scale, offsetY + y * scale}, text, fontSize, color);
 		};
+		// 母艦のバーは距離やカメラの向きによらず画面左上に固定する。
+		if (snapshot.missionEnabled && snapshot.carrierPresent && snapshot.carrierMaxHealth > 0) {
+			const float health = std::clamp(snapshot.carrierHealth, 0.0f, snapshot.carrierMaxHealth);
+			const float ratio = health / snapshot.carrierMaxHealth;
+			const float x = 48 * scale;
+			const float y = 66 * scale;
+			const float width = 760 * scale, height = 24 * scale;
+			const float labelSize = 30 * scale;
+			const std::string hp = std::to_string(static_cast<int>(std::ceil(health))) + " / " +
+				std::to_string(static_cast<int>(std::ceil(snapshot.carrierMaxHealth)));
+			list.Text({x, 26 * scale}, health > 0 ? "CARRIER" : "CARRIER DESTROYED", labelSize, color);
+			list.Text({x + width - Engine::HudDrawList::MeasureTextWidth(hp, labelSize), 26 * scale}, hp,
+				labelSize, color);
+			list.FilledRect({x, y}, {width, height}, {0.025f, 0.025f, 0.025f, 0.8f});
+			if (ratio > 0)
+				list.FilledRect(
+					{x, y}, {width * ratio, height}, ratio <= 0.25f ? HudStyle::Alert : HudStyle::Caution);
+			list.Line({x, y}, {x + width, y}, lineWidth, color);
+			list.Line({x, y + height}, {x + width, y + height}, lineWidth, color);
+			list.Line({x, y}, {x, y + height}, lineWidth, color);
+			list.Line({x + width, y}, {x + width, y + height}, lineWidth, color);
+		}
 		// 敵機とミサイルで同じ画面端配置・記号を共有する。
 		const auto drawOffscreenIndicator = [&](const HudProjection& projection, XMFLOAT4 tint) {
 			if (projection.visible || !std::isfinite(projection.pixel.x) ||
@@ -103,10 +125,12 @@ namespace Game {
 				: "LOCK WARNING  " + std::to_string(snapshot.lockingEnemyCount);
 			const float titleSize = fontSize * 1.35f;
 			const float titleWidth = Engine::HudDrawList::MeasureTextWidth(label, titleSize);
-			list.Text({(view.width - titleWidth) * 0.5f, offsetY + 160 * scale}, label, titleSize, warning);
+			list.Text(
+				{(view.width - titleWidth) * 0.5f, offsetY + (snapshot.carrierPresent ? 320 : 160) * scale},
+				label, titleSize, warning);
 			if (!missile) {
-				list.Circle({view.width * 0.5f, offsetY + 240 * scale}, 20 * scale,
-					snapshot.enemyLockProgress, lineWidth * 2, warning);
+				list.Circle({view.width * 0.5f, offsetY + (snapshot.carrierPresent ? 400 : 240) * scale},
+					20 * scale, snapshot.enemyLockProgress, lineWidth * 2, warning);
 			}
 		}
 		// 照準は弾道予測とは独立し、機関砲の軸に追従する
@@ -188,9 +212,9 @@ namespace Game {
 			}
 		}
 		if (snapshot.selected == Engine::InvalidObjectId)
-			drawLabel(80, 80, "NO TARGET");
+			drawLabel(80, snapshot.carrierPresent ? 116.0f : 80.0f, "NO TARGET");
 		else if (!snapshot.aim)
-			drawLabel(80, 80, "OUT OF RANGE");
+			drawLabel(80, snapshot.carrierPresent ? 116.0f : 80.0f, "OUT OF RANGE");
 		if (snapshot.destroyedSeconds > 0)
 			drawLabel(800, 720, "DESTROYED");
 		else if (snapshot.hitSeconds > 0)
@@ -209,7 +233,7 @@ namespace Game {
 			}
 		}
 		if (snapshot.allDownSeconds > 0)
-			drawLabel(760, 180, "ALL TARGETS DOWN");
+			drawLabel(760, snapshot.carrierPresent ? 600.0f : 180.0f, "ALL TARGETS DOWN");
 		if (snapshot.missionEnabled) {
 			const auto phase = snapshot.missionPhase;
 			std::string objective;
@@ -218,7 +242,7 @@ namespace Game {
 				objective = "1/3 DESTROY PATROL";
 				break;
 			case MissionPhase::CarrierAttack:
-				objective = "2/3 BOMB CARRIER FLIGHT DECK";
+				objective = "2/3 DESTROY CARRIER";
 				break;
 			case MissionPhase::FinalFighters:
 				objective = "3/3 DESTROY REMAINING FIGHTERS";
@@ -233,17 +257,17 @@ namespace Game {
 				objective = "MISSION FAILED";
 				break;
 			}
-			drawLabel(540, 36, objective);
-			drawLabel(540, 76, "AIRCRAFT REMAINING: " + std::to_string(snapshot.enemies.size()));
+			drawLabel(540, 116, objective);
+			drawLabel(540, 160, "AIRCRAFT REMAINING: " + std::to_string(snapshot.enemies.size()));
 			if (snapshot.deckDisabled)
-				drawLabel(540, 116, "CARRIER FLIGHT DECK DISABLED");
+				drawLabel(540, 204, "CARRIER DESTROYED");
 			if (snapshot.missionMessageSeconds > 0 && snapshot.result == CombatResult::Active) {
 				if (phase == MissionPhase::Patrol)
-					drawLabel(540, 160, "LMB: CANNON  TAB: TARGET  WASD: FLIGHT");
+					drawLabel(540, 248, "LMB: CANNON  TAB: TARGET  WASD: FLIGHT");
 				else if (phase == MissionPhase::CarrierAttack)
-					drawLabel(540, 160, "RMB: DROP BOMB  CROSS: PREDICTED IMPACT");
+					drawLabel(540, 248, "RMB: DROP BOMB  CROSS: PREDICTED IMPACT");
 				else
-					drawLabel(540, 160, "ENGAGE OUTSIDE THE FLEET - NO MORE REINFORCEMENTS");
+					drawLabel(540, 248, "ENGAGE OUTSIDE THE FLEET - NO MORE REINFORCEMENTS");
 			}
 			if (snapshot.result == CombatResult::Active && phase != MissionPhase::Patrol) {
 				const auto marker = projector.Project(snapshot.objectivePosition);
