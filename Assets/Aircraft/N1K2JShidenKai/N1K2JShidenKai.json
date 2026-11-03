@@ -3,6 +3,5 @@
     "visualScale": 20,
     "flightParameters": "flightParameters.json",
     "modelImport": "modelImport.json",
-    "weapon": "weapon.json",
-    "rocketWeapon": "rocketWeapon.json"
+    "weapon": "weapon.json"
 }

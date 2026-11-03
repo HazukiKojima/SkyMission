@@ -106,14 +106,9 @@ void TestRadarMap() {
 		build();
 		Require(list.GetVertices().size() == baseline.size() - 6,
 			"Outside contact did not switch to an edge marker");
-		snapshot.incomingMissiles = {{42, {player.x, 5000, player.z - 4000}, 4000}};
-		build();
-		Require(list.GetVertices().size() == baseline.size() + 18, "Radar missile was not visible");
 		snapshot.enemies.clear();
-		snapshot.incomingMissiles.clear();
 		build();
-		Require(list.GetVertices().size() == baseline.size() - 18,
-			"Destroyed contacts or expired missiles remained on radar");
+		Require(list.GetVertices().size() == baseline.size() - 18, "Destroyed aircraft remained on radar");
 		snapshot.enemies = {{1, {player.x + 5000, 0, player.z}, {}, "CONTACT", 100}};
 		snapshot.playerPosition.x += 1000;
 		const auto moved = Game::RadarMapPresenter::Project(

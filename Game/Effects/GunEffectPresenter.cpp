@@ -13,8 +13,7 @@ namespace Game {
 				EffectDrawSettings::explosionVertexBudget +
 			std::min(snapshot.impacts.size(), ImpactEffectSettings::maxCount) *
 				EffectDrawSettings::impactVertexBudget +
-			std::min(snapshot.rocketSmoke.size(), RocketEffectSettings::maxSmokeCount) * 6 +
-			std::min(snapshot.rocketExhausts.size(), RocketEffectSettings::maxExhaustCount) * 222;
+			std::min(snapshot.deckSmoke.size(), DeckSmokeSettings::maxCount) * 6;
 		if (!context.HasVertexBudget(otherBudget + count * 6))
 			return;
 		for (size_t index = 0; index < count; ++index) {

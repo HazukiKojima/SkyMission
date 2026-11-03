@@ -4,7 +4,6 @@
 #include "Game/Scene/FlightSceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
-#include <cmath>
 #include <filesystem>
 #include <format>
 #include "Engine/ExecutablePath.h"
@@ -31,7 +30,8 @@ namespace Game {
 			.enemyAircraft = assetsDir / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 			.retroFilm = assetsDir / L"Environment/retroFilm.json",
 			.ships = assetsDir / L"Ships/ships.json",
-			.mission = assetsDir / L"Combat/mission.json"};
+			.mission = assetsDir / L"Combat/mission.json",
+			.bomb = assetsDir / L"Ammunition/Bomb/ammunition.json"};
 		const FlightSceneDefinition assets = sceneLoader.Load(scenePaths);
 
 		m_renderer = std::make_unique<Renderer>();
@@ -48,39 +48,18 @@ namespace Game {
 	}
 
 	void Application::InitializeFlightScene(const FlightSceneDefinition& assets) {
-		m_scene = std::make_unique<FlightScene>();
-		m_scene->ConfigureCombat(assets.combat);
 		m_hudPresenter.Configure(assets.hud);
-		m_scene->Initialize(
-			static_cast<float>(m_window->GetWidth()) / static_cast<float>(m_window->GetHeight()), 1.0f,
-			m_renderer->GetOceanSize());
-		SceneEnvironment environment;
-		environment.sunDirection = assets.environment.sky.sunDirection;
-		environment.sunIntensity = assets.environment.sky.sunIntensity;
-		environment.sunColor = assets.environment.sky.sunColor;
-		environment.ambientIntensity = assets.environment.sky.ambientIntensity;
-		environment.ambientColor = assets.environment.sky.ambientColor;
-		m_scene->SetEnvironment(environment);
-		m_scene->SetPlayerAircraftPosition({0, 1500, 0});
-		m_scene->SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
-		m_scene->SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
-		m_scene->AddPlayerObject(m_renderer->GetModel(PlayerModelId));
-		m_scene->ConfigureMission(assets.mission, m_renderer->GetModel(EnemyModelId),
-			assets.enemyAircraft.visualScale, assets.enemyAircraft.flightParameters, assets.enemyAIParameters,
-			m_renderer->GetModel(RocketModelId));
-		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
-		if (assets.ships.size() < 3)
-			throw std::runtime_error("Mission requires a carrier and two escorts");
-		for (size_t i = 0; i < assets.ships.size(); ++i) {
-			const auto& ship = assets.ships[i];
-			const auto id = m_scene->AddObject(m_renderer->GetModel(ship.asset.id), ship.BuildTransform());
-			m_scene->RegisterMissionShip(id, i == 0);
-		}
+		m_scene = std::make_unique<FlightScene>(FlightScene::CreateMission(
+			assets,
+			[this](const std::string& id) {
+				return m_renderer->GetModel(id);
+			},
+			m_window->GetWidth(), m_window->GetHeight(), m_renderer->GetOceanSize()));
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +
 			assets.mission.finalFighterCount + 1 +
-			static_cast<size_t>(std::ceil(120 / assets.mission.bombReloadSeconds)) + 2);
+			BombSystem::RequiredModelCapacity(assets.mission.bombReloadSeconds));
 	}
 
 	void Application::ConfigureResizeHandling() {
@@ -156,9 +135,7 @@ namespace Game {
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
-			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount,
-				combatState.threatWarning == ThreatWarning::LockOn,
-				combatState.threatWarning == ThreatWarning::Missile, deltaSeconds);
+			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount);
 			const auto view = m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
 			m_hud.Reset(view.width, view.height);

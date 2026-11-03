@@ -16,7 +16,7 @@ namespace Game {
 			const DirectX::XMFLOAT4X4& aircraftWorld, const DirectX::XMFLOAT4X4& aircraftPose,
 			const DirectX::XMFLOAT3& forward, const DirectX::XMFLOAT3& aircraftVelocity, float age,
 			const AimAssistance& assistance = {}, std::span<const CollisionTarget> targets = {},
-			float frameSeconds = 0);
+			float frameSeconds = 0, float damage = 10);
 		std::vector<HitEvent> TakeHits() {
 			auto hits = std::move(m_hits);
 			m_hits.clear();

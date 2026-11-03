@@ -106,17 +106,6 @@ namespace Game {
 					}
 			}
 		}
-		for (const auto& missile : snapshot.incomingMissiles) {
-			const auto point = Project(missile.position, snapshot.playerPosition, layout);
-			if (!point.valid)
-				continue;
-			const float radius = 4 * scale;
-			const XMFLOAT2 corners[] = {{point.pixel.x, point.pixel.y - radius},
-				{point.pixel.x + radius, point.pixel.y}, {point.pixel.x, point.pixel.y + radius},
-				{point.pixel.x - radius, point.pixel.y}};
-			for (size_t i = 0; i < std::size(corners); ++i)
-				list.Line(corners[i], corners[(i + 1) % std::size(corners)], lineWidth, HudStyle::Alert);
-		}
 		aircraft(layout.center, snapshot.playerHeading, 9 * scale, border);
 	}
 } // namespace Game

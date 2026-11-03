@@ -38,8 +38,6 @@ namespace Game {
 
 		m_shot = Synthesize(SoundKind::Shot);
 		m_hit = Synthesize(SoundKind::Hit);
-		m_lockWarning = Synthesize(SoundKind::LockWarning);
-		m_missileWarning = Synthesize(SoundKind::MissileWarning);
 
 		WAVEFORMATEX format{};
 		format.wFormatTag = WAVE_FORMAT_PCM;
@@ -56,19 +54,7 @@ namespace Game {
 		}
 	}
 
-	void CombatAudio::Update(
-		unsigned volleyCount, unsigned hitCount, bool lockWarning, bool missileWarning, float deltaSeconds) {
-		const int warning = missileWarning ? 2 : lockWarning ? 1 : 0;
-		if (warning != m_warningKind) {
-			m_warningKind = warning;
-			m_warningCountdown = 0;
-		}
-		if (std::isfinite(deltaSeconds) && deltaSeconds > 0)
-			m_warningCountdown -= std::min(deltaSeconds, 0.25f);
-		if (warning && m_warningCountdown <= 0) {
-			Play(missileWarning ? m_missileWarning : m_lockWarning, 0.45f);
-			m_warningCountdown = missileWarning ? 0.22f : 0.65f;
-		}
+	void CombatAudio::Update(unsigned volleyCount, unsigned hitCount) {
 		// 同一フレームの多重命中は一音にまとめ、音量の急増を抑える
 		if (volleyCount)
 			Play(m_shot, kShotVolume);
@@ -77,16 +63,6 @@ namespace Game {
 	}
 
 	std::vector<int16_t> CombatAudio::Synthesize(SoundKind kind) {
-		if (kind == SoundKind::LockWarning || kind == SoundKind::MissileWarning) {
-			std::vector<int16_t> samples(static_cast<size_t>(kSampleRate * 0.1f));
-			const float frequency = kind == SoundKind::MissileWarning ? 1600.0f : 900.0f;
-			for (size_t i = 0; i < samples.size(); ++i) {
-				const float time = static_cast<float>(i) / kSampleRate;
-				const float envelope = std::min(time * 200, 1.0f) * std::min((0.1f - time) * 200, 1.0f);
-				samples[i] = static_cast<int16_t>(std::sin(6.2831853f * frequency * time) * envelope * 16000);
-			}
-			return samples;
-		}
 		const bool isHit = kind == SoundKind::Hit;
 
 		const float durationSeconds = isHit ? kHitDurationSeconds : kShotDurationSeconds;
@@ -144,8 +120,6 @@ namespace Game {
 		if (m_comInitialized)
 			CoUninitialize();
 		m_comInitialized = false;
-		m_warningCountdown = 0;
-		m_warningKind = 0;
 	}
 
 } // namespace Game

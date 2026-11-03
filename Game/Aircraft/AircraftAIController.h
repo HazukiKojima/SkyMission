@@ -46,8 +46,8 @@ namespace Game {
 	struct AircraftAIDecision {
 		AircraftInput flight;
 		bool fire = false;
-		bool locking = false;
-		float lockProgress = 0;
+		bool aiming = false;
+		float aimProgress = 0;
 	};
 
 	class AircraftAIController {
@@ -238,8 +238,8 @@ namespace Game {
 					std::cos(XMConvertToRadians(p.aimAngleDegrees)) &&
 				m_combatTime >= p.openingGraceSeconds;
 			m_aimTime = aligned ? std::min(p.aimHoldSeconds, m_aimTime + dt) : 0;
-			result.locking = aligned;
-			result.lockProgress = m_aimTime / p.aimHoldSeconds;
+			result.aiming = aligned;
+			result.aimProgress = m_aimTime / p.aimHoldSeconds;
 			result.fire = aligned && m_aimTime >= p.aimHoldSeconds;
 			return result;
 		}

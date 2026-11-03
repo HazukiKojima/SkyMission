@@ -33,14 +33,6 @@ namespace Game {
 			settings.enemyHealth = Positive(reader, path, "enemyHealth");
 			settings.playerHealth = Positive(reader, path, "playerHealth");
 			settings.bulletDamage = Positive(reader, path, "bulletDamage");
-			for (size_t i = 0; i < 3; ++i) {
-				const auto key = "enemyPosition" + std::to_string(i + 1);
-				const auto position = reader.ResolveFloatArray(path, key);
-				if (position.size() != 3 || !std::isfinite(position[0]) || !std::isfinite(position[1]) ||
-					!std::isfinite(position[2]))
-					throw std::invalid_argument(key + " must contain three finite coordinates");
-				settings.enemyPositions[i] = {position[0], position[1], position[2]};
-			}
 			return settings;
 		} catch (const std::exception& error) {
 			throw std::runtime_error(PathText(path) + ": " + error.what());

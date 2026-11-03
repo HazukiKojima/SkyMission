@@ -150,7 +150,7 @@ namespace Game {
 	bool ProjectileSystem::FireVolley(Engine::Scene& scene, const std::array<XMFLOAT3, 4>& muzzles,
 		const XMFLOAT4X4& aircraftWorld, const XMFLOAT4X4& aircraftPose, const XMFLOAT3& forward,
 		const XMFLOAT3& aircraftVelocity, float age, const AimAssistance& assistance,
-		std::span<const CollisionTarget> targets, float frameSeconds) {
+		std::span<const CollisionTarget> targets, float frameSeconds, float damage) {
 		if (!m_model || m_settings.maxProjectiles - m_projectiles.size() < 4)
 			return false;
 		auto aircraftRotation = XMLoadFloat4x4(&aircraftPose);
@@ -170,6 +170,7 @@ namespace Game {
 			XMStoreFloat3(&projectile.velocity,
 				XMLoadFloat3(&aircraftVelocity) + XMLoadFloat3(&direction) * m_settings.muzzleSpeed);
 			projectile.remainingLifetime = m_settings.lifetime;
+			projectile.damage = damage;
 			projectile.birthPosition = projectile.position;
 			// L1・R2とL2・R1を交互に光らせ、4門が同時に消える周期を作らない
 			const unsigned phase = muzzleIndex == 0 || muzzleIndex == 3 ? 0u : 1u;
