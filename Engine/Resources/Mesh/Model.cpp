@@ -1,258 +1,21 @@
 #include "../../Renderer/RootBindings.h"
 #include "Model.h"
+#include "ModelGeometry.h"
+#include "ModelImporter.h"
 #include "MaterialTexturePaths.h"
 #include "../Buffer/BufferUtilities.h"
 #include "../../Log.h"
 #include "../../Renderer/Device/RenderDevice.h"
 #include <assimp/Importer.hpp>
-#include <assimp/Exporter.hpp>
-#include <assimp/version.h>
-#include <assimp/config.h>
-#include <assimp/matrix3x3.h>
 #include <assimp/material.h>
-#include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <cwctype>
-#include <cstring>
-#include <DirectXMath.h>
-#include <filesystem>
 #include <limits>
-#include <string>
-#include <vector>
-#include <array>
-#include <unordered_map>
-
 namespace Engine {
+	using namespace ModelProcessing;
 	namespace {
-		struct ModelVertex {
-			DirectX::XMFLOAT3 position;
-			DirectX::XMFLOAT2 texcoord;
-			DirectX::XMFLOAT3 normal;
-			DirectX::XMFLOAT4 tangent;
-		};
-
-		struct MeshInstance {
-			const aiMesh* mesh;
-			aiMatrix4x4 transform;
-			bool isRotatingNode;
-		};
-
-		// メッシュと補助ノードに同じ原点補正・縮尺を適用する
-		struct ModelNormalization {
-			aiVector3D minimum;
-			aiVector3D maximum;
-			float scale;
-			float groundOffset;
-			ModelOrigin origin;
-			DirectX::XMFLOAT3 Transform(const aiVector3D& position) const {
-				return {(position.x - (minimum.x + maximum.x) * 0.5f) * scale,
-					origin == ModelOrigin::BoundsCenter
-						? (position.y - (minimum.y + maximum.y) * 0.5f) * scale
-						: (position.y - minimum.y) * scale + groundOffset,
-					(position.z - (minimum.z + maximum.z) * 0.5f) * scale};
-			}
-		};
-		struct MeshGeometry {
-			const aiMesh* source = nullptr;
-			std::vector<ModelVertex> vertices;
-			std::vector<uint32_t> indices;
-			bool isRotatingNode = false;
-			DirectX::XMFLOAT3 nodeRotationPivot{};
-			DirectX::XMFLOAT3 nodeRotationAxis{0.0f, 0.0f, 1.0f};
-		};
-		MeshGeometry BuildMeshGeometry(
-			const MeshInstance& instance, const ModelNormalization& normalization) {
-			MeshGeometry result;
-			const aiMesh* sourceMesh = instance.mesh;
-			if (!sourceMesh->HasPositions() || !sourceMesh->HasFaces())
-				return result;
-			result.source = sourceMesh;
-			auto& vertices = result.vertices;
-			vertices.reserve(sourceMesh->mNumVertices);
-			const bool isRotatingNode = instance.isRotatingNode;
-			const aiMatrix3x3 linearTransform(instance.transform);
-			aiMatrix3x3 normalTransform(linearTransform);
-			normalTransform.Inverse().Transpose();
-			aiVector3D nodeRotationBoundsMin(std::numeric_limits<float>::max(),
-				std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-			aiVector3D nodeRotationBoundsMax(std::numeric_limits<float>::lowest(),
-				std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-			for (unsigned int vertexIndex = 0; vertexIndex < sourceMesh->mNumVertices; ++vertexIndex) {
-				const aiVector3D position = instance.transform * sourceMesh->mVertices[vertexIndex];
-				if (isRotatingNode) {
-					nodeRotationBoundsMin.x = std::min(nodeRotationBoundsMin.x, position.x);
-					nodeRotationBoundsMin.y = std::min(nodeRotationBoundsMin.y, position.y);
-					nodeRotationBoundsMin.z = std::min(nodeRotationBoundsMin.z, position.z);
-					nodeRotationBoundsMax.x = std::max(nodeRotationBoundsMax.x, position.x);
-					nodeRotationBoundsMax.y = std::max(nodeRotationBoundsMax.y, position.y);
-					nodeRotationBoundsMax.z = std::max(nodeRotationBoundsMax.z, position.z);
-				}
-
-				const aiVector3D texcoord = sourceMesh->HasTextureCoords(0)
-					? sourceMesh->mTextureCoords[0][vertexIndex]
-					: aiVector3D();
-				const aiVector3D normal = normalTransform *
-					(sourceMesh->HasNormals() ? sourceMesh->mNormals[vertexIndex]
-											  : aiVector3D(0.0f, 1.0f, 0.0f));
-				const aiVector3D tangent = linearTransform *
-					(sourceMesh->HasTangentsAndBitangents() ? sourceMesh->mTangents[vertexIndex]
-															: aiVector3D(1.0f, 0.0f, 0.0f));
-				const aiVector3D bitangent = linearTransform *
-					(sourceMesh->HasTangentsAndBitangents() ? sourceMesh->mBitangents[vertexIndex]
-															: aiVector3D(0.0f, 0.0f, 1.0f));
-				const float handedness = normal.x * (tangent.y * bitangent.z - tangent.z * bitangent.y) +
-					normal.y * (tangent.z * bitangent.x - tangent.x * bitangent.z) +
-					normal.z * (tangent.x * bitangent.y - tangent.y * bitangent.x);
-				const float tangentSign = handedness < 0 ? -1.0f : 1.0f;
-
-				vertices.push_back({normalization.Transform(position), {texcoord.x, texcoord.y},
-					{normal.x, normal.y, normal.z}, {tangent.x, tangent.y, tangent.z, tangentSign}});
-			}
-
-			auto& indices = result.indices;
-			indices.reserve(static_cast<size_t>(sourceMesh->mNumFaces) * 3);
-			for (unsigned int faceIndex = 0; faceIndex < sourceMesh->mNumFaces; ++faceIndex) {
-				const aiFace& face = sourceMesh->mFaces[faceIndex];
-				if (face.mNumIndices == 3) {
-					indices.insert(indices.end(), face.mIndices, face.mIndices + 3);
-				}
-			}
-
-			if (indices.empty() || vertices.size() > UINT_MAX / sizeof(ModelVertex) ||
-				indices.size() > UINT_MAX / sizeof(uint32_t)) {
-				return {};
-			}
-
-			result.isRotatingNode = isRotatingNode;
-			if (isRotatingNode) {
-				const float extentX = nodeRotationBoundsMax.x - nodeRotationBoundsMin.x;
-				const float extentY = nodeRotationBoundsMax.y - nodeRotationBoundsMin.y;
-				const float extentZ = nodeRotationBoundsMax.z - nodeRotationBoundsMin.z;
-				result.nodeRotationPivot =
-					normalization.Transform((nodeRotationBoundsMin + nodeRotationBoundsMax) * 0.5f);
-				if (extentX <= extentY && extentX <= extentZ) {
-					result.nodeRotationAxis = {1.0f, 0.0f, 0.0f};
-				} else if (extentY <= extentZ) {
-					result.nodeRotationAxis = {0.0f, 1.0f, 0.0f};
-				}
-			}
-			return result;
-		}
-
-		MeshGeometry SimplifyGeometry(const MeshGeometry& source, float extent, unsigned lod) {
-			if (lod == 0 || source.isRotatingNode)
-				return source;
-			auto low = source.vertices.front().position, high = low;
-			for (const auto& v : source.vertices) {
-				low.x = std::min(low.x, v.position.x);
-				low.y = std::min(low.y, v.position.y);
-				low.z = std::min(low.z, v.position.z);
-				high.x = std::max(high.x, v.position.x);
-				high.y = std::max(high.y, v.position.y);
-				high.z = std::max(high.z, v.position.z);
-			}
-			const float componentSize = std::max({high.x - low.x, high.y - low.y, high.z - low.z});
-			if (componentSize < extent * (lod == 1 ? 0.006f : 0.018f))
-				return {};
-			struct Key {
-				std::array<int, 7> values;
-				bool operator==(const Key&) const = default;
-			};
-			struct Hash {
-				size_t operator()(const Key& key) const {
-					size_t hash = 14695981039346656037ULL;
-					for (int value : key.values) {
-						hash ^= static_cast<unsigned>(value);
-						hash *= 1099511628211ULL;
-					}
-					return hash;
-				}
-			};
-			const float cell = extent / (lod == 1 ? 128.0f : 48.0f);
-			MeshGeometry result;
-			result.source = source.source;
-			std::unordered_map<Key, uint32_t, Hash> clusters;
-			std::vector<uint32_t> remap(source.vertices.size()), counts;
-			for (size_t i = 0; i < source.vertices.size(); ++i) {
-				const auto& v = source.vertices[i];
-				const float n[] = {v.normal.x, v.normal.y, v.normal.z};
-				int axis = 0;
-				if (std::abs(n[1]) > std::abs(n[axis]))
-					axis = 1;
-				if (std::abs(n[2]) > std::abs(n[axis]))
-					axis = 2;
-				const Key key{{int(std::floor(v.position.x / cell)), int(std::floor(v.position.y / cell)),
-					int(std::floor(v.position.z / cell)),
-					int(std::floor(std::clamp(v.texcoord.x, -1e6f, 1e6f) * 32)),
-					int(std::floor(std::clamp(v.texcoord.y, -1e6f, 1e6f) * 32)),
-					axis * 2 + (n[axis] < 0 ? 1 : 0), v.tangent.w < 0 ? 1 : 0}};
-				const auto [entry, inserted] =
-					clusters.emplace(key, static_cast<uint32_t>(result.vertices.size()));
-				remap[i] = entry->second;
-				if (inserted) {
-					result.vertices.push_back(v);
-					counts.push_back(1);
-				} else {
-					auto& target = result.vertices[entry->second];
-					target.position.x += v.position.x;
-					target.position.y += v.position.y;
-					target.position.z += v.position.z;
-					target.texcoord.x += v.texcoord.x;
-					target.texcoord.y += v.texcoord.y;
-					++counts[entry->second];
-				}
-			}
-			for (size_t i = 0; i < result.vertices.size(); ++i) {
-				const float scale = 1.0f / counts[i];
-				auto& v = result.vertices[i];
-				v.position.x *= scale;
-				v.position.y *= scale;
-				v.position.z *= scale;
-				v.texcoord.x *= scale;
-				v.texcoord.y *= scale;
-			}
-			for (size_t i = 0; i < source.indices.size(); i += 3) {
-				const auto a = remap[source.indices[i]], b = remap[source.indices[i + 1]],
-						   c = remap[source.indices[i + 2]];
-				if (a != b && b != c && a != c)
-					result.indices.insert(result.indices.end(), {a, b, c});
-			}
-			// Discard vertices no longer referenced by surviving triangles.
-			std::vector<ModelVertex> compact;
-			std::vector<uint32_t> used(result.vertices.size(), UINT32_MAX);
-			for (auto& index : result.indices) {
-				if (used[index] == UINT32_MAX) {
-					used[index] = static_cast<uint32_t>(compact.size());
-					compact.push_back(result.vertices[index]);
-				}
-				index = used[index];
-			}
-			result.vertices = std::move(compact);
-			return result;
-		}
-
-		void CollectMeshInstances(const aiScene* scene, const aiNode* node,
-			const aiMatrix4x4& parentTransform, bool parentIsNodeRotation,
-			const std::string& rotatingNodeName, std::vector<MeshInstance>& instances) {
-			const aiMatrix4x4 transform = parentTransform * node->mTransformation;
-			const bool isRotatingNode = parentIsNodeRotation ||
-				(!rotatingNodeName.empty() && node->mName.C_Str() == rotatingNodeName);
-			for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex) {
-				const aiMesh* mesh = scene->mMeshes[node->mMeshes[meshIndex]];
-				instances.push_back({mesh, transform,
-					isRotatingNode ||
-						(!rotatingNodeName.empty() && mesh->mName.C_Str() == rotatingNodeName)});
-			}
-
-			for (unsigned int childIndex = 0; childIndex < node->mNumChildren; ++childIndex) {
-				CollectMeshInstances(scene, node->mChildren[childIndex], transform, isRotatingNode,
-					rotatingNodeName, instances);
-			}
-		}
-
 		std::filesystem::path ResolveMaterialTexture(const aiMaterial* material, aiTextureType type,
 			const std::filesystem::path& modelDirectory, const ModelLoadOptions& options) {
 			aiString texturePath;
@@ -271,142 +34,7 @@ namespace Engine {
 			return resolved;
 		}
 
-		std::filesystem::path ModelSceneCachePath(const std::filesystem::path& source, unsigned flags) {
-			auto extension = source.extension().wstring();
-			std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
-			// FBX contains its geometry and material definitions; OBJ can depend on an external MTL.
-			if (extension != L".fbx")
-				return {};
-			std::error_code error;
-			const auto canonical = std::filesystem::weakly_canonical(source, error);
-			if (error)
-				return {};
-			const auto size = std::filesystem::file_size(source, error);
-			if (error)
-				return {};
-			const auto modified = std::filesystem::last_write_time(source, error);
-			if (error)
-				return {};
-			const auto pathText = canonical.u8string();
-			const auto key = std::string(reinterpret_cast<const char*>(pathText.data()), pathText.size()) +
-				"|scene-v2-static|" + std::to_string(size) + "|" +
-				std::to_string(modified.time_since_epoch().count()) + "|" + std::to_string(flags) + "|" +
-				std::to_string(aiGetVersionMajor()) + "." + std::to_string(aiGetVersionMinor()) + "." +
-				std::to_string(aiGetVersionRevision());
-			uint64_t hash = 14695981039346656037ULL;
-			for (unsigned char value : key) {
-				hash ^= value;
-				hash *= 1099511628211ULL;
-			}
-			const auto temp = std::filesystem::temp_directory_path(error);
-			return error ? std::filesystem::path{}
-						 : temp / L"SkyMissionModelCache" / (std::to_wstring(hash) + L".assbin");
-		}
-
-		const aiScene* ImportScene(Assimp::Importer& importer, const std::string& importerPath) {
-			// Animation is driven by FlightScene/node rotation; imported animation tracks are never used.
-			importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_ANIMATIONS, false);
-			importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_CAMERAS, false);
-			importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_LIGHTS, false);
-			constexpr unsigned flags = aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
-				aiProcess_ImproveCacheLocality | aiProcess_ConvertToLeftHanded | aiProcess_GenSmoothNormals |
-				aiProcess_CalcTangentSpace;
-			const auto source = std::filesystem::path(
-				std::u8string(reinterpret_cast<const char8_t*>(importerPath.data()), importerPath.size()));
-			const auto cache = ModelSceneCachePath(source, flags);
-			const auto utf8 = [](const std::filesystem::path& path) {
-				const auto text = path.u8string();
-				return std::string(reinterpret_cast<const char*>(text.data()), text.size());
-			};
-			std::error_code error;
-			if (!cache.empty() && std::filesystem::is_regular_file(cache, error)) {
-				const auto* cached = importer.ReadFile(utf8(cache), 0);
-				if (cached && cached->HasMeshes() && cached->mRootNode) {
-					Log("Model scene cache hit: {}\n", importerPath);
-					return cached;
-				}
-			}
-			const aiScene* scene = importer.ReadFile(importerPath, flags);
-			if (!scene || !scene->HasMeshes() || !scene->mRootNode) {
-				Log("{}", importer.GetErrorString());
-				Log("\n");
-				return nullptr;
-			}
-			if (!cache.empty()) {
-				std::filesystem::create_directories(cache.parent_path(), error);
-				if (!error) {
-					auto temporary = cache;
-					temporary += L"." + std::to_wstring(GetCurrentProcessId()) + L".tmp";
-					Assimp::Exporter exporter;
-					if (exporter.Export(scene, "assbin", utf8(temporary)) == AI_SUCCESS)
-						MoveFileExW(temporary.c_str(), cache.c_str(), MOVEFILE_REPLACE_EXISTING);
-					std::filesystem::remove(temporary, error);
-				}
-			}
-
-			return scene;
-		}
-
-		void CollectNodePositions(const aiNode& node, const aiMatrix4x4& parent,
-			const ModelNormalization& normalization,
-			std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>>& positions) {
-			const auto transform = parent * node.mTransformation;
-			positions[node.mName.C_Str()].push_back(normalization.Transform(transform * aiVector3D()));
-			for (unsigned i = 0; i < node.mNumChildren; ++i)
-				CollectNodePositions(*node.mChildren[i], transform, normalization, positions);
-		}
-
-		std::vector<MeshGeometry> BuildModelGeometry(const aiScene& scene, const ModelLoadOptions& options,
-			std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>>& positions) {
-			std::vector<MeshInstance> meshInstances;
-			CollectMeshInstances(
-				&scene, scene.mRootNode, aiMatrix4x4(), false, options.rotatingNodeName, meshInstances);
-			if (meshInstances.empty()) {
-				Log("Model::Load - model has no node mesh instances\n");
-				return {};
-			}
-
-			aiVector3D boundsMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
-				std::numeric_limits<float>::max());
-			aiVector3D boundsMax(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(),
-				std::numeric_limits<float>::lowest());
-			for (const MeshInstance& instance : meshInstances) {
-				const aiMesh* mesh = instance.mesh;
-				for (unsigned int vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex) {
-					const aiVector3D position = instance.transform * mesh->mVertices[vertexIndex];
-					boundsMin.x = std::min(boundsMin.x, position.x);
-					boundsMin.y = std::min(boundsMin.y, position.y);
-					boundsMin.z = std::min(boundsMin.z, position.z);
-					boundsMax.x = std::max(boundsMax.x, position.x);
-					boundsMax.y = std::max(boundsMax.y, position.y);
-					boundsMax.z = std::max(boundsMax.z, position.z);
-				}
-			}
-
-			const float extent =
-				std::max({boundsMax.x - boundsMin.x, boundsMax.y - boundsMin.y, boundsMax.z - boundsMin.z});
-			if (!std::isfinite(extent) || extent <= 0.0f) {
-				Log("Model::Load - model has no valid dimensions\n");
-				return {};
-			}
-			const ModelNormalization normalization{boundsMin, boundsMax, options.normalizedExtent / extent,
-				options.groundOffset, options.origin};
-			CollectNodePositions(*scene.mRootNode, aiMatrix4x4(), normalization, positions);
-			std::vector<MeshGeometry> geometries;
-			for (const auto& instance : meshInstances) {
-				auto geometry = BuildMeshGeometry(instance, normalization);
-				if (!geometry.indices.empty())
-					geometries.push_back(std::move(geometry));
-			}
-
-			if (geometries.empty())
-				return {};
-
-			return geometries;
-		}
-
 	} // namespace
-
 	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 		const std::wstring& filePath, const ModelLoadOptions& options) {
 		for (auto& meshes : m_lodMeshes)
@@ -429,7 +57,7 @@ namespace Engine {
 		const std::string importerPath(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
 
 		Assimp::Importer importer;
-		const aiScene* scene = ImportScene(importer, importerPath);
+		const aiScene* scene = ModelImport::ImportScene(importer, importerPath);
 		if (!scene)
 			return false;
 		auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
@@ -473,7 +101,7 @@ namespace Engine {
 		const float extent = std::max({bounds.maximum.x - bounds.minimum.x,
 			bounds.maximum.y - bounds.minimum.y, bounds.maximum.z - bounds.minimum.z});
 		for (auto& geometry : geometries) {
-			const auto materialIndex = geometry.source->mMaterialIndex;
+			const auto materialIndex = geometry.materialIndex;
 			auto [material, inserted] = materials.try_emplace(materialIndex);
 			if (inserted) {
 				if (materialIndex < scene->mNumMaterials)

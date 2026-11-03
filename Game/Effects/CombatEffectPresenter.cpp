@@ -23,7 +23,7 @@ namespace Game {
 				continue;
 			DrawExplosion(explosion, context, view.height / EffectDrawSettings::referenceHeight);
 		}
-		DrawRocketEffects(snapshot, context);
+		DrawDeckSmoke(snapshot, context);
 		context.SetAdditionalReservedVertices(0);
 		DrawGunFire(snapshot, context);
 		for (const auto& impact : snapshot.impacts) {

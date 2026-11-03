@@ -570,21 +570,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Game\Weapons\RocketDefinition.h">
-      <Filter>Game\Weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Weapons\RocketLauncher.h">
-      <Filter>Game\Weapons</Filter>
-    </ClInclude>
-    <ClCompile Include="Game\Weapons\RocketLauncher.cpp">
-      <Filter>Game\Weapons</Filter>
-    </ClCompile>
-    <ClInclude Include="Game\Weapons\RocketSystem.h">
-      <Filter>Game\Weapons</Filter>
-    </ClInclude>
-    <ClCompile Include="Game\Weapons\RocketSystem.cpp">
-      <Filter>Game\Weapons</Filter>
-    </ClCompile>
     <ClCompile Include="Game\Effects\GunEffectPresenter.cpp">
       <Filter>Game\Effects</Filter>
     </ClCompile>
@@ -597,15 +582,6 @@
     <ClInclude Include="Game\Weapons\GunShotEvent.h">
       <Filter>Game\Weapons</Filter>
     </ClInclude>
-    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp">
-      <Filter>Game\Effects</Filter>
-    </ClCompile>
-    <ClInclude Include="Tests\RocketTests.h">
-      <Filter>Tests</Filter>
-    </ClInclude>
-    <None Include="Assets\Aircraft\N1K2JShidenKai\rocketWeapon.json">
-      <Filter>Assets\Aircraft\N1K2JShidenKai</Filter>
-    </None>
     <None Include="Assets\Ammunition\Rocket\ammunition.json">
       <Filter>Assets\Ammunition\Rocket</Filter>
     </None>
@@ -626,5 +602,27 @@
     <ClInclude Include="Game\Weapons\BombFlight.h"><Filter>Game\Weapons</Filter></ClInclude>
     <ClInclude Include="Tests\MissionTests.h"><Filter>Tests</Filter></ClInclude>
     <None Include="Assets\Combat\mission.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\BombSystem.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\BombDefinition.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Tests\BombTests.h"><Filter>Tests</Filter></ClInclude>
+    <ClCompile Include="Game\Weapons\BombSystem.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\Effects\DeckSmokePresenter.cpp"><Filter>Game\Effects</Filter></ClCompile>
+    <None Include="Assets\Ammunition\Bomb\ammunition.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Scene\FlightMission.cpp"><Filter>Game\Scene</Filter></ClCompile>
+    <ClCompile Include="Game\Scene\FlightSceneRestart.cpp"><Filter>Game\Scene</Filter></ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\ModelGeometry.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\ModelLod.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\ModelImporter.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
+    <ClInclude Include="Game\Scene\FlightMission.h"><Filter>Game\Scene</Filter></ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\ModelGeometry.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
+    <ClInclude Include="Engine\Resources\Mesh\ModelImporter.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Combat\CombatSnapshotBuilder.cpp"><Filter>Game\Combat</Filter></ClCompile>
+    <ClInclude Include="Game\Combat\CombatSnapshotBuilder.h"><Filter>Game\Combat</Filter></ClInclude>
   </ItemGroup>
 </Project>

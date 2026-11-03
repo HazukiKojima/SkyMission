@@ -27,7 +27,7 @@ namespace Game {
 		const auto drawLabel = [&](float x, float y, std::string_view text) {
 			list.Text({offsetX + x * scale, offsetY + y * scale}, text, fontSize, color);
 		};
-		// 敵機とミサイルで同じ画面端配置・記号を共有する。
+		// 目標が画面外にある場合も、機首を向ける方向を表示する。
 		const auto drawOffscreenIndicator = [&](const HudProjection& projection, XMFLOAT4 tint) {
 			if (projection.visible || !std::isfinite(projection.pixel.x) ||
 				!std::isfinite(projection.pixel.y))
@@ -94,20 +94,6 @@ namespace Game {
 			list.Line(tip, {tip.x - x * 25 * scale + y * 12 * scale, tip.y - y * 25 * scale - x * 12 * scale},
 				lineWidth * 2, warning);
 			drawLabel(820, 800, "TAKING FIRE");
-		}
-		if (snapshot.threatWarning != ThreatWarning::None) {
-			const bool missile = snapshot.threatWarning == ThreatWarning::Missile;
-			const auto warning = color;
-			const std::string label = missile
-				? "MISSILE ALERT  " + std::to_string(snapshot.incomingMissiles.size())
-				: "LOCK WARNING  " + std::to_string(snapshot.lockingEnemyCount);
-			const float titleSize = fontSize * 1.35f;
-			const float titleWidth = Engine::HudDrawList::MeasureTextWidth(label, titleSize);
-			list.Text({(view.width - titleWidth) * 0.5f, offsetY + 160 * scale}, label, titleSize, warning);
-			if (!missile) {
-				list.Circle({view.width * 0.5f, offsetY + 240 * scale}, 20 * scale,
-					snapshot.enemyLockProgress, lineWidth * 2, warning);
-			}
 		}
 		// 照準は弾道予測とは独立し、機関砲の軸に追従する
 		XMFLOAT3 sightWorldPosition;
@@ -195,22 +181,9 @@ namespace Game {
 			drawLabel(800, 720, "DESTROYED");
 		else if (snapshot.hitSeconds > 0)
 			drawLabel(920, 640, "HIT");
-		if (snapshot.rocket.configured) {
-			for (size_t port = 0; port < 2; ++port) {
-				std::ostringstream text;
-				text << (snapshot.rocket.nextMuzzle == port ? "> " : "  ") << "RKT "
-					 << (port == 0 ? "L1 " : "R1 ");
-				if (snapshot.rocket.cooldowns[port] <= 1e-6f)
-					text << "READY";
-				else
-					text << std::fixed << std::setprecision(1)
-						 << std::ceil(snapshot.rocket.cooldowns[port] * 10) / 10 << "s";
-				drawStatus(188 + float(port) * 48, text.str());
-			}
-		}
 		if (snapshot.allDownSeconds > 0)
 			drawLabel(760, 180, "ALL TARGETS DOWN");
-		if (snapshot.missionEnabled) {
+		{
 			const auto phase = snapshot.missionPhase;
 			std::string objective;
 			switch (phase) {
@@ -276,17 +249,5 @@ namespace Game {
 				}
 			}
 		}
-		// ロック中の敵と飛来ミサイルは、同じ画面端配置を色で区別する。
-		for (const auto& position : snapshot.lockingEnemyPositions)
-			drawOffscreenIndicator(projector.Project(position), HudStyle::Caution);
-		if (snapshot.threatWarning == ThreatWarning::Missile)
-			for (const auto& threat : snapshot.incomingMissiles) {
-				const auto projected = projector.Project(threat.position);
-				if (projected.visible)
-					list.Circle(
-						projected.pixel, std::max(10.0f, 22 * scale), 1, lineWidth * 2, HudStyle::Alert);
-				else
-					drawOffscreenIndicator(projected, HudStyle::Alert);
-			}
 	}
 } // namespace Game

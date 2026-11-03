@@ -66,7 +66,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		.playerAircraft = assets / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = assets / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 		.retroFilm = assets / L"Environment/retroFilm.json",
-		.mission = assets / L"Combat/mission.json"});
+		.mission = assets / L"Combat/mission.json",
+		.bomb = assets / L"Ammunition/Bomb/ammunition.json"});
 	Require(definition.mission.patrolCount == 2 && definition.mission.bombReloadSeconds == 10,
 		"Mission config not loaded");
 	const auto window = CreateWindowW(L"STATIC", L"Mission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0,
@@ -88,6 +89,101 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		Require(box->Load(device.GetDevice(), context.GetCommandList(), &device,
 					(fixture / L"combat-box.obj").wstring(), options),
 			"Mission carrier fixture failed");
+		// 本番と同じ生成経路で、初回更新前の表示とリトライを検証する。
+		auto missionDefinition = definition;
+		missionDefinition.ships.resize(3);
+		for (size_t i = 0; i < missionDefinition.ships.size(); ++i) {
+			auto& ship = missionDefinition.ships[i];
+			ship.asset.id = "fixtureShip" + std::to_string(i);
+			ship.position = {0, 0, -20000.0f - float(i) * 4000};
+		}
+		const auto resolveModel = [&](const std::string& id) {
+			return id == PlayerModelId || id == AmmunitionModelId ? player : box;
+		};
+		auto initialized = FlightScene::CreateMission(missionDefinition, resolveModel, 1024, 768, 100000);
+		Require(initialized.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount &&
+				initialized.GetCombatSnapshot().playerAltitudeMeters == 1500,
+			"Mission factory returned an incomplete initial snapshot");
+		const auto initialPlayerId = initialized.GetObjects().front().id;
+		const auto initialEnemyPosition = initialized.GetCombatSnapshot().enemies.front().center;
+		initialized.RemoveObject(initialPlayerId);
+		initialized.Update({}, 0.01f);
+		Require(initialized.GetCombatSnapshot().result == CombatResult::Defeat,
+			"Removing player before first update must fail mission");
+		initialized.OnResize(1600, 900);
+		for (int retry = 0; retry < 2; ++retry) {
+			initialized.Update({}, 0.01f, {}, {.retry = true});
+			const auto& restored = initialized.GetCombatSnapshot();
+			Require(restored.result == CombatResult::Active &&
+					restored.missionPhase == MissionPhase::Patrol &&
+					restored.playerHealth == definition.combat.playerHealth &&
+					restored.enemies.size() == definition.mission.patrolCount &&
+					restored.enemies.front().center.z == initialEnemyPosition.z &&
+					initialized.GetProjectileCount() == 0 && initialized.GetHostileProjectileCount() == 0 &&
+					initialized.GetBombCount() == 0 && initialized.GetEffectSnapshot().explosions.empty(),
+				"Factory retry did not restore the completed initial state");
+			XMFLOAT4X4 projection;
+			XMStoreFloat4x4(&projection, initialized.GetRenderScene().GetCamera().GetProjection());
+			Require(std::abs(projection._22 / projection._11 - 1600.0f / 900.0f) < 0.0001f &&
+					initialized.GetObjects().front().model == player,
+				"Retry restored an old viewport or replaced shared GPU assets");
+			initialized.RemoveObject(initialPlayerId);
+			initialized.Update({}, 0.01f);
+		}
+		bool rejectedMissingModel = false;
+		try {
+			FlightScene::CreateMission(
+				missionDefinition,
+				[](const std::string&) {
+					return std::shared_ptr<Model>{};
+				},
+				1024, 768, 100000);
+		} catch (const std::invalid_argument& error) {
+			rejectedMissingModel = std::string(error.what()).find(PlayerModelId) != std::string::npos;
+		}
+		Require(rejectedMissingModel, "Mission factory accepted a missing player model");
+		// Enemy weapon setup must not depend on whether player/mission setup ran first.
+		auto weaponSettings = definition.mission;
+		weaponSettings.maxHostileProjectiles = 4;
+		weaponSettings.enemyGunInterval = 0.07f;
+		const auto configuredScene = [&](bool weaponsFirst) {
+			FlightScene candidate;
+			candidate.Initialize(1, 1, 100000);
+			auto combat = definition.combat;
+			combat.playerHealth = 100000;
+			candidate.ConfigureCombat(combat);
+			candidate.SetPlayerAircraftPosition({0, 1500, 0});
+			candidate.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
+			candidate.AddPlayerObject(player);
+			const auto configureWeapons = [&] {
+				candidate.ConfigureEnemyWeapons(definition.playerWeapon, weaponSettings, player);
+				candidate.ConfigurePlayerWeapon(definition.playerWeapon, player);
+				candidate.ConfigureBombWeapon(definition.bomb, weaponSettings.bombReloadSeconds, box);
+			};
+			if (weaponsFirst)
+				configureWeapons();
+			candidate.ConfigureMission(weaponSettings, box, 1, definition.enemyAircraft.flightParameters,
+				definition.enemyAIParameters);
+			if (!weaponsFirst)
+				configureWeapons();
+			return candidate;
+		};
+		auto weaponsFirst = configuredScene(true);
+		auto missionFirst = configuredScene(false);
+		size_t mostBullets = 0;
+		for (int frame = 0; frame < 3600; ++frame) {
+			weaponsFirst.Update({}, 1.0f / 60);
+			missionFirst.Update({}, 1.0f / 60);
+			mostBullets = std::max(mostBullets, weaponsFirst.GetHostileProjectileCount());
+			Require(weaponsFirst.GetHostileProjectileCount() == missionFirst.GetHostileProjectileCount() &&
+					weaponsFirst.GetCombatSnapshot().playerHealth ==
+						missionFirst.GetCombatSnapshot().playerHealth,
+				"Initialization order changed enemy weapons");
+			Require(mostBullets <= weaponSettings.maxHostileProjectiles,
+				"Configured hostile projectile cap was ignored");
+		}
+		Require(mostBullets > 0, "Gun AI did not fire during the close-range pursuit simulation");
+
 		FlightScene scene;
 		scene.Initialize(1, 1, 100000);
 		auto combat = definition.combat;
@@ -97,7 +193,9 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
 		const auto playerId = scene.AddPlayerObject(player);
 		scene.ConfigureMission(definition.mission, box, 1, definition.enemyAircraft.flightParameters,
-			definition.enemyAIParameters, box);
+			definition.enemyAIParameters);
+		scene.ConfigureBombWeapon(definition.bomb, definition.mission.bombReloadSeconds, box);
+		scene.ConfigureEnemyWeapons(definition.playerWeapon, definition.mission, player);
 		scene.ConfigurePlayerWeapon(definition.playerWeapon, player);
 		XMFLOAT4X4 carrierWorld;
 		XMStoreFloat4x4(&carrierWorld,

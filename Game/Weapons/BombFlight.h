@@ -5,6 +5,10 @@
 #include <optional>
 
 namespace Game {
+	struct BombTuning {
+		static constexpr float releaseOffsetMeters = 12;
+		static constexpr float lifetimeSeconds = 120;
+	};
 	struct BombFlight {
 		DirectX::XMFLOAT3 position{}, velocity{};
 		static constexpr float gravity = 9.81f;

@@ -60,15 +60,14 @@ void TestHudTypography() {
 	snapshot.forward = {0, 0, 1};
 	snapshot.enemies = {{1, {0, 0, 1000}, {}, "ENEMY 01", 100, {0, 0, 1}}};
 	snapshot.selected = 1;
-	snapshot.rocket = {true, {0, 2.4f}, 0};
 	snapshot.hitSeconds = snapshot.playerHitSeconds = 0.1f;
 	snapshot.playerHitDirection = {1, 0, 0};
 	snapshot.destroyedSeconds = snapshot.allDownSeconds = 1;
 	for (auto result : {Game::CombatResult::Active, Game::CombatResult::Victory, Game::CombatResult::Defeat})
-		for (auto warning :
-			{Game::ThreatWarning::None, Game::ThreatWarning::LockOn, Game::ThreatWarning::Missile}) {
+		for (auto phase :
+			{Game::MissionPhase::Patrol, Game::MissionPhase::CarrierAttack, Game::MissionPhase::Commander}) {
 			snapshot.result = result;
-			snapshot.threatWarning = warning;
+			snapshot.missionPhase = phase;
 			snapshot.lockState = Game::LockState::Locked;
 			list.Reset(view.width, view.height);
 			Game::CombatHudPresenter{}.Build(snapshot, view, list);

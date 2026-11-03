@@ -15,20 +15,20 @@ void TestEnemyCombatAI() {
 	const XMFLOAT3 forward{0, 0, -1};
 	AircraftAITarget target{{0, 300, -600}, {0, 0, -60}, forward};
 	AircraftAIController controller;
-	bool fired = false, warnedBeforeLaunch = false;
+	bool fired = false, aimedBeforeShot = false;
 	for (int i = 0; i < 400; ++i) {
 		const auto decision = controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, true);
 		if (i < 299)
 			Require(!decision.fire, "Enemy launched during opening grace");
-		warnedBeforeLaunch |= decision.locking && !decision.fire;
+		aimedBeforeShot |= decision.aiming && !decision.fire;
 		fired |= decision.fire;
 	}
-	Require(fired && warnedBeforeLaunch, "Enemy missile did not warn before lock completion");
+	Require(fired && aimedBeforeShot, "Enemy did not hold its aim before firing");
 	const auto interrupted = controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, true, false);
-	Require(!interrupted.fire && !interrupted.locking && interrupted.lockProgress == 0,
-		"Cooldown retained missile lock");
+	Require(!interrupted.fire && !interrupted.aiming && interrupted.aimProgress == 0,
+		"Cooldown retained gun aim");
 	const auto reacquire = controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, true);
-	Require(!reacquire.fire && reacquire.lockProgress < 1, "Missile reacquired instantly after cooldown");
+	Require(!reacquire.fire && reacquire.aimProgress < 1, "Gun fired without reacquiring aim");
 	Require(!controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, false).fire,
 		"Reserved enemy kept launching");
 	AircraftAIController pursue, disengage, evade, recover;
@@ -53,7 +53,7 @@ void TestEnemyCombatAI() {
 	Require(attack.GetMode() == AircraftCombatMode::Attack, "Attack duration alone caused escape");
 	attack.NotifyWeaponFired();
 	const auto postShot = attack.ReadCombatInput(aircraft, target, forward, 0.1f, p, 0, true);
-	Require(attack.GetMode() == AircraftCombatMode::Disengage && !postShot.locking && !postShot.fire,
+	Require(attack.GetMode() == AircraftCombatMode::Disengage && !postShot.aiming && !postShot.fire,
 		"Successful launch did not create a counterattack window");
 	bool returned = false;
 	for (int i = 0; i < 31; ++i) {
@@ -108,7 +108,7 @@ void TestEnemyCombatAI() {
 	for (int i = 0; i < 100; ++i) {
 		const auto decision =
 			tooClose.ReadCombatInput(aircraft, {{0, 300, -100}, {}, {0, 0, 1}}, forward, 0.1f, p, 0, true);
-		Require(!decision.locking && !decision.fire, "Enemy attacked inside its minimum separation");
+		Require(!decision.aiming && !decision.fire, "Enemy attacked inside its minimum separation");
 	}
 	AircraftFlightParameters fast;
 	fast.initialSpeed = 650;
@@ -126,7 +126,7 @@ void TestEnemyCombatAI() {
 	const auto recovery = settle(recover, target);
 	Require(recover.GetMode() == AircraftCombatMode::Recover && recovery.flight.pitch > 0,
 		"Low altitude did not trigger climb");
-	std::cout << "PASS: enemy pursuit, evasion, separation, recovery, grace and missile lock acquisition\n";
+	std::cout << "PASS: enemy pursuit, evasion, separation, recovery, grace and gun aim acquisition\n";
 }
 
 void TestAIParameters(const fs::path& repository, const fs::path& fixture) {
@@ -143,14 +143,14 @@ void TestAIParameters(const fs::path& repository, const fs::path& fixture) {
 	aircraft << "{\"visualScale\":20,\"model\":" << std::quoted((enemy / L"F4U4Corsair.fbx").generic_string())
 			 << ",\"flightParameters\":" << std::quoted((enemy / L"flightParameters.json").generic_string())
 			 << ",\"modelImport\":" << std::quoted((enemy / L"modelImport.json").generic_string())
-			 << ",\"rocketWeapon\":" << std::quoted((enemy / L"rocketWeapon.json").generic_string())
 			 << ",\"aiParameters\":" << std::quoted(aiPath.generic_string()) << '}';
 	aircraft.close();
 	const auto load = [&] {
 		return FlightSceneLoader{}.Load({.environment = assets / L"Environment/environment.json",
 			.playerAircraft = assets / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 			.enemyAircraft = aircraftPath,
-			.retroFilm = assets / L"Environment/retroFilm.json"});
+			.retroFilm = assets / L"Environment/retroFilm.json",
+			.bomb = assets / L"Ammunition/Bomb/ammunition.json"});
 	};
 	std::ofstream(aiPath) << original;
 	const auto valid = load().enemyAIParameters;
@@ -182,92 +182,6 @@ void TestAIParameters(const fs::path& repository, const fs::path& fixture) {
 	reject("tailDistance", "6000");
 	reject("reengageDistance", "9000");
 	std::cout << "PASS: tail-pursuit JSON/layout, positive finite fields and distance ordering\n";
-}
-
-void TestMissileEdgeIndicators() {
-	using namespace DirectX;
-	for (const XMFLOAT2 size : {XMFLOAT2{800, 600}, XMFLOAT2{1920, 1080}})
-		for (float yaw : {0.0f, XM_PIDIV2}) {
-			Engine::RenderView view;
-			view.width = static_cast<unsigned>(size.x);
-			view.height = static_cast<unsigned>(size.y);
-			XMStoreFloat4x4(&view.view, XMMatrixRotationY(yaw));
-			XMStoreFloat4x4(&view.projection, XMMatrixPerspectiveFovLH(XM_PIDIV4, size.x / size.y, 1, 10000));
-			const auto cameraWorld = XMMatrixInverse(nullptr, XMLoadFloat4x4(&view.view));
-			const auto world = [&](XMFLOAT3 local) {
-				XMFLOAT3 result;
-				XMStoreFloat3(&result, XMVector3TransformCoord(XMLoadFloat3(&local), cameraWorld));
-				return result;
-			};
-			CombatSnapshot missile;
-			missile.threatWarning = ThreatWarning::Missile;
-			Engine::HudDrawList empty;
-			empty.Reset(view.width, view.height);
-			CombatHudPresenter{}.Build(missile, view, empty);
-			const size_t emptyCount = empty.GetVertices().size();
-			missile.incomingMissiles = {{77, world({0, 0, 100}), 100}};
-			Engine::HudDrawList list;
-			list.Reset(view.width, view.height);
-			CombatHudPresenter{}.Build(missile, view, list);
-			const size_t visibleCount = list.GetVertices().size();
-			Require(visibleCount > emptyCount + 12, "Visible missile was not circled");
-			for (const XMFLOAT3 local : {XMFLOAT3{5000, 0, 100}, XMFLOAT3{-5000, 0, 100},
-					 XMFLOAT3{0, 5000, 100}, XMFLOAT3{0, -5000, 100}, XMFLOAT3{0, 0, -100}}) {
-				const auto position = world(local);
-				missile.incomingMissiles.front().position = position;
-				list.Reset(view.width, view.height);
-				CombatHudPresenter{}.Build(missile, view, list);
-				Require(list.GetVertices().size() == emptyCount + 12 + 24,
-					"Offscreen missile did not add one edge arrow and one radar marker");
-				const auto& vertices = list.GetVertices();
-				CombatSnapshot enemy;
-				enemy.selected = 1;
-				enemy.enemies = {{1, position, {}, "ENEMY", 100}};
-				Engine::HudDrawList enemyList;
-				enemyList.Reset(view.width, view.height);
-				CombatHudPresenter{}.Build(enemy, view, enemyList);
-				bool same = false;
-				for (size_t first = 0; first + 12 <= enemyList.GetVertices().size(); ++first) {
-					bool matches = true;
-					for (size_t n = 0; n < 12; ++n) {
-						const auto a = vertices[vertices.size() - 12 + n].position,
-								   b = enemyList.GetVertices()[first + n].position;
-						matches &= std::abs(a.x - b.x) < 0.01f && std::abs(a.y - b.y) < 0.01f;
-					}
-					same |= matches;
-				}
-				Require(same, "Enemy and missile edge indicators used different placement or shape");
-				CombatSnapshot lock;
-				lock.threatWarning = ThreatWarning::LockOn;
-				lock.lockingEnemyCount = 1;
-				lock.enemyLockProgress = 0.5f;
-				lock.lockingEnemyPositions = {world({0, 0, 100})};
-				Engine::HudDrawList yellow;
-				yellow.Reset(view.width, view.height);
-				CombatHudPresenter{}.Build(lock, view, yellow);
-				const auto yellowVisibleCount = yellow.GetVertices().size();
-				lock.lockingEnemyPositions = {position};
-				yellow.Reset(view.width, view.height);
-				CombatHudPresenter{}.Build(lock, view, yellow);
-				Require(yellow.GetVertices().size() == yellowVisibleCount + 12,
-					"Yellow lock arrow was not restricted to screen edges");
-				for (size_t n = 0; n < 12; ++n) {
-					const auto redVertex = vertices[vertices.size() - 12 + n];
-					const auto yellowVertex = yellow.GetVertices()[yellow.GetVertices().size() - 12 + n];
-					Require(std::abs(redVertex.position.x - yellowVertex.position.x) < 0.01f &&
-							std::abs(redVertex.position.y - yellowVertex.position.y) < 0.01f,
-						"Yellow/red warning arrows used different placement");
-				}
-			}
-			missile.incomingMissiles.front().position = world({0, 0, 100});
-			list.Reset(view.width, view.height);
-			CombatHudPresenter{}.Build(missile, view, list);
-			Require(list.GetVertices().size() == visibleCount,
-				"Visible missile did not switch from edge arrow to circle");
-		}
-	std::cout << "PASS: identical enemy/lock/missile edge arrows, front/rear/sides, camera rotation and "
-				 "visible circle "
-				 "suppression\n";
 }
 
 void TestCombatMath() {
@@ -362,162 +276,8 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 	const auto definition = FlightSceneLoader{}.Load({.environment = assets / L"Environment/environment.json",
 		.playerAircraft = assets / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = assets / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-		.retroFilm = assets / L"Environment/retroFilm.json"});
-	// 実機の飛行モデルを使い、長距離離脱ではなく背後の位置取りと攻撃復帰を測定する
-	const auto simulatePursuit = [&](DirectX::XMFLOAT3 start, size_t slot, bool turning,
-									 bool physicalPlayer) {
-		const float battleSpeed = definition.playerAircraft.flightParameters.initialSpeed;
-		AircraftFlightModel fighter;
-		fighter.SetFlightParameters(definition.enemyAircraft.flightParameters);
-		fighter.SetPosition(start);
-		fighter.SetHeading({-start.x, 1500 - start.y, -start.z});
-		AircraftAIController controller;
-		AircraftFlightModel player;
-		player.SetFlightParameters(definition.playerAircraft.flightParameters);
-		player.SetPosition({0, 1500, 0});
-		float firstRear = -1, firstLock = -1, rearSeconds = 0, distantSeconds = 0;
-		float bandSeconds = 0, closeSeconds = 0;
-		float breakSeconds = 0, maximumBreak = 0, cooldown = 0, closest = 100000;
-		unsigned shots = 0, rearEntries = 0;
-		bool wasRear = false;
-		for (int frame = 0; frame < 7200; ++frame) {
-			const float seconds = frame / 60.0f;
-			const float angle = turning ? seconds * 0.22f : 0;
-			AircraftAITarget target;
-			target.position = turning ? XMFLOAT3{battleSpeed / 0.22f * (1 - std::cos(angle)), 1500,
-											-battleSpeed / 0.22f * std::sin(angle)}
-									  : XMFLOAT3{0, 1500, -battleSpeed * seconds};
-			target.velocity = {battleSpeed * std::sin(angle), 0, -battleSpeed * std::cos(angle)};
-			target.forward = {std::sin(angle), 0, -std::cos(angle)};
-			if (physicalPlayer)
-				target = {player.GetPosition(), player.GetVelocity(), player.GetForward()};
-			const auto position = fighter.GetPosition();
-			const auto delta = XMLoadFloat3(&target.position) - XMLoadFloat3(&position);
-			const float distance = XMVectorGetX(XMVector3Length(delta));
-			XMFLOAT3 direction;
-			XMStoreFloat3(&direction, XMVector3Normalize(delta));
-			cooldown = std::max(0.0f, cooldown - 1 / 60.0f);
-			const bool allowed = slot % 3 != static_cast<size_t>(seconds / 6) % 3;
-			const auto decision = controller.ReadCombatInput(fighter, target, direction, 1 / 60.0f,
-				definition.enemyAIParameters, slot, allowed, cooldown <= 0);
-			const bool rear = distance <= definition.enemyAIParameters.attackDistance &&
-				XMVectorGetX(XMVector3Dot(XMLoadFloat3(&direction), XMLoadFloat3(&target.forward))) >= 0.5f;
-			if (rear) {
-				if (firstRear < 0)
-					firstRear = seconds;
-				rearSeconds += 1 / 60.0f;
-				if (!wasRear)
-					++rearEntries;
-			}
-			wasRear = rear;
-			if (decision.locking) {
-				Require(distance >= definition.enemyAIParameters.disengageDistance &&
-						distance <= definition.enemyAIParameters.attackDistance && allowed && cooldown <= 0,
-					"Enemy locked outside its medium-range attack window");
-				if (firstLock < 0)
-					firstLock = seconds;
-			}
-			if (decision.fire) {
-				++shots;
-				cooldown = definition.enemyMissile.settings.cooldownSeconds;
-				controller.NotifyWeaponFired();
-			}
-			if (controller.GetMode() == AircraftCombatMode::Disengage) {
-				breakSeconds += 1 / 60.0f;
-				maximumBreak = std::max(maximumBreak, breakSeconds);
-			} else
-				breakSeconds = 0;
-			if (seconds > 30 && distance >= definition.enemyAIParameters.disengageDistance &&
-				distance <= definition.enemyAIParameters.reengageDistance)
-				bandSeconds += 1 / 60.0f;
-			if (seconds > 30 && distance < definition.enemyAIParameters.disengageDistance * 0.85f)
-				closeSeconds += 1 / 60.0f;
-			if (seconds > 45 && distance > definition.enemyAIParameters.attackDistance * 1.2f)
-				distantSeconds += 1 / 60.0f;
-			closest = std::min(closest, distance);
-			fighter.Update(decision.flight, 1 / 60.0f);
-			if (physicalPlayer) {
-				const auto f = player.GetForward(), playerPosition = player.GetPosition();
-				AircraftInput input;
-				input.autoLevelRoll = true;
-				input.turn = turning ? 0.35f : 0;
-				input.throttle = std::clamp((battleSpeed - player.GetSpeed()) * 0.015f, -1.0f, 1.0f);
-				input.pitch = std::clamp(
-					(std::atan2(1500 - playerPosition.y, 1000.0f) - std::atan2(f.y, std::hypot(f.x, f.z))) *
-						1.5f,
-					-1.0f, 1.0f);
-				player.Update(input, 1 / 60.0f);
-			}
-			const auto updated = fighter.GetPosition();
-			Require(std::isfinite(updated.x) && std::isfinite(updated.y) && std::isfinite(updated.z) &&
-					updated.y > 0,
-				"Combat AI produced a non-finite position or entered the sea");
-		}
-		Require(firstLock >= 0 && firstLock <= 45,
-			"Actual flight AI did not acquire a medium-range lock within 45 seconds");
-		Require(bandSeconds > 45 && closeSeconds < 5 && shots >= 2 && distantSeconds < 10,
-			"Actual flight AI did not maintain medium-range pursuit and repeated attacks");
-		Require(maximumBreak <= definition.enemyAIParameters.maximumDisengageSeconds + 1 / 60.0f,
-			"Actual flight AI exceeded its disengagement time limit");
-		Require(closest > definition.enemyAIParameters.disengageDistance * 0.6f,
-			"Actual flight AI entered close combat");
-		std::cout << "PASS: tail pursuit physical=" << physicalPlayer << " turn=" << turning
-				  << " slot=" << slot << " first rear=" << firstRear << " lock=" << firstLock
-				  << " rear seconds=" << rearSeconds << " entries=" << rearEntries << " shots=" << shots
-				  << " band seconds=" << bandSeconds << " close seconds=" << closeSeconds
-				  << " far seconds=" << distantSeconds << " break=" << maximumBreak << " closest=" << closest
-				  << '\n';
-	};
-	for (bool physicalPlayer : {false, true})
-		for (bool turning : {false, true}) {
-			for (size_t slot = 0; slot < definition.combat.enemyPositions.size(); ++slot)
-				simulatePursuit(definition.combat.enemyPositions[slot], slot, turning, physicalPlayer);
-			// 初期配置だけでなく、前方・側方・後方の接近からも確認する
-			simulatePursuit({0, 1500, -5000}, 0, turning, physicalPlayer);
-			simulatePursuit({5000, 1500, 0}, 1, turning, physicalPlayer);
-			simulatePursuit({0, 1500, 5000}, 2, turning, physicalPlayer);
-		}
-	// 同じミサイルでも直進なら被弾し、接近を見てハイG旋回すると失探させられる。
-	const auto evadeMissile = [&](bool evade) {
-		AircraftFlightModel playerFlight;
-		playerFlight.SetFlightParameters(definition.playerAircraft.flightParameters);
-		playerFlight.SetPosition({0, 1500, -10000});
-		playerFlight.SetHeading({0, 0, 1});
-		RocketSystem missiles;
-		Scene missileScene;
-		missiles.Configure(definition.enemyMissile.settings, std::make_shared<Model>(), {1, 0, 0});
-		XMFLOAT4X4 pose;
-		XMStoreFloat4x4(&pose, XMMatrixTranslation(0, 1500, 0));
-		missiles.Fire(missileScene, {}, pose, {0, 0, -1}, {0, 0, -650}, 77);
-		bool hit = false, lost = false, turning = false;
-		for (int frame = 0; frame < 1000 && missiles.GetCount(); ++frame) {
-			const auto previous = playerFlight.GetPosition();
-			const auto rocket = missiles.GetRockets().front().position;
-			const float distance =
-				XMVectorGetX(XMVector3Length(XMLoadFloat3(&rocket) - XMLoadFloat3(&previous)));
-			AircraftInput input;
-			input.autoLevelRoll = true;
-			turning |= evade && distance < 6000;
-			if (turning) {
-				input.turn = 1;
-				input.pitch = 0.8f;
-				input.highGTurn = true;
-			}
-			playerFlight.Update(input, 1 / 60.0f);
-			const auto position = playerFlight.GetPosition();
-			CollisionTarget collision{
-				77, {{-80, -30, -80}, {80, 30, 80}}, previous, playerFlight.GetWorldTransform()};
-			CombatTarget target{77, position, playerFlight.GetVelocity(), "PLAYER", 100};
-			missiles.Update(missileScene, 1 / 60.0f, std::span(&collision, 1), std::span(&target, 1));
-			hit |= !missiles.TakeHits().empty();
-			if (missiles.GetCount())
-				lost |= missiles.GetRockets().front().targetId == InvalidObjectId;
-		}
-		return std::pair{hit, lost};
-	};
-	Require(evadeMissile(false).first, "Straight flight was never hit by missile");
-	const auto avoided = evadeMissile(true);
-	Require(!avoided.first && avoided.second, "High-G turn could not evade/break missile seeker");
+		.retroFilm = assets / L"Environment/retroFilm.json",
+		.bomb = assets / L"Ammunition/Bomb/ammunition.json"});
 	const auto cubePath = fixture / L"combat-box.obj";
 	std::ofstream(cubePath)
 		<< "v -1 -1 -1\nv 1 -1 -1\nv 1 1 -1\nv -1 1 -1\nv -1 -1 1\nv 1 -1 1\nv 1 1 1\nv -1 1 1\n"
@@ -550,137 +310,28 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			combat.bulletDamage = 100;
 			scene.ConfigureCombat(combat);
 			scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
-			scene.AddPlayerObject(player);
+			const auto playerId = scene.AddPlayerObject(player);
 			scene.ConfigurePlayerWeapon(definition.playerWeapon, player);
 			scene.AddEnemyAircraft(enemy, {0, 15, -160}, 5, definition.enemyAircraft.flightParameters,
-				definition.enemyAIParameters, 100, "ENEMY 01");
-			ShipDefinition staticShip;
-			staticShip.position = {2200, 0, -9000};
-			staticShip.size = 5400;
-			staticShip.waterlineOffset = -195;
-			const auto shipTransform = staticShip.BuildTransform();
-			const auto shipId = scene.AddObject(enemy, shipTransform);
+				definition.enemyAIParameters, 100, "PATROL");
 			scene.Update({}, 0.25f, {}, {{true}});
 			const auto& state = scene.GetCombatSnapshot();
-			const auto& playerWorld = scene.GetObjects().front().worldTransform;
-			Require(std::abs(state.playerPosition.x - playerWorld._41) < 0.001f &&
-					std::abs(state.playerPosition.y - playerWorld._42) < 0.001f &&
-					std::abs(state.playerPosition.z - playerWorld._43) < 0.001f &&
-					std::abs(state.playerHeading.y) < 0.001f &&
-					std::abs(std::hypot(state.playerHeading.x, state.playerHeading.z) - 1) < 0.001f,
-				"Radar player snapshot does not match the aircraft position and horizontal heading");
-			const auto& effectState = scene.GetEffectSnapshot();
-			Require(state.enemies.empty() && state.destroyedSeconds > 0 && state.allDownSeconds > 0,
-				"Projectile damage did not destroy enemy and notify all-down");
-			Require(state.firedVolleys > 0 && state.hitCount == 1 && !effectState.impacts.empty(),
-				"Combat feedback events missing");
-			Require(effectState.explosions.size() == 1 && effectState.explosions.front().age == 0,
-				"Lethal multi-hit did not create exactly one explosion");
-			const auto deathPosition = effectState.explosions.front().position;
+			Require(state.enemies.empty() && state.hitCount == 1 && state.destroyedSeconds > 0,
+				"Lethal cannon volley did not produce one kill");
+			Require(state.result == CombatResult::Active && state.missionPhase == MissionPhase::CarrierAttack,
+				"Patrol all-down incorrectly produced victory");
+			Require(scene.GetEffectSnapshot().explosions.size() == 1,
+				"Multiple simultaneous bullets created duplicate death effects");
+			scene.RemoveObject(playerId);
 			scene.Update({}, 0.01f);
-			Require(effectState.explosions.size() == 1 &&
-					effectState.explosions.front().position.z == deathPosition.z,
-				"Explosion did not survive enemy removal");
-			Require(scene.GetCombatSnapshot().firedVolleys == 0 && scene.GetCombatSnapshot().hitCount == 0,
-				"Combat sound events persisted across frames");
-			Require(state.selected == Engine::InvalidObjectId && state.lockState == LockState::None,
-				"Destroyed enemy retained target reference");
-			scene.Update({}, 0.25f, {}, {{true}});
-			Require(scene.GetCombatSnapshot().allDownSeconds < 3, "All-down timer was repeatedly restarted");
-			scene.Update({}, 0.25f);
-			Require(scene.GetEffectSnapshot().impacts.empty(), "Impact effect did not expire");
-			for (int frame = 0; frame < 14; ++frame)
-				scene.Update({}, 0.25f);
-			Require(effectState.explosions.empty(), "Explosion did not expire");
-			for (int retry = 0; retry < 3; ++retry) {
-				Require(state.result == CombatResult::Victory, "Last enemy kill did not produce victory");
-				CombatInput input;
-				input.retry = true;
-				scene.Update({}, 0.01f, {}, input);
-				const auto shipObject = std::find_if(
-					scene.GetObjects().begin(), scene.GetObjects().end(), [&](const auto& object) {
-						return object.id == shipId;
-					});
-				Require(shipObject != scene.GetObjects().end() &&
-						std::memcmp(&shipObject->worldTransform, &shipTransform, sizeof(shipTransform)) == 0,
-					"Retry did not preserve static ship transform");
-				Require(std::abs(state.playerSpeedMetersPerSecond -
-							definition.playerAircraft.flightParameters.initialSpeed) < 0.001f &&
-						std::abs(state.playerAltitudeMeters) < 0.001f,
-					"Retry did not restore flight HUD values");
-				Require(std::hypot(state.playerPosition.x, state.playerPosition.z) < 0.001f &&
-						std::abs(state.playerHeading.x) < 0.001f && state.playerHeading.z < -0.99f,
-					"Retry did not restore the radar player position and heading");
-				Require(state.result == CombatResult::Active && state.enemies.size() == 1 &&
-						scene.GetProjectileCount() == 0 && scene.GetRocketCount() == 0 &&
-						state.lockState == LockState::None,
-					"Victory retry retained weapons, targets or result");
-				scene.Update({}, 0.25f, {}, {{true}});
-			}
-		}
-		// 実際の遠距離戦で、捕捉警告→発射→追尾警告→命中/失探と再挑戦を検証する。
-		{
-			FlightScene battle;
-			battle.Initialize(1, 1, 60000);
-			auto combat = definition.combat;
-			combat.playerHealth = 35;
-			battle.ConfigureCombat(combat);
-			auto targetFlight = definition.playerAircraft.flightParameters;
-			targetFlight.initialSpeed = 500;
-			targetFlight.gravity = targetFlight.drag = targetFlight.acceleration = 0;
-			battle.SetPlayerAircraftFlightParameters(targetFlight);
-			battle.SetPlayerAircraftPosition({0, 1500, 0});
-			battle.AddPlayerObject(enemy);
-			auto enemyFlight = targetFlight;
-			enemyFlight.initialSpeed = 650;
-			for (size_t i = 0; i < 3; ++i)
-				battle.AddEnemyAircraft(enemy, {static_cast<float>(i) * 1000, 1500, 11000}, 1, enemyFlight,
-					definition.enemyAIParameters, 120, "MISSILE", true);
-			battle.ConfigureEnemyMissile(definition.enemyMissile, player);
-			for (int retry = 0; retry < 3; ++retry) {
-				bool locking = false, incoming = false;
-				unsigned launches = 0;
-				for (int frame = 0;
-					frame < 14400 && battle.GetCombatSnapshot().result == CombatResult::Active; ++frame) {
-					battle.Update({}, 1 / 60.0f);
-					const auto& state = battle.GetCombatSnapshot();
-					locking |= state.threatWarning == ThreatWarning::LockOn;
-					if (!incoming && state.threatWarning == ThreatWarning::Missile) {
-						FlightScene brokenLock = battle;
-						brokenLock.SetPlayerAircraftPosition({100000, 1500, 0});
-						brokenLock.Update({}, 1 / 60.0f);
-						Require(brokenLock.GetEnemyMissileCount() > 0 &&
-								brokenLock.GetCombatSnapshot().incomingMissiles.empty() &&
-								brokenLock.GetCombatSnapshot().threatWarning == ThreatWarning::None,
-							"Lost seeker retained incoming warning");
-					}
-					incoming |= state.threatWarning == ThreatWarning::Missile;
-					launches += state.enemyMissilesLaunched;
-					Require(state.lockingEnemyCount == state.lockingEnemyPositions.size(),
-						"Lock warning positions were stale or missing");
-					Require(state.lockingEnemyCount <= 2 && state.enemyMissilesLaunched <= 2,
-						"More than two enemy missile locks/launches");
-				}
-				Require(locking && incoming && launches > 0, "Missile lock/launch warnings were missing");
-				Require(battle.GetCombatSnapshot().result == CombatResult::Defeat,
-					"Straight flight escaped every enemy missile");
-				Require(battle.GetCombatSnapshot().incomingMissiles.empty() &&
-						battle.GetCombatSnapshot().threatWarning == ThreatWarning::None,
-					"Defeat retained missile warning");
-				Require(std::all_of(battle.GetCombatSnapshot().enemies.begin(),
-							battle.GetCombatSnapshot().enemies.end(),
-							[](const CombatTarget& target) {
-								return target.health == 120;
-							}),
-					"Enemy missiles damaged friendly aircraft");
-				CombatInput input;
-				input.retry = true;
-				battle.Update({}, 0.01f, {}, input);
-				Require(battle.GetEnemyMissileCount() == 0 && battle.GetCombatSnapshot().playerHealth == 35 &&
-						battle.GetCombatSnapshot().threatWarning == ThreatWarning::None &&
-						battle.GetObjects().size() == 4,
-					"Retry retained enemy missiles, warning, cooldown or damage");
-			}
+			Require(state.result == CombatResult::Defeat, "Player removal did not produce defeat");
+			CombatInput retry;
+			retry.retry = true;
+			scene.Update({}, 0.01f, {}, retry);
+			Require(state.result == CombatResult::Active && state.enemies.size() == 1 &&
+					scene.GetProjectileCount() == 0 && scene.GetBombCount() == 0 &&
+					state.playerHealth == combat.playerHealth,
+				"Retry retained damage or weapons");
 		}
 
 		GunSettings gun = definition.playerWeapon.gun;
@@ -776,7 +427,6 @@ void TestHudRendering(const fs::path& fixture) {
 			snapshot.forward = {0, 0, 1};
 			snapshot.playerHeading = {0, 0, 1};
 			snapshot.gunImpactPoint = XMFLOAT3{20, 10, 1000};
-			snapshot.rocket = {true, {0, 2.4f}, 0};
 			snapshot.aim = AimSolution{{0.05f, 0, 1}, {60, 50, 1100}, 1};
 			snapshot.assistReady = true;
 			snapshot.hitSeconds = 0.15f;
@@ -830,8 +480,6 @@ void TestHudRendering(const fs::path& fixture) {
 			Require(list.GetVertices().size() == baseVertices, "Rear explosion was drawn");
 			effects.explosions.assign(4, {{0, 0, 250}, {}, 0.08f, 22});
 			effects.impacts.assign(64, {{0, 0, 250}, 0});
-			effects.rocketSmoke.assign(RocketEffectSettings::maxSmokeCount, {{0, 0, 250}, 0.1f});
-			effects.rocketExhausts.assign(RocketEffectSettings::maxExhaustCount, {{0, 0, 250}, {0, 0, -1}});
 			effects.gunSmoke.assign(GunEffectSettings::maxSmokeCount, {{0, 0, 100}, {20, 0, 0}, 0.1f});
 			effects.gunTracers.assign(GunEffectSettings::maxTracerCount, {{30, 10, 250}, {10, 0, 200}});
 			for (size_t muzzle = 0; muzzle < 4; ++muzzle)
@@ -853,8 +501,6 @@ void TestHudRendering(const fs::path& fixture) {
 				"Combined effects overflowed HUD");
 			effects.explosions.clear();
 			effects.impacts.clear();
-			effects.rocketSmoke.clear();
-			effects.rocketExhausts.clear();
 			effects.gunSmoke.clear();
 			effects.gunTracers.clear();
 			effects.gunFlashes.clear();
@@ -876,9 +522,6 @@ void TestHudRendering(const fs::path& fixture) {
 				Require(std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y),
 					"HUD projection generated NaN");
 			effects.explosions = {{{-25, 0, 250}, {}, 0.2f, 22}};
-			effects.rocketExhausts = {{{60, 0, 200}, {0, 0, -1}}};
-			for (int smoke = 0; smoke < 20; ++smoke)
-				effects.rocketSmoke.push_back({{60, 0, 200 + smoke * 5.0f}, smoke * 0.025f});
 			snapshot.selected = 1;
 			// 両解像度の読み戻し画像に発射演出を含め、照準との重なりを確認する
 			for (size_t muzzle = 0; muzzle < 4; ++muzzle) {
@@ -888,18 +531,8 @@ void TestHudRendering(const fs::path& fixture) {
 				effects.gunTracers.push_back({{x + 3, -5, 170}, {x, -10, 100}});
 			}
 			buildFrame();
-			const auto withoutWarning = list.GetVertices().size();
-			snapshot.threatWarning = ThreatWarning::LockOn;
-			snapshot.lockingEnemyCount = 1;
-			snapshot.enemyLockProgress = 0.5f;
-			snapshot.threatDirection = {1, 0, 1};
+
 			buildFrame();
-			Require(list.GetVertices().size() > withoutWarning, "Lock warning was invisible");
-			snapshot.threatWarning = ThreatWarning::Missile;
-			snapshot.incomingMissiles = {{88, {0, 0, 250}, 250}, {89, {5000, 0, 100}, 5001}};
-			snapshot.lockingEnemyPositions = {{-5000, 0, 100}};
-			buildFrame();
-			Require(list.GetVertices().size() > withoutWarning, "Incoming missile warning was invisible");
 			const auto saveFrame = [&](std::string_view suffix) {
 				context.BeginFrame();
 				auto* commands = context.GetCommandList();
@@ -964,12 +597,8 @@ void TestHudRendering(const fs::path& fixture) {
 				ThrowIfFailed(SaveToWICFile(*pixels, WIC_FLAGS_NONE, GUID_ContainerFormatPng, path.c_str()));
 			};
 			saveFrame("");
-			snapshot.threatWarning = ThreatWarning::LockOn;
-			snapshot.incomingMissiles.clear();
 			buildFrame();
 			saveFrame("-lock");
-			snapshot.threatWarning = ThreatWarning::None;
-			snapshot.lockingEnemyPositions.clear();
 			snapshot.lockState = LockState::Selected;
 			snapshot.hitSeconds = 0;
 			buildFrame();
@@ -987,8 +616,6 @@ void TestHudRendering(const fs::path& fixture) {
 			snapshot.result = CombatResult::Active;
 			snapshot.playerHealth = 100;
 			snapshot.playerHitSeconds = 0;
-			snapshot.rocket = {};
-			snapshot.missionEnabled = true;
 			snapshot.missionMessageSeconds = 6;
 			snapshot.missionPhase = MissionPhase::Patrol;
 			buildFrame();

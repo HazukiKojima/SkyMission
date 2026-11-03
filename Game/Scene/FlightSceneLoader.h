@@ -2,7 +2,7 @@
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Engine/Renderer/RendererDefinition.h"
 #include "Game/Weapons/WeaponDefinition.h"
-#include "Game/Weapons/RocketDefinition.h"
+#include "Game/Weapons/BombDefinition.h"
 #include "Game/Combat/CombatTypes.h"
 #include "Engine/Renderer/Hud/HudDrawList.h"
 namespace Engine {
@@ -12,12 +12,12 @@ namespace Game {
 	inline constexpr const char* PlayerModelId = "player";
 	inline constexpr const char* EnemyModelId = "enemy";
 	inline constexpr const char* AmmunitionModelId = "20mmAmmo";
-	inline constexpr const char* RocketModelId = "rocket";
-	inline constexpr const char* EnemyMissileModelId = "enemyMissile";
+	inline constexpr const char* BombModelId = "bomb";
 	struct SceneSourcePaths {
 		std::filesystem::path environment, playerAircraft, enemyAircraft, retroFilm;
 		std::filesystem::path ships;
 		std::filesystem::path mission;
+		std::filesystem::path bomb;
 	};
 	struct AircraftDefinition {
 		std::filesystem::path model;
@@ -39,8 +39,7 @@ namespace Game {
 		AircraftDefinition playerAircraft, enemyAircraft;
 		AircraftAIParameters enemyAIParameters;
 		WeaponDefinition playerWeapon;
-		RocketDefinition enemyMissile;
-		RocketDefinition playerRocket;
+		BombDefinition bomb;
 		CombatSettings combat;
 		Engine::HudSettings hud;
 		std::vector<ShipDefinition> ships;
@@ -49,7 +48,7 @@ namespace Game {
 			Engine::RendererDefinition result{environment,
 				{{PlayerModelId, playerAircraft.model, playerAircraft.modelImport},
 					{EnemyModelId, enemyAircraft.model, enemyAircraft.modelImport}, playerWeapon.ammunition,
-					playerRocket.ammunition, enemyMissile.ammunition}};
+					bomb.ammunition}};
 			for (const auto& ship : ships)
 				result.models.push_back(ship.asset);
 			return result;

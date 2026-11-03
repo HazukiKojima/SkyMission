@@ -64,7 +64,8 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	const auto definition = FlightSceneLoader{}.Load({.environment = config / L"Environment/environment.json",
 		.playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-		.retroFilm = config / L"Environment/retroFilm.json"});
+		.retroFilm = config / L"Environment/retroFilm.json",
+		.bomb = config / L"Ammunition/Bomb/ammunition.json"});
 	auto settings = definition.playerWeapon.gun;
 	JsonAssetReader reader;
 	Require(settings.maxProjectiles == 128 && settings.fireInterval == 0.1f &&
@@ -125,7 +126,8 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 			FlightSceneLoader{}.Load({.environment = config / L"Environment/environment.json",
 				.playerAircraft = badPlayerPath,
 				.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-				.retroFilm = config / L"Environment/retroFilm.json"});
+				.retroFilm = config / L"Environment/retroFilm.json",
+				.bomb = config / L"Ammunition/Bomb/ammunition.json"});
 		} catch (const std::runtime_error& error) {
 			const std::string message = error.what();
 			rejected = message.find(field) != std::string::npos &&

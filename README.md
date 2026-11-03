@@ -99,16 +99,19 @@ GPU時間は数フレーム遅れて取得し、計測のためのGPU待機は�
 | --- | --- |
 | Application | 初期化、ウィンドウのメッセージ処理、更新と描画の呼び出し |
 | FlightScene / FlightSceneLoader | 戦闘シーンの更新順、設定・アセット定義の読み込み |
+| FlightMission / FlightSceneRestart | ミッション進行・増援・艦隊攻撃と、再挑戦状態の保存・復元 |
+| CombatSnapshotBuilder | HUD向けの飛行情報と照準計算 |
 | AircraftFlightModel / AircraftAIController | 飛行モデルと敵機の操縦入力 |
 | TargetingSystem / GunAimSolver | 対象選択・ロック状態と迎撃位置の計算 |
 | AircraftGun / ProjectileSystem | 機関砲の発射タイミング、弾の移動と命中収集 |
-| RocketLauncher / RocketSystem | 銃口別クールタイム、追尾、ロケットの移動と命中収集 |
+| BombSystem / BombFlight | 爆弾の生成・再装填・落下・命中収集・描画姿勢と弾道予測 |
 | CombatEffectSystem / CombatEffectPresenter | 演出の生成・寿命管理と描画データの作成 |
 | CombatHudPresenter / HudRenderer | 戦闘情報の表示とGPUへの描画 |
 | Renderer / RenderDevice / CommandContext | 描画パス、D3D12リソース、コマンド記録とGPU同期 |
 | JsonAssetReader / JsonParametersLoader | JSONからのパス・値の取得と型付き設定の受け渡し |
 
 `Engine` には描画・リソース・入力などを、`Game` には航空機・武器・戦闘・表示を配置しています。
+本番シーンは `FlightScene::CreateMission` で一括生成します。生成条件・フレーム更新順・再挑戦の扱いは[シーンのライフサイクル](Docs/Design/FlightSceneLifecycle.md)を参照してください。モデルの取り込み・形状処理・GPU管理の分担は[モデル処理の設計](Docs/Design/ModelProcessing.md)に記載しています。
 
 ## 技術上の工夫
 
@@ -126,8 +129,8 @@ GPU時間は数フレーム遅れて取得し、計測のためのGPU待機は�
 | --- | --- |
 | プレイヤー機 | `Assets/Aircraft/N1K2JShidenKai/` |
 | 敵機・AI | `Assets/Aircraft/F4U4Corsair/` |
-| 機関砲 / ロケット | 機体フォルダーの `weapon.json` / `rocketWeapon.json` |
-| 弾薬モデル | `Assets/Ammunition/20mmAmmo/` / `Assets/Ammunition/Rocket/` |
+| 機関砲 / 爆弾 | 自機フォルダーの `weapon.json` / `Assets/Ammunition/Bomb/ammunition.json` |
+| 弾薬モデル | `Assets/Ammunition/20mmAmmo/` / 爆弾定義から参照する既存モデル |
 | 耐久値・ロック条件 | `Assets/Combat/targeting.json` |
 | ミッション機数・再装填・対空砲・甲板判定 | `Assets/Combat/mission.json` |
 | HUD | `Assets/UI/combatHud.json` |
@@ -181,7 +184,7 @@ Assimpによるモデル読み込み、DirectXTexによる画像処理、RE:Dox 
 - 飛行モデルはゲーム向けの近似です。
 - 命中判定は機体全体を囲むOBB近似で、メッシュ単位ではありません。
 - 爆発・煙・着弾はHUD描画経路による投影表示で、3D物体による遮蔽は行いません。
-- ロケットは直撃ダメージのみで、爆風ダメージと自機判定はありません。
+- 爆弾は飛行甲板への命中で発艦を止めます。爆風による周囲の機体へのダメージはありません。
 - WARPへのフォールバックは機能確認用で、実機GPUと同じ性能は保証しません。
 
 ## ミッション設定
@@ -192,4 +195,6 @@ Assimpによるモデル読み込み、DirectXTexによる画像処理、RE:Dox 
 甲板判定は空母モデルのローカル境界内に置き、`deckHeightFraction` / `deckWidthFraction` /
 `deckLengthFraction` で高さ・幅・長さの比率を指定します。空母の配置・回転・サイズに追従します。
 モデルを差し替えた場合は、実際の甲板面に合わせてこれらの比率を調整してください。
-敵配置は各段階でプレイヤーと艦隊の位置から決定し、旧 `enemyPosition1`〜`3` は単独ミッションでは使いません。
+敵配置は各段階でプレイヤーと艦隊の位置から決定します。
+爆弾のモデル軸は `Ammunition/Bomb/ammunition.json` で指定します。既存の `Ammunition/Rocket/` にあるFBX・テクスチャを再利用しますが、誘導弾の発射・追尾処理はありません。
+自機機関砲・敵機銃・爆弾はそれぞれ独立して設定し、敵武器設定とミッション設定の呼び出し順に依存しません。

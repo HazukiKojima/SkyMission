@@ -25,7 +25,8 @@ void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture
 		return FlightSceneLoader{}.Load({.environment = environmentPath,
 			.playerAircraft = assets / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 			.enemyAircraft = assets / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-			.retroFilm = assets / L"Environment/retroFilm.json"});
+			.retroFilm = assets / L"Environment/retroFilm.json",
+			.bomb = assets / L"Ammunition/Bomb/ammunition.json"});
 	};
 	const auto replace = [](std::string text, const std::string& field, const std::string& value) {
 		const auto key = text.find(char(34) + field + char(34));
