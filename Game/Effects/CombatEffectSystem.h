@@ -15,6 +15,7 @@ namespace Game {
 		void ClearGunFlashes();
 		void SetGunTracers(std::vector<GunTracerSegment> tracers);
 		void SpawnRocketSmoke(const DirectX::XMFLOAT3& position, float age);
+		void SpawnDeckSmoke(const DirectX::XMFLOAT3& position);
 		void SetRocketExhausts(std::vector<RocketExhaust> exhausts);
 		void SpawnImpact(const HitEvent& hit, const DirectX::XMFLOAT3& targetVelocity);
 		void SpawnExplosion(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity);

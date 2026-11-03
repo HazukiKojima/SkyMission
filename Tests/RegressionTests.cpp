@@ -39,6 +39,7 @@ void Require(bool condition, const char* description) {
 #include "GunEffectTests.h"
 #include "ShipTests.h"
 #include "RenderOptimizationTests.h"
+#include "MissionTests.h"
 
 void TestCombatAudioLifecycle() {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -775,6 +776,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestFlightAndScene();
 		TestCombatAudioLifecycle();
 		TestCombatMath();
+		TestMissionRules();
 		TestMissileEdgeIndicators();
 		TestEnemyCombatAI();
 		TestCombatEffectLifetime();
@@ -792,6 +794,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestWeapons(argv[1], fixture);
 		TestRocketLauncherAndAssets(argv[1], fixture);
 		TestCombatDamage(argv[1], fixture);
+		TestMissionScene(argv[1], fixture);
 		TestHudRendering(fixture);
 		TestHudTypography();
 		TestRadarMap();

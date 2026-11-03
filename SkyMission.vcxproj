@@ -405,6 +405,11 @@
   <ItemGroup>
     <ClInclude Include="Game\Scene\FlightScene.h" />
     <ClCompile Include="Game\Scene\FlightScene.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneMission.cpp" />
+    <ClInclude Include="Game\Combat\MissionState.h" />
+    <ClInclude Include="Game\Weapons\BombFlight.h" />
+    <ClInclude Include="Tests\MissionTests.h" />
+    <None Include="Assets\Combat\mission.json" />
     <ClInclude Include="Game\Camera\AircraftCameraController.h" />
     <ClCompile Include="Game\Camera\AircraftCameraController.cpp" />
     <ClInclude Include="Engine\Renderer\RendererDefinition.h" />

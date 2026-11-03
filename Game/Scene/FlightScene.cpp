@@ -3,6 +3,7 @@
 #include <cmath>
 #include <limits>
 #include "Game/Combat/GunAimSolver.h"
+#include "Game/Combat/ProjectileCollision.h"
 namespace Game {
 	namespace {
 		constexpr float kPropellerAngularSpeedPerSpeed = 0.06f;
@@ -41,9 +42,14 @@ namespace Game {
 			if (!player)
 				throw std::invalid_argument("player model must be added before configuring its weapon");
 			m_gun.Configure(definition.gun, *player->model);
-			m_projectiles.Configure(definition.gun, std::move(ammunition), definition.modelForward);
+			m_projectiles.Configure(definition.gun, ammunition, definition.modelForward);
 			m_weaponConfigured = true;
 			m_gunSettings = definition.gun;
+			auto hostileSettings = definition.gun;
+			hostileSettings.maxProjectiles = m_missionSettings.maxHostileProjectiles;
+			hostileSettings.lifetime = 5;
+			hostileSettings.muzzleSpeed = m_missionSettings.enemyGunSpeed;
+			m_hostileProjectiles.Configure(hostileSettings, ammunition, definition.modelForward);
 		} catch (const std::exception& error) {
 			const auto path = definition.sourcePath.u8string();
 			throw std::runtime_error(
@@ -121,11 +127,19 @@ namespace Game {
 					++m_combat.firedVolleys;
 		}
 		UpdateGunEffects();
-		UpdateRockets(combatInput, dt, targets);
+		if (m_missionEnabled)
+			UpdateBombs(combatInput, dt);
+		else
+			UpdateRockets(combatInput, dt, targets);
 
 		// 命中と撃破を反映してから、HUDとカメラへ最終状態を渡す
-		UpdateEnemyWeapons(dt);
+		if (m_missionEnabled)
+			UpdateMissionWeapons(dt);
+		else
+			UpdateEnemyWeapons(dt);
 		ApplyHits();
+		if (m_missionEnabled)
+			UpdateMission(dt);
 		RefreshCombatSnapshot();
 		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, false, 0);
 		RefreshCombatSnapshot();
@@ -214,6 +228,13 @@ namespace Game {
 			DirectX::XMStoreFloat3(&direction,
 				DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(
 					DirectX::XMLoadFloat3(&target.position), DirectX::XMLoadFloat3(&position))));
+			if (m_missionEnabled) {
+				const CombatTarget playerTarget{m_playerId, target.position, target.velocity};
+				const auto aim = SolveGunAim(position, enemy.flightModel.GetVelocity(), playerTarget,
+					m_missionSettings.enemyGunSpeed, 5);
+				if (aim)
+					direction = aim->direction;
+			}
 			enemy.missileCooldown = std::max(0.0f, enemy.missileCooldown - dt);
 			const size_t reserveSlot = static_cast<size_t>(m_battleSeconds / 6) % m_enemies.size();
 			const bool allowed = m_enemies.size() <= 2 || &enemy != &m_enemies[reserveSlot];
@@ -221,7 +242,7 @@ namespace Game {
 				enemy.aiParameters, enemy.slot, allowed, enemy.missileCooldown <= 0);
 			const auto input = decision.flight;
 			enemy.fire = decision.fire;
-			enemy.locking = decision.locking && m_enemyMissileConfigured;
+			enemy.locking = !m_missionEnabled && decision.locking && m_enemyMissileConfigured;
 			enemy.lockProgress = decision.lockProgress;
 			enemy.previousPosition = enemy.flightModel.GetPosition();
 			enemy.flightModel.Update(input, dt);
@@ -310,6 +331,27 @@ namespace Game {
 	}
 
 	void FlightScene::RefreshCombatSnapshot() {
+		m_combat.missionEnabled = m_missionEnabled;
+		m_combat.missionPhase = m_mission.GetPhase();
+		m_combat.deckDisabled = m_mission.IsDeckDisabled();
+		m_combat.bombCooldown = m_bombCooldown;
+		m_combat.missionMessageSeconds = m_missionMessageSeconds;
+		m_combat.bombImpactPoint.reset();
+		if (m_missionEnabled) {
+			if (const auto deck = GetDeckTarget()) {
+				const auto center = deck->bounds.Center();
+				DirectX::XMStoreFloat3(&m_combat.objectivePosition,
+					DirectX::XMVector3TransformCoord(
+						DirectX::XMLoadFloat3(&center), DirectX::XMLoadFloat4x4(&deck->world)));
+				auto release = m_player.GetPosition();
+				release.y -= 12;
+				m_combat.bombImpactPoint =
+					BombFlight{release, m_player.GetVelocity()}.Predict(m_combat.objectivePosition.y);
+			}
+			if (m_mission.GetPhase() == MissionPhase::FinalFighters ||
+				m_mission.GetPhase() == MissionPhase::Commander)
+				m_combat.objectivePosition = m_airCombatPosition;
+		}
 		m_combat.playerSpeedMetersPerSecond = m_player.GetSpeed();
 		m_combat.playerAltitudeMeters = m_player.GetPosition().y;
 		m_combat.playerPosition = m_player.GetPosition();
@@ -459,6 +501,10 @@ namespace Game {
 	void FlightScene::ApplyHits() {
 		// 武器ごとの命中をまとめ、フレーム内の接触時刻順にダメージを反映する
 		auto hits = m_projectiles.TakeHits();
+		hits.insert(hits.end(), m_bombHits.begin(), m_bombHits.end());
+		m_bombHits.clear();
+		auto hostileHits = m_hostileProjectiles.TakeHits();
+		hits.insert(hits.end(), hostileHits.begin(), hostileHits.end());
 		const auto enemyHits = m_enemyMissiles.TakeHits();
 		hits.insert(hits.end(), enemyHits.begin(), enemyHits.end());
 		const auto rocketHits = m_rockets.TakeHits();
@@ -468,10 +514,18 @@ namespace Game {
 		});
 		std::vector<Engine::ObjectId> destroyed;
 		for (const auto& hit : hits) {
+			if (m_missionEnabled && hit.target == m_carrierId && hit.kind == ProjectileKind::Bomb) {
+				if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
+					m_mission.ConfirmDeckHit();
+					m_effects.SpawnExplosion(hit.position, {});
+				}
+				continue;
+			}
 			if (hit.target == m_playerId && m_playerId != Engine::InvalidObjectId) {
 				if (m_combat.playerHealth <= 0)
 					continue;
-				m_combat.playerHealth = std::max(0.0f, m_combat.playerHealth - m_enemyMissileSettings.damage);
+				m_combat.playerHealth = std::max(0.0f,
+					m_combat.playerHealth - (hit.damage > 0 ? hit.damage : m_enemyMissileSettings.damage));
 				m_combat.playerHitSeconds = 0.7f;
 				m_combat.playerHitDirection = {-hit.direction.x, -hit.direction.y, -hit.direction.z};
 				m_effects.SpawnExplosion(hit.position, m_player.GetVelocity());
@@ -490,8 +544,10 @@ namespace Game {
 				continue;
 			}
 
-			enemy->health -=
-				hit.kind == ProjectileKind::Rocket ? m_rocketSettings.damage : m_combatSettings.bulletDamage;
+			enemy->health -= hit.damage > 0
+				? hit.damage
+				: (hit.kind == ProjectileKind::Rocket ? m_rocketSettings.damage
+													  : m_combatSettings.bulletDamage);
 			++m_combat.hitCount;
 			if (hit.kind == ProjectileKind::Gun)
 				m_effects.SpawnImpact(hit, enemy->flightModel.GetVelocity());
@@ -514,9 +570,9 @@ namespace Game {
 		if (m_combat.playerHealth <= 0) {
 			RemoveObject(m_playerId);
 			m_combat.result = CombatResult::Defeat;
-		} else if (!destroyed.empty() && m_enemies.empty())
+		} else if (!m_missionEnabled && !destroyed.empty() && m_enemies.empty())
 			m_combat.result = CombatResult::Victory;
-		if (!destroyed.empty() && m_enemies.empty())
+		if (!m_missionEnabled && !destroyed.empty() && m_enemies.empty())
 			m_combat.allDownSeconds = 3;
 	}
 

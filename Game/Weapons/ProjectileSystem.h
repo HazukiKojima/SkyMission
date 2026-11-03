@@ -10,6 +10,8 @@ namespace Game {
 		void Configure(const GunSettings& settings, std::shared_ptr<Engine::Model> model,
 			const DirectX::XMFLOAT3& modelForward);
 		void Update(Engine::Scene& scene, float dt, std::span<const CollisionTarget> targets = {});
+		bool FireSingle(Engine::Scene& scene, const DirectX::XMFLOAT3& position,
+			const DirectX::XMFLOAT3& velocity, AttackSource source, float damage);
 		bool FireVolley(Engine::Scene& scene, const std::array<DirectX::XMFLOAT3, 4>& muzzles,
 			const DirectX::XMFLOAT4X4& aircraftWorld, const DirectX::XMFLOAT4X4& aircraftPose,
 			const DirectX::XMFLOAT3& forward, const DirectX::XMFLOAT3& aircraftVelocity, float age,
@@ -34,6 +36,8 @@ namespace Game {
 			float remainingLifetime;
 			DirectX::XMFLOAT3 birthPosition{};
 			bool isTracer = false;
+			AttackSource source = AttackSource::Player;
+			float damage = 0;
 		};
 		static void Advance(Projectile& projectile, float dt);
 		void AddTracer(const Projectile& projectile, const DirectX::XMFLOAT3& head);

@@ -9,6 +9,7 @@
 #include "Game/Combat/CombatController.h"
 #include "Game/Combat/TargetingSystem.h"
 #include "Game/Effects/CombatEffectSystem.h"
+#include "Game/Weapons/BombFlight.h"
 
 namespace Game {
 	class FlightScene {
@@ -17,6 +18,10 @@ namespace Game {
 		void Update(const AircraftInput& input, float deltaSeconds,
 			const Engine::InputSnapshot& cameraInput = {}, CombatInput combatInput = {});
 		void ConfigureCombat(const CombatSettings& settings);
+		void ConfigureMission(const MissionSettings& settings, std::shared_ptr<Engine::Model> enemyModel,
+			float enemyScale, const AircraftFlightParameters& flight, const AircraftAIParameters& ai,
+			std::shared_ptr<Engine::Model> bombModel);
+		void RegisterMissionShip(Engine::ObjectId id, bool carrier);
 		void ConfigureEnemyMissile(const RocketDefinition& definition, std::shared_ptr<Engine::Model> model);
 		size_t GetEnemyMissileCount() const {
 			return m_enemyMissiles.GetCount();
@@ -70,6 +75,31 @@ namespace Game {
 		void RemoveObject(Engine::ObjectId id);
 
 	  private:
+		void UpdateMission(float dt);
+		void SpawnMissionAircraft(size_t count, bool commander, bool opening = false);
+		void UpdateBombs(const CombatInput& input, float dt);
+		void UpdateMissionWeapons(float dt);
+		std::optional<CollisionTarget> GetDeckTarget();
+		struct Bomb {
+			Engine::ObjectId id;
+			BombFlight flight;
+			float life = 120;
+		};
+		bool m_missionEnabled = false;
+		MissionState m_mission;
+		MissionSettings m_missionSettings;
+		std::shared_ptr<Engine::Model> m_missionEnemyModel, m_bombModel;
+		AircraftFlightParameters m_missionEnemyFlight;
+		AircraftAIParameters m_missionEnemyAI;
+		float m_missionEnemyScale = 1;
+		Engine::ObjectId m_carrierId = Engine::InvalidObjectId;
+		std::vector<Engine::ObjectId> m_escortIds;
+		std::vector<float> m_aaCooldowns;
+		std::vector<Bomb> m_bombs;
+		std::vector<HitEvent> m_bombHits;
+		ProjectileSystem m_hostileProjectiles;
+		float m_bombCooldown = 0, m_missionMessageSeconds = 8, m_deckSmokeSeconds = 0;
+		DirectX::XMFLOAT3 m_airCombatPosition{};
 		struct EnemyAircraft {
 			AircraftFlightModel flightModel;
 			AircraftAIController controller;

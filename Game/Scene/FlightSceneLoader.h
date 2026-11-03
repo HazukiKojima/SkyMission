@@ -17,6 +17,7 @@ namespace Game {
 	struct SceneSourcePaths {
 		std::filesystem::path environment, playerAircraft, enemyAircraft, retroFilm;
 		std::filesystem::path ships;
+		std::filesystem::path mission;
 	};
 	struct AircraftDefinition {
 		std::filesystem::path model;
@@ -43,6 +44,7 @@ namespace Game {
 		CombatSettings combat;
 		Engine::HudSettings hud;
 		std::vector<ShipDefinition> ships;
+		MissionSettings mission;
 		Engine::RendererDefinition BuildRendererDefinition() const {
 			Engine::RendererDefinition result{environment,
 				{{PlayerModelId, playerAircraft.model, playerAircraft.modelImport},

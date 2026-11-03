@@ -3,6 +3,7 @@
 #include <array>
 #include <optional>
 #include <span>
+#include "MissionState.h"
 
 namespace Game {
 	struct TargetingSettings {
@@ -45,12 +46,15 @@ namespace Game {
 		DirectX::XMFLOAT3 previousPosition;
 		DirectX::XMFLOAT4X4 world;
 	};
-	enum class ProjectileKind { Gun, Rocket };
+	enum class ProjectileKind { Gun, Rocket, Bomb };
+	enum class AttackSource { Player, EnemyAircraft, AntiAircraft };
 	struct HitEvent {
 		Engine::ObjectId target;
 		float frameSeconds;
 		DirectX::XMFLOAT3 position{}, direction{0, 0, -1};
 		ProjectileKind kind = ProjectileKind::Gun;
+		AttackSource source = AttackSource::Player;
+		float damage = 0; // Zero keeps legacy weapon-configured damage.
 	};
 	struct RocketHudState {
 		bool configured = false;
@@ -65,6 +69,13 @@ namespace Game {
 		float distance;
 	};
 	struct CombatSnapshot {
+		bool missionEnabled = false;
+		MissionPhase missionPhase = MissionPhase::Patrol;
+		bool deckDisabled = false;
+		float bombCooldown = 0;
+		std::optional<DirectX::XMFLOAT3> bombImpactPoint;
+		DirectX::XMFLOAT3 objectivePosition{};
+		float missionMessageSeconds = 0;
 		float playerSpeedMetersPerSecond = 0;
 		float playerAltitudeMeters = 0;
 		DirectX::XMFLOAT3 playerPosition{}, playerHeading{0, 0, -1};

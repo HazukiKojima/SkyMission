@@ -379,6 +379,35 @@ namespace Game {
 		JsonAssetReader reader(documents);
 		JsonParametersLoader parameters(documents);
 
+		MissionSettings mission;
+		if (!paths.mission.empty()) {
+			try {
+				const auto count = [&](const char* key, size_t maximum) {
+					const float value = reader.ResolveFloat(paths.mission, key);
+					if (!std::isfinite(value) || value < 1 || value > float(maximum) ||
+						std::floor(value) != value)
+						throw std::invalid_argument(std::string(key) + " must be an integer within range");
+					return static_cast<size_t>(value);
+				};
+				mission.patrolCount = count("patrolCount", 8);
+				mission.finalFighterCount = count("finalFighterCount", 8);
+				mission.maxHostileProjectiles = count("maxHostileProjectiles", 512);
+				mission.bombReloadSeconds = reader.ResolveFloat(paths.mission, "bombReloadSeconds");
+				mission.commanderHealthMultiplier =
+					reader.ResolveFloat(paths.mission, "commanderHealthMultiplier");
+				mission.enemyGunSpeed = reader.ResolveFloat(paths.mission, "enemyGunSpeed");
+				mission.enemyGunInterval = reader.ResolveFloat(paths.mission, "enemyGunInterval");
+				mission.commanderGunInterval = reader.ResolveFloat(paths.mission, "commanderGunInterval");
+				mission.aaRange = reader.ResolveFloat(paths.mission, "aaRange");
+				mission.aaInterval = reader.ResolveFloat(paths.mission, "aaInterval");
+				mission.deckHeightFraction = reader.ResolveFloat(paths.mission, "deckHeightFraction");
+				mission.deckWidthFraction = reader.ResolveFloat(paths.mission, "deckWidthFraction");
+				mission.deckLengthFraction = reader.ResolveFloat(paths.mission, "deckLengthFraction");
+				mission.Validate();
+			} catch (const std::exception& error) {
+				throw std::runtime_error(paths.mission.string() + ": " + error.what());
+			}
+		}
 		return {.environment = LoadEnvironment(paths, reader, parameters),
 			.playerAircraft = LoadAircraftDefinition(reader, parameters, paths.playerAircraft),
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
@@ -391,6 +420,7 @@ namespace Game {
 			.hud =
 				LoadHudSettings(reader, paths.environment.parent_path().parent_path() / L"UI/combatHud.json"),
 			.ships = paths.ships.empty() ? std::vector<ShipDefinition>{}
-										 : LoadShipDefinitions(reader, paths.ships)};
+										 : LoadShipDefinitions(reader, paths.ships),
+			.mission = mission};
 	}
 } // namespace Game

@@ -984,6 +984,29 @@ void TestHudRendering(const fs::path& fixture) {
 			snapshot.playerHitSeconds = 0.5f;
 			buildFrame();
 			saveFrame("-defeat");
+			snapshot.result = CombatResult::Active;
+			snapshot.playerHealth = 100;
+			snapshot.playerHitSeconds = 0;
+			snapshot.rocket = {};
+			snapshot.missionEnabled = true;
+			snapshot.missionMessageSeconds = 6;
+			snapshot.missionPhase = MissionPhase::Patrol;
+			buildFrame();
+			saveFrame("-mission-patrol");
+			snapshot.missionPhase = MissionPhase::CarrierAttack;
+			snapshot.enemies.clear();
+			snapshot.objectivePosition = {180, -100, 1500};
+			snapshot.bombImpactPoint = XMFLOAT3{100, -100, 1500};
+			snapshot.bombCooldown = 4.2f;
+			buildFrame();
+			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices,
+				"Mission objective and bomb HUD overflowed");
+			saveFrame("-mission-bombing");
+			snapshot.missionPhase = MissionPhase::Commander;
+			snapshot.deckDisabled = true;
+			snapshot.enemies = {{1, {0, 30, 1000}, {}, "SQUADRON LEADER", 180}};
+			buildFrame();
+			saveFrame("-mission-commander");
 		}
 	}
 	DestroyWindow(window);

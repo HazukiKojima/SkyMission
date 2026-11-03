@@ -76,8 +76,9 @@ namespace Game {
 		drawStatus(108,
 			"HULL " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
 				std::to_string(static_cast<int>(snapshot.playerMaxHealth)));
-		if (snapshot.result != CombatResult::Active) {
-			drawLabel(740, 380, snapshot.result == CombatResult::Victory ? "VICTORY" : "SHOT DOWN");
+		if (snapshot.result != CombatResult::Active &&
+			(snapshot.result != CombatResult::Victory || snapshot.allDownSeconds <= 0)) {
+			drawLabel(740, 380, snapshot.result == CombatResult::Victory ? "MISSION COMPLETE" : "SHOT DOWN");
 			drawLabel(740, 440, "R: RETRY");
 		}
 		if (snapshot.playerHitSeconds > 0) {
@@ -209,6 +210,72 @@ namespace Game {
 		}
 		if (snapshot.allDownSeconds > 0)
 			drawLabel(760, 180, "ALL TARGETS DOWN");
+		if (snapshot.missionEnabled) {
+			const auto phase = snapshot.missionPhase;
+			std::string objective;
+			switch (phase) {
+			case MissionPhase::Patrol:
+				objective = "1/3 DESTROY PATROL";
+				break;
+			case MissionPhase::CarrierAttack:
+				objective = "2/3 BOMB CARRIER FLIGHT DECK";
+				break;
+			case MissionPhase::FinalFighters:
+				objective = "3/3 DESTROY REMAINING FIGHTERS";
+				break;
+			case MissionPhase::Commander:
+				objective = "3/3 DESTROY SQUADRON LEADER";
+				break;
+			case MissionPhase::Complete:
+				objective = "BASE SECURED";
+				break;
+			case MissionPhase::Failed:
+				objective = "MISSION FAILED";
+				break;
+			}
+			drawLabel(540, 36, objective);
+			drawLabel(540, 76, "AIRCRAFT REMAINING: " + std::to_string(snapshot.enemies.size()));
+			if (snapshot.deckDisabled)
+				drawLabel(540, 116, "CARRIER FLIGHT DECK DISABLED");
+			if (snapshot.missionMessageSeconds > 0 && snapshot.result == CombatResult::Active) {
+				if (phase == MissionPhase::Patrol)
+					drawLabel(540, 160, "LMB: CANNON  TAB: TARGET  WASD: FLIGHT");
+				else if (phase == MissionPhase::CarrierAttack)
+					drawLabel(540, 160, "RMB: DROP BOMB  CROSS: PREDICTED IMPACT");
+				else
+					drawLabel(540, 160, "ENGAGE OUTSIDE THE FLEET - NO MORE REINFORCEMENTS");
+			}
+			if (snapshot.result == CombatResult::Active && phase != MissionPhase::Patrol) {
+				const auto marker = projector.Project(snapshot.objectivePosition);
+				if (marker.visible) {
+					list.Circle(marker.pixel, 26 * scale, 1, lineWidth * 2, color);
+					list.Text({marker.pixel.x + 32 * scale, marker.pixel.y},
+						phase == MissionPhase::CarrierAttack ? "FLIGHT DECK" : "COMBAT AREA", fontSize,
+						color);
+				} else
+					drawOffscreenIndicator(marker, color);
+			}
+			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active) {
+				std::ostringstream bomb;
+				bomb << "BOMB ";
+				if (snapshot.bombCooldown <= 0)
+					bomb << "READY [RMB]";
+				else
+					bomb << std::fixed << std::setprecision(1) << snapshot.bombCooldown << "s";
+				drawStatus(188, bomb.str());
+				if (snapshot.bombImpactPoint) {
+					const auto impact = projector.Project(*snapshot.bombImpactPoint);
+					if (impact.visible) {
+						const float r = 14 * scale;
+						list.Line({impact.pixel.x - r, impact.pixel.y}, {impact.pixel.x + r, impact.pixel.y},
+							lineWidth * 2, color);
+						list.Line({impact.pixel.x, impact.pixel.y - r}, {impact.pixel.x, impact.pixel.y + r},
+							lineWidth * 2, color);
+					} else
+						drawOffscreenIndicator(impact, HudStyle::Caution);
+				}
+			}
+		}
 		// ロック中の敵と飛来ミサイルは、同じ画面端配置を色で区別する。
 		for (const auto& position : snapshot.lockingEnemyPositions)
 			drawOffscreenIndicator(projector.Project(position), HudStyle::Caution);
