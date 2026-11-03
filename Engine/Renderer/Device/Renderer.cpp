@@ -30,6 +30,7 @@ namespace Engine {
 
 		m_context = std::make_unique<CommandContext>();
 		m_context->Initialize(m_device.get());
+		m_gpuProfiler.Initialize(m_device->GetDevice(), m_device->GetCommandQueue());
 
 		m_pipelines.Initialize(m_device->GetDevice());
 
@@ -74,7 +75,6 @@ namespace Engine {
 		auto cmd = m_context->GetCommandList();
 		auto backBuffer = m_device->GetCurrentRenderTarget();
 		auto sceneTarget = m_device->GetSceneRenderTarget();
-		auto postProcessTarget = m_device->GetPostProcessRenderTarget();
 		auto sceneDepth = m_device->GetSceneDepth();
 
 		// バックバッファをレンダーターゲットへ遷移
@@ -82,8 +82,6 @@ namespace Engine {
 			backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_context->TransitionResource(
 			sceneTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		m_context->TransitionResource(postProcessTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-			D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_context->TransitionResource(
 			sceneDepth, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
@@ -94,17 +92,28 @@ namespace Engine {
 		cmd->RSSetViewports(1, &viewport);
 		cmd->RSSetScissorRects(1, &scissorRect);
 
+		m_statistics = {};
+		m_statistics.oceanTriangles = m_oceanGeometry.GetIndexCount() / 3;
+		m_gpuProfiler.Begin(cmd, m_context->GetFrameIndex());
 		RecordScenePass(runtimeScene);
-		RecordOceanFogPass();
+		m_context->TransitionResource(
+			sceneTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		m_context->TransitionResource(
+			sceneDepth, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		RecordRetroFilmPass();
+		m_gpuProfiler.Mark(cmd, 4);
 		if (hud)
 			m_hudRenderer.Record(*m_device, cmd, *hud);
+
+		m_gpuProfiler.Mark(cmd, 5);
+		m_gpuProfiler.Resolve(cmd);
 
 		// 描画したフレームを表示する
 		m_context->TransitionResource(
 			backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 		m_context->EndFrame();
+		m_gpuProfiler.Submitted(m_device->GetCommandQueue());
 		m_device->Present();
 		m_context->MoveToNextFrame(m_device.get());
 	}
@@ -122,25 +131,11 @@ namespace Engine {
 		const FrameContext frame{
 			cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()};
 		m_skyPass.Record(frame, m_assets);
+		m_gpuProfiler.Mark(cmd, 1);
 		m_oceanPass.Record(frame, m_assets, m_oceanGeometry);
-		m_modelPass.Record(frame, scene);
-	}
-
-	void Renderer::RecordOceanFogPass() {
-		auto cmd = m_context->GetCommandList();
-		m_context->TransitionResource(m_device->GetSceneRenderTarget(), D3D12_RESOURCE_STATE_RENDER_TARGET,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		m_context->TransitionResource(m_device->GetSceneDepth(), D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		auto rtv = m_device->GetPostProcessRtvHandle();
-		const float postProcessClear[] = {0.1f, 0.1f, 0.1f, 1.0f};
-		cmd->ClearRenderTargetView(rtv, postProcessClear, 0, nullptr);
-		cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
-
-		m_oceanFogPass.Record(
-			{cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()});
-		m_context->TransitionResource(m_device->GetPostProcessRenderTarget(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		m_gpuProfiler.Mark(cmd, 2);
+		m_modelPass.Record(frame, scene, m_frameUpdater.GetDrawDecisions(), m_statistics);
+		m_gpuProfiler.Mark(cmd, 3);
 	}
 
 	void Renderer::RecordRetroFilmPass() {

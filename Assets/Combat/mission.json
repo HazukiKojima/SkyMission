@@ -1,0 +1,15 @@
+{
+  "patrolCount": 2,
+  "finalFighterCount": 2,
+  "bombReloadSeconds": 10,
+  "commanderHealthMultiplier": 1.5,
+  "enemyGunSpeed": 1800,
+  "enemyGunInterval": 0.18,
+  "commanderGunInterval": 0.1,
+  "aaRange": 6500,
+  "aaInterval": 0.8,
+  "maxHostileProjectiles": 128,
+  "deckHeightFraction": 0.445,
+  "deckWidthFraction": 0.75,
+  "deckLengthFraction": 0.9
+}

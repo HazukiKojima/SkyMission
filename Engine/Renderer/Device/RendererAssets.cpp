@@ -58,10 +58,19 @@ namespace Engine {
 		assert(m_oceanNormalTexture2SrvIndex == m_oceanTextureSrvIndex + 2);
 		m_skyTexture =
 			LoadTexture(*device, *context, assets.environment.skyTexture, {}, m_skyTextureSrvIndex);
+		// Submit bounded batches so upload heaps do not accumulate across all models.
+		const auto finishBatch = [&]() {
+			context->EndFrame();
+			context->WaitForGpu();
+			ReleaseUploadResources();
+			context->BeginFrame();
+		};
+		finishBatch();
 		for (const auto& asset : assets.models) {
 			if (asset.id.empty() || m_models.contains(asset.id))
 				throw std::invalid_argument("Model asset IDs must be unique and nonempty.");
 			m_models.emplace(asset.id, LoadModel(*device, *context, asset));
+			finishBatch();
 		}
 	}
 

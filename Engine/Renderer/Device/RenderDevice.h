@@ -4,6 +4,12 @@
 namespace Engine {
 	class RenderDevice {
 	  public:
+		void SetVerticalSync(bool enabled) {
+			m_verticalSync = enabled;
+		}
+		bool IsVerticalSyncEnabled() const {
+			return m_verticalSync;
+		}
 		// バックバッファ数
 		static const UINT FrameCount = 2;
 
@@ -56,35 +62,25 @@ namespace Engine {
 			return m_sceneRenderTargets[GetFrameIndex()].Get();
 		}
 		D3D12_CPU_DESCRIPTOR_HANDLE GetSceneRtvHandle() const;
-		ID3D12Resource* GetPostProcessRenderTarget() const {
-			return m_postProcessRenderTargets[GetFrameIndex()].Get();
-		}
-		D3D12_CPU_DESCRIPTOR_HANDLE GetPostProcessRtvHandle() const;
 		ID3D12Resource* GetSceneDepth() const {
 			return m_sceneDepth.Get();
 		}
 		D3D12_CPU_DESCRIPTOR_HANDLE GetDsvHandle() const {
 			return m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
 		}
-		// SRVはフレーム別の［シーンカラー、深度］、続いてフレーム別の後処理カラーを配置する
+		// SRVはフレーム別の［シーンカラー、深度］を配置する
 		static constexpr UINT SceneColorSrvIndex(UINT frame) {
 			return frame * 2;
 		}
 		static constexpr UINT SceneDepthSrvIndex(UINT frame) {
 			return SceneColorSrvIndex(frame) + 1;
 		}
-		static constexpr UINT PostProcessSrvIndex(UINT frame) {
-			return FrameCount * 2 + frame;
-		}
-		static constexpr UINT ReservedSrvCount = FrameCount * 3;
+		static constexpr UINT ReservedSrvCount = FrameCount * 2;
 		UINT GetSceneColorSrvIndex() const {
 			return SceneColorSrvIndex(GetFrameIndex());
 		}
 		UINT GetSceneDepthSrvIndex() const {
 			return SceneDepthSrvIndex(GetFrameIndex());
-		}
-		UINT GetPostProcessSrvIndex() const {
-			return PostProcessSrvIndex(GetFrameIndex());
 		}
 
 	  private:
@@ -111,11 +107,11 @@ namespace Engine {
 		UINT m_srvDescriptorCount = 0; // 使用済みディスクリプタ数
 		ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 		ComPtr<ID3D12Resource> m_sceneRenderTargets[FrameCount];
-		ComPtr<ID3D12Resource> m_postProcessRenderTargets[FrameCount];
 		ComPtr<ID3D12Resource> m_sceneDepth;
 		UINT m_rtvDescriptorSize = 0;
 		UINT m_width = 0;
 		UINT m_height = 0;
 		std::wstring m_adapterName = L"Unknown";
+		bool m_verticalSync = true, m_allowTearing = false;
 	};
 } // namespace Engine

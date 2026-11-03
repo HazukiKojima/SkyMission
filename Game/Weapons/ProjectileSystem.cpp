@@ -97,7 +97,8 @@ namespace Game {
 				&position, XMVectorLerp(XMLoadFloat3(&start), XMLoadFloat3(&projectile.position), *first));
 			XMFLOAT3 direction;
 			XMStoreFloat3(&direction, XMVector3Normalize(XMLoadFloat3(&projectile.velocity)));
-			m_hits.push_back({hit, frameOffset + *first * valid, position, direction});
+			m_hits.push_back({hit, frameOffset + *first * valid, position, direction, ProjectileKind::Gun,
+				projectile.source, projectile.damage});
 			// 接触点を終端にして、敵を貫く光の筋を残さない
 			AddTracer(projectile, position);
 			return false;
@@ -125,6 +126,25 @@ namespace Game {
 			object->worldTransform._43 = projectile.position.z;
 			return false;
 		});
+	}
+
+	bool ProjectileSystem::FireSingle(Engine::Scene& scene, const XMFLOAT3& position,
+		const XMFLOAT3& velocity, AttackSource source, float damage) {
+		if (!m_model || m_projectiles.size() >= m_settings.maxProjectiles)
+			return false;
+		Projectile projectile;
+		projectile.position = projectile.birthPosition = position;
+		projectile.velocity = velocity;
+		projectile.remainingLifetime = m_settings.lifetime;
+		projectile.isTracer = true;
+		projectile.source = source;
+		projectile.damage = damage;
+		XMFLOAT4X4 transform;
+		XMStoreFloat4x4(&transform,
+			XMLoadFloat4x4(&m_modelRotation) * XMMatrixTranslation(position.x, position.y, position.z));
+		projectile.objectId = scene.AddObject(m_model, transform);
+		m_projectiles.push_back(projectile);
+		return true;
 	}
 
 	bool ProjectileSystem::FireVolley(Engine::Scene& scene, const std::array<XMFLOAT3, 4>& muzzles,

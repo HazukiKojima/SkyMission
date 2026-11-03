@@ -62,7 +62,7 @@ namespace Game {
 		const float northFont = std::max(10.0f, 20 * scale);
 		const float rangeFont = std::max(10.0f, 18 * scale);
 		list.Text(
-			{layout.center.x - northFont / 2, layout.origin.y + 14 * scale}, "北", northFont, labelColor);
+			{layout.center.x - northFont / 3, layout.origin.y + 14 * scale}, "N", northFont, labelColor);
 		list.Text({layout.origin.x + 22 * scale, layout.origin.y + layout.size - 14 * scale - rangeFont},
 			"10 km", rangeFont, labelColor);
 		list.Text(panelPoint(166, 218), "5 km", std::max(9.0f, 16 * scale), labelColor);

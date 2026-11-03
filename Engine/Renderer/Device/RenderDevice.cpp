@@ -79,6 +79,12 @@ namespace Engine {
 	}
 
 	void RenderDevice::CreateSwapChain(HWND hwnd, UINT width, UINT height) {
+		ComPtr<IDXGIFactory5> factory5;
+		BOOL tearing = FALSE;
+		if (SUCCEEDED(m_factory.As(&factory5)) &&
+			SUCCEEDED(
+				factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearing, sizeof(tearing))))
+			m_allowTearing = tearing != FALSE;
 		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 		swapChainDesc.BufferCount = FrameCount;
 		swapChainDesc.Width = width;
@@ -87,6 +93,7 @@ namespace Engine {
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		swapChainDesc.SampleDesc.Count = 1;
+		swapChainDesc.Flags = m_allowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
 		ComPtr<IDXGISwapChain1> swapChain;
 
@@ -97,10 +104,10 @@ namespace Engine {
 	}
 
 	void RenderDevice::CreateDescriptorHeaps() {
-		// RTVはバックバッファ・シーンカラー・後処理カラーの順に各フレーム分を配置する
+		// RTVはバックバッファ・シーンカラーの順に各フレーム分を配置する
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount * 3;
+		rtvHeapDesc.NumDescriptors = FrameCount * 2;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
@@ -146,16 +153,9 @@ namespace Engine {
 		return handle;
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetPostProcessRtvHandle() const {
-		D3D12_CPU_DESCRIPTOR_HANDLE handle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-
-		handle.ptr += static_cast<SIZE_T>(FrameCount * 2 + GetFrameIndex()) * m_rtvDescriptorSize;
-
-		return handle;
-	}
-
 	void RenderDevice::Present() {
-		ThrowIfFailed(m_swapChain->Present(1, 0));
+		ThrowIfFailed(m_swapChain->Present(
+			m_verticalSync ? 1 : 0, !m_verticalSync && m_allowTearing ? DXGI_PRESENT_ALLOW_TEARING : 0));
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCurrentRtvHandle() const {
@@ -204,12 +204,12 @@ namespace Engine {
 		for (UINT i = 0; i < FrameCount; ++i) {
 			m_renderTargets[i].Reset();
 			m_sceneRenderTargets[i].Reset();
-			m_postProcessRenderTargets[i].Reset();
 		}
 
 		m_sceneDepth.Reset();
 
-		ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+		ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, width, height, DXGI_FORMAT_R8G8B8A8_UNORM,
+			m_allowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0));
 
 		// バックバッファの描画先
 
@@ -249,17 +249,6 @@ namespace Engine {
 			rtv.ptr += static_cast<SIZE_T>(FrameCount + i) * m_rtvDescriptorSize;
 
 			m_device->CreateRenderTargetView(m_sceneRenderTargets[i].Get(), nullptr, rtv);
-
-			CD3DX12_RESOURCE_DESC postProcessDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,
-				m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
-			CD3DX12_CLEAR_VALUE postProcessClearValue(DXGI_FORMAT_R8G8B8A8_UNORM, clearColor);
-			ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE,
-				&postProcessDesc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &postProcessClearValue,
-				IID_PPV_ARGS(&m_postProcessRenderTargets[i])));
-
-			D3D12_CPU_DESCRIPTOR_HANDLE postProcessRtv = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
-			postProcessRtv.ptr += static_cast<SIZE_T>(FrameCount * 2 + i) * m_rtvDescriptorSize;
-			m_device->CreateRenderTargetView(m_postProcessRenderTargets[i].Get(), nullptr, postProcessRtv);
 		}
 	}
 
@@ -302,12 +291,6 @@ namespace Engine {
 			m_device->CreateShaderResourceView(m_sceneRenderTargets[i].Get(), &colorSrv, srv);
 			srv.ptr += m_srvDescriptorSize;
 			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, srv);
-		}
-
-		for (UINT i = 0; i < FrameCount; ++i) {
-			D3D12_CPU_DESCRIPTOR_HANDLE srv = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
-			srv.ptr += static_cast<SIZE_T>(PostProcessSrvIndex(i)) * m_srvDescriptorSize;
-			m_device->CreateShaderResourceView(m_postProcessRenderTargets[i].Get(), &colorSrv, srv);
 		}
 	}
 

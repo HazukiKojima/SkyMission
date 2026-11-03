@@ -12,9 +12,6 @@ namespace Engine {
 		GraphicsPipeline* GetSky() const {
 			return m_sky.get();
 		}
-		GraphicsPipeline* GetOceanFog() const {
-			return m_oceanFog.get();
-		}
 		GraphicsPipeline* GetRetroFilm() const {
 			return m_retroFilm.get();
 		}
@@ -25,7 +22,6 @@ namespace Engine {
 	  private:
 		std::unique_ptr<GraphicsPipeline> m_ocean;
 		std::unique_ptr<GraphicsPipeline> m_sky;
-		std::unique_ptr<GraphicsPipeline> m_oceanFog;
 		std::unique_ptr<GraphicsPipeline> m_retroFilm;
 		std::unique_ptr<GraphicsPipeline> m_model;
 	};

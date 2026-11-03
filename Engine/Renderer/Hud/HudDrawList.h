@@ -10,7 +10,7 @@ namespace Engine {
 		unsigned height = 0;
 	};
 	struct HudSettings {
-		DirectX::XMFLOAT4 color{230.0f / 255, 205.0f / 255, 164.0f / 255, 0.95f};
+		DirectX::XMFLOAT4 color{232.0f / 255, 217.0f / 255, 181.0f / 255, 0.95f};
 		float lineWidth = 2.0f;
 		float fontSize = 40;
 	};

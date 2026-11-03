@@ -19,7 +19,7 @@ $sources = @(Get-ChildItem -LiteralPath (Join-Path $repository 'Engine') -Filter
 $sources += @(Get-ChildItem -LiteralPath (Join-Path $repository 'Game') -Filter '*.cpp' -Recurse |
     Where-Object Name -ne 'Application.cpp' | ForEach-Object FullName)
 $sources += Join-Path $PSScriptRoot 'RegressionTests.cpp'
-$response = @('/nologo', '/std:c++20', '/EHsc', '/MDd', '/utf-8', '/DNOMINMAX', '/DUNICODE', '/D_DEBUG',
+$response = @('/nologo', '/MP2', '/std:c++20', '/EHsc', '/MDd', '/utf-8', '/DNOMINMAX', '/DUNICODE', '/D_DEBUG',
     '/W4', '/FS', ('/I"{0}"' -f $repository), ('/I"{0}"' -f (Join-Path $repository 'packages\directxtex_desktop_win10.2026.5.8.1\include')),
     ('/I"{0}"' -f (Join-Path $assimp 'include')), ('/Fe"{0}\RegressionTests.exe"' -f $build),
     ('/Fo"{0}\\"' -f $build))

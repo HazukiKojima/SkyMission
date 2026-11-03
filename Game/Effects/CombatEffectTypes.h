@@ -43,6 +43,7 @@ namespace Game {
 		std::vector<GunMuzzleFlash> gunFlashes;
 		std::vector<GunSmoke> gunSmoke;
 		std::vector<GunTracerSegment> gunTracers;
+		std::vector<RocketTrailSample> deckSmoke;
 		std::vector<ImpactEffect> impacts;
 		std::vector<ExplosionEffect> explosions;
 		std::vector<RocketTrailSample> rocketSmoke;

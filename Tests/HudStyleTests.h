@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/Renderer/Hud/HudFont.h"
 #include "Game/UI/HudStyle.h"
+#include "Game/UI/CombatHudPresenter.h"
 
 void TestHudTypography() {
 	Engine::HudDrawList list;
@@ -43,16 +44,50 @@ void TestHudTypography() {
 	view.width = 1920;
 	view.height = 1080;
 	list.Reset(view.width, view.height);
-	Game::HudStyle::DrawFrame(view, list, Game::HudStyle::Ink);
-	const auto frame = list.GetVertices();
-	list.Reset(view.width, view.height);
-	Game::HudStyle::DrawFrame(view, list, Game::HudStyle::Ink);
-	Require(frame.size() == list.GetVertices().size() && frame.size() < 1500,
-		"Weathered border has an unstable or excessive vertex count");
-	for (size_t i = 0; i < frame.size(); ++i)
-		Require(frame[i].position.x == list.GetVertices()[i].position.x &&
-				frame[i].position.y == list.GetVertices()[i].position.y &&
-				std::isfinite(frame[i].position.x) && std::isfinite(frame[i].position.y),
-			"Weathered border changed between otherwise identical frames");
-	std::cout << "PASS: Japanese HUD typography, width, UTF-8 fallback, solid UV and deterministic border\n";
+
+	Game::CombatSnapshot snapshot;
+	snapshot.playerSpeedMetersPerSecond = 100;
+	snapshot.playerAltitudeMeters = 1500;
+	DirectX::XMStoreFloat4x4(&view.view, DirectX::XMMatrixIdentity());
+	DirectX::XMStoreFloat4x4(
+		&view.projection, DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, 1920.0f / 1080, 1, 10000));
+	Game::CombatHudPresenter{}.Build(snapshot, view, list);
+	for (const auto& vertex : list.GetVertices()) {
+		const float x = (vertex.position.x + 1) * 960, y = (1 - vertex.position.y) * 540;
+		Require(
+			x > 16 && x < 1904 && y > 16 && y < 1064, "Flight HUD retained the weathered screen-edge frame");
+	}
+	snapshot.forward = {0, 0, 1};
+	snapshot.enemies = {{1, {0, 0, 1000}, {}, "ENEMY 01", 100, {0, 0, 1}}};
+	snapshot.selected = 1;
+	snapshot.rocket = {true, {0, 2.4f}, 0};
+	snapshot.hitSeconds = snapshot.playerHitSeconds = 0.1f;
+	snapshot.playerHitDirection = {1, 0, 0};
+	snapshot.destroyedSeconds = snapshot.allDownSeconds = 1;
+	for (auto result : {Game::CombatResult::Active, Game::CombatResult::Victory, Game::CombatResult::Defeat})
+		for (auto warning :
+			{Game::ThreatWarning::None, Game::ThreatWarning::LockOn, Game::ThreatWarning::Missile}) {
+			snapshot.result = result;
+			snapshot.threatWarning = warning;
+			snapshot.lockState = Game::LockState::Locked;
+			list.Reset(view.width, view.height);
+			Game::CombatHudPresenter{}.Build(snapshot, view, list);
+			for (size_t i = 0; i < list.GetVertices().size(); i += 6) {
+				const auto uv = list.GetVertices()[i].uv;
+				if (uv.x == Engine::HudFont::SolidUv.x && uv.y == Engine::HudFont::SolidUv.y)
+					continue;
+				const auto column =
+					unsigned(std::lround(uv.x * Engine::HudFont::Width)) / Engine::HudFont::Cell;
+				const auto row =
+					unsigned(std::lround(uv.y * Engine::HudFont::Height)) / Engine::HudFont::Cell;
+				Require(row * Engine::HudFont::Columns + column < Engine::HudFont::AsciiCount,
+					"A built-in flight HUD or radar label is not English/ASCII");
+			}
+		}
+	const auto ink = Engine::HudSettings{}.color;
+	Require(ink.x == Game::HudStyle::Ink.x && ink.y == Game::HudStyle::Ink.y &&
+			ink.z == Game::HudStyle::Ink.z && ink.w == Game::HudStyle::Ink.w,
+		"English HUD changed the current parchment palette");
+	std::cout
+		<< "PASS: HUD typography, UTF-8 fallback, English labels, preserved palette and undecorated frame\n";
 }

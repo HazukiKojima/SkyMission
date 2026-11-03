@@ -1,0 +1,10 @@
+#pragma once
+#include "EngineCommon.h"
+#include <DirectXMath.h>
+#include <DirectXTex.h>
+#include <algorithm>
+#include <cmath>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <vector>

@@ -4,7 +4,9 @@
 #include "Game/Scene/FlightSceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
+#include <format>
 #include "Engine/ExecutablePath.h"
 #include "Game/Weapons/WeaponController.h"
 #include "Game/Combat/CombatController.h"
@@ -28,7 +30,8 @@ namespace Game {
 			.playerAircraft = assetsDir / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 			.enemyAircraft = assetsDir / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 			.retroFilm = assetsDir / L"Environment/retroFilm.json",
-			.ships = assetsDir / L"Ships/ships.json"};
+			.ships = assetsDir / L"Ships/ships.json",
+			.mission = assetsDir / L"Combat/mission.json"};
 		const FlightSceneDefinition assets = sceneLoader.Load(scenePaths);
 
 		m_renderer = std::make_unique<Renderer>();
@@ -62,20 +65,22 @@ namespace Game {
 		m_scene->SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		m_scene->SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
 		m_scene->AddPlayerObject(m_renderer->GetModel(PlayerModelId));
-		for (size_t i = 0; i < assets.combat.enemyPositions.size(); ++i)
-			m_scene->AddEnemyAircraft(m_renderer->GetModel(EnemyModelId), assets.combat.enemyPositions[i],
-				assets.enemyAircraft.visualScale, assets.enemyAircraft.flightParameters,
-				assets.enemyAIParameters, assets.combat.enemyHealth, "ENEMY 0" + std::to_string(i + 1), true);
-
+		m_scene->ConfigureMission(assets.mission, m_renderer->GetModel(EnemyModelId),
+			assets.enemyAircraft.visualScale, assets.enemyAircraft.flightParameters, assets.enemyAIParameters,
+			m_renderer->GetModel(RocketModelId));
 		m_scene->ConfigurePlayerWeapon(assets.playerWeapon, m_renderer->GetModel(AmmunitionModelId));
-		m_scene->ConfigurePlayerRocket(assets.playerRocket, m_renderer->GetModel(RocketModelId));
-		m_scene->ConfigureEnemyMissile(assets.enemyMissile, m_renderer->GetModel(EnemyMissileModelId));
-		for (const auto& ship : assets.ships)
-			m_scene->AddObject(m_renderer->GetModel(ship.asset.id), ship.BuildTransform());
+		if (assets.ships.size() < 3)
+			throw std::runtime_error("Mission requires a carrier and two escorts");
+		for (size_t i = 0; i < assets.ships.size(); ++i) {
+			const auto& ship = assets.ships[i];
+			const auto id = m_scene->AddObject(m_renderer->GetModel(ship.asset.id), ship.BuildTransform());
+			m_scene->RegisterMissionShip(id, i == 0);
+		}
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
-			assets.playerWeapon.gun.maxProjectiles + assets.enemyMissile.settings.maxRockets +
-			assets.playerRocket.settings.maxRockets);
+			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +
+			assets.mission.finalFighterCount + 1 +
+			static_cast<size_t>(std::ceil(120 / assets.mission.bombReloadSeconds)) + 2);
 	}
 
 	void Application::ConfigureResizeHandling() {
@@ -132,6 +137,11 @@ namespace Game {
 		if (m_fpsTimer >= 0.25f) {
 			const float fps = static_cast<float>(m_fpsFrameCount) / m_fpsTimer;
 			std::wstring title = m_windowTitle + L" | FPS: " + std::to_wstring(static_cast<int>(fps + 0.5f));
+			title += m_renderer->IsVerticalSyncEnabled() ? L" | VSync ON [F10]" : L" | VSync OFF [F10]";
+			const auto& gpu = m_renderer->GetGpuTimings();
+			if (gpu.valid)
+				title += std::format(L" | GPU {:.2f} ms (Sea {:.2f}, Models {:.2f}, Post {:.2f})",
+					gpu.TotalMs(), gpu.oceanMs, gpu.modelsMs, gpu.postProcessMs);
 			SetWindowTextW(m_window->GetHandle(), title.c_str());
 			m_fpsTimer = 0.0f;
 			m_fpsFrameCount = 0;
@@ -141,6 +151,8 @@ namespace Game {
 
 		if (m_scene) {
 			const InputSnapshot input = m_window->ConsumeInput();
+			if (input.WasKeyPressed(VK_F10))
+				m_renderer->SetVerticalSync(!m_renderer->IsVerticalSyncEnabled());
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();

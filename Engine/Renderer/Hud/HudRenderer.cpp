@@ -19,8 +19,8 @@ namespace Engine {
 			info.bmiHeader.biBitCount = 32;
 			void* pixels = nullptr;
 			const auto bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
-			const auto font = CreateFontW(-36, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, SHIFTJIS_CHARSET,
-				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH, L"游明朝");
+			const auto font = CreateFontW(-36, 20, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH, L"Consolas");
 			const auto japaneseFont = CreateFontW(-36, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 				SHIFTJIS_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH,
 				L"UD デジタル 教科書体 N");

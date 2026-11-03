@@ -12,6 +12,7 @@ namespace Engine {
 		bool generateMipmaps = true;
 		bool invertNormalGreen = false;
 		DXGI_FORMAT targetFormat = DXGI_FORMAT_UNKNOWN;
+		UINT maxDimension = 0; // 0 preserves source resolution.
 	};
 
 	class Texture {
@@ -44,6 +45,7 @@ namespace Engine {
 			const std::filesystem::path& cachePath, DXGI_FORMAT targetFormat, const std::wstring& source);
 		bool DecodeSource(const std::wstring& filePath, bool useSrgb);
 		bool DecompressForProcessing(const TextureLoadOptions& options);
+		bool ResizeToLimit(UINT maxDimension);
 		void CorrectNormalGreen(bool invertNormalGreen);
 		bool GenerateMipChain(bool generateMipmaps);
 		bool ConvertFormat(DXGI_FORMAT targetFormat, const std::wstring& filePath);

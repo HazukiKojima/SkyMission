@@ -3,10 +3,14 @@
 #include "../../Scene/Scene.h"
 #include "../RendererDefinition.h"
 #include "Engine/Renderer/Hud/HudDrawList.h"
+#include "RenderVisibility.h"
 
 namespace Engine {
 	class RendererFrameUpdater {
 	  public:
+		const std::vector<ModelDrawDecision>& GetDrawDecisions() const {
+			return m_drawDecisions;
+		}
 		void Configure(const OceanSettings& settings);
 		RenderView GetRenderView() const {
 			return m_renderView;
@@ -22,6 +26,7 @@ namespace Engine {
 		}
 
 	  private:
+		std::vector<ModelDrawDecision> m_drawDecisions;
 		struct FrameViewData;
 		FrameViewData BuildFrameView(const Scene& scene, float elapsedTime) const;
 		void UpdateOceanConstants(

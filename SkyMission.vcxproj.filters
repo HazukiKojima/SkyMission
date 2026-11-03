@@ -620,4 +620,11 @@
     <None Include="global.json" />
     <ClInclude Include="Tests\EnvironmentSettingsTests.h"><Filter>Tests</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Scene\FlightSceneMission.cpp"><Filter>Game\Scene</Filter></ClCompile>
+    <ClInclude Include="Game\Combat\MissionState.h"><Filter>Game\Combat</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\BombFlight.h"><Filter>Game\Weapons</Filter></ClInclude>
+    <ClInclude Include="Tests\MissionTests.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="Assets\Combat\mission.json" />
+  </ItemGroup>
 </Project>

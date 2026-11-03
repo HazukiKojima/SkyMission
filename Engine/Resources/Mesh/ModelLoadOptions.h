@@ -21,5 +21,8 @@ namespace Engine {
 		float normalizedExtent = 10.0f;
 		float groundOffset = 0.1f;
 		ModelOrigin origin = ModelOrigin::Ground;
+		unsigned maxTextureDimension = 0;
+		bool generateLods = false;
+		bool mergeStaticMeshes = true;
 	};
 } // namespace Engine

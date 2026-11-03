@@ -104,6 +104,12 @@ PS_INPUT VS(VS_INPUT input)
     }
 
     pos.y -= oceanWaveHeightOffset;
+    // Distant waves are subpixel; fade geometric displacement before the sparse outer grid aliases.
+    float waveDetail = 1.0f - smoothstep(oceanWaveLength * 16.0f, oceanWaveLength * 64.0f,
+        length(input.position.xz));
+    pos = lerp(float3(wavePos.x, -oceanWaveHeightOffset, wavePos.z), pos, waveDetail);
+    tangent = lerp(float3(1, 0, 0), tangent, waveDetail);
+    binormal = lerp(float3(0, 0, 1), binormal, waveDetail);
 
     // 法線を計算する
 

@@ -19,6 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Precompiled.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClInclude Include="Engine\Precompiled.h" />
+    <ClInclude Include="Engine\Renderer\Device\RenderVisibility.h" />
+    <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h" />
+    <None Include="Engine\Renderer\Shader\OceanFog.hlsli" />
     <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
     <ClCompile Include="Game\Audio\CombatAudio.cpp" />
     <ClCompile Include="Game\Application\Application.cpp" />
@@ -246,7 +253,7 @@
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IntDir>$(SolutionDir)x64\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)x64\$(Configuration)\</IntDir>
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -326,6 +333,14 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>Engine/Precompiled.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)SkyMission.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Engine/Precompiled.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/MP2 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <FxCompile>
       <AdditionalOptions>/WX %(AdditionalOptions)</AdditionalOptions>
     </FxCompile>
@@ -344,28 +359,26 @@
     <Error Condition="!Exists('packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />
   </Target>
   <ItemGroup>
-    <ProjectReference Include="External\REDoxWrapper\REDoxWrapper.csproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <BuildReference>true</BuildReference>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\**\*.cs" Exclude="$(SolutionDir)External\REDoxWrapper\bin\**;$(SolutionDir)External\REDoxWrapper\obj\**" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)global.json" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)External\REDoxWrapper\obj\project.assets.json" Condition="Exists('$(SolutionDir)External\REDoxWrapper\obj\project.assets.json')" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(SolutionDir)tools\AircraftParameterGenerator\bin\**;$(SolutionDir)tools\AircraftParameterGenerator\obj\**" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)Game\Aircraft\AircraftFlightParameters.h;$(SolutionDir)Game\Aircraft\AircraftAIController.h;$(SolutionDir)Engine\Scene\OceanParameters.h;$(SolutionDir)Engine\Scene\SkyParameters.h" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.props" Condition="Exists('$(SolutionDir)Directory.Build.props')" />
-    <REDoxWrapperPublishInput Include="$(SolutionDir)Directory.Build.targets" Condition="Exists('$(SolutionDir)Directory.Build.targets')" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\**\*.cs" Exclude="$(ProjectDir)External\REDoxWrapper\bin\**;$(ProjectDir)External\REDoxWrapper\obj\**" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxWrapper.csproj" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)global.json" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(ProjectDir)tools\AircraftParameterGenerator\bin\**;$(ProjectDir)tools\AircraftParameterGenerator\obj\**" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Game\Aircraft\AircraftFlightParameters.h;$(ProjectDir)Game\Aircraft\AircraftAIController.h;$(ProjectDir)Engine\Scene\OceanParameters.h;$(ProjectDir)Engine\Scene\SkyParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Directory.Build.props" Condition="Exists('$(ProjectDir)Directory.Build.props')" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Directory.Build.targets" Condition="Exists('$(ProjectDir)Directory.Build.targets')" />
   </ItemGroup>
   <PropertyGroup>
-    <REDoxWrapperPublishDll>$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll</REDoxWrapperPublishDll>
+    <REDoxWrapperPublishDll>$(ProjectDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll</REDoxWrapperPublishDll>
+    <REDoxWrapperPublishStamp>$(ProjectDir)External\REDoxWrapper\obj\native-publish\$(Configuration)\win-x64.stamp</REDoxWrapperPublishStamp>
   </PropertyGroup>
-  <Target Name="PublishREDoxWrapper" AfterTargets="Build" Condition="'$(Platform)' == 'x64'" Inputs="@(REDoxWrapperPublishInput)" Outputs="$(REDoxWrapperPublishDll);$(OutDir)REDoxWrapper.dll">
-    <Exec Command="set DOTNET_CLI_UI_LANGUAGE=en&#xD;&#xA;dotnet publish &quot;$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj&quot; -c $(Configuration) -r win-x64" />
-    <Copy SourceFiles="$(REDoxWrapperPublishDll)" DestinationFiles="$(OutDir)REDoxWrapper.dll" />
+  <Target Name="PublishREDoxWrapper" BeforeTargets="ClCompile" Condition="'$(Platform)' == 'x64'" Inputs="@(REDoxWrapperPublishInput)" Outputs="$(REDoxWrapperPublishStamp);$(REDoxWrapperPublishDll)">
+    <Exec Command="set DOTNET_CLI_UI_LANGUAGE=en&#xD;&#xA;dotnet publish &quot;$(ProjectDir)External\REDoxWrapper\REDoxWrapper.csproj&quot; -c $(Configuration) -r win-x64" />
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(REDoxWrapperPublishStamp)'))" />
+    <Touch Files="$(REDoxWrapperPublishStamp)" AlwaysCreate="true" />
+  </Target>
+  <Target Name="CopyREDoxWrapper" AfterTargets="Build" Condition="'$(Platform)' == 'x64'">
+    <Copy SourceFiles="$(REDoxWrapperPublishDll)" DestinationFiles="$(OutDir)REDoxWrapper.dll" SkipUnchangedFiles="true" />
   </Target>
 
   <ItemGroup>
@@ -392,6 +405,11 @@
   <ItemGroup>
     <ClInclude Include="Game\Scene\FlightScene.h" />
     <ClCompile Include="Game\Scene\FlightScene.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneMission.cpp" />
+    <ClInclude Include="Game\Combat\MissionState.h" />
+    <ClInclude Include="Game\Weapons\BombFlight.h" />
+    <ClInclude Include="Tests\MissionTests.h" />
+    <None Include="Assets\Combat\mission.json" />
     <ClInclude Include="Game\Camera\AircraftCameraController.h" />
     <ClCompile Include="Game\Camera\AircraftCameraController.cpp" />
     <ClInclude Include="Engine\Renderer\RendererDefinition.h" />

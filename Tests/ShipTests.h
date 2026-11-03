@@ -8,6 +8,7 @@ void TestShips(const fs::path& repository, const fs::path& fixture) {
 		Require(fs::is_regular_file(ship.asset.file), "Ship model relative path did not resolve");
 		Require(ship.asset.options.normalizedExtent == 1 && ship.asset.options.groundOffset == 0,
 			"Ship normalization must allow world size and waterline placement");
+		Require(ship.asset.options.maxTextureDimension == 2048, "Ship texture budget was ignored");
 		const auto transform = ship.BuildTransform();
 		Require(transform._41 == ship.position.x && transform._43 == ship.position.z &&
 				std::abs(transform._42 - (ship.position.y + ship.waterlineOffset)) < 0.001f,
@@ -16,9 +17,10 @@ void TestShips(const fs::path& repository, const fs::path& fixture) {
 	const auto path = fixture / L"ships.json";
 	const auto write = [&](const char* size, const char* position, const char* rotation = "[0,0,0]",
 						   const char* waterline = "-10") {
-		std::ofstream(path) << "{\"shipCount\":1,\"ship1Model\":\"ship.fbx\",\"ship1Position\":" << position
-							<< ",\"ship1RotationDegrees\":" << rotation << ",\"ship1Size\":" << size
-							<< ",\"ship1WaterlineOffset\":" << waterline << "}";
+		std::ofstream(path)
+			<< "{\"shipCount\":1,\"maxTextureDimension\":2048,\"ship1Model\":\"ship.fbx\",\"ship1Position\":"
+			<< position << ",\"ship1RotationDegrees\":" << rotation << ",\"ship1Size\":" << size
+			<< ",\"ship1WaterlineOffset\":" << waterline << "}";
 	};
 	write("100", "[1,2,3]", "[0,90,0]");
 	const auto ship = LoadShipDefinitions(JsonAssetReader{}, path).front();

@@ -6,6 +6,9 @@ namespace Engine {
 
 	class CommandContext {
 	  public:
+		UINT GetRenderHeight() const {
+			return m_renderDevice->GetHeight();
+		}
 		CommandContext() = default;
 		~CommandContext();
 
