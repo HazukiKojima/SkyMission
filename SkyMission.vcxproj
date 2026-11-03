@@ -497,6 +497,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="global.json" />
+    <None Include="Assets\Sound\*.mp3" />
     <ClInclude Include="Tests\EnvironmentSettingsTests.h"></ClInclude>
   </ItemGroup>
 </Project>

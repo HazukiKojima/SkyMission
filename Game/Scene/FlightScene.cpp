@@ -60,6 +60,7 @@ namespace Game {
 	void FlightScene::Update(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput,
 		CombatInput combatInput) {
 		using namespace DirectX;
+		m_combat.audio = {};
 		m_combat.firedVolleys = 0;
 		m_combat.enemyMissilesLaunched = 0;
 		m_combat.hitCount = 0;
@@ -81,6 +82,8 @@ namespace Game {
 				OnResize(width, height);
 				ApplyRenderStates();
 				RefreshCombatSnapshot();
+				m_combat.audio.restarted = true;
+				m_combat.audio.flying = true;
 				UpdateCamera({}, dt, {});
 			} else
 				m_effects.Update(dt);
@@ -105,7 +108,8 @@ namespace Game {
 		// 集合変更前に機体行列を値として保持し、弾追加で無効になるポインタを残さない
 		if (m_weaponConfigured) {
 			const bool hasPlayer = m_scene.FindObject(m_playerId) != nullptr;
-			const auto ages = m_gun.Update({combatInput.weapon.fire && hasPlayer}, dt);
+			m_combat.audio.gunFiring = combatInput.weapon.fire && hasPlayer;
+			const auto ages = m_gun.Update({m_combat.audio.gunFiring}, dt);
 			const auto pose = m_player.GetWorldTransform();
 			DirectX::XMFLOAT4X4 world;
 			DirectX::XMStoreFloat4x4(&world,
@@ -143,6 +147,9 @@ namespace Game {
 		RefreshCombatSnapshot();
 		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, false, 0);
 		RefreshCombatSnapshot();
+		m_combat.audio.flying = m_combat.result == CombatResult::Active && m_combat.playerHealth > 0 &&
+			m_scene.FindObject(m_playerId);
+		m_combat.audio.gunFiring &= m_combat.audio.flying;
 		UpdateCamera(input, dt, cameraInput);
 		ApplyRenderStates();
 	}
@@ -199,8 +206,10 @@ namespace Game {
 				if (!muzzle)
 					break;
 				if (m_rockets.Fire(
-						m_scene, *muzzle, world, m_player.GetForward(), m_player.GetVelocity(), target))
+						m_scene, *muzzle, world, m_player.GetForward(), m_player.GetVelocity(), target)) {
 					m_rocketLauncher.CommitShot();
+					++m_combat.audio.missileLaunches;
+				}
 			}
 		}
 		m_combat.rocket = m_rocketLauncher.GetState();
@@ -517,6 +526,7 @@ namespace Game {
 			if (m_missionEnabled && hit.target == m_carrierId && hit.kind == ProjectileKind::Bomb) {
 				if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 					m_mission.ConfirmDeckHit();
+					++m_combat.audio.shipExplosions;
 					m_effects.SpawnExplosion(hit.position, {});
 				}
 				continue;
@@ -526,6 +536,10 @@ namespace Game {
 					continue;
 				m_combat.playerHealth = std::max(0.0f,
 					m_combat.playerHealth - (hit.damage > 0 ? hit.damage : m_enemyMissileSettings.damage));
+				if (hit.kind == ProjectileKind::Gun)
+					++m_combat.audio.gunHits;
+				else if (hit.kind == ProjectileKind::Rocket)
+					++m_combat.audio.missileHits;
 				m_combat.playerHitSeconds = 0.7f;
 				m_combat.playerHitDirection = {-hit.direction.x, -hit.direction.y, -hit.direction.z};
 				m_effects.SpawnExplosion(hit.position, m_player.GetVelocity());
@@ -560,6 +574,7 @@ namespace Game {
 				else
 					m_effects.SpawnExplosion(
 						enemy->flightModel.GetPosition(), enemy->flightModel.GetVelocity());
+				++m_combat.audio.aircraftExplosions;
 				destroyed.push_back(enemy->objectId);
 				m_combat.destroyedSeconds = 0.8f;
 			}

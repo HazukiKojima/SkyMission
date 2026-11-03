@@ -107,6 +107,26 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		scene.Update({}, 0.01f);
 		Require(
 			scene.GetCombatSnapshot().enemies.size() == 2, "Mission did not start with two patrol aircraft");
+		// A nearby escort firing into the enlarged player fixture guarantees a gun hit.
+		{
+			auto aaScene = scene;
+			aaScene.RemoveObject(playerId);
+			aaScene.AddPlayerObject(box);
+			aaScene.SetPlayerAircraftVisualScale(1000);
+			XMFLOAT4X4 escortWorld;
+			XMStoreFloat4x4(&escortWorld, XMMatrixTranslation(0, 1000, 100));
+			aaScene.RegisterMissionShip(aaScene.AddObject(box, escortWorld), false);
+			bool heardGunHit = false;
+			for (int frame = 0; frame < 60 && !heardGunHit; ++frame) {
+				const float health = aaScene.GetCombatSnapshot().playerHealth;
+				aaScene.Update({}, 0.1f);
+				const auto& state = aaScene.GetCombatSnapshot();
+				heardGunHit = state.audio.gunHits > 0;
+				Require((state.playerHealth < health) == heardGunHit && !state.audio.missileHits,
+					"Anti-aircraft damage/audio classification mismatch");
+			}
+			Require(heardGunHit, "Anti-aircraft fixture did not produce gun hit audio");
+		}
 		const auto checkDefeatRetry = [&](FlightScene checkpoint) {
 			checkpoint.RemoveObject(playerId);
 			checkpoint.Update({}, 0.01f);
@@ -160,6 +180,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		drop.bombPressCount = 1;
 		scene.Update({}, 0.01f, {}, drop);
 		Require(scene.GetCombatSnapshot().bombCooldown == 10, "Bomb was not released/reloaded");
+		Require(!scene.GetCombatSnapshot().audio.missileLaunches, "Bomb emitted missile launch audio");
 		for (int i = 0; i < 80; ++i)
 			scene.Update({}, 0.25f);
 		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
@@ -173,8 +194,10 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		Require(scene.GetCombatSnapshot().deckDisabled && scene.GetCombatSnapshot().enemies.size() == 2 &&
 				scene.GetCombatSnapshot().missionPhase == MissionPhase::FinalFighters,
 			"Bomb did not hit rotated deck/spawn final fighters once");
+		Require(scene.GetCombatSnapshot().audio.shipExplosions == 1, "Deck audio missing or duplicated");
 		scene.Update({}, 0.01f);
 		Require(scene.GetCombatSnapshot().enemies.size() == 2, "Final fighters duplicated");
+		Require(!scene.GetCombatSnapshot().audio.shipExplosions, "Deck audio persisted across frames");
 		checkDefeatRetry(scene);
 		removeEnemies();
 		Require(scene.GetCombatSnapshot().enemies.size() == 1 &&

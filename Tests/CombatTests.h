@@ -574,6 +574,8 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				"Projectile damage did not destroy enemy and notify all-down");
 			Require(state.firedVolleys > 0 && state.hitCount == 1 && !effectState.impacts.empty(),
 				"Combat feedback events missing");
+			Require(state.audio.aircraftExplosions == 1 && !state.audio.flying && !state.audio.gunFiring,
+				"Final kill audio missing, duplicated or loops retained");
 			Require(effectState.explosions.size() == 1 && effectState.explosions.front().age == 0,
 				"Lethal multi-hit did not create exactly one explosion");
 			const auto deathPosition = effectState.explosions.front().position;
@@ -583,6 +585,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				"Explosion did not survive enemy removal");
 			Require(scene.GetCombatSnapshot().firedVolleys == 0 && scene.GetCombatSnapshot().hitCount == 0,
 				"Combat sound events persisted across frames");
+			Require(state.audio.aircraftExplosions == 0, "Kill audio repeated after victory");
 			Require(state.selected == Engine::InvalidObjectId && state.lockState == LockState::None,
 				"Destroyed enemy retained target reference");
 			scene.Update({}, 0.25f, {}, {{true}});
@@ -615,6 +618,8 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 						scene.GetProjectileCount() == 0 && scene.GetRocketCount() == 0 &&
 						state.lockState == LockState::None,
 					"Victory retry retained weapons, targets or result");
+				Require(state.audio.restarted && state.audio.flying && !state.audio.aircraftExplosions,
+					"Retry did not reset audio state");
 				scene.Update({}, 0.25f, {}, {{true}});
 			}
 		}
@@ -664,6 +669,9 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				Require(locking && incoming && launches > 0, "Missile lock/launch warnings were missing");
 				Require(battle.GetCombatSnapshot().result == CombatResult::Defeat,
 					"Straight flight escaped every enemy missile");
+				Require(battle.GetCombatSnapshot().audio.missileHits > 0 &&
+						!battle.GetCombatSnapshot().audio.gunHits && !battle.GetCombatSnapshot().audio.flying,
+					"Lethal missile audio was missing or misclassified");
 				Require(battle.GetCombatSnapshot().incomingMissiles.empty() &&
 						battle.GetCombatSnapshot().threatWarning == ThreatWarning::None,
 					"Defeat retained missile warning");

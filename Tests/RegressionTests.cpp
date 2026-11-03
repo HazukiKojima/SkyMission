@@ -41,7 +41,7 @@ void Require(bool condition, const char* description) {
 #include "RenderOptimizationTests.h"
 #include "MissionTests.h"
 
-void TestCombatAudioLifecycle() {
+void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
 	for (const bool initializeComFirst : {false, true}) {
 		HRESULT originalApartmentResult = E_FAIL;
@@ -50,29 +50,51 @@ void TestCombatAudioLifecycle() {
 		APTTYPEQUALIFIER originalQualifier = APTTYPEQUALIFIER_NONE;
 		APTTYPE apartment = APTTYPE_CURRENT;
 		APTTYPEQUALIFIER qualifier = APTTYPEQUALIFIER_NONE;
+		std::exception_ptr workerError;
 		std::thread worker([&]() {
-			if (initializeComFirst) {
-				ThrowIfFailed(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
-			}
-			// 他スレッドのMTAから暗黙に参加している場合も、呼び出し前の状態と比較する
-			originalApartmentResult = CoGetApartmentType(&originalApartment, &originalQualifier);
-			{
-				CombatAudio audio;
-				audio.Update(1, 1);
-				audio.Initialize();
-				audio.Update(2, 3);
-				audio.Update(0, 0, true, false, 0.1f);
-				audio.Update(0, 0, false, true, 0.25f);
-				audio.Update(0, 0, false, false, 0.1f);
-				audio.Initialize();
-				audio.Update(1, 1);
-			}
-			apartmentResult = CoGetApartmentType(&apartment, &qualifier);
-			if (initializeComFirst) {
-				CoUninitialize();
+			try {
+				if (initializeComFirst) {
+					ThrowIfFailed(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+				}
+				// 他スレッドのMTAから暗黙に参加している場合も、呼び出し前の状態と比較する
+				originalApartmentResult = CoGetApartmentType(&originalApartment, &originalQualifier);
+				{
+					CombatAudio audio;
+					audio.Update({.flying = true, .gunFiring = true}, 1);
+					audio.Initialize(repository / L"Assets/Sound");
+					Require(audio.GetLoadedSoundCount() == 7, "Not all seven MP3 assets decoded");
+					audio.Update({.flying = true, .gunFiring = true}, 0);
+					audio.Update({.flying = true,
+									 .missileLaunches = 2,
+									 .gunHits = 1,
+									 .missileHits = 1,
+									 .aircraftExplosions = 1,
+									 .shipExplosions = 1},
+						3);
+					audio.SetSuspended(true);
+					audio.SetSuspended(false);
+					audio.Update({}, 0);
+					audio.Update({.flying = true}, 0, true, false, 0.1f);
+					audio.Update({.flying = true}, 0, false, true, 0.25f);
+					audio.Update({.flying = true}, 0, false, false, 0.1f);
+					audio.Initialize(repository / L"Assets/Sound");
+					Require(audio.GetLoadedSoundCount() == 7, "Not all seven MP3 assets decoded");
+					audio.Update({.flying = true, .restarted = true}, 0);
+					audio.Initialize(fixture / L"missing-sound-directory");
+					Require(audio.GetLoadedSoundCount() == 0, "Missing clips retained old PCM");
+					audio.Update({.flying = true, .gunFiring = true, .missileLaunches = 1}, 0);
+				}
+				apartmentResult = CoGetApartmentType(&apartment, &qualifier);
+				if (initializeComFirst) {
+					CoUninitialize();
+				}
+			} catch (...) {
+				workerError = std::current_exception();
 			}
 		});
 		worker.join();
+		if (workerError)
+			std::rethrow_exception(workerError);
 		Require(apartmentResult == originalApartmentResult &&
 				(FAILED(apartmentResult) ||
 					(apartment == originalApartment && qualifier == originalQualifier)),
@@ -774,7 +796,7 @@ int wmain(int argc, wchar_t** argv) {
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
 		TestFlightAndScene();
-		TestCombatAudioLifecycle();
+		TestCombatAudioLifecycle(argv[1], fixture);
 		TestCombatMath();
 		TestMissionRules();
 		TestMissileEdgeIndicators();

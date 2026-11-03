@@ -68,7 +68,15 @@ namespace Game {
 		DirectX::XMFLOAT3 position;
 		float distance;
 	};
+	// Transient events are cleared at the beginning of every simulation frame.
+	struct CombatAudioState {
+		bool flying = false, gunFiring = false, restarted = false;
+		unsigned missileLaunches = 0, gunHits = 0, missileHits = 0;
+		unsigned aircraftExplosions = 0, shipExplosions = 0;
+	};
 	struct CombatSnapshot {
+		CombatAudioState audio;
+
 		bool missionEnabled = false;
 		MissionPhase missionPhase = MissionPhase::Patrol;
 		bool deckDisabled = false;

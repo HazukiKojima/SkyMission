@@ -41,7 +41,7 @@ namespace Game {
 		SetWindowTextW(m_window->GetHandle(), m_windowTitle.c_str());
 
 		InitializeFlightScene(assets);
-		m_combatAudio.Initialize();
+		m_combatAudio.Initialize(assetsDir / L"Sound");
 		ConfigureResizeHandling();
 
 		m_lastTime = std::chrono::steady_clock::now();
@@ -109,6 +109,7 @@ namespace Game {
 			} else if (IsIconic(m_window->GetHandle()) || m_window->GetWidth() == 0 ||
 				m_window->GetHeight() == 0) {
 				// 最小化中は描画とシミュレーションを止め、メッセージ到着までCPUを休ませる
+				m_combatAudio.SetSuspended(true);
 				suspended = true;
 				WaitMessage();
 			} else {
@@ -117,6 +118,7 @@ namespace Game {
 					m_lastTime = std::chrono::steady_clock::now();
 					m_fpsTimer = 0;
 					m_fpsFrameCount = 0;
+					m_combatAudio.SetSuspended(false);
 					suspended = false;
 				}
 				Update();
@@ -156,7 +158,7 @@ namespace Game {
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
-			m_combatAudio.Update(combatState.firedVolleys, combatState.hitCount,
+			m_combatAudio.Update(combatState.audio, combatState.hitCount,
 				combatState.threatWarning == ThreatWarning::LockOn,
 				combatState.threatWarning == ThreatWarning::Missile, deltaSeconds);
 			const auto view = m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);

@@ -261,6 +261,9 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 		scene.Update({}, 0.25f, {}, {{}, false, 2});
 		Require(scene.GetCombatSnapshot().enemies.empty() && scene.GetCombatSnapshot().hitCount == 1,
 			"Rocket direct hit did not destroy standard enemy");
+		Require(scene.GetCombatSnapshot().audio.missileLaunches == 2 &&
+				scene.GetCombatSnapshot().audio.aircraftExplosions == 1,
+			"Rocket audio event missing");
 		Require(
 			scene.GetEffectSnapshot().explosions.size() <= 2 && !scene.GetEffectSnapshot().explosions.empty(),
 			"Rocket impact explosion missing or duplicated per hit");
@@ -292,6 +295,9 @@ void TestRocketLauncherAndAssets(const fs::path& repository, const fs::path& fix
 		Require(full.GetRocketCount() == 1 && full.GetCombatSnapshot().rocket.nextMuzzle == 1 &&
 				full.GetCombatSnapshot().rocket.cooldowns[1] == 0,
 			"Capacity failure consumed R1 cooldown or alternation");
+		Require(full.GetCombatSnapshot().audio.missileLaunches == 1, "Failed launch emitted sound");
+		full.Update({}, 0.01f, {}, {{}, false, 2});
+		Require(full.GetCombatSnapshot().audio.missileLaunches == 0, "Cooldown emitted launch sound");
 		FlightScene boundary;
 		boundary.Initialize(1, 1, 10000);
 		boundary.AddPlayerObject(aircraft);
