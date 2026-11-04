@@ -14,8 +14,10 @@ namespace Game {
 		const float length = XMVectorGetX(XMVector3Length(forward));
 		if (!std::isfinite(length) || length < 0.001f)
 			throw std::invalid_argument("Bomb modelForward must be finite and nonzero");
-		if (!m_bombs.empty())
+		if (!m_bombs.empty() || !m_missiles.empty())
 			throw std::logic_error("Cannot configure active bombs");
+		m_missileMode = false;
+		m_ammo = 2;
 		m_model = std::move(model);
 		XMStoreFloat3(&m_modelForward, XMVector3Normalize(forward));
 		m_reloadSeconds = reloadSeconds;
@@ -67,6 +69,7 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0)
 			return;
 		dt = std::min(dt, 0.25f);
+		if (m_missileMode) { UpdateMissiles(scene, dt, deck); return; }
 		m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
 		std::erase_if(m_bombs, [&](Bomb& bomb) {
 			const auto start = bomb.flight.position;
@@ -92,6 +95,69 @@ namespace Game {
 			}
 			if (auto* object = scene.FindObject(bomb.id))
 				object->worldTransform = BuildTransform(bomb.flight);
+			return false;
+		});
+	}
+
+	void BombSystem::ConfigureMissiles(float speed, float damage) {
+		if (!std::isfinite(speed) || speed <= 0 || !std::isfinite(damage) || damage <= 0)
+			throw std::invalid_argument("Missile speed/damage must be positive and finite");
+		m_missileMode = true;
+		m_missileSpeed = speed;
+		m_missileDamage = damage;
+	}
+	bool BombSystem::TryLaunch(Engine::Scene& scene, const XMFLOAT3& position,
+		const XMFLOAT3& velocity, const XMFLOAT3& forward, Engine::ObjectId target) {
+		if (!m_model || !m_missileMode || m_ammo == 0 || m_cooldownSeconds > 0) return false;
+		auto release = position;
+		const float side = m_ammo == 2 ? -14.0f : 14.0f;
+		release.x -= forward.z * side;
+		release.y -= BombTuning::releaseOffsetMeters;
+		release.z += forward.x * side;
+		XMFLOAT3 launch;
+		XMStoreFloat3(&launch, XMLoadFloat3(&velocity) + XMLoadFloat3(&forward) * m_missileSpeed);
+		m_missiles.push_back({scene.AddObject(m_model, BuildTransform({release, launch})), target, {release, launch}});
+		if (--m_ammo == 0) m_cooldownSeconds = m_reloadSeconds;
+		return true;
+	}
+	void BombSystem::UpdateMissiles(Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& hull) {
+		if (m_cooldownSeconds > 0) {
+			m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
+			if (m_cooldownSeconds <= 0) m_ammo = 2;
+		}
+		std::erase_if(m_missiles, [&](Missile& missile) {
+			const auto start = missile.flight.position;
+			if (missile.target != Engine::InvalidObjectId) {
+				if (hull && hull->id == missile.target) {
+					XMFLOAT3 target;
+					const auto center = hull->bounds.Center();
+					XMStoreFloat3(&target, XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&hull->world)));
+					missile.flight.GuideTo(target, XM_PIDIV2 * dt);
+				} else missile.target = Engine::InvalidObjectId;
+			}
+			const float valid = std::min({dt, missile.remaining, missile.flight.TimeToHeight(0).value_or(dt)});
+			missile.flight.Advance(valid);
+			missile.remaining -= dt;
+			missile.smokeSeconds -= dt;
+			if (missile.smokeSeconds <= 0) {
+				m_trail.push_back(missile.flight.position);
+				missile.smokeSeconds = 0.06f;
+			}
+			if (hull) {
+				if (const auto contact = IntersectMovingTarget(start, missile.flight.position, *hull, 0, 1)) {
+					XMFLOAT3 point;
+					XMStoreFloat3(&point, XMVectorLerp(XMLoadFloat3(&start), XMLoadFloat3(&missile.flight.position), *contact));
+					m_hits.push_back({hull->id, valid * *contact, point, {}, ProjectileKind::Rocket, AttackSource::Player, m_missileDamage});
+					scene.RemoveObject(missile.id);
+					return true;
+				}
+			}
+			if (missile.flight.position.y <= 0.001f || missile.remaining <= 0) {
+				m_missImpacts.push_back(missile.flight.position);
+				scene.RemoveObject(missile.id);
+				return true;
+			}
+			if (auto* object = scene.FindObject(missile.id)) object->worldTransform = BuildTransform({missile.flight.position, missile.flight.velocity});
 			return false;
 		});
 	}

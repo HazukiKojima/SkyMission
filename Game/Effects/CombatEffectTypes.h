@@ -17,9 +17,12 @@ namespace Game {
 		DirectX::XMFLOAT3 velocity{};
 		float age = 0;
 	};
-	struct DeckSmoke {
+	struct RocketTrailSample {
 		DirectX::XMFLOAT3 position{};
 		float age = 0;
+	};
+	struct RocketExhaust {
+		DirectX::XMFLOAT3 position{}, direction{0, 0, -1};
 	};
 	struct ImpactEffect {
 		DirectX::XMFLOAT3 position{};
@@ -40,8 +43,10 @@ namespace Game {
 		std::vector<GunMuzzleFlash> gunFlashes;
 		std::vector<GunSmoke> gunSmoke;
 		std::vector<GunTracerSegment> gunTracers;
-		std::vector<DeckSmoke> deckSmoke;
+		std::vector<RocketTrailSample> deckSmoke;
 		std::vector<ImpactEffect> impacts;
 		std::vector<ExplosionEffect> explosions;
+		std::vector<RocketTrailSample> rocketSmoke;
+		std::vector<RocketExhaust> rocketExhausts;
 	};
 } // namespace Game

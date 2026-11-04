@@ -10,6 +10,7 @@
 #include "Game/Combat/TargetingSystem.h"
 #include "Game/Effects/CombatEffectSystem.h"
 #include "Game/Weapons/BombSystem.h"
+#include "Game/Combat/EnemyGunBehavior.h"
 #include "Game/Weapons/BombDefinition.h"
 
 namespace Game {
@@ -111,6 +112,7 @@ namespace Game {
 		struct EnemyAircraft {
 			AircraftFlightModel flightModel;
 			AircraftAIController controller;
+			EnemyGunPattern gunPattern;
 			AircraftAIParameters aiParameters;
 			Engine::ObjectId objectId = Engine::InvalidObjectId;
 			float visualScale = 1;
@@ -124,6 +126,7 @@ namespace Game {
 		};
 		void UpdatePlayer(const AircraftInput& input, float dt);
 		void UpdateEnemies(float dt);
+		void UpdateTargeting(const CombatGeometry& geometry, bool next, float dt);
 		void UpdateCamera(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput);
 		void ApplyRenderStates();
 		void RefreshCombatSnapshot();

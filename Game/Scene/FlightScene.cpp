@@ -94,6 +94,7 @@ namespace Game {
 
 	void FlightScene::Update(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput,
 		CombatInput combatInput) {
+		m_combat.audio = {};
 		m_combat.firedVolleys = 0;
 		m_combat.hitCount = 0;
 		if (!std::isfinite(dt) || dt <= 0)
@@ -105,8 +106,10 @@ namespace Game {
 		if (m_combat.result != CombatResult::Active) {
 			if (combatInput.retry) {
 				Restart(dt);
-			} else
+			} else {
 				m_effects.Update(dt);
+				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
+			}
 			return;
 		}
 		m_battleSeconds += dt;
@@ -126,6 +129,8 @@ namespace Game {
 		UpdateMission(dt);
 		ApplyRenderStates();
 		RefreshCombatSnapshot();
+		m_combat.audio.flying = m_combat.result == CombatResult::Active && m_scene.FindObject(m_playerId);
+		m_combat.audio.gunFiring &= m_combat.audio.flying;
 		UpdateCamera(input, dt, cameraInput);
 	}
 
@@ -139,12 +144,13 @@ namespace Game {
 	void FlightScene::UpdateWeapons(const CombatInput& input, float dt) {
 		using namespace DirectX;
 		const auto geometry = BuildCombatGeometry();
-		m_targeting.Update(geometry.enemies, geometry.muzzle, geometry.forward, input.nextTarget, dt);
+		UpdateTargeting(geometry, input.nextTarget, dt);
 		const auto targets = BuildCollisionTargets();
 		m_projectiles.Update(m_scene, dt, targets);
 		// 集合変更前に機体行列を値として保持し、弾追加で無効になるポインタを残さない
 		if (m_weaponConfigured) {
 			const bool hasPlayer = m_scene.FindObject(m_playerId) != nullptr;
+			m_combat.audio.gunFiring = input.weapon.fire && hasPlayer;
 			const auto ages = m_gun.Update({input.weapon.fire && hasPlayer}, dt);
 			const auto pose = m_player.GetWorldTransform();
 			DirectX::XMFLOAT4X4 world;
@@ -198,6 +204,17 @@ namespace Game {
 		m_playerPropellerAngle = AdvancePropeller(m_playerPropellerAngle, m_player.GetSpeed(), dt);
 	}
 
+	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, bool next, float dt) {
+		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
+			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
+				const CombatTarget carrier{m_mission.GetCarrierId(), *center, {}, "CARRIER", m_mission.GetCarrierHealth()};
+				m_targeting.Update(std::span(&carrier, 1), geometry.muzzle, geometry.forward, next, dt);
+				return;
+			}
+		}
+		m_targeting.Update(geometry.enemies, geometry.muzzle, geometry.forward, next, dt);
+	}
+
 	void FlightScene::UpdateEnemies(float dt) {
 		for (auto& enemy : m_enemies) {
 			if (!m_scene.FindObject(enemy.objectId))
@@ -217,10 +234,11 @@ namespace Game {
 					direction = aim->direction;
 			}
 			enemy.weaponCooldownSeconds = std::max(0.0f, enemy.weaponCooldownSeconds - dt);
-			const size_t reserveSlot = static_cast<size_t>(m_battleSeconds / 6) % m_enemies.size();
-			const bool allowed = m_enemies.size() <= 2 || &enemy != &m_enemies[reserveSlot];
+			const bool allowed = true;
+			const bool gunWindow = enemy.gunPattern.Update(dt, enemy.slot);
 			const auto decision = enemy.controller.ReadCombatInput(enemy.flightModel, target, direction, dt,
-				enemy.aiParameters, enemy.slot, allowed, enemy.weaponCooldownSeconds <= 0);
+				enemy.aiParameters, enemy.slot, allowed, enemy.weaponCooldownSeconds <= 0 && gunWindow,
+				m_mission.GetDefenseCenter(m_scene), true);
 			const auto input = decision.flight;
 			enemy.fire = decision.fire;
 			enemy.previousPosition = enemy.flightModel.GetPosition();
@@ -340,6 +358,11 @@ namespace Game {
 	}
 
 	void FlightScene::RefreshCombatSnapshot() {
+		m_combat.missionEnabled = true;
+		m_combat.carrierPresent = m_scene.FindObject(m_mission.GetCarrierId()) != nullptr;
+		m_combat.carrierHealth = m_mission.GetCarrierHealth();
+		m_combat.carrierMaxHealth = m_mission.GetCarrierMaxHealth();
+		m_combat.carrierMissileAmmo = m_bombs.GetAmmo();
 		m_combat.missionPhase = m_mission.GetPhase();
 		m_combat.deckDisabled = m_mission.IsDeckDisabled();
 		m_combat.bombCooldown = m_bombs.GetCooldownSeconds();
@@ -351,19 +374,26 @@ namespace Game {
 				DirectX::XMVector3TransformCoord(
 					DirectX::XMLoadFloat3(&center), DirectX::XMLoadFloat4x4(&deck->world)));
 			m_combat.bombImpactPoint =
-				BombSystem::ReleaseFlight(m_player.GetPosition(), m_player.GetVelocity())
-					.Predict(m_combat.objectivePosition.y);
+				[&] {
+					auto release = m_player.GetPosition();
+					release.y -= BombTuning::releaseOffsetMeters;
+					DirectX::XMFLOAT3 velocity;
+					const auto forward = m_player.GetForward(), inherited = m_player.GetVelocity();
+					DirectX::XMStoreFloat3(&velocity, DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&inherited),
+						DirectX::XMVectorScale(DirectX::XMLoadFloat3(&forward), m_mission.GetSettings().carrierMissileSpeed)));
+					return CarrierMissileFlight{release, velocity}.Predict(m_combat.objectivePosition.y);
+				}();
 		}
 		if (m_mission.GetPhase() == MissionPhase::FinalFighters ||
 			m_mission.GetPhase() == MissionPhase::Commander)
 			m_combat.objectivePosition = m_mission.GetAirCombatPosition();
 		using namespace DirectX;
 		auto geometry = BuildCombatGeometry();
-		m_combat.enemies = std::move(geometry.enemies);
+		m_combat.enemies = geometry.enemies;
 		m_combat.muzzle = geometry.muzzle;
 		m_combat.forward = geometry.forward;
 		// 命中・増援後の対象を再検証する。捕捉時間はここでは進めない。
-		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, false, 0);
+		UpdateTargeting(geometry, false, 0);
 		m_combat.selected = m_targeting.GetSelected();
 		m_combat.lockState = m_targeting.GetState();
 		m_combat.acquireProgress = m_targeting.GetProgress();
@@ -382,10 +412,12 @@ namespace Game {
 		});
 		std::vector<Engine::ObjectId> destroyed;
 		for (const auto& hit : hits) {
-			if (hit.target == m_mission.GetCarrierId() && hit.kind == ProjectileKind::Bomb) {
-				if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
-					m_mission.ConfirmDeckHit();
-					m_effects.SpawnExplosion(hit.position, {});
+			if (hit.target == m_mission.GetCarrierId() && (hit.kind == ProjectileKind::Rocket || hit.kind == ProjectileKind::Bomb)) {
+				if (m_mission.ApplyCarrierDamage(hit.damage)) {
+					if (m_mission.IsDeckDisabled()) {
+						++m_combat.audio.shipExplosions;
+						if (auto center = m_mission.GetCarrierCenter(m_scene)) m_effects.SpawnCarrierExplosion(*center);
+					} else m_effects.SpawnExplosion(hit.position, {});
 				}
 				continue;
 			}
@@ -393,10 +425,13 @@ namespace Game {
 				if (m_combat.playerHealth <= 0)
 					continue;
 				m_combat.playerHealth = std::max(0.0f, m_combat.playerHealth - hit.damage);
+				if (hit.kind == ProjectileKind::Gun) ++m_combat.audio.gunHits;
+				else ++m_combat.audio.missileHits;
 				m_combat.playerHitSeconds = 0.7f;
 				m_combat.playerHitDirection = {-hit.direction.x, -hit.direction.y, -hit.direction.z};
 				m_effects.SpawnExplosion(hit.position, m_player.GetVelocity());
 				if (m_combat.playerHealth <= 0) {
+					++m_combat.audio.aircraftExplosions;
 					if (const auto* object = m_scene.FindObject(m_playerId))
 						m_effects.SpawnExplosion(*object, m_player.GetVelocity(), m_playerVisualScale);
 				}
@@ -417,6 +452,7 @@ namespace Game {
 				m_effects.SpawnExplosion(hit.position, enemy->flightModel.GetVelocity());
 			m_combat.hitSeconds = 0.15f;
 			if (enemy->health <= 0) {
+				++m_combat.audio.aircraftExplosions;
 				if (const auto* aircraft = m_scene.FindObject(enemy->objectId))
 					m_effects.SpawnExplosion(*aircraft, enemy->flightModel.GetVelocity(), enemy->visualScale);
 				else

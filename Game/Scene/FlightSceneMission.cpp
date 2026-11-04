@@ -16,11 +16,12 @@ namespace Game {
 			throw std::invalid_argument(
 				"Configure mission with loaded models before adding enemies/updating");
 		m_mission.Configure(settings, std::move(enemyModel), enemyScale, flight, ai);
+		m_bombs.ConfigureMissiles(settings.carrierMissileSpeed, settings.bombDamage);
 		SpawnMissionAircraft(settings.patrolCount, SquadronKind::Patrol);
 	}
 	void FlightScene::SpawnMissionAircraft(size_t count, SquadronKind kind) {
 		for (auto& spawn :
-			m_mission.BuildWave(m_scene, m_player.GetPosition(), count, kind, m_combatSettings.enemyHealth)) {
+			m_mission.BuildWave(m_scene, m_player.GetPosition(), count, kind, m_combatSettings.enemyHealth, m_player.GetForward(), m_enemySequence)) {
 			const auto id = AddEnemyAircraft(spawn.model, spawn.position, spawn.scale, spawn.flight, spawn.ai,
 				spawn.health, std::move(spawn.name), spawn.facePlayer);
 			if (spawn.heading) {
@@ -71,16 +72,29 @@ namespace Game {
 	void FlightScene::ConfigureBombWeapon(
 		const BombDefinition& definition, float reloadSeconds, std::shared_ptr<Engine::Model> model) {
 		m_bombs.Configure(reloadSeconds, std::move(model), definition.modelForward);
+		m_bombs.ConfigureMissiles(m_mission.GetSettings().carrierMissileSpeed, m_mission.GetSettings().bombDamage);
 	}
 
 	void FlightScene::UpdateBombs(const CombatInput& input, float dt) {
 		const bool bombing =
 			m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled();
-		m_bombs.Update(m_scene, dt, bombing ? GetDeckTarget() : std::nullopt);
-		for (const auto& position : m_bombs.TakeMissImpacts())
-			m_effects.SpawnExplosion(position, {});
-		if (bombing && input.bombPressCount > 0 && m_scene.FindObject(m_playerId))
-			m_bombs.TryDrop(m_scene, m_player.GetPosition(), m_player.GetVelocity());
+		std::optional<CollisionTarget> hull;
+		if (bombing) {
+			if (const auto* carrier = m_scene.FindObject(m_mission.GetCarrierId()); carrier && carrier->model->GetLocalBounds())
+				hull = CollisionTarget{carrier->id, *carrier->model->GetLocalBounds(),
+					{carrier->worldTransform._41, carrier->worldTransform._42, carrier->worldTransform._43}, carrier->worldTransform};
+		}
+		m_bombs.Update(m_scene, dt, hull);
+		for (const auto& position : m_bombs.TakeMissImpacts()) m_effects.SpawnExplosion(position, {});
+		for (const auto& position : m_bombs.TakeTrail()) m_effects.SpawnRocketSmoke(position, 0);
+		if (bombing && m_scene.FindObject(m_playerId)) {
+			const unsigned count = std::min(input.bombPressCount, m_bombs.GetAmmo());
+			const auto target = m_targeting.GetState() == LockState::Locked && m_targeting.GetSelected() == m_mission.GetCarrierId()
+				? m_mission.GetCarrierId() : Engine::InvalidObjectId;
+			for (unsigned i = 0; i < count; ++i)
+				if (m_bombs.TryLaunch(m_scene, m_player.GetPosition(), m_player.GetVelocity(), m_player.GetForward(), target))
+					++m_combat.audio.missileLaunches;
+		}
 	}
 
 	void FlightScene::UpdateHostileWeapons(float dt) {
@@ -103,21 +117,16 @@ namespace Game {
 				continue;
 			const CombatTarget player{m_playerId, m_player.GetPosition(), m_player.GetVelocity()};
 			const auto enemyVelocity = enemy.flightModel.GetVelocity();
-			const auto aim = SolveGunAim(enemy.flightModel.GetPosition(), enemyVelocity, player,
-				m_enemyGunSettings.muzzleSpeed, m_enemyGunSettings.lifetime);
-			if (!aim ||
-				!IsWithinAngle(
-					enemy.flightModel.GetForward(), aim->direction, enemy.aiParameters.aimAngleDegrees))
-				continue;
+			const auto direction = EnemyGunDirection(enemy.flightModel.GetPosition(), enemyVelocity,
+				player, m_enemyGunSettings.muzzleSpeed, enemy.slot, enemy.gunPattern.GetShotIndex());
+			if (!IsWithinAngle(enemy.flightModel.GetForward(), direction, enemy.aiParameters.aimAngleDegrees)) continue;
 			XMFLOAT3 velocity;
-			XMStoreFloat3(&velocity,
-				XMLoadFloat3(&enemyVelocity) +
-					XMLoadFloat3(&aim->direction) * m_enemyGunSettings.muzzleSpeed);
-			if (m_hostileProjectiles.FireSingle(m_scene, enemy.flightModel.GetPosition(), velocity,
-					AttackSource::EnemyAircraft, kAircraftGunDamage))
-				enemy.weaponCooldownSeconds = m_mission.GetPhase() == MissionPhase::Commander
-					? m_commanderGunInterval
-					: m_enemyGunSettings.fireInterval;
+			XMStoreFloat3(&velocity, XMLoadFloat3(&enemyVelocity) + XMLoadFloat3(&direction) * m_enemyGunSettings.muzzleSpeed);
+			if (m_hostileProjectiles.FireSingle(m_scene, enemy.flightModel.GetPosition(), velocity, AttackSource::EnemyAircraft, kAircraftGunDamage)) {
+				const float interval = m_mission.GetPhase() == MissionPhase::Commander ? m_commanderGunInterval : m_enemyGunSettings.fireInterval;
+				enemy.weaponCooldownSeconds = enemy.gunPattern.Interval(interval, enemy.slot);
+				enemy.gunPattern.NotifyShot();
+			}
 		}
 	}
 } // namespace Game

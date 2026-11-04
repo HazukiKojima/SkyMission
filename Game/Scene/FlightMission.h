@@ -24,7 +24,8 @@ namespace Game {
 		void RegisterShip(Engine::Scene& scene, Engine::ObjectId id, bool carrier);
 		std::optional<CollisionTarget> GetDeckTarget(Engine::Scene& scene) const;
 		std::vector<AircraftSpawn> BuildWave(Engine::Scene& scene, const DirectX::XMFLOAT3& player,
-			size_t count, SquadronKind kind, float enemyHealth);
+			size_t count, SquadronKind kind, float enemyHealth,
+			const DirectX::XMFLOAT3& forward = {0, 0, -1}, size_t slotBase = 0);
 		bool Advance(size_t remaining, bool alive, float dt);
 		void UpdateDeckSmoke(Engine::Scene& scene, CombatEffectSystem& effects, float dt);
 		void UpdateAntiAircraftGuns(Engine::Scene& scene, const AircraftFlightModel& player,
@@ -35,6 +36,14 @@ namespace Game {
 		bool IsDeckDisabled() const {
 			return m_mission.IsDeckDisabled();
 		}
+		std::optional<DirectX::XMFLOAT3> GetCarrierCenter(Engine::Scene& scene) const;
+		std::optional<DirectX::XMFLOAT3> GetDefenseCenter(Engine::Scene& scene) {
+			if (auto center = GetCarrierCenter(scene)) m_defenseCenter = center;
+			return m_defenseCenter;
+		}
+		float GetCarrierHealth() const { return m_mission.GetCarrierHealth(); }
+		float GetCarrierMaxHealth() const { return m_mission.GetCarrierMaxHealth(); }
+		bool ApplyCarrierDamage(float damage) { return m_mission.ApplyCarrierDamage(damage); }
 		void ConfirmDeckHit() {
 			m_mission.ConfirmDeckHit();
 		}
@@ -66,5 +75,6 @@ namespace Game {
 		std::vector<EscortState> m_escorts;
 		float m_missionMessageSeconds = 8, m_deckSmokeSeconds = 0;
 		DirectX::XMFLOAT3 m_airCombatPosition{};
+		std::optional<DirectX::XMFLOAT3> m_defenseCenter;
 	};
 } // namespace Game

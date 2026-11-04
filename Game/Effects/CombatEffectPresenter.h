@@ -11,6 +11,7 @@ namespace Game {
 			Engine::HudDrawList& list) const;
 
 	  private:
+		void DrawRocketEffects(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
 		void DrawExplosion(
 			const ExplosionEffect& effect, EffectDrawContext& context, float fragmentScale) const;
 		void DrawDeckSmoke(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;

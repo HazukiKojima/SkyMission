@@ -132,6 +132,18 @@ namespace Game {
 		const XMFLOAT3& velocity, AttackSource source, float damage) {
 		if (!m_model || m_projectiles.size() >= m_settings.maxProjectiles)
 			return false;
+		const auto velocityVector = XMLoadFloat3(&velocity);
+		const float speedSquared = XMVectorGetX(XMVector3LengthSq(velocityVector));
+		if (!std::isfinite(speedSquared) || speedSquared < 1e-8f)
+			return false;
+		const auto direction = XMVector3Normalize(velocityVector);
+		const auto forward = XMVectorSet(0, 0, -1, 0);
+		const float dot = std::clamp(XMVectorGetX(XMVector3Dot(forward, direction)), -1.0f, 1.0f);
+		auto rotation = XMMatrixIdentity();
+		if (dot < -0.999999f)
+			rotation = XMMatrixRotationY(XM_PI);
+		else if (dot < 0.999999f)
+			rotation = XMMatrixRotationAxis(XMVector3Cross(forward, direction), std::acos(dot));
 		Projectile projectile;
 		projectile.position = projectile.birthPosition = position;
 		projectile.velocity = velocity;
@@ -141,7 +153,7 @@ namespace Game {
 		projectile.damage = damage;
 		XMFLOAT4X4 transform;
 		XMStoreFloat4x4(&transform,
-			XMLoadFloat4x4(&m_modelRotation) * XMMatrixTranslation(position.x, position.y, position.z));
+			XMLoadFloat4x4(&m_modelRotation) * rotation * XMMatrixTranslation(position.x, position.y, position.z));
 		projectile.objectId = scene.AddObject(m_model, transform);
 		m_projectiles.push_back(projectile);
 		return true;

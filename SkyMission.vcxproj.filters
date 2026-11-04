@@ -390,6 +390,9 @@
     <ClInclude Include="Game\Combat\CombatTypes.h">
       <Filter>Game\Combat</Filter>
     </ClInclude>
+    <ClInclude Include="Game\Combat\EnemyGunBehavior.h">
+      <Filter>Game\Combat</Filter>
+    </ClInclude>
     <ClInclude Include="Game\Combat\GunAimSolver.h">
       <Filter>Game\Combat</Filter>
     </ClInclude>
@@ -608,6 +611,7 @@
     <ClInclude Include="Game\Weapons\BombDefinition.h"><Filter>Game\Weapons</Filter></ClInclude>
     <ClInclude Include="Tests\BombTests.h"><Filter>Tests</Filter></ClInclude>
     <ClCompile Include="Game\Weapons\BombSystem.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp"><Filter>Game\Effects</Filter></ClCompile>
     <ClCompile Include="Game\Effects\DeckSmokePresenter.cpp"><Filter>Game\Effects</Filter></ClCompile>
     <None Include="Assets\Ammunition\Bomb\ammunition.json" />
   </ItemGroup>

@@ -80,6 +80,8 @@ namespace Game {
 		OnResize(m_width, m_height);
 		ApplyRenderStates();
 		RefreshCombatSnapshot();
+		m_combat.audio.restarted = true;
+		m_combat.audio.flying = true;
 		UpdateCamera({}, dt, {});
 	}
 } // namespace Game

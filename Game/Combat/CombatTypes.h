@@ -44,7 +44,7 @@ namespace Game {
 		DirectX::XMFLOAT3 previousPosition;
 		DirectX::XMFLOAT4X4 world;
 	};
-	enum class ProjectileKind { Gun, Bomb };
+	enum class ProjectileKind { Gun, Rocket, Bomb };
 	enum class AttackSource { Player, EnemyAircraft, AntiAircraft };
 	struct HitEvent {
 		Engine::ObjectId target;
@@ -55,7 +55,16 @@ namespace Game {
 		float damage = 0;
 	};
 	enum class CombatResult { Active, Victory, Defeat };
+	struct CombatAudioState {
+		bool flying = false, gunFiring = false, restarted = false;
+		unsigned missileLaunches = 0, gunHits = 0, missileHits = 0;
+		unsigned aircraftExplosions = 0, shipExplosions = 0;
+	};
 	struct CombatSnapshot {
+		CombatAudioState audio;
+		bool missionEnabled = true, carrierPresent = false;
+		float carrierHealth = 0, carrierMaxHealth = 0;
+		unsigned carrierMissileAmmo = 2;
 		MissionPhase missionPhase = MissionPhase::Patrol;
 		bool deckDisabled = false;
 		float bombCooldown = 0;

@@ -359,6 +359,9 @@ namespace Game {
 				mission.finalFighterCount = count("finalFighterCount", 8);
 				mission.maxHostileProjectiles = count("maxHostileProjectiles", 512);
 				mission.bombReloadSeconds = reader.ResolveFloat(paths.mission, "bombReloadSeconds");
+				mission.carrierMissileSpeed = reader.ResolveFloat(paths.mission, "carrierMissileSpeed");
+				mission.carrierHealth = reader.ResolveFloat(paths.mission, "carrierHealth");
+				mission.bombDamage = reader.ResolveFloat(paths.mission, "bombDamage");
 				mission.commanderHealthMultiplier =
 					reader.ResolveFloat(paths.mission, "commanderHealthMultiplier");
 				mission.enemyGunSpeed = reader.ResolveFloat(paths.mission, "enemyGunSpeed");
@@ -379,7 +382,7 @@ namespace Game {
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
 			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
-			.bomb = LoadBomb(reader, paths.bomb),
+			.bomb = LoadBomb(reader, paths.bomb.empty() ? paths.environment.parent_path().parent_path() / L"Ammunition/Bomb/ammunition.json" : paths.bomb),
 			.combat = LoadCombatSettings(
 				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),
 			.hud =
