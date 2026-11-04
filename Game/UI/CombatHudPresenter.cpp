@@ -49,7 +49,7 @@ namespace Game {
 			list.Line({x, y}, {x, y + height}, lineWidth, color);
 			list.Line({x + width, y}, {x + width, y + height}, lineWidth, color);
 		}
-		// 敵機とミサイルで同じ画面端配置・記号を共有する。
+		// 目標が画面外にある場合も、機首を向ける方向を表示する。
 		const auto drawOffscreenIndicator = [&](const HudProjection& projection, XMFLOAT4 tint) {
 			if (projection.visible || !std::isfinite(projection.pixel.x) ||
 				!std::isfinite(projection.pixel.y))
@@ -116,22 +116,6 @@ namespace Game {
 			list.Line(tip, {tip.x - x * 25 * scale + y * 12 * scale, tip.y - y * 25 * scale - x * 12 * scale},
 				lineWidth * 2, warning);
 			drawLabel(820, 800, "TAKING FIRE");
-		}
-		if (snapshot.threatWarning != ThreatWarning::None) {
-			const bool missile = snapshot.threatWarning == ThreatWarning::Missile;
-			const auto warning = color;
-			const std::string label = missile
-				? "MISSILE ALERT  " + std::to_string(snapshot.incomingMissiles.size())
-				: "LOCK WARNING  " + std::to_string(snapshot.lockingEnemyCount);
-			const float titleSize = fontSize * 1.35f;
-			const float titleWidth = Engine::HudDrawList::MeasureTextWidth(label, titleSize);
-			list.Text(
-				{(view.width - titleWidth) * 0.5f, offsetY + (snapshot.carrierPresent ? 320 : 160) * scale},
-				label, titleSize, warning);
-			if (!missile) {
-				list.Circle({view.width * 0.5f, offsetY + (snapshot.carrierPresent ? 400 : 240) * scale},
-					20 * scale, snapshot.enemyLockProgress, lineWidth * 2, warning);
-			}
 		}
 		// 照準は弾道予測とは独立し、機関砲の軸に追従する
 		XMFLOAT3 sightWorldPosition;
@@ -212,29 +196,16 @@ namespace Game {
 			}
 		}
 		if (snapshot.selected == Engine::InvalidObjectId)
-			drawLabel(80, snapshot.carrierPresent ? 116.0f : 80.0f, "NO TARGET");
+			drawLabel(80, 80, "NO TARGET");
 		else if (!snapshot.aim)
-			drawLabel(80, snapshot.carrierPresent ? 116.0f : 80.0f, "OUT OF RANGE");
+			drawLabel(80, 80, "OUT OF RANGE");
 		if (snapshot.destroyedSeconds > 0)
 			drawLabel(800, 720, "DESTROYED");
 		else if (snapshot.hitSeconds > 0)
 			drawLabel(920, 640, "HIT");
-		if (snapshot.rocket.configured) {
-			for (size_t port = 0; port < 2; ++port) {
-				std::ostringstream text;
-				text << (snapshot.rocket.nextMuzzle == port ? "> " : "  ") << "RKT "
-					 << (port == 0 ? "L1 " : "R1 ");
-				if (snapshot.rocket.cooldowns[port] <= 1e-6f)
-					text << "READY";
-				else
-					text << std::fixed << std::setprecision(1)
-						 << std::ceil(snapshot.rocket.cooldowns[port] * 10) / 10 << "s";
-				drawStatus(188 + float(port) * 48, text.str());
-			}
-		}
 		if (snapshot.allDownSeconds > 0)
-			drawLabel(760, snapshot.carrierPresent ? 600.0f : 180.0f, "ALL TARGETS DOWN");
-		if (snapshot.missionEnabled) {
+			drawLabel(760, 180, "ALL TARGETS DOWN");
+		{
 			const auto phase = snapshot.missionPhase;
 			std::string objective;
 			switch (phase) {
@@ -280,11 +251,10 @@ namespace Game {
 					drawOffscreenIndicator(marker, color);
 			}
 			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active) {
-				std::string carrierLock = "CARRIER: AIM TO LOCK";
-				if (snapshot.lockState == LockState::Locked) carrierLock = "CARRIER: LOCKED";
-				else if (snapshot.lockState == LockState::Acquiring)
-					carrierLock = "CARRIER: LOCK " + std::to_string(int(snapshot.acquireProgress * 100)) + "%";
-				drawStatus(236, carrierLock);
+				std::string lock = "CARRIER: AIM TO LOCK";
+				if (snapshot.lockState == LockState::Locked) lock = "CARRIER: LOCKED";
+				else if (snapshot.lockState == LockState::Acquiring) lock = "CARRIER: LOCK " + std::to_string(int(snapshot.acquireProgress * 100)) + "%";
+				drawStatus(236, lock);
 				std::ostringstream bomb;
 				bomb << "MISSILE " << snapshot.carrierMissileAmmo << "/2 ";
 				if (snapshot.bombCooldown <= 0)
@@ -305,17 +275,5 @@ namespace Game {
 				}
 			}
 		}
-		// ロック中の敵と飛来ミサイルは、同じ画面端配置を色で区別する。
-		for (const auto& position : snapshot.lockingEnemyPositions)
-			drawOffscreenIndicator(projector.Project(position), HudStyle::Caution);
-		if (snapshot.threatWarning == ThreatWarning::Missile)
-			for (const auto& threat : snapshot.incomingMissiles) {
-				const auto projected = projector.Project(threat.position);
-				if (projected.visible)
-					list.Circle(
-						projected.pixel, std::max(10.0f, 22 * scale), 1, lineWidth * 2, HudStyle::Alert);
-				else
-					drawOffscreenIndicator(projected, HudStyle::Alert);
-			}
 	}
 } // namespace Game

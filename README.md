@@ -76,12 +76,12 @@ EXEだけを別の場所へ移動すると、アセットと外部DLLを読み�
 | Tab | 選択する敵を切り替え |
 | R | 勝利・撃墜後に再挑戦 |
 | F10 | 垂直同期のON / OFFを切り替え（初期値ON） |
-| 右クリック | 空母攻撃段階で対艦ミサイルを発射（2発装填、撃ち切り後4秒で再装填） |
+| 右クリック | 空母攻撃段階で対艦ミサイルを発射（2発装填、4秒で再装填） |
 | Zを押しながらマウス移動 | 機体の周囲を見回す。Zを離すと標準視点へ滑らかに復帰 |
 
 HUDのHULLは自機の耐久力です。画面上部には現在目標と残存機数を表示します。
-空母攻撃では母艦のマーカーへ機首を向け、10km以内・25度以内で2秒捕捉するとロックが成立します。HUDの「CARRIER: LOCKED」を確認して右クリックで発射します。
-ミサイルは自機速度に6,000m/sを加えた速度で飛び、ロック中に発射すると母艦へ誘導します。ロックなしでも直進発射できます。2発を続けて撃て、命中・外れに関係なく撃ち切りから4秒で2発を自動再装填します。機関砲では母艦にダメージを与えません。
+空母攻撃では飛行甲板の丸いマーカーへ接近し、予測着弾位置の十字が甲板へ重なるように投弾します。
+爆弾は自機の速度を引き継いで重力で落下し、外しても再装填後に再挑戦できます。機関砲では甲板を無力化できません。
 空母攻撃後はCOMBAT AREAマーカーを目印に艦隊の外側へ向かい、残存機を撃墜します。
 編隊長機は通常機の1.5倍の耐久力と短い射撃間隔を持ちます。
 
@@ -101,16 +101,19 @@ GPU時間は数フレーム遅れて取得し、計測のためのGPU待機は�
 | --- | --- |
 | Application | 初期化、ウィンドウのメッセージ処理、更新と描画の呼び出し |
 | FlightScene / FlightSceneLoader | 戦闘シーンの更新順、設定・アセット定義の読み込み |
+| FlightMission / FlightSceneRestart | ミッション進行・増援・艦隊攻撃と、再挑戦状態の保存・復元 |
+| CombatSnapshotBuilder | HUD向けの飛行情報と照準計算 |
 | AircraftFlightModel / AircraftAIController | 飛行モデルと敵機の操縦入力 |
 | TargetingSystem / GunAimSolver | 対象選択・ロック状態と迎撃位置の計算 |
 | AircraftGun / ProjectileSystem | 機関砲の発射タイミング、弾の移動と命中収集 |
-| RocketLauncher / RocketSystem | 銃口別クールタイム、追尾、ロケットの移動と命中収集 |
+| BombSystem / BombFlight | 爆弾の生成・再装填・落下・命中収集・描画姿勢と弾道予測 |
 | CombatEffectSystem / CombatEffectPresenter | 演出の生成・寿命管理と描画データの作成 |
 | CombatHudPresenter / HudRenderer | 戦闘情報の表示とGPUへの描画 |
 | Renderer / RenderDevice / CommandContext | 描画パス、D3D12リソース、コマンド記録とGPU同期 |
 | JsonAssetReader / JsonParametersLoader | JSONからのパス・値の取得と型付き設定の受け渡し |
 
 `Engine` には描画・リソース・入力などを、`Game` には航空機・武器・戦闘・表示を配置しています。
+本番シーンは `FlightScene::CreateMission` で一括生成します。生成条件・フレーム更新順・再挑戦の扱いは[シーンのライフサイクル](Docs/Design/FlightSceneLifecycle.md)を参照してください。モデルの取り込み・形状処理・GPU管理の分担は[モデル処理の設計](Docs/Design/ModelProcessing.md)に記載しています。
 
 ## 技術上の工夫
 
@@ -128,8 +131,8 @@ GPU時間は数フレーム遅れて取得し、計測のためのGPU待機は�
 | --- | --- |
 | プレイヤー機 | `Assets/Aircraft/N1K2JShidenKai/` |
 | 敵機・AI | `Assets/Aircraft/F4U4Corsair/` |
-| 機関砲 / ロケット | 機体フォルダーの `weapon.json` / `rocketWeapon.json` |
-| 弾薬モデル | `Assets/Ammunition/20mmAmmo/` / `Assets/Ammunition/Rocket/` |
+| 機関砲 / 爆弾 | 自機フォルダーの `weapon.json` / `Assets/Ammunition/Bomb/ammunition.json` |
+| 弾薬モデル | `Assets/Ammunition/20mmAmmo/` / 爆弾定義から参照する既存モデル |
 | 耐久値・ロック条件 | `Assets/Combat/targeting.json` |
 | ミッション機数・再装填・対空砲・甲板判定 | `Assets/Combat/mission.json` |
 | HUD | `Assets/UI/combatHud.json` |
@@ -158,18 +161,6 @@ C++の共通ヘッダーはPCHで共有し、コンパイルは最大2並列に�
 調整値と描画の制約は[機関砲の発射エフェクト設計](Docs/Design/GunFireEffects.md)を参照してください。
 詳細は [機関砲の設計](Docs/Design/PlayerAircraftGun.md) と [ロックオン・HUDの設計](Docs/Design/TargetLockCombatHud.md) を参照してください。
 
-## サウンド
-
-Windows Media Foundationで Assets/Sound のMP3を起動時にPCMへ変換し、XAudio2で再生します。
-飛行音はプレイ中、機関銃音は射撃中にループします。ミサイル発射成功、自機への機関銃・対空砲／ミサイル被弾、
-敵航空機撃破、空母の甲板無力化にそれぞれ専用音を再生します。爆発音の音量は距離によらず一定です。
-対艦ミサイルには発射音と煙跡が付きます。
-
-勝敗確定時はループ音と警告音を停止し、被弾・爆発音は最後まで再生します。最小化中は音声も一時停止し、
-リトライ時は残音を消去します。既存の合成警告音と敵への命中音は維持しています。
-音量は Game/Audio/CombatAudio.cpp 冒頭の定数で調整できます。
-音源の欠損・読み込み失敗はデバッグ出力へ記録し、該当音なしで続行します。
-
 ## テスト
 
 Debug x64を一度ビルドしてNative AOT DLLを生成した後、リポジトリ直下で実行します。
@@ -195,7 +186,7 @@ Assimpによるモデル読み込み、DirectXTexによる画像処理、RE:Dox 
 - 飛行モデルはゲーム向けの近似です。
 - 命中判定は機体全体を囲むOBB近似で、メッシュ単位ではありません。
 - 爆発・煙・着弾はHUD描画経路による投影表示で、3D物体による遮蔽は行いません。
-- ロケットは直撃ダメージのみで、爆風ダメージと自機判定はありません。
+- 爆弾は飛行甲板への命中で発艦を止めます。爆風による周囲の機体へのダメージはありません。
 - WARPへのフォールバックは機能確認用で、実機GPUと同じ性能は保証しません。
 
 ## ミッション設定

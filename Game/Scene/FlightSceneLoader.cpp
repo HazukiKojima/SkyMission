@@ -59,6 +59,23 @@ namespace Game {
 			return aircraft;
 		}
 
+		DirectX::XMFLOAT3 LoadModelForward(const JsonAssetReader& reader, const std::filesystem::path& path) {
+			const auto axis = reader.ResolveString(path, "modelForward");
+			if (axis == "+X")
+				return {1, 0, 0};
+			if (axis == "-X")
+				return {-1, 0, 0};
+			if (axis == "+Y")
+				return {0, 1, 0};
+			if (axis == "-Y")
+				return {0, -1, 0};
+			if (axis == "+Z")
+				return {0, 0, 1};
+			if (axis == "-Z")
+				return {0, 0, -1};
+			throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
+		}
+
 		WeaponDefinition LoadWeapon(
 			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
 			const auto weaponPath = reader.Resolve(aircraftPath, "weapon");
@@ -90,75 +107,24 @@ namespace Game {
 				definition.ammunition = {
 					AmmunitionModelId, reader.Resolve(ammoPath, "model"), LoadModelOptions(reader, ammoPath)};
 				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
-				const auto axis = reader.ResolveString(ammoPath, "modelForward");
-				if (axis == "+Y")
-					definition.modelForward = {0, 1, 0};
-				else if (axis == "-Y")
-					definition.modelForward = {0, -1, 0};
-				else if (axis == "+X")
-					definition.modelForward = {1, 0, 0};
-				else if (axis == "-X")
-					definition.modelForward = {-1, 0, 0};
-				else if (axis == "+Z")
-					definition.modelForward = {0, 0, 1};
-				else if (axis == "-Z")
-					definition.modelForward = {0, 0, -1};
-				else
-					throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
+				definition.modelForward = LoadModelForward(reader, ammoPath);
 			} catch (const std::exception& error) {
 				throw std::runtime_error(pathText(ammoPath) + ": " + error.what());
 			}
 			return definition;
 		}
 
-		RocketDefinition LoadRocket(const JsonAssetReader& reader, const std::filesystem::path& aircraftPath,
-			const char* modelId = RocketModelId) {
-			const auto weaponPath = reader.Resolve(aircraftPath, "rocketWeapon");
-			RocketDefinition definition;
-			definition.sourcePath = weaponPath;
-			auto source = weaponPath;
+		BombDefinition LoadBomb(const JsonAssetReader& reader, const std::filesystem::path& path) {
 			try {
-				auto& settings = definition.settings;
-				settings.muzzleNames = {reader.ResolveString(weaponPath, "muzzleL1"),
-					reader.ResolveString(weaponPath, "muzzleR1")};
-				settings.cooldownSeconds = reader.ResolveFloat(weaponPath, "cooldownSeconds");
-				settings.speed = reader.ResolveFloat(weaponPath, "speed");
-				settings.turnDegreesPerSecond = reader.ResolveFloat(weaponPath, "turnDegreesPerSecond");
-				settings.lifetimeSeconds = reader.ResolveFloat(weaponPath, "lifetimeSeconds");
-				settings.damage = reader.ResolveFloat(weaponPath, "damage");
-				settings.seekerAngleDegrees = reader.ResolveFloat(weaponPath, "seekerAngleDegrees");
-				const float capacity = reader.ResolveFloat(weaponPath, "maxRockets");
-				if (!std::isfinite(capacity) || capacity < 1 || capacity > 1024 ||
-					std::floor(capacity) != capacity)
-					throw std::invalid_argument("maxRockets must be an integer between 1 and 1024");
-				settings.maxRockets = static_cast<size_t>(capacity);
-				ValidateRocketSettings(settings);
-				source = reader.Resolve(weaponPath, "ammunition");
+				BombDefinition definition;
 				definition.ammunition = {
-					modelId, reader.Resolve(source, "model"), LoadModelOptions(reader, source)};
+					BombModelId, reader.Resolve(path, "model"), LoadModelOptions(reader, path)};
 				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
-				const auto axis = reader.ResolveString(source, "modelForward");
-				if (axis == "+X")
-					definition.modelForward = {1, 0, 0};
-				else if (axis == "-X")
-					definition.modelForward = {-1, 0, 0};
-				else if (axis == "+Y")
-					definition.modelForward = {0, 1, 0};
-				else if (axis == "-Y")
-					definition.modelForward = {0, -1, 0};
-				else if (axis == "+Z")
-					definition.modelForward = {0, 0, 1};
-				else if (axis == "-Z")
-					definition.modelForward = {0, 0, -1};
-				else
-					throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
+				definition.modelForward = LoadModelForward(reader, path);
+				return definition;
 			} catch (const std::exception& error) {
-				const auto path = source.u8string();
-				throw std::runtime_error(
-					std::string(reinterpret_cast<const char*>(path.data()), path.size()) + ": " +
-					error.what());
+				throw std::runtime_error(path.string() + ": " + error.what());
 			}
-			return definition;
 		}
 
 		void ValidateAIParameters(const AircraftAIParameters& parameters) {
@@ -416,8 +382,7 @@ namespace Game {
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
 			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
-			.enemyMissile = LoadRocket(reader, paths.enemyAircraft, EnemyMissileModelId),
-			.playerRocket = LoadRocket(reader, paths.playerAircraft),
+			.bomb = LoadBomb(reader, paths.bomb.empty() ? paths.environment.parent_path().parent_path() / L"Ammunition/Bomb/ammunition.json" : paths.bomb),
 			.combat = LoadCombatSettings(
 				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),
 			.hud =

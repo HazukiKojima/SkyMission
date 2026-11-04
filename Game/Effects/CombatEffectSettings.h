@@ -75,6 +75,10 @@ namespace Game {
 		static constexpr size_t maxExhaustCount = 20;
 	};
 
+	struct DeckSmokeSettings {
+		static constexpr float lifetimeSeconds = CarrierEffectSettings::smokeLifetimeSeconds;
+		static constexpr size_t maxCount = CarrierEffectSettings::maxSmokeCount;
+	};
 	struct CombatEffectSettings {
 		static constexpr float maximumFrameSeconds = 0.25f;
 	};

@@ -21,8 +21,6 @@ namespace Game {
 		float enemyHealth = 120;
 		float playerHealth = 100;
 		float bulletDamage = 10;
-		std::array<DirectX::XMFLOAT3, 3> enemyPositions{
-			{{0, 300, -1200}, {-450, 350, -1700}, {500, 400, -2000}}};
 	};
 	struct CombatTarget {
 		Engine::ObjectId id = Engine::InvalidObjectId;
@@ -54,21 +52,9 @@ namespace Game {
 		DirectX::XMFLOAT3 position{}, direction{0, 0, -1};
 		ProjectileKind kind = ProjectileKind::Gun;
 		AttackSource source = AttackSource::Player;
-		float damage = 0; // Zero keeps legacy weapon-configured damage.
-	};
-	struct RocketHudState {
-		bool configured = false;
-		std::array<float, 2> cooldowns{};
-		size_t nextMuzzle = 0;
+		float damage = 0;
 	};
 	enum class CombatResult { Active, Victory, Defeat };
-	enum class ThreatWarning { None, LockOn, Missile };
-	struct MissileThreat {
-		Engine::ObjectId id;
-		DirectX::XMFLOAT3 position;
-		float distance;
-	};
-	// Transient events are cleared at the beginning of every simulation frame.
 	struct CombatAudioState {
 		bool flying = false, gunFiring = false, restarted = false;
 		unsigned missileLaunches = 0, gunHits = 0, missileHits = 0;
@@ -76,14 +62,12 @@ namespace Game {
 	};
 	struct CombatSnapshot {
 		CombatAudioState audio;
-
-		bool missionEnabled = false;
+		bool missionEnabled = true, carrierPresent = false;
+		float carrierHealth = 0, carrierMaxHealth = 0;
+		unsigned carrierMissileAmmo = 2;
 		MissionPhase missionPhase = MissionPhase::Patrol;
 		bool deckDisabled = false;
-		bool carrierPresent = false;
-		float carrierHealth = 0, carrierMaxHealth = 0;
 		float bombCooldown = 0;
-		unsigned carrierMissileAmmo = 2;
 		std::optional<DirectX::XMFLOAT3> bombImpactPoint;
 		DirectX::XMFLOAT3 objectivePosition{};
 		float missionMessageSeconds = 0;
@@ -96,15 +80,7 @@ namespace Game {
 		static constexpr float gunSightDistance = 1500.0f;
 		std::vector<CombatTarget> enemies;
 		unsigned firedVolleys = 0;
-		unsigned enemyMissilesLaunched = 0;
-		ThreatWarning threatWarning = ThreatWarning::None;
-		unsigned lockingEnemyCount = 0;
-		std::vector<DirectX::XMFLOAT3> lockingEnemyPositions;
-		float enemyLockProgress = 0;
-		std::vector<MissileThreat> incomingMissiles;
-		DirectX::XMFLOAT3 threatDirection{};
 		unsigned hitCount = 0;
-		RocketHudState rocket;
 		Engine::ObjectId selected = Engine::InvalidObjectId;
 		LockState lockState = LockState::None;
 		float acquireProgress = 0;

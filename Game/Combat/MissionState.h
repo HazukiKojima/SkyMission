@@ -61,6 +61,7 @@ namespace Game {
 			m_carrierHealth = std::max(0.0f, m_carrierHealth - damage);
 			return true;
 		}
+		void ConfirmDeckHit() { ApplyCarrierDamage(m_carrierHealth); }
 		bool Advance(size_t remainingAircraft, bool playerAlive) {
 			if (m_phase == MissionPhase::Complete || m_phase == MissionPhase::Failed)
 				return false;

@@ -1,0 +1,5 @@
+{
+  "model": "../Rocket/Rocket.fbx",
+  "modelImport": "../Rocket/modelImport.json",
+  "modelForward": "+X"
+}

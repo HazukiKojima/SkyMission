@@ -9,20 +9,5 @@
   "assistAngleDegrees": 3,
   "enemyHealth": 120,
   "bulletDamage": 10,
-  "enemyPosition1": [
-    -4500,
-    1200,
-    -14500
-  ],
-  "enemyPosition2": [
-    7000,
-    1800,
-    -16000
-  ],
-  "enemyPosition3": [
-    -13000,
-    1600,
-    7000
-  ],
   "playerHealth": 100
 }

@@ -34,12 +34,12 @@ void Require(bool condition, const char* description) {
 #include "RadarTests.h"
 #include "HudStyleTests.h"
 #include "CombatEffectTests.h"
-#include "RocketTests.h"
 #include "EnvironmentSettingsTests.h"
 #include "GunEffectTests.h"
 #include "ShipTests.h"
 #include "RenderOptimizationTests.h"
 #include "MissionTests.h"
+#include "BombTests.h"
 
 void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -198,16 +198,16 @@ void TestFollowCameraLook() {
 	const float initialOffset = distance(camera.GetPosition(), reference.GetPosition());
 	Require(camera.GetPosition().x > reference.GetPosition().x, "Right mouse motion orbited camera left");
 	Require(initialOffset > 100, "Z mouse movement did not orbit following camera");
-	Engine::InputSnapshot rocket;
-	rocket.active = true;
-	rocket.rightMouseDown = true;
-	rocket.rightMousePressCount = 1;
-	rocket.mouseDeltaX = 900;
-	rocket.mouseDeltaY = 900;
+	Engine::InputSnapshot bomb;
+	bomb.active = true;
+	bomb.rightMouseDown = true;
+	bomb.rightMousePressCount = 1;
+	bomb.mouseDeltaX = 900;
+	bomb.mouseDeltaY = 900;
 	auto unchanged = reference;
-	unchanged.Update(1 / 60.0f, rocket);
+	unchanged.Update(1 / 60.0f, bomb);
 	Require(distance(unchanged.GetPosition(), reference.GetPosition()) < 0.01f,
-		"Rocket click rotated camera without Z");
+		"Bomb click rotated camera without Z");
 	camera.Update(1 / 60.0f, {});
 	const float releaseOffset = distance(camera.GetPosition(), reference.GetPosition());
 	Require(releaseOffset > 1 && releaseOffset < initialOffset && releaseOffset > initialOffset * 0.5f,
@@ -238,7 +238,7 @@ void TestFollowCameraLook() {
 	const auto before = camera.GetPosition();
 	camera.Update(std::numeric_limits<float>::infinity(), look);
 	Require(distance(before, camera.GetPosition()) == 0, "Invalid delta moved camera");
-	std::cout << "PASS: Z orbit, rocket/camera independence, smooth return, moving follow and frame-rate "
+	std::cout << "PASS: Z orbit, bomb/camera independence, smooth return, moving follow and frame-rate "
 				 "stability\n";
 }
 
@@ -377,7 +377,7 @@ void TestRawInput() {
 		Require(GetCapture() != second.GetHandle(), "Left click started camera capture");
 		SendMessageW(second.GetHandle(), WM_LBUTTONUP, 0, 0);
 		SendMessageW(second.GetHandle(), WM_RBUTTONDOWN, MK_RBUTTON, 0);
-		Require(GetCapture() != second.GetHandle(), "Rocket click captured the camera mouse");
+		Require(GetCapture() != second.GetHandle(), "Bomb click captured the camera mouse");
 		SendMessageW(second.GetHandle(), WM_RBUTTONUP, 0, 0);
 		SendMessageW(second.GetHandle(), WM_KEYDOWN, 'Z', 0);
 		Require(GetCapture() == second.GetHandle(), "Z did not capture the camera mouse");
@@ -431,7 +431,8 @@ void TestPathsAndJson(const fs::path& repository, const fs::path& fixture) {
 	const auto definition = FlightSceneLoader{}.Load({.environment = config / L"Environment/environment.json",
 		.playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-		.retroFilm = config / L"Environment/retroFilm.json"});
+		.retroFilm = config / L"Environment/retroFilm.json",
+		.bomb = config / L"Ammunition/Bomb/ammunition.json"});
 	Require(definition.playerAircraft.modelImport.rotatingNodeName == "Propeller" &&
 			definition.environment.ocean.fogTop == 350.0f,
 		"Model/fog JSON settings were not loaded");
@@ -649,7 +650,8 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		.playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = config / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 		.retroFilm = config / L"Environment/retroFilm.json",
-		.ships = config / L"Ships/ships.json"});
+		.ships = config / L"Ships/ships.json",
+		.bomb = config / L"Ammunition/Bomb/ammunition.json"});
 	const auto model = fixture / L"triangles.obj";
 	std::ofstream(model) << "o Body\nv -1 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"
 							"o Propeller\nv -1 0 -1\nv 1 0 -1\nv 0 1 -1\nf 4 5 6\n";
@@ -704,7 +706,6 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		scene.AddEnemyAircraft(renderer.GetModel(EnemyModelId), {30, 100, 0}, 1.0f,
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
 		scene.ConfigurePlayerWeapon(definition.playerWeapon, renderer.GetModel(AmmunitionModelId));
-		scene.ConfigurePlayerRocket(definition.playerRocket, renderer.GetModel(RocketModelId));
 		std::vector<Engine::ObjectId> shipIds;
 		for (const auto& ship : definition.ships) {
 			const auto shipModel = renderer.GetModel(ship.asset.id);
@@ -717,12 +718,12 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		}
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
 		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles +
-			definition.playerRocket.settings.maxRockets);
+			BombSystem::RequiredModelCapacity(definition.mission.bombReloadSeconds));
 		const auto reserved = renderer.GetModelCapacity();
 		Engine::HudDrawList hud;
 		Game::CombatHudPresenter presenter;
 		for (int i = 0; i < 6; ++i) {
-			scene.Update({}, 0.05f, {}, {{true}, false, i == 0 ? 2u : 0u});
+			scene.Update({}, 0.05f, {}, {.weapon = {true}, .bombPressCount = i == 0 ? 2u : 0u});
 			if (scene.GetCombatSnapshot().firedVolleys > 0) {
 				Require(!scene.GetEffectSnapshot().gunFlashes.empty(),
 					"FlightScene did not forward gun shot effects");
@@ -776,10 +777,14 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		renderer.Render(96, 96, scene.GetRenderScene(), &hud);
 		scene.RemoveObject(scene.GetObjects()[0].id);
 		Require(scene.GetEffectSnapshot().gunFlashes.empty(), "Player removal retained muzzle flashes");
+		const auto remainingProjectiles = scene.GetProjectileCount();
 		for (int i = 0; i < 14; ++i)
 			scene.Update({}, 0.25f, {}, {{true}});
-		Require(scene.GetProjectileCount() == 0,
-			"Removed player kept firing or existing projectiles did not expire");
+		Require(
+			scene.GetProjectileCount() <= remainingProjectiles && scene.GetCombatSnapshot().firedVolleys == 0,
+			"Removed player kept firing");
+		scene.Update({}, 0.01f, {}, {.retry = true});
+		Require(scene.GetProjectileCount() == 0, "Retry retained projectiles after player removal");
 		renderer.UpdateFrameConstants(scene.GetRenderScene(), 4.0f);
 		renderer.Render(96, 96, scene.GetRenderScene());
 	}
@@ -802,12 +807,11 @@ int wmain(int argc, wchar_t** argv) {
 		TestHostileProjectileOrientation();
 		TestCarrierMissileFlight();
 		TestMissionRules();
-		TestMissileEdgeIndicators();
+		TestBombSystem();
 		TestEnemyCombatAI();
 		TestCombatEffectLifetime();
 		TestGunFireEffects();
 		TestGunSegmentClipping();
-		TestRocketInputAndFlight();
 		TestRawInput();
 		TestFollowCameraLook();
 		TestPathsAndJson(argv[1], fixture);
@@ -817,7 +821,6 @@ int wmain(int argc, wchar_t** argv) {
 		TestRenderOptimizationMath();
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
-		TestRocketLauncherAndAssets(argv[1], fixture);
 		TestCombatDamage(argv[1], fixture);
 		TestMissionScene(argv[1], fixture);
 		TestHudRendering(fixture);

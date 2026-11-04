@@ -481,18 +481,10 @@
     <ClInclude Include="Tests\CombatEffectTests.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Game\Weapons\RocketDefinition.h" />
-    <ClInclude Include="Game\Weapons\RocketLauncher.h" />
-    <ClCompile Include="Game\Weapons\RocketLauncher.cpp" />
-    <ClInclude Include="Game\Weapons\RocketSystem.h" />
-    <ClCompile Include="Game\Weapons\RocketSystem.cpp" />
-    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp" />
     <ClCompile Include="Game\Effects\GunEffectPresenter.cpp" />
     <ClInclude Include="Game\Weapons\GunShotEvent.h" />
     <ClInclude Include="Tests\GunEffectTests.h" />
     <None Include="Docs\Design\GunFireEffects.md" />
-    <ClInclude Include="Tests\RocketTests.h" />
-    <None Include="Assets\Aircraft\N1K2JShidenKai\rocketWeapon.json" />
     <None Include="Assets\Ammunition\Rocket\ammunition.json" />
     <None Include="Assets\Ammunition\Rocket\modelImport.json" />
   </ItemGroup>
@@ -500,5 +492,28 @@
     <None Include="global.json" />
     <None Include="Assets\Sound\*.mp3" />
     <ClInclude Include="Tests\EnvironmentSettingsTests.h"></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\BombSystem.h" />
+    <ClInclude Include="Game\Weapons\BombDefinition.h" />
+    <ClInclude Include="Tests\BombTests.h" />
+    <ClCompile Include="Game\Weapons\BombSystem.cpp" />
+    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\DeckSmokePresenter.cpp" />
+    <None Include="Assets\Ammunition\Bomb\ammunition.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Scene\FlightMission.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneRestart.cpp" />
+    <ClCompile Include="Engine\Resources\Mesh\ModelGeometry.cpp" />
+    <ClCompile Include="Engine\Resources\Mesh\ModelLod.cpp" />
+    <ClCompile Include="Engine\Resources\Mesh\ModelImporter.cpp" />
+    <ClInclude Include="Game\Scene\FlightMission.h" />
+    <ClInclude Include="Engine\Resources\Mesh\ModelGeometry.h" />
+    <ClInclude Include="Engine\Resources\Mesh\ModelImporter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Combat\CombatSnapshotBuilder.cpp" />
+    <ClInclude Include="Game\Combat\CombatSnapshotBuilder.h" />
   </ItemGroup>
 </Project>
