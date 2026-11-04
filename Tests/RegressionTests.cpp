@@ -798,6 +798,9 @@ int wmain(int argc, wchar_t** argv) {
 		TestFlightAndScene();
 		TestCombatAudioLifecycle(argv[1], fixture);
 		TestCombatMath();
+		TestEnemyGunBehavior();
+		TestHostileProjectileOrientation();
+		TestCarrierMissileFlight();
 		TestMissionRules();
 		TestMissileEdgeIndicators();
 		TestEnemyCombatAI();

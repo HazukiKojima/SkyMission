@@ -390,6 +390,9 @@
     <ClInclude Include="Game\Combat\CombatTypes.h">
       <Filter>Game\Combat</Filter>
     </ClInclude>
+    <ClInclude Include="Game\Combat\EnemyGunBehavior.h">
+      <Filter>Game\Combat</Filter>
+    </ClInclude>
     <ClInclude Include="Game\Combat\GunAimSolver.h">
       <Filter>Game\Combat</Filter>
     </ClInclude>

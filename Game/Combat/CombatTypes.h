@@ -83,6 +83,7 @@ namespace Game {
 		bool carrierPresent = false;
 		float carrierHealth = 0, carrierMaxHealth = 0;
 		float bombCooldown = 0;
+		unsigned carrierMissileAmmo = 2;
 		std::optional<DirectX::XMFLOAT3> bombImpactPoint;
 		DirectX::XMFLOAT3 objectivePosition{};
 		float missionMessageSeconds = 0;

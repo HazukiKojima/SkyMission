@@ -2,6 +2,33 @@
 #include "Game/Weapons/AircraftGun.h"
 #include "Game/Weapons/ProjectileSystem.h"
 
+void TestHostileProjectileOrientation() {
+	using namespace DirectX;
+	for (const XMFLOAT3 modelForward : {XMFLOAT3{0, 1, 0}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 0, -1}})
+		for (const XMFLOAT3 velocity : {XMFLOAT3{1000, 0, 0}, XMFLOAT3{-1000, 0, 0},
+			XMFLOAT3{0, 1000, 0}, XMFLOAT3{0, -1000, 0}, XMFLOAT3{0, 0, 1000},
+			XMFLOAT3{0, 0, -1000}, XMFLOAT3{600, 300, -800}, XMFLOAT3{-300, -400, 700}}) {
+			GunSettings settings;
+			settings.muzzleNames = {"a", "b", "c", "d"};
+			ProjectileSystem projectiles;
+			projectiles.Configure(settings, std::make_shared<Model>(), modelForward);
+			Scene scene;
+			Require(projectiles.FireSingle(scene, {0, 1000, 0}, velocity, AttackSource::EnemyAircraft, 5),
+				"Hostile projectile did not spawn");
+			for (int frame = 0; frame < 2; ++frame) {
+				const auto& world = scene.GetObjects().front().worldTransform;
+				const auto axis = XMVector3Normalize(XMVector3TransformNormal(
+					XMLoadFloat3(&modelForward), XMLoadFloat4x4(&world)));
+				Require(XMVectorGetX(XMVector3Dot(axis, XMVector3Normalize(XMLoadFloat3(&velocity)))) > 0.99999f,
+					"Hostile projectile model pointed sideways relative to its velocity");
+				projectiles.Update(scene, 0.01f);
+			}
+			Require(!projectiles.FireSingle(scene, {0, 1000, 0}, {}, AttackSource::AntiAircraft, 8),
+				"Stationary projectile created an invalid orientation");
+		}
+	std::cout << "PASS: hostile bullet orientation across axes, reverse directions and flight updates\n";
+}
+
 // RegressionTests.cppのRequireと共通のGPU初期化環境を使用する。
 void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	using namespace DirectX;

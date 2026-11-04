@@ -2,6 +2,20 @@
 #include "Game/Combat/MissionState.h"
 #include "Game/Weapons/BombFlight.h"
 
+void TestCarrierMissileFlight() {
+	Game::CarrierMissileFlight missile{{0, 1500, 0}, {0, -1000, -6000}};
+	const auto impact = missile.Predict(500);
+	Require(impact && impact->z == -6000, "Missile impact prediction did not use launch speed");
+	missile.Advance(1);
+	Require(missile.position.y == 500 && missile.position.z == -6000 && missile.velocity.y == -1000,
+		"Carrier missile was slowed by gravity");
+	Require(!Game::CarrierMissileFlight{{0, 1500, 0}, {0, 0, -6000}}.Predict(500),
+		"Level missile predicted an impossible lower impact");
+	Require(!Game::CarrierMissileFlight{{0, 1500, 0}, {0, 1000, -6000}}.TimeToHeight(0),
+		"Climbing missile expired at a sea crossing behind it");
+	std::cout << "PASS: fast linear carrier missile, impact prediction and sea crossing\n";
+}
+
 void TestMissionRules() {
 	// HPの塗り幅とゼロ時の空バーを、通常・小画面・横長の各解像度で確認する。
 	for (const auto dimensions :
@@ -109,7 +123,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		.enemyAircraft = assets / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 		.retroFilm = assets / L"Environment/retroFilm.json",
 		.mission = assets / L"Combat/mission.json"});
-	Require(definition.mission.patrolCount == 2 && definition.mission.bombReloadSeconds == 10,
+	Require(definition.mission.patrolCount == 6 && definition.mission.finalFighterCount == 6 && definition.mission.bombReloadSeconds == 4,
 		"Mission config not loaded");
 	const auto window = CreateWindowW(L"STATIC", L"Mission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0,
 		64, 64, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
@@ -148,7 +162,24 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		scene.RegisterMissionShip(carrierId, true);
 		scene.Update({}, 0.01f);
 		Require(
-			scene.GetCombatSnapshot().enemies.size() == 2, "Mission did not start with two patrol aircraft");
+			scene.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount, "Mission did not start with six patrol aircraft");
+		{
+			const auto& patrol = scene.GetCombatSnapshot().enemies;
+			float minAltitude = patrol.front().center.y, maxAltitude = minAltitude;
+			float minDepth = patrol.front().center.z, maxDepth = minDepth;
+			for (size_t i = 0; i < patrol.size(); ++i) {
+				minAltitude = std::min(minAltitude, patrol[i].center.y);
+				maxAltitude = std::max(maxAltitude, patrol[i].center.y);
+				minDepth = std::min(minDepth, patrol[i].center.z);
+				maxDepth = std::max(maxDepth, patrol[i].center.z);
+				for (size_t j = i + 1; j < patrol.size(); ++j)
+					Require(std::hypot(patrol[i].center.x - patrol[j].center.x,
+						patrol[i].center.z - patrol[j].center.z) > 1000,
+						"Patrol formation spawned in a tight cluster");
+			}
+			Require(maxAltitude - minAltitude > 1000 && maxDepth - minDepth > 2000,
+				"Patrol formation did not stagger altitude and approach distance");
+		}
 		// A nearby escort firing into the enlarged player fixture guarantees a gun hit.
 		{
 			auto aaScene = scene;
@@ -178,11 +209,12 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			retryInput.retry = true;
 			checkpoint.Update({}, 0.01f, {}, retryInput);
 			Require(checkpoint.GetCombatSnapshot().missionPhase == MissionPhase::Patrol &&
-					checkpoint.GetCombatSnapshot().enemies.size() == 2 &&
+					checkpoint.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount &&
 					!checkpoint.GetCombatSnapshot().deckDisabled &&
 					checkpoint.GetCombatSnapshot().carrierHealth == 300 &&
 					checkpoint.GetEffectSnapshot().deckSmoke.empty() &&
 					checkpoint.GetCombatSnapshot().bombCooldown == 0 &&
+					checkpoint.GetCombatSnapshot().carrierMissileAmmo == 2 &&
 					checkpoint.GetEffectSnapshot().explosions.empty() &&
 					checkpoint.GetCombatSnapshot().result == CombatResult::Active,
 				"Defeat retry retained phase, deck, ordnance or effects");
@@ -207,7 +239,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		retry.retry = true;
 		scene.Update({}, 0.01f, {}, retry);
 		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::Patrol &&
-				scene.GetCombatSnapshot().enemies.size() == 2 && scene.GetCombatSnapshot().bombCooldown == 0,
+				scene.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount && scene.GetCombatSnapshot().bombCooldown == 0,
 			"Defeat retry did not restore mission");
 		scene = carrierPhase;
 		CombatInput gunfire;
@@ -218,41 +250,86 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack,
 			"Cannon fire disabled the flight deck");
 
-		// Missing the rotated deck consumes a bomb, but reload permits another attempt.
+		// Two quick presses fire both missiles; missing either never prevents reloading.
 		scene.SetPlayerAircraftPosition({100000, 1500, 0});
 		CombatInput drop;
 		drop.bombPressCount = 1;
 		scene.Update({}, 0.01f, {}, drop);
-		Require(scene.GetCombatSnapshot().bombCooldown == 10, "Bomb was not released/reloaded");
-		Require(!scene.GetCombatSnapshot().audio.missileLaunches, "Bomb emitted missile launch audio");
-		for (int i = 0; i < 80; ++i)
-			scene.Update({}, 0.25f);
+		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 1 && scene.GetCombatSnapshot().bombCooldown == 0,
+			"First missile blocked the second shot");
+		Require(scene.GetCombatSnapshot().audio.missileLaunches == 1, "Missile launch audio missing");
+		scene.Update({}, 0.01f, {}, drop);
+		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 0 && scene.GetCombatSnapshot().bombCooldown == 4,
+			"Second missile did not start magazine reload");
+		const auto objectsAfterLaunch = scene.GetObjects().size();
+		scene.Update({}, 0.01f, {}, drop);
+		Require(scene.GetObjects().size() == objectsAfterLaunch, "Empty magazine fired a third missile");
+		for (int i = 0; i < 15; ++i) scene.Update({}, 0.25f);
+		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 0 && scene.GetCombatSnapshot().bombCooldown > 0,
+			"Missile magazine reloaded before four seconds");
+		scene.Update({}, 0.25f);
+		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 2 && scene.GetCombatSnapshot().bombCooldown == 0,
+			"Missile magazine did not reload after four seconds");
+		for (int i = 0; i < 20; ++i) scene.Update({}, 0.25f);
 		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
-				scene.GetCombatSnapshot().bombCooldown == 0,
-			"Miss did not allow bombing retry");
-		Require(scene.GetObjects().size() == 2, "Missed bomb did not expire at sea");
-		for (int bombIndex = 0; bombIndex < 3; ++bombIndex) {
-			// 同じ進入条件で爆弾を投下し、命中前後のHPを確認する。
-			while (scene.GetCombatSnapshot().bombCooldown > 0)
-				scene.Update({}, 0.25f);
-			scene.SetPlayerAircraftPosition({0, 1500, 0});
+				scene.GetCombatSnapshot().bombCooldown == 0 && scene.GetCombatSnapshot().carrierMissileAmmo == 2 &&
+				scene.GetCombatSnapshot().carrierHealth == 300,
+			"Missed missiles did not reload a full magazine without damaging carrier");
+		Require(scene.GetObjects().size() == 2, "Missed missile did not expire");
+		const auto lockCarrier = [&](FlightScene& combatScene) {
+			combatScene.SetPlayerAircraftPosition({0, 1500, 2000});
+			for (int i = 0; i < 24; ++i) combatScene.Update({}, 0.1f);
+			Require(combatScene.GetCombatSnapshot().selected == carrierId &&
+				combatScene.GetCombatSnapshot().lockState == LockState::Locked &&
+				combatScene.GetCombatSnapshot().acquireProgress == 1 &&
+				combatScene.GetCombatSnapshot().enemies.empty(),
+				"Carrier did not lock without being counted as an enemy aircraft");
+		};
+		{
+			auto lockLoss = scene;
+			lockCarrier(lockLoss);
+			lockLoss.SetPlayerAircraftPosition({100000, 1500, 0});
+			lockLoss.Update({}, 0.25f);
+			Require(lockLoss.GetCombatSnapshot().lockState == LockState::None &&
+				lockLoss.GetCombatSnapshot().acquireProgress == 0 && lockLoss.GetCombatSnapshot().carrierMissileAmmo == 2,
+				"Distant carrier retained a stale lock or aiming consumed ammunition");
+		}
+		{
+			auto volley = scene;
+			lockCarrier(volley);
+			CombatInput doubleClick;
+			doubleClick.bombPressCount = 3;
+			volley.Update({}, 0.01f, {}, doubleClick);
+			Require(volley.GetCombatSnapshot().audio.missileLaunches == 2 &&
+				volley.GetCombatSnapshot().carrierMissileAmmo == 0,
+				"Queued double-click did not fire exactly the two loaded missiles");
+			// Guidance retains the launched target even after the aircraft breaks its lock.
+			volley.SetPlayerAircraftPosition({100000, 1500, 0});
+			for (int frame = 0; frame < 32 && !volley.GetCombatSnapshot().deckDisabled; ++frame)
+				volley.Update({}, 0.25f);
+			Require(volley.GetCombatSnapshot().deckDisabled &&
+				volley.GetCombatSnapshot().missionPhase == MissionPhase::FinalFighters &&
+				volley.GetCombatSnapshot().audio.shipExplosions == 1,
+				"Two fast missiles did not destroy the rotated carrier exactly once");
+		}
+		for (int missileIndex = 0; missileIndex < 2; ++missileIndex) {
+			lockCarrier(scene);
 			const float before = scene.GetCombatSnapshot().carrierHealth;
 			scene.Update({}, 0.01f, {}, drop);
-			for (int i = 0; i < 120 && scene.GetCombatSnapshot().carrierHealth == before; ++i)
+			for (int i = 0; i < 32 && scene.GetCombatSnapshot().carrierHealth == before; ++i)
 				scene.Update({}, 0.25f);
-			Require(scene.GetCombatSnapshot().carrierHealth == 200 - bombIndex * 100,
-				"Bomb did not reduce carrier health by configured damage");
-			if (bombIndex < 2) {
+			Require(scene.GetCombatSnapshot().carrierHealth == 150 - missileIndex * 150,
+				"Carrier did not require exactly two missile hits");
+			if (missileIndex == 0) {
 				Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
-						!scene.GetCombatSnapshot().audio.shipExplosions &&
-						scene.GetEffectSnapshot().deckSmoke.empty(),
-					"Partial carrier damage triggered defeat, audio or smoke");
+						!scene.GetCombatSnapshot().audio.shipExplosions && scene.GetEffectSnapshot().deckSmoke.empty(),
+					"First missile prematurely destroyed carrier");
 				checkDefeatRetry(scene);
 			}
 		}
-		Require(scene.GetCombatSnapshot().deckDisabled && scene.GetCombatSnapshot().enemies.size() == 2 &&
+		Require(scene.GetCombatSnapshot().deckDisabled && scene.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount &&
 				scene.GetCombatSnapshot().missionPhase == MissionPhase::FinalFighters,
-			"Bomb did not hit rotated deck/spawn final fighters once");
+			"Missiles did not hit carrier/spawn final fighters once");
 		Require(scene.GetCombatSnapshot().audio.shipExplosions == 1, "Deck audio missing or duplicated");
 		const auto& carrierExplosion = scene.GetEffectSnapshot().explosions.back();
 		Require(carrierExplosion.radius == CarrierEffectSettings::explosionRadius &&
@@ -262,7 +339,10 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			"Carrier explosion was not large or centered on the transformed model");
 		Require(!scene.GetEffectSnapshot().deckSmoke.empty(), "Carrier defeat did not emit smoke");
 		scene.Update({}, 0.01f);
-		Require(scene.GetCombatSnapshot().enemies.size() == 2, "Final fighters duplicated");
+		Require(scene.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount, "Final fighters duplicated");
+		for (const auto& enemy : scene.GetCombatSnapshot().enemies)
+			Require(std::hypot(enemy.center.x, enemy.center.z + 6000) < 8000,
+				"Reinforcement spawned outside carrier defense area");
 		Require(!scene.GetCombatSnapshot().audio.shipExplosions, "Deck audio persisted across frames");
 		checkDefeatRetry(scene);
 		removeEnemies();
@@ -286,12 +366,12 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			"Wreck smoke was not emitted from carrier center");
 		scene.Update({}, 0.01f, {}, retry);
 		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::Patrol &&
-				!scene.GetCombatSnapshot().deckDisabled && scene.GetCombatSnapshot().enemies.size() == 2 &&
+				!scene.GetCombatSnapshot().deckDisabled && scene.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount &&
 				scene.GetCombatSnapshot().result == CombatResult::Active,
 			"Victory retry retained mission state");
 		context.EndFrame();
 		context.WaitForGpu();
 	}
 	DestroyWindow(window);
-	std::cout << "PASS: full mission scene, rotated deck bombing, miss/reload, one-time waves and retry\n";
+	std::cout << "PASS: full mission scene, two fast missiles, two-hit carrier, miss/reload, one-time waves and retry\n";
 }

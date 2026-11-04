@@ -29,9 +29,10 @@ namespace Game {
 		const auto* ship = m_scene.FindObject(id);
 		if (!ship || !ship->model->GetLocalBounds())
 			throw std::invalid_argument("Mission ship must have loaded bounds");
-		if (carrier)
+		if (carrier) {
 			m_carrierId = id;
-		else {
+			m_defenseCenter = GetCarrierCenter();
+		} else {
 			m_escortIds.push_back(id);
 			m_aaCooldowns.push_back(2 + static_cast<float>(m_escortIds.size()) * 0.4f);
 		}
@@ -68,22 +69,32 @@ namespace Game {
 		}
 		m_airCombatPosition = {
 			player.x + away.x * 8500, std::max(1000.0f, player.y), player.z + away.z * 8500};
+		if (m_defenseCenter)
+			m_airCombatPosition = {m_defenseCenter->x + away.x * 6500,
+				std::max(1000.0f, player.y), m_defenseCenter->z + away.z * 6500};
+		const auto nose = m_player.GetForward();
+		XMFLOAT3 approach{nose.x, 0, nose.z};
+		if (std::hypot(approach.x, approach.z) < 0.001f) approach = {0, 0, -1};
+		XMStoreFloat3(&approach, XMVector3Normalize(XMLoadFloat3(&approach)));
+		static constexpr float depth[] = {-600, 1000, -1300, 500, -200, 1500};
+		static constexpr float altitude[] = {150, 650, -250, 1000, 350, -100};
 		for (size_t i = 0; i < count; ++i) {
-			const float lateral = (static_cast<float>(i) - static_cast<float>(count - 1) * 0.5f) * 900;
+			const float lateral = (static_cast<float>(i) - static_cast<float>(count - 1) * 0.5f) * 1500;
+			const size_t formationSlot = i % std::size(depth);
+			const float height = std::max(m_missionEnemyAI.lowAltitude + 350,
+				(opening ? player.y : m_airCombatPosition.y) + altitude[formationSlot]);
+			const float range = 5500 + depth[formationSlot];
+			// Stagger all three axes instead of launching a single flat row.
 			XMFLOAT3 position = opening
-				? XMFLOAT3{player.x + lateral, player.y + 100, player.z - 4500}
-				: XMFLOAT3{m_airCombatPosition.x + away.z * lateral, m_airCombatPosition.y + 150,
-					  m_airCombatPosition.z - away.x * lateral};
+				? XMFLOAT3{player.x + approach.x * range - approach.z * lateral, height,
+					player.z + approach.z * range + approach.x * lateral}
+				: XMFLOAT3{m_airCombatPosition.x + away.z * lateral - away.x * depth[formationSlot] * 0.5f,
+					height, m_airCombatPosition.z - away.x * lateral - away.z * depth[formationSlot] * 0.5f};
 			auto ai = m_missionEnemyAI;
-			ai.disengageDistance = 350;
-			ai.threatDistance = 1400;
-			ai.attackDistance = 2800;
-			ai.aimAngleDegrees = 5;
-			ai.aimHoldSeconds = 0.12f;
-			ai.tailDistance = 1000;
-			ai.flankDistance = 700;
-			ai.reengageDistance = 3500;
-			ai.separationLookAheadSeconds = 0.8f;
+			// More firing opportunities without changing the shared flight policy.
+			ai.aimAngleDegrees = 10;
+			ai.aimHoldSeconds = 0.08f;
+			ai.openingGraceSeconds += EnemyVariation(m_enemySequence, 0, 79) * 1.5f;
 			const auto id = AddEnemyAircraft(m_missionEnemyModel, position, m_missionEnemyScale,
 				m_missionEnemyFlight, ai,
 				m_combatSettings.enemyHealth * (commander ? m_missionSettings.commanderHealthMultiplier : 1),
@@ -148,21 +159,40 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateBombs(const CombatInput& input, float dt) {
-		m_bombCooldown = std::max(0.0f, m_bombCooldown - dt);
-		const auto deck = GetDeckTarget();
+		if (m_bombCooldown > 0) {
+			m_bombCooldown = std::max(0.0f, m_bombCooldown - dt);
+			if (m_bombCooldown <= 0) m_bombAmmo = 2;
+		}
+		std::optional<CollisionTarget> deck;
+		if (const auto* carrier = m_scene.FindObject(m_carrierId); carrier && carrier->model->GetLocalBounds())
+			deck = CollisionTarget{m_carrierId, *carrier->model->GetLocalBounds(),
+				{carrier->worldTransform._41, carrier->worldTransform._42, carrier->worldTransform._43},
+				carrier->worldTransform};
 		std::erase_if(m_bombs, [&](Bomb& bomb) {
 			const auto start = bomb.flight.position;
+			if (bomb.targetId == m_carrierId && !m_mission.IsDeckDisabled()) {
+				if (const auto center = GetCarrierCenter()) {
+					XMFLOAT3 desired;
+					XMStoreFloat3(&desired, XMLoadFloat3(&*center) - XMLoadFloat3(&start));
+					bomb.flight.velocity = RocketSystem::Steer(bomb.flight.velocity, desired, XM_PIDIV2 * dt);
+				} else bomb.targetId = Engine::InvalidObjectId;
+			}
 			const auto seaTime = bomb.flight.TimeToHeight(0);
-			const float valid = seaTime ? std::min(dt, *seaTime) : dt;
+			const float valid = std::min({dt, bomb.life, seaTime.value_or(dt)});
 			bomb.flight.Advance(valid);
 			bomb.life -= dt;
+			bomb.smokeSeconds -= dt;
+			if (bomb.smokeSeconds <= 0) {
+				m_effects.SpawnRocketSmoke(bomb.flight.position, 0);
+				bomb.smokeSeconds = 0.06f;
+			}
 			if (deck && m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 				if (const auto contact = IntersectMovingTarget(start, bomb.flight.position, *deck, 0, 1)) {
 					XMFLOAT3 point;
 					XMStoreFloat3(&point,
 						XMVectorLerp(XMLoadFloat3(&start), XMLoadFloat3(&bomb.flight.position), *contact));
 					m_bombHits.push_back({m_carrierId, valid * *contact, point, {0, -1, 0},
-						ProjectileKind::Bomb, AttackSource::Player, 1});
+						ProjectileKind::Rocket, AttackSource::Player, m_missionSettings.bombDamage});
 					m_scene.RemoveObject(bomb.id);
 					return true;
 				}
@@ -182,15 +212,32 @@ namespace Game {
 			}
 			return false;
 		});
-		if (input.bombPressCount > 0 && m_bombCooldown <= 0 &&
+		if (m_bombAmmo > 0 && m_bombCooldown <= 0 && m_scene.FindObject(m_playerId) &&
 			m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
-			auto position = m_player.GetPosition();
-			position.y -= 12;
-			XMFLOAT4X4 transform;
-			XMStoreFloat4x4(&transform, XMMatrixTranslation(position.x, position.y, position.z));
-			m_bombs.push_back(
-				{m_scene.AddObject(m_bombModel, transform), {position, m_player.GetVelocity()}});
-			m_bombCooldown = m_missionSettings.bombReloadSeconds;
+			const unsigned count = std::min(input.bombPressCount, m_bombAmmo);
+			for (unsigned i = 0; i < count; ++i) {
+				auto position = m_player.GetPosition();
+				const auto forward = m_player.GetForward(), inherited = m_player.GetVelocity();
+				const float side = m_bombAmmo == 2 ? -14.0f : 14.0f;
+				position.x += -forward.z * side;
+				position.y -= 12;
+				position.z += forward.x * side;
+				XMFLOAT3 velocity;
+				XMStoreFloat3(&velocity, XMLoadFloat3(&inherited) +
+					XMLoadFloat3(&forward) * m_missionSettings.carrierMissileSpeed);
+				XMFLOAT4X4 transform;
+				XMStoreFloat4x4(&transform,
+					XMMatrixRotationZ(std::atan2(velocity.y, std::hypot(velocity.x, velocity.z))) *
+					XMMatrixRotationY(std::atan2(-velocity.z, velocity.x)) *
+					XMMatrixTranslation(position.x, position.y, position.z));
+				const auto targetId = m_targeting.GetState() == LockState::Locked &&
+					m_targeting.GetSelected() == m_carrierId ? m_carrierId : Engine::InvalidObjectId;
+				m_bombs.push_back({m_scene.AddObject(m_bombModel, transform), {position, velocity},
+					8, 0, targetId});
+				--m_bombAmmo;
+				++m_combat.audio.missileLaunches;
+			}
+			if (count > 0 && m_bombAmmo == 0) m_bombCooldown = m_missionSettings.bombReloadSeconds;
 		}
 	}
 
@@ -205,21 +252,20 @@ namespace Game {
 				continue;
 			const CombatTarget player{m_playerId, m_player.GetPosition(), m_player.GetVelocity()};
 			const auto enemyVelocity = enemy.flightModel.GetVelocity();
-			const auto aim = SolveGunAim(
-				enemy.flightModel.GetPosition(), enemyVelocity, player, m_missionSettings.enemyGunSpeed, 5);
-			if (!aim ||
-				!IsWithinAngle(
-					enemy.flightModel.GetForward(), aim->direction, enemy.aiParameters.aimAngleDegrees))
+			const auto direction = EnemyGunDirection(enemy.flightModel.GetPosition(), enemyVelocity,
+				player, m_missionSettings.enemyGunSpeed, enemy.slot, enemy.gunPattern.GetShotIndex());
+			if (!IsWithinAngle(enemy.flightModel.GetForward(), direction, enemy.aiParameters.aimAngleDegrees))
 				continue;
 			XMFLOAT3 velocity;
-			XMStoreFloat3(&velocity,
-				XMLoadFloat3(&enemyVelocity) +
-					XMLoadFloat3(&aim->direction) * m_missionSettings.enemyGunSpeed);
+			XMStoreFloat3(&velocity, XMLoadFloat3(&enemyVelocity) +
+				XMLoadFloat3(&direction) * m_missionSettings.enemyGunSpeed);
 			if (m_hostileProjectiles.FireSingle(
-					m_scene, enemy.flightModel.GetPosition(), velocity, AttackSource::EnemyAircraft, 5))
-				enemy.missileCooldown = m_mission.GetPhase() == MissionPhase::Commander
-					? m_missionSettings.commanderGunInterval
-					: m_missionSettings.enemyGunInterval;
+					m_scene, enemy.flightModel.GetPosition(), velocity, AttackSource::EnemyAircraft, 5)) {
+				const float interval = m_mission.GetPhase() == MissionPhase::Commander
+					? m_missionSettings.commanderGunInterval : m_missionSettings.enemyGunInterval;
+				enemy.missileCooldown = enemy.gunPattern.Interval(interval, enemy.slot);
+				enemy.gunPattern.NotifyShot();
+			}
 		}
 		for (size_t i = 0; i < m_escortIds.size(); ++i) {
 			m_aaCooldowns[i] = std::max(0.0f, m_aaCooldowns[i] - dt);

@@ -265,7 +265,7 @@ namespace Game {
 				if (phase == MissionPhase::Patrol)
 					drawLabel(540, 248, "LMB: CANNON  TAB: TARGET  WASD: FLIGHT");
 				else if (phase == MissionPhase::CarrierAttack)
-					drawLabel(540, 248, "RMB: DROP BOMB  CROSS: PREDICTED IMPACT");
+					drawLabel(540, 248, "AIM AT CARRIER TO LOCK  RMB: FIRE MISSILE");
 				else
 					drawLabel(540, 248, "ENGAGE OUTSIDE THE FLEET - NO MORE REINFORCEMENTS");
 			}
@@ -274,18 +274,23 @@ namespace Game {
 				if (marker.visible) {
 					list.Circle(marker.pixel, 26 * scale, 1, lineWidth * 2, color);
 					list.Text({marker.pixel.x + 32 * scale, marker.pixel.y},
-						phase == MissionPhase::CarrierAttack ? "FLIGHT DECK" : "COMBAT AREA", fontSize,
+						phase == MissionPhase::CarrierAttack ? "CARRIER" : "COMBAT AREA", fontSize,
 						color);
 				} else
 					drawOffscreenIndicator(marker, color);
 			}
 			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active) {
+				std::string carrierLock = "CARRIER: AIM TO LOCK";
+				if (snapshot.lockState == LockState::Locked) carrierLock = "CARRIER: LOCKED";
+				else if (snapshot.lockState == LockState::Acquiring)
+					carrierLock = "CARRIER: LOCK " + std::to_string(int(snapshot.acquireProgress * 100)) + "%";
+				drawStatus(236, carrierLock);
 				std::ostringstream bomb;
-				bomb << "BOMB ";
+				bomb << "MISSILE " << snapshot.carrierMissileAmmo << "/2 ";
 				if (snapshot.bombCooldown <= 0)
-					bomb << "READY [RMB]";
+					bomb << "[RMB]";
 				else
-					bomb << std::fixed << std::setprecision(1) << snapshot.bombCooldown << "s";
+					bomb << "RELOAD " << std::fixed << std::setprecision(1) << snapshot.bombCooldown << "s";
 				drawStatus(188, bomb.str());
 				if (snapshot.bombImpactPoint) {
 					const auto impact = projector.Project(*snapshot.bombImpactPoint);

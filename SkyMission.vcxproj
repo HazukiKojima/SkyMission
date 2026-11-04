@@ -440,6 +440,7 @@
     <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp" />
     <ClInclude Include="Game\Combat\CombatTypes.h" />
     <ClInclude Include="Game\Combat\CombatController.h" />
+    <ClInclude Include="Game\Combat\EnemyGunBehavior.h" />
     <ClInclude Include="Game\Combat\GunAimSolver.h" />
     <ClCompile Include="Game\Combat\GunAimSolver.cpp" />
     <ClInclude Include="Game\Combat\TargetingSystem.h" />

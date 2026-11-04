@@ -103,7 +103,7 @@ namespace Game {
 		ApplyRenderStates();
 		RefreshCombatSnapshot();
 		// 更新後の位置を使ってロック状態を決め、両武器で同じ衝突対象を共有する
-		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, combatInput.nextTarget, dt);
+		UpdateTargeting(combatInput.nextTarget, dt);
 		RefreshCombatSnapshot();
 		const auto targets = BuildCollisionTargets();
 		m_projectiles.Update(m_scene, dt, targets);
@@ -147,7 +147,7 @@ namespace Game {
 		if (m_missionEnabled)
 			UpdateMission(dt);
 		RefreshCombatSnapshot();
-		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, false, 0);
+		UpdateTargeting(false, 0);
 		RefreshCombatSnapshot();
 		m_combat.audio.flying = m_combat.result == CombatResult::Active && m_combat.playerHealth > 0 &&
 			m_scene.FindObject(m_playerId);
@@ -228,7 +228,20 @@ namespace Game {
 		m_playerPropellerAngle = AdvancePropeller(m_playerPropellerAngle, m_player.GetSpeed(), dt);
 	}
 
+	void FlightScene::UpdateTargeting(bool next, float dt) {
+		if (m_missionEnabled && m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
+			if (const auto center = GetCarrierCenter()) {
+				const CombatTarget carrier{m_carrierId, *center, {}, "CARRIER", m_mission.GetCarrierHealth()};
+				m_targeting.Update(std::span(&carrier, 1), m_combat.muzzle, m_combat.forward, next, dt);
+				return;
+			}
+		}
+		m_targeting.Update(m_combat.enemies, m_combat.muzzle, m_combat.forward, next, dt);
+	}
+
 	void FlightScene::UpdateEnemies(float dt) {
+		if (m_missionEnabled)
+			if (const auto center = GetCarrierCenter()) m_defenseCenter = center;
 		for (auto& enemy : m_enemies) {
 			if (!m_scene.FindObject(enemy.objectId))
 				continue;
@@ -248,9 +261,10 @@ namespace Game {
 			}
 			enemy.missileCooldown = std::max(0.0f, enemy.missileCooldown - dt);
 			const size_t reserveSlot = static_cast<size_t>(m_battleSeconds / 6) % m_enemies.size();
-			const bool allowed = m_enemies.size() <= 2 || &enemy != &m_enemies[reserveSlot];
+			const bool allowed = m_missionEnabled || m_enemies.size() <= 2 || &enemy != &m_enemies[reserveSlot];
+			const bool gunWindow = !m_missionEnabled || enemy.gunPattern.Update(dt, enemy.slot);
 			const auto decision = enemy.controller.ReadCombatInput(enemy.flightModel, target, direction, dt,
-				enemy.aiParameters, enemy.slot, allowed, enemy.missileCooldown <= 0);
+				enemy.aiParameters, enemy.slot, allowed, enemy.missileCooldown <= 0 && gunWindow, m_defenseCenter, m_missionEnabled);
 			const auto input = decision.flight;
 			enemy.fire = decision.fire;
 			enemy.locking = !m_missionEnabled && decision.locking && m_enemyMissileConfigured;
@@ -349,6 +363,7 @@ namespace Game {
 		m_combat.carrierHealth = m_mission.GetCarrierHealth();
 		m_combat.carrierMaxHealth = m_mission.GetCarrierMaxHealth();
 		m_combat.bombCooldown = m_bombCooldown;
+		m_combat.carrierMissileAmmo = m_bombAmmo;
 		m_combat.missionMessageSeconds = m_missionMessageSeconds;
 		m_combat.bombImpactPoint.reset();
 		if (m_missionEnabled) {
@@ -360,7 +375,13 @@ namespace Game {
 				auto release = m_player.GetPosition();
 				release.y -= 12;
 				m_combat.bombImpactPoint =
-					BombFlight{release, m_player.GetVelocity()}.Predict(m_combat.objectivePosition.y);
+					[&] {
+						DirectX::XMFLOAT3 velocity;
+						const auto forward = m_player.GetForward(), inherited = m_player.GetVelocity();
+						DirectX::XMStoreFloat3(&velocity, DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&inherited),
+							DirectX::XMVectorScale(DirectX::XMLoadFloat3(&forward), m_missionSettings.carrierMissileSpeed)));
+						return CarrierMissileFlight{release, velocity}.Predict(m_combat.objectivePosition.y);
+					}();
 			}
 			if (m_mission.GetPhase() == MissionPhase::FinalFighters ||
 				m_mission.GetPhase() == MissionPhase::Commander)
@@ -528,7 +549,7 @@ namespace Game {
 		});
 		std::vector<Engine::ObjectId> destroyed;
 		for (const auto& hit : hits) {
-			if (m_missionEnabled && hit.target == m_carrierId && hit.kind == ProjectileKind::Bomb) {
+			if (m_missionEnabled && hit.target == m_carrierId && hit.kind == ProjectileKind::Rocket) {
 				if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 					m_mission.ApplyCarrierDamage(m_missionSettings.bombDamage);
 					if (m_mission.IsDeckDisabled()) {

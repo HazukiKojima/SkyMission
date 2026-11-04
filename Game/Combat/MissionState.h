@@ -8,20 +8,21 @@
 namespace Game {
 	enum class MissionPhase { Patrol, CarrierAttack, FinalFighters, Commander, Complete, Failed };
 	struct MissionSettings {
-		size_t patrolCount = 2, finalFighterCount = 2;
-		float bombReloadSeconds = 10;
-		float carrierHealth = 300, bombDamage = 100;
+		size_t patrolCount = 6, finalFighterCount = 6;
+		float bombReloadSeconds = 4;
+		float carrierMissileSpeed = 6000;
+		float carrierHealth = 300, bombDamage = 150;
 		float commanderHealthMultiplier = 1.5f;
 		float enemyGunSpeed = 1800;
-		float enemyGunInterval = 0.18f, commanderGunInterval = 0.10f;
+		float enemyGunInterval = 0.22f, commanderGunInterval = 0.16f;
 		float aaRange = 6500, aaInterval = 0.8f;
-		size_t maxHostileProjectiles = 128;
+		size_t maxHostileProjectiles = 256;
 		float deckHeightFraction = 0.445f, deckWidthFraction = 0.75f, deckLengthFraction = 0.9f;
 		void Validate() const {
 			if (patrolCount < 1 || patrolCount > 8 || finalFighterCount < 1 || finalFighterCount > 8 ||
 				maxHostileProjectiles < 4 || maxHostileProjectiles > 512)
 				throw std::invalid_argument("Mission aircraft/projectile counts outside valid ranges");
-			for (float value : {carrierHealth, bombDamage, bombReloadSeconds, commanderHealthMultiplier,
+			for (float value : {carrierHealth, bombDamage, bombReloadSeconds, carrierMissileSpeed, commanderHealthMultiplier,
 					 enemyGunSpeed, enemyGunInterval, commanderGunInterval, aaRange, aaInterval,
 					 deckHeightFraction, deckWidthFraction, deckLengthFraction})
 				if (!std::isfinite(value) || value <= 0)

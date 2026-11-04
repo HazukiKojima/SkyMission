@@ -10,6 +10,7 @@
 #include "Game/Combat/TargetingSystem.h"
 #include "Game/Effects/CombatEffectSystem.h"
 #include "Game/Weapons/BombFlight.h"
+#include "Game/Combat/EnemyGunBehavior.h"
 
 namespace Game {
 	class FlightScene {
@@ -82,8 +83,10 @@ namespace Game {
 		std::optional<CollisionTarget> GetDeckTarget();
 		struct Bomb {
 			Engine::ObjectId id;
-			BombFlight flight;
-			float life = 120;
+			CarrierMissileFlight flight;
+			float life = 8;
+			float smokeSeconds = 0;
+			Engine::ObjectId targetId = Engine::InvalidObjectId;
 		};
 		bool m_missionEnabled = false;
 		MissionState m_mission;
@@ -98,11 +101,14 @@ namespace Game {
 		std::vector<Bomb> m_bombs;
 		std::vector<HitEvent> m_bombHits;
 		ProjectileSystem m_hostileProjectiles;
+		unsigned m_bombAmmo = 2;
 		float m_bombCooldown = 0, m_missionMessageSeconds = 8, m_deckSmokeSeconds = 0;
 		DirectX::XMFLOAT3 m_airCombatPosition{};
+		std::optional<DirectX::XMFLOAT3> m_defenseCenter;
 		struct EnemyAircraft {
 			AircraftFlightModel flightModel;
 			AircraftAIController controller;
+			EnemyGunPattern gunPattern;
 			AircraftAIParameters aiParameters;
 			Engine::ObjectId objectId = Engine::InvalidObjectId;
 			float visualScale = 1;
@@ -118,6 +124,7 @@ namespace Game {
 		};
 		void UpdatePlayer(const AircraftInput& input, float dt);
 		void UpdateEnemies(float dt);
+		void UpdateTargeting(bool next, float dt);
 		void UpdateCamera(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput);
 		void ApplyRenderStates();
 		void RefreshCombatSnapshot();
