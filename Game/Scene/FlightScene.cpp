@@ -71,7 +71,7 @@ namespace Game {
 	}
 
 	void FlightScene::Initialize(float aspect, float nearZ, float farZ) {
-		m_cameraController.Initialize(DirectX::XM_PIDIV4, aspect, nearZ, farZ);
+		m_cameraController.Initialize(AircraftCameraController::DefaultFovY, aspect, nearZ, farZ);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
 
@@ -358,6 +358,7 @@ namespace Game {
 	}
 
 	void FlightScene::RefreshCombatSnapshot() {
+		m_combat.elapsedSeconds = m_battleSeconds;
 		m_combat.missionEnabled = true;
 		m_combat.carrierPresent = m_scene.FindObject(m_mission.GetCarrierId()) != nullptr;
 		m_combat.carrierHealth = m_mission.GetCarrierHealth();

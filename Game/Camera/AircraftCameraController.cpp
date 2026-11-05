@@ -130,7 +130,7 @@ namespace Game {
 		const float followDistance = m_followDistance + (m_maxFollowDistance - m_followDistance) * speedRatio;
 		const XMVECTOR desiredPosition =
 			target - smoothedDirection * followDistance + worldUp * m_followHeight;
-		const XMVECTOR desiredLookAt = target + smoothedDirection * 12.0f + worldUp * 2.0f;
+		const XMVECTOR desiredLookAt = target + smoothedDirection * 12.0f + worldUp * m_followLookHeight;
 		const float blend = 1.0f - std::exp(-m_followSmoothing * deltaSeconds);
 		XMStoreFloat3(&m_position, XMVectorLerp(XMLoadFloat3(&m_position), desiredPosition, blend));
 		XMStoreFloat3(&m_followLookAt, XMVectorLerp(XMLoadFloat3(&m_followLookAt), desiredLookAt, blend));

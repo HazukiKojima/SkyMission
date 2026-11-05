@@ -6,6 +6,7 @@ namespace Engine {
 	// ビュー・射影行列を管理し、入力・追従制御はゲーム側で行う
 	class Camera {
 	  public:
+		// 左手系の透視投影。fovYはラジアン、nearZ・farZはワールド単位
 		void Initialize(float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,
 			float farZ = 1000.0f);
 		void OnResize(UINT width, UINT height);
@@ -16,6 +17,7 @@ namespace Engine {
 		DirectX::XMMATRIX GetProjection() const {
 			return m_proj;
 		}
+		// 遠クリップだけを差し替えた行列を返す。保持している射影設定は変更しない
 		DirectX::XMMATRIX GetProjection(float farZ) const {
 			return farZ > m_nearZ ? DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, farZ)
 								  : m_proj;

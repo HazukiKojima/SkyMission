@@ -4,16 +4,18 @@
 #include <optional>
 
 namespace Game {
+	// 中心が画面内のものだけ描くか、外周の一部が見えるものも描くかを選ぶ
 	enum class EffectClipMode { CenterVisible, BoundsVisible };
 	struct ProjectedEffectSegment {
 		DirectX::XMFLOAT2 head;
 		DirectX::XMFLOAT2 tail;
 	};
 
+	// 発生位置とサンプル番号から再現可能な値を作り、フレーム間の模様のちらつきを防ぐ
 	class EffectRandom {
 	  public:
 		explicit EffectRandom(const DirectX::XMFLOAT3& position);
-		float Sample(int index) const;
+		float Sample(int index) const; // 戻り値は0以上1未満
 
 	  private:
 		float m_seed;
@@ -23,6 +25,7 @@ namespace Game {
 	class EffectDrawContext {
 	  public:
 		EffectDrawContext(const Engine::RenderView& view, Engine::HudDrawList& list);
+		// HUDなどの予約分を残したまま、指定頂点数を追加できるか判定する
 		bool HasVertexBudget(size_t requiredVertices) const;
 		void SetAdditionalReservedVertices(size_t vertices);
 		float GetScale() const;
@@ -44,6 +47,7 @@ namespace Game {
 		};
 		std::optional<ProjectedBillboard> ProjectBillboard(
 			DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode) const;
+		// 借用参照のため、viewとlistはこのコンテキストより長く生存させる
 		const Engine::RenderView& m_view;
 		Engine::HudDrawList& m_list;
 		HudProjector m_projector;

@@ -52,6 +52,7 @@ namespace Game {
 		float lockProgress = 0;
 	};
 
+	// 敵機ごとに保持する操縦判断。状態遷移と照準保持時間を持つため機体間で共有しない
 	class AircraftAIController {
 	  public:
 		AircraftCombatMode GetMode() const {
@@ -59,6 +60,8 @@ namespace Game {
 		}
 		// A shot resets acquisition, but does not interrupt the attack run.
 		void NotifyWeaponFired() { m_aimTime = 0; }
+		// dtは秒。slotで機体ごとの行動差を固定し、defenseCenter指定時は防衛範囲へ帰還させる
+		// 操縦・射撃の要求を返すだけで、飛行モデルの更新や弾の生成は呼び出し側が行う
 		AircraftAIDecision ReadCombatInput(const AircraftFlightModel& aircraft,
 			const AircraftAITarget& target, const DirectX::XMFLOAT3& aimDirection, float dt,
 			const AircraftAIParameters& p, size_t slot, bool attackAllowed, bool weaponReady = true,
@@ -144,7 +147,8 @@ namespace Game {
 				const float preferredClimb = style.climb + (EnemyVariation(slot, maneuver, 127) - 0.5f) * 0.08f;
 				const float climb = position.y < p.lowAltitude + 350
 					? std::max(0.0f, preferredClimb) : preferredClimb;
-				escape = XMVectorSetY(escape, std::clamp(forward.y + climb, -0.25f, 0.35f));
+				// 離脱を繰り返しても、現在の上昇角へ上昇指示を積み増さない
+				escape = XMVectorSetY(escape, std::clamp(climb, -0.18f, 0.18f));
 				XMStoreFloat3(&m_escapeDirection, XMVector3Normalize(escape));
 			};
 			if (position.y < p.lowAltitude) enter(AircraftCombatMode::Recover);
@@ -228,8 +232,15 @@ namespace Game {
 			result.flight.yaw = std::abs(yawError) <= 0.6f
 				? std::clamp(-yawError * p.turnGain * 2, -1.0f, 1.0f) : 0;
 			const float pitch = std::atan2(forward.y, std::hypot(forward.x, forward.z));
-			const float desiredPitch = std::clamp(std::atan2(m_steering.y,
+			float desiredPitch = std::clamp(std::atan2(m_steering.y,
 				std::hypot(m_steering.x, m_steering.z)), -0.6f, 0.6f);
+			if (m_mode != AircraftCombatMode::Recover) {
+				// 自機を追う高度は確保しつつ、離脱・回避で戦闘高度から上がり続けるのを抑える
+				const float ceiling = std::max(p.highAltitude, target.position.y + 300.0f);
+				const float altitudePitch = std::clamp(std::atan2(ceiling - position.y,
+					std::max(1.0f, p.pitchLookAheadDistance)), -0.25f, 0.6f);
+				desiredPitch = std::min(desiredPitch, altitudePitch);
+			}
 			result.flight.pitch = std::clamp((desiredPitch - pitch) * p.pitchGain, -1.0f, 1.0f);
 			float targetSpeed = p.cruiseSpeed;
 			if (m_mode == AircraftCombatMode::Disengage ||

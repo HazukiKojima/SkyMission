@@ -34,7 +34,7 @@ namespace Game {
 		}
 	};
 
-	// 母艦の耐久値と敵機の残数で進行を管理し、描画には依存しない。
+	// 母艦の耐久値と敵機の残数で進行を管理し、描画には依存しない
 	class MissionState {
 	  public:
 		explicit MissionState(float carrierHealth = 300)
@@ -54,6 +54,7 @@ namespace Game {
 		bool IsDeckDisabled() const {
 			return m_carrierHealth <= 0;
 		}
+		// 母艦攻撃フェーズ中の有効なダメージだけ適用し、適用した場合にtrueを返す
 		bool ApplyCarrierDamage(float damage) {
 			if (m_phase != MissionPhase::CarrierAttack || IsDeckDisabled() || !std::isfinite(damage) ||
 				damage <= 0)
@@ -62,6 +63,8 @@ namespace Game {
 			return true;
 		}
 		void ConfirmDeckHit() { ApplyCarrierDamage(m_carrierHealth); }
+		// 1回の呼び出しで最大1段階進め、フェーズが変化した場合にtrueを返す
+		// 完了・失敗は終端状態。自機撃墜は敵残数より優先して失敗へ移る
 		bool Advance(size_t remainingAircraft, bool playerAlive) {
 			if (m_phase == MissionPhase::Complete || m_phase == MissionPhase::Failed)
 				return false;

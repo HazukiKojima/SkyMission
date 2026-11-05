@@ -9,9 +9,11 @@
 #include <vector>
 
 namespace Engine {
+	// 配列の添字ではない安定識別子。追加・削除で要素の位置が変わっても参照に使える
 	using ObjectId = std::uint64_t;
 	inline constexpr ObjectId InvalidObjectId = 0;
 
+	// モデル資産は共有し、配置とノード回転はインスタンスごとに保持する
 	struct SceneObject {
 		explicit SceneObject(std::shared_ptr<Model> model)
 			: model(std::move(model)), worldTransform(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
@@ -33,6 +35,7 @@ namespace Engine {
 		DirectX::XMFLOAT3 ambientColor = {0.18f, 0.32f, 0.48f};
 	};
 
+	// 描画対象・カメラ・環境を保持するコンテナ。飛行や戦闘の進行はゲーム側が担当する
 	class Scene {
 	  public:
 		const Camera& GetCamera() const {

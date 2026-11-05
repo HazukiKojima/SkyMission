@@ -2,6 +2,7 @@
 #include "GunAimSolver.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <tuple>
 
 namespace Game {
@@ -52,12 +53,14 @@ namespace Game {
 			m_selected = (*found)->id;
 		} else if (found == candidates.end()) {
 			m_selected = Engine::InvalidObjectId;
-			std::tuple<float, float, Engine::ObjectId> best{2.0f, 0.0f, Engine::InvalidObjectId};
+			std::tuple<float, float, Engine::ObjectId> best{
+				std::numeric_limits<float>::infinity(), 0.0f, Engine::InvalidObjectId};
 			for (auto* candidate : candidates) {
 				const auto direction =
 					XMVector3Normalize(XMLoadFloat3(&candidate->center) - XMLoadFloat3(&position));
 				const float dot = XMVectorGetX(XMVector3Dot(direction, XMLoadFloat3(&forward)));
-				if (dot <= 0)
+				// 初回は前方を優先するが、選択対象の撃墜・喪失後は後方の敵も引き継ぐ
+				if (dot <= 0 && old == Engine::InvalidObjectId)
 					continue;
 				const auto score = std::tuple{1 - dot, distance(*candidate), candidate->id};
 				if (score < best) {
