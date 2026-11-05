@@ -210,6 +210,17 @@ void TestEnemyCombatAI() {
 	const auto recovery = settle(recover, target);
 	Require(recover.GetMode() == AircraftCombatMode::Recover && recovery.flight.pitch > 0,
 		"Low altitude did not trigger climb");
+	// 高高度の回避では降下を促し、高高度の目標そのものへの追従は許可する
+	aircraft.SetPosition({0, 2500, 0});
+	aircraft.SetHeading({0, 0, -1});
+	AircraftAIController highAvoidance;
+	const auto high = highAvoidance.ReadCombatInput(aircraft,
+		{{0, 300, -100}, {0, 0, 60}, forward}, forward, 0.1f, p, 3, true);
+	Require(high.flight.pitch < 0, "High altitude avoidance kept climbing above the combat band");
+	AircraftAIController highPursuit;
+	const auto chasing = highPursuit.ReadCombatInput(aircraft,
+		{{0, 3500, -5000}, {}, forward}, {0, 0.2f, -1}, 0.1f, p, 0, true);
+	Require(chasing.flight.pitch > 0, "Altitude control prevented pursuit of a higher target");
 	std::cout << "PASS: straight pass, reengagement, defense hysteresis, recovery and missile acquisition\n";
 }
 
@@ -341,6 +352,23 @@ void TestCombatMath() {
 	Require(targeting.GetSelected() == 3, "Destroyed selected target was not replaced");
 	targeting.Update({}, {}, {0, 0, -1}, false, 0);
 	Require(targeting.GetState() == LockState::None, "Empty target list retained selection");
+	{
+		TargetingSystem replacement;
+		std::vector<CombatTarget> remaining{{10, {0, 0, -1000}, {}, "FRONT", 100},
+			{11, {0, 0, 1000}, {}, "REAR", 100}};
+		replacement.Update(remaining, {}, {0, 0, -1}, false, 0.25f);
+		replacement.Update(remaining, {}, {0, 0, -1}, false, 0.25f);
+		Require(replacement.GetSelected() == 10 && replacement.GetState() == LockState::Locked,
+			"Replacement fixture did not lock the front enemy");
+		remaining[0].health = 0;
+		replacement.Update(remaining, {}, {0, 0, -1}, false, 0);
+		Require(replacement.GetSelected() == 11 && replacement.GetState() == LockState::Selected &&
+				replacement.GetProgress() == 0,
+			"Destroyed target did not switch to a rear enemy with a fresh lock state");
+		replacement.Update({}, {}, {0, 0, -1}, false, 0);
+		Require(replacement.GetSelected() == Engine::InvalidObjectId,
+			"All enemies destroyed retained a target");
+	}
 
 	CollisionTarget box{4, {{-1, -1, -1}, {1, 1, 1}}, {0, 10, -50}, {}};
 	XMStoreFloat4x4(&box.world, XMMatrixRotationY(0.7f) * XMMatrixTranslation(0, 10, -50));

@@ -62,11 +62,13 @@ namespace Game {
 		auto gun = definition.gun;
 		gun.maxProjectiles = settings.maxHostileProjectiles;
 		gun.lifetime = 5;
-		gun.muzzleSpeed = settings.enemyGunSpeed;
-		gun.fireInterval = settings.enemyGunInterval;
+		// 敵機の弾速はプレイヤー武器の定義と共有する
+		gun.muzzleSpeed = definition.gun.muzzleSpeed;
+		// 発射間隔を2倍にし、連射中の発射レートをプレイヤーの半分にする
+		gun.fireInterval = definition.gun.fireInterval * 2.0f;
 		m_hostileProjectiles.Configure(gun, std::move(ammunition), definition.modelForward);
 		m_enemyGunSettings = gun;
-		m_commanderGunInterval = settings.commanderGunInterval;
+		m_commanderGunInterval = gun.fireInterval;
 	}
 
 	void FlightScene::ConfigureBombWeapon(
@@ -124,7 +126,7 @@ namespace Game {
 			XMStoreFloat3(&velocity, XMLoadFloat3(&enemyVelocity) + XMLoadFloat3(&direction) * m_enemyGunSettings.muzzleSpeed);
 			if (m_hostileProjectiles.FireSingle(m_scene, enemy.flightModel.GetPosition(), velocity, AttackSource::EnemyAircraft, kAircraftGunDamage)) {
 				const float interval = m_mission.GetPhase() == MissionPhase::Commander ? m_commanderGunInterval : m_enemyGunSettings.fireInterval;
-				enemy.weaponCooldownSeconds = enemy.gunPattern.Interval(interval, enemy.slot);
+				enemy.weaponCooldownSeconds = interval;
 				enemy.gunPattern.NotifyShot();
 			}
 		}

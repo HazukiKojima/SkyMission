@@ -16,11 +16,12 @@ namespace Game {
 
 	class AircraftCameraController {
 	  public:
+		static constexpr float DefaultFovY = DirectX::XM_PI / 3.0f; // 縦視野角60度
 		AircraftCameraController() = default;
 		~AircraftCameraController() = default;
 
 		// 射影と初期視点を設定する（fovYはラジアン、nearZ・farZはワールド単位）
-		void Initialize(float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,
+		void Initialize(float fovY = DefaultFovY, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,
 			float farZ = 1000.0f);
 
 		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
@@ -62,9 +63,11 @@ namespace Game {
 		float m_lookYaw = 0, m_lookPitch = 0;
 		float m_lookReturnRate = 6.0f;
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
-		float m_followDistance = 250.0f;
-		float m_maxFollowDistance = 450.0f;
-		float m_followHeight = 120.0f;
+		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする
+		float m_followDistance = 240.0f;
+		float m_maxFollowDistance = 280.0f;
+		float m_followHeight = 65.0f;
+		float m_followLookHeight = 40.0f; // 機体より上を注視し、機体を画面中央より下へ配置する
 		float m_followSmoothing = 1000.0f;
 		float m_followDirectionSmoothing = 2.0f;
 

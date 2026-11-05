@@ -253,7 +253,7 @@ namespace Game {
 				// 選択枠だけを毎秒2回明滅させ、暗い瞬間も位置を追える濃さを残す
 				const float pulse = 0.5f + 0.5f * std::cos(snapshot.elapsedSeconds * XM_2PI * 2);
 				const auto frameColor = selected
-					? HudStyle::Faded(color, 0.2f + 0.8f * pulse)
+					? HudStyle::Faded(HudStyle::Selected, 0.2f + 0.8f * pulse)
 					: color;
 				for (float x : {-1.0f, 1.0f})
 					for (float y : {-1.0f, 1.0f}) {

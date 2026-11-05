@@ -71,7 +71,7 @@ namespace Game {
 	}
 
 	void FlightScene::Initialize(float aspect, float nearZ, float farZ) {
-		m_cameraController.Initialize(DirectX::XM_PIDIV4, aspect, nearZ, farZ);
+		m_cameraController.Initialize(AircraftCameraController::DefaultFovY, aspect, nearZ, farZ);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
 
