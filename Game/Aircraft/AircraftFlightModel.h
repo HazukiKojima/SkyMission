@@ -5,6 +5,7 @@
 #include <cmath>
 
 namespace Game {
+	// 操縦軸は-1～1の入力。highGTurnとautoLevelRollは操縦補助の要求を表す
 	struct AircraftInput {
 		float pitch = 0.0f;
 		float turn = 0.0f;
@@ -14,6 +15,7 @@ namespace Game {
 		bool autoLevelRoll = false;
 	};
 
+	// 描画から独立した飛行状態。位置・速度はワールド座標、内部の角度はラジアン
 	class AircraftFlightModel {
 	  public:
 		// 入力を受け取り、制御・姿勢・飛行物理・速度・位置の順に機体を更新する
@@ -30,6 +32,7 @@ namespace Game {
 		void SetPosition(const DirectX::XMFLOAT3& position) {
 			m_position = position;
 		}
+		// 機首を指定方向へ向けてロールを0に戻す。速さを保ったまま速度方向も合わせる
 		void SetHeading(const DirectX::XMFLOAT3& direction) {
 			m_yaw = std::atan2(-direction.x, -direction.z);
 			m_pitch = std::atan2(direction.y, std::hypot(direction.x, direction.z));

@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 namespace Game {
+	// 4門共通の発射設定。時間は秒、muzzleSpeedはワールド単位/秒
 	struct GunSettings {
 		std::array<std::string, 4> muzzleNames;
 		float fireInterval = 0.1f;
@@ -14,6 +15,8 @@ namespace Game {
 		size_t maxProjectiles = 128;
 	};
 
+	// 数値の正値・有限性、最低4発の容量、銃口名の非空・重複なしを検証する
+	// モデル内にその名前のノードが存在するかはAircraftGun::Configureで検証する
 	inline void ValidateGunSettings(const GunSettings& settings) {
 		for (const auto& [name, value] : {std::pair{"fireInterval", settings.fireInterval},
 				 std::pair{"muzzleSpeed", settings.muzzleSpeed}, std::pair{"lifetime", settings.lifetime}}) {

@@ -52,6 +52,7 @@ namespace Game {
 		float lockProgress = 0;
 	};
 
+	// 敵機ごとに保持する操縦判断。状態遷移と照準保持時間を持つため機体間で共有しない
 	class AircraftAIController {
 	  public:
 		AircraftCombatMode GetMode() const {
@@ -59,6 +60,8 @@ namespace Game {
 		}
 		// A shot resets acquisition, but does not interrupt the attack run.
 		void NotifyWeaponFired() { m_aimTime = 0; }
+		// dtは秒。slotで機体ごとの行動差を固定し、defenseCenter指定時は防衛範囲へ帰還させる
+		// 操縦・射撃の要求を返すだけで、飛行モデルの更新や弾の生成は呼び出し側が行う
 		AircraftAIDecision ReadCombatInput(const AircraftFlightModel& aircraft,
 			const AircraftAITarget& target, const DirectX::XMFLOAT3& aimDirection, float dt,
 			const AircraftAIParameters& p, size_t slot, bool attackAllowed, bool weaponReady = true,

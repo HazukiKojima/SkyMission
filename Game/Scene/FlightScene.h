@@ -15,13 +15,15 @@
 
 namespace Game {
 	struct FlightSceneDefinition;
+	// 飛行・AI・武器・任務・カメラを統合し、描画用Sceneと表示用スナップショットを更新する
 	class FlightScene {
 	  public:
-		// 必須アセットと設定をまとめて渡し、完成したミッションだけを返す。
+		// 必須アセットと設定をまとめて渡し、完成したミッションだけを返す
 		static FlightScene CreateMission(const FlightSceneDefinition& definition,
 			const std::function<std::shared_ptr<Engine::Model>(const std::string&)>& resolveModel, UINT width,
 			UINT height, float farZ);
 		void Initialize(float aspect, float nearZ, float farZ);
+		// deltaSecondsは秒。1フレーム分の操作を渡し、更新後の状態を各Get関数から取得する
 		void Update(const AircraftInput& input, float deltaSeconds,
 			const Engine::InputSnapshot& cameraInput = {}, CombatInput combatInput = {});
 		void ConfigureCombat(const CombatSettings& settings);
@@ -30,6 +32,7 @@ namespace Game {
 		void RegisterMissionShip(Engine::ObjectId id, bool carrier) {
 			m_mission.RegisterShip(m_scene, id, carrier);
 		}
+		// 内部状態への参照。次のUpdateで内容が変わるため、フレームを越える保存にはコピーする
 		const CombatSnapshot& GetCombatSnapshot() const {
 			return m_combat;
 		}
@@ -133,7 +136,7 @@ namespace Game {
 		std::vector<CollisionTarget> BuildCollisionTargets();
 		void ApplyHits();
 		void UpdateGunEffects();
-		// CreateMission完了時の状態を保持する。個別構成時は初回更新前に保存する。
+		// CreateMission完了時の状態を保持する。個別構成時は初回更新前に保存する
 		std::shared_ptr<const RestartState> m_initialState;
 		UINT m_width = 800, m_height = 600;
 		float m_battleSeconds = 0;

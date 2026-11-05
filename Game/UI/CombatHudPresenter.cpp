@@ -76,6 +76,48 @@ namespace Game {
 					tip.y - unitY * 20 * scale - unitX * 9 * scale},
 				lineWidth, tint);
 		};
+		// 中央付近の立体矢印。カメラ座標の奥行きも使い、前後で形が変わる。
+		const auto drawEnemyDirection = [&](const XMFLOAT3& target) {
+			const auto worldDirection = XMLoadFloat3(&target) - XMLoadFloat3(&snapshot.muzzle);
+			const auto cameraDirection = XMVector3TransformNormal(worldDirection, XMLoadFloat4x4(&view.view));
+			const float distance = XMVectorGetX(XMVector3Length(cameraDirection));
+			if (!std::isfinite(distance) || distance < 0.001f)
+				return;
+			const auto direction = cameraDirection / distance;
+			XMFLOAT3 d;
+			XMStoreFloat3(&d, direction);
+			// 正面・真後ろでも基底が潰れないよう、視線に直交する軸を選ぶ。
+			const auto reference = std::abs(d.z) < 0.95f ? XMVectorSet(0, 0, 1, 0) : XMVectorSet(0, 1, 0, 0);
+			const auto side = XMVector3Normalize(XMVector3Cross(reference, direction));
+			const auto up = XMVector3Cross(direction, side);
+			// 敵の方位に合わせて中央の周囲を移動する。視線軸の近くでは
+			// 半径を縮め、正面を横切る際に反対側へ突然跳ばないようにする。
+			const float radial = 110 * scale / std::max(0.35f, std::hypot(d.x, d.y));
+			const XMFLOAT2 anchor{view.width * 0.5f + d.x * radial, view.height * 0.5f - d.y * radial};
+			const auto projectArrow = [&](FXMVECTOR point) {
+				XMFLOAT3 p;
+				XMStoreFloat3(&p, point);
+				const float perspective = 420 / (420 + p.z);
+				return XMFLOAT2{anchor.x + p.x * perspective * scale, anchor.y - p.y * perspective * scale};
+			};
+			// 細長い山形の後端を内側へ折り込み、稜線だけで薄い立体感を出す。
+			// 四角錐の底面や軸線は描かず、矢印として読める輪郭を優先する。
+			const auto tip = projectArrow(direction * 64);
+			const auto left = projectArrow(direction * -42 + side * 17);
+			const auto right = projectArrow(direction * -42 - side * 17);
+			const auto notch = projectArrow(direction * -23);
+			const auto ridge = projectArrow(direction * -34 + up * 9);
+			const XMFLOAT4 arrowColor{0.25f, 1.0f, 0.32f, 0.95f};
+			auto ridgeColor = arrowColor;
+			ridgeColor.w = 0.65f;
+			list.Line(tip, left, lineWidth, arrowColor);
+			list.Line(left, notch, lineWidth, arrowColor);
+			list.Line(notch, right, lineWidth, arrowColor);
+			list.Line(right, tip, lineWidth, arrowColor);
+			list.Line(tip, ridge, lineWidth, ridgeColor);
+			list.Line(ridge, left, lineWidth, ridgeColor);
+			list.Line(ridge, right, lineWidth, ridgeColor);
+		};
 		const auto drawFlightValue = [&](float x, bool pointsRight, std::string_view label, float value) {
 			constexpr float top = 420, width = 240, height = 64, tipWidth = 16;
 			const auto point = [&](float dx, float dy) {
@@ -161,6 +203,8 @@ namespace Game {
 		for (const auto& enemy : snapshot.enemies) {
 			const auto projected = projector.Project(enemy.center);
 			const bool selected = enemy.id == snapshot.selected;
+			if (selected)
+				drawEnemyDirection(enemy.center);
 			if (projected.visible) {
 				const auto centerPixel = projected.pixel;
 				const float radius = (selected ? 32.0f : 22.0f) * scale;
@@ -191,8 +235,6 @@ namespace Game {
 									  std::max(0.0f, centerPixel.y - radius - fontSize - 4 * scale)},
 							"LOCK", fontSize, color);
 				}
-			} else if (selected) {
-				drawOffscreenIndicator(projected, color);
 			}
 		}
 		if (snapshot.selected == Engine::InvalidObjectId)

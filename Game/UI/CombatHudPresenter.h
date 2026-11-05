@@ -4,12 +4,15 @@
 #include "HudProjection.h"
 
 namespace Game {
+	// 戦闘状態をHUDへ変換する。対象選択や命中判定などのゲーム状態は変更しない
 	class CombatHudPresenter {
 	  public:
+		// 線幅・文字サイズは1920x1080基準。Buildで実際の解像度に合わせて縮尺を適用する
 		void Configure(const Engine::HudSettings& settings) {
 			m_settings = settings;
 		}
-		// エフェクト描画後のリストへ照準と文字を追記する
+		// 初期化済みリストへレーダー・敵方向矢印・照準・文字を追記する
+		// エフェクト描画後に呼び出し、HUDの視認性を保つ。幅か高さが0なら描画しない
 		void Build(
 			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
 

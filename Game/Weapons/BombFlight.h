@@ -17,6 +17,7 @@ namespace Game {
 			position.y += velocity.y * dt;
 			position.z += velocity.z * dt;
 		}
+		// 速度の大きさを保ち、目標へ最大radiansだけ旋回する（角速度ではなく今回の角度）
 		void GuideTo(const DirectX::XMFLOAT3& target, float radians) {
 			using namespace DirectX;
 			const auto value = XMLoadFloat3(&velocity);
@@ -32,11 +33,13 @@ namespace Game {
 			}
 			XMStoreFloat3(&velocity, XMVector3TransformNormal(value, XMMatrixRotationAxis(axis, std::min(angle, radians))));
 		}
+		// 現在速度のまま指定高度へ到達する秒数。平行移動や過去の交差ならnullopt
 		std::optional<float> TimeToHeight(float height) const {
 			if (std::abs(velocity.y) < 0.0001f) return std::nullopt;
 			const float seconds = (height - position.y) / velocity.y;
 			return seconds >= 0 ? std::optional<float>(seconds) : std::nullopt;
 		}
+		// 誘導による今後の旋回は含めず、8秒以内に到達する位置だけを返す
 		std::optional<DirectX::XMFLOAT3> Predict(float height) const {
 			const auto seconds = TimeToHeight(height);
 			if (!seconds || *seconds > 8) return std::nullopt;
@@ -44,9 +47,10 @@ namespace Game {
 				position.z + velocity.z * *seconds};
 		}
 	};
+	// Y上向きのワールド座標で、一定重力による自由落下を計算する
 	struct BombFlight {
 		DirectX::XMFLOAT3 position{}, velocity{};
-		static constexpr float gravity = 9.81f;
+		static constexpr float gravity = 9.81f; // ワールド単位/秒^2
 		void Advance(float dt) {
 			position.x += velocity.x * dt;
 			position.y += velocity.y * dt - 0.5f * gravity * dt * dt;
