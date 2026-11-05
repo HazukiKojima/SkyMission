@@ -18,5 +18,10 @@ namespace Game {
 
 	  private:
 		Engine::HudSettings m_settings;
+		// 描画上の補間状態のみ保持する。対象変更・リトライ時は新しい方向から開始する
+		mutable Engine::ObjectId m_arrowTarget = Engine::InvalidObjectId;
+		mutable float m_arrowSeconds = -1;
+		mutable float m_arrowAngle = 0;
+		mutable float m_rearTurnSide = 1;
 	};
 } // namespace Game

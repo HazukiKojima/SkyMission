@@ -83,9 +83,43 @@ namespace Game {
 			const float distance = XMVectorGetX(XMVector3Length(cameraDirection));
 			if (!std::isfinite(distance) || distance < 0.001f)
 				return;
-			const auto direction = cameraDirection / distance;
+			auto direction = cameraDirection / distance;
 			XMFLOAT3 d;
 			XMStoreFloat3(&d, direction);
+			const bool continuing = m_arrowTarget == snapshot.selected &&
+				m_arrowSeconds >= 0 && snapshot.elapsedSeconds >= m_arrowSeconds;
+			if (!continuing)
+				m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
+			const bool behind = d.z < 0;
+			if (behind) {
+				// 後方は方位角を展開して旋回方向を示し、奥行きによる矢印の潰れを防ぐ
+				// 真後ろ付近では直前の旋回側を保持し、左右の微小な変化では反転させない
+				if (std::abs(d.x) > 0.5f)
+					m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
+				const float yaw = std::abs(std::atan2(d.x, d.z)) * m_rearTurnSide;
+				const float pitch = std::atan2(d.y, std::hypot(d.x, d.z));
+				const auto turn = XMVector3Normalize(XMVectorSet(yaw, pitch, -0.35f, 0));
+				const float blend = std::clamp(-d.z / 0.35f, 0.0f, 1.0f);
+				direction = XMVector3Normalize(XMVectorLerp(direction, turn, blend));
+				XMStoreFloat3(&d, direction);
+			}
+			else
+				m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
+			// 方向変更時は中央の周囲を連続して回す。左右の座標を直接切り替えない
+			const float lateral = std::hypot(d.x, d.y);
+			const float desiredAngle = lateral > 0.001f ? std::atan2(d.y, d.x) : m_arrowAngle;
+			if (continuing) {
+				const float dt = std::clamp(snapshot.elapsedSeconds - m_arrowSeconds, 0.0f, 0.1f);
+				const float difference = std::remainder(desiredAngle - m_arrowAngle, XM_2PI);
+				m_arrowAngle += std::clamp(difference, -4 * dt, 4 * dt);
+			} else
+				m_arrowAngle = desiredAngle;
+			m_arrowAngle = std::remainder(m_arrowAngle, XM_2PI);
+			d.x = std::cos(m_arrowAngle) * lateral;
+			d.y = std::sin(m_arrowAngle) * lateral;
+			direction = XMLoadFloat3(&d);
+			m_arrowTarget = snapshot.selected;
+			m_arrowSeconds = snapshot.elapsedSeconds;
 			// 正面・真後ろでも基底が潰れないよう、視線に直交する軸を選ぶ。
 			const auto reference = std::abs(d.z) < 0.95f ? XMVectorSet(0, 0, 1, 0) : XMVectorSet(0, 1, 0, 0);
 			const auto side = XMVector3Normalize(XMVector3Cross(reference, direction));
@@ -107,7 +141,7 @@ namespace Game {
 			const auto right = projectArrow(direction * -42 - side * 17);
 			const auto notch = projectArrow(direction * -23);
 			const auto ridge = projectArrow(direction * -34 + up * 9);
-			const XMFLOAT4 arrowColor{0.25f, 1.0f, 0.32f, 0.95f};
+			const auto arrowColor = color;
 			auto ridgeColor = arrowColor;
 			ridgeColor.w = 0.65f;
 			list.Line(tip, left, lineWidth, arrowColor);
@@ -117,6 +151,12 @@ namespace Game {
 			list.Line(tip, ridge, lineWidth, ridgeColor);
 			list.Line(ridge, left, lineWidth, ridgeColor);
 			list.Line(ridge, right, lineWidth, ridgeColor);
+			if (behind) {
+				constexpr std::string_view label = "BEHIND";
+				const float labelSize = 24 * scale;
+				list.Text({anchor.x - Engine::HudDrawList::MeasureTextWidth(label, labelSize) * 0.5f,
+					anchor.y + 70 * scale}, label, labelSize, arrowColor);
+			}
 		};
 		const auto drawFlightValue = [&](float x, bool pointsRight, std::string_view label, float value) {
 			constexpr float top = 420, width = 240, height = 64, tipWidth = 16;
@@ -209,11 +249,17 @@ namespace Game {
 				const auto centerPixel = projected.pixel;
 				const float radius = (selected ? 32.0f : 22.0f) * scale;
 				const float corner = radius * 0.4f;
+				const float frameWidth = selected ? lineWidth * 1.5f : lineWidth;
+				// 選択枠だけを毎秒2回明滅させ、暗い瞬間も位置を追える濃さを残す
+				const float pulse = 0.5f + 0.5f * std::cos(snapshot.elapsedSeconds * XM_2PI * 2);
+				const auto frameColor = selected
+					? HudStyle::Faded(color, 0.2f + 0.8f * pulse)
+					: color;
 				for (float x : {-1.0f, 1.0f})
 					for (float y : {-1.0f, 1.0f}) {
 						const XMFLOAT2 a{centerPixel.x + x * radius, centerPixel.y + y * radius};
-						list.Line(a, {a.x - x * corner, a.y}, lineWidth, color);
-						list.Line(a, {a.x, a.y - y * corner}, lineWidth, color);
+						list.Line(a, {a.x - x * corner, a.y}, frameWidth, frameColor);
+						list.Line(a, {a.x, a.y - y * corner}, frameWidth, frameColor);
 					}
 				if (selected) {
 					const auto distance = int(XMVectorGetX(
@@ -237,8 +283,11 @@ namespace Game {
 				}
 			}
 		}
-		if (snapshot.selected == Engine::InvalidObjectId)
+		if (snapshot.selected == Engine::InvalidObjectId) {
+			m_arrowTarget = Engine::InvalidObjectId;
+			m_arrowSeconds = -1;
 			drawLabel(80, 80, "NO TARGET");
+		}
 		else if (!snapshot.aim)
 			drawLabel(80, 80, "OUT OF RANGE");
 		if (snapshot.destroyedSeconds > 0)

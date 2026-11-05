@@ -67,6 +67,7 @@ namespace Game {
 	};
 	// シミュレーションからHUD・音声へ渡す表示用状態。表示側からゲーム状態を書き換えない
 	struct CombatSnapshot {
+		float elapsedSeconds = 0; // HUDの明滅に使う戦闘開始からの経過秒数
 		CombatAudioState audio;
 		bool missionEnabled = true, carrierPresent = false;
 		float carrierHealth = 0, carrierMaxHealth = 0;
