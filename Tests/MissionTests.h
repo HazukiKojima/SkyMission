@@ -220,12 +220,10 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				candidate.ConfigureCarrierMissileWeapon(
 					definition.bomb, weaponSettings.bombReloadSeconds, box);
 			};
-			if (weaponsFirst)
-				configureWeapons();
+			if (weaponsFirst) configureWeapons();
 			candidate.ConfigureMission(weaponSettings, box, 1, definition.enemyAircraft.flightParameters,
 				definition.enemyAIParameters);
-			if (!weaponsFirst)
-				configureWeapons();
+			if (!weaponsFirst) configureWeapons();
 			return candidate;
 		};
 		auto weaponsFirst = configuredScene(true);

@@ -31,8 +31,7 @@ namespace Game {
 			if (speed > 0.001f) {
 				float seconds = std::min(distance / speed, input.gun.lifetime);
 				const float vy = XMVectorGetY(velocity);
-				if (vy < 0)
-					seconds = std::min(seconds, std::max(0.0f, -snapshot.muzzle.y / vy));
+				if (vy < 0) seconds = std::min(seconds, std::max(0.0f, -snapshot.muzzle.y / vy));
 				XMFLOAT3 point;
 				XMStoreFloat3(&point, XMLoadFloat3(&snapshot.muzzle) + velocity * seconds);
 				snapshot.gunImpactPoint = point;

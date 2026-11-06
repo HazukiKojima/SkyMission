@@ -22,8 +22,7 @@ namespace Game {
 
 	std::vector<float> AircraftGun::Update(WeaponInput input, float dt) {
 		std::vector<float> ages;
-		if (!std::isfinite(dt) || dt <= 0)
-			return ages;
+		if (!std::isfinite(dt) || dt <= 0) return ages;
 		const double seconds = std::min(dt, 0.25f);
 		if (!input.fire) {
 			m_cooldown = std::max(0.0, m_cooldown - seconds);

@@ -29,8 +29,7 @@ namespace Game {
 	std::optional<HudSegmentProjection> HudProjector::ProjectClippedSegment(
 		const DirectX::XMFLOAT3& head, const DirectX::XMFLOAT3& tail) const {
 		using namespace DirectX;
-		if (m_width == 0 || m_height == 0)
-			return std::nullopt;
+		if (m_width == 0 || m_height == 0) return std::nullopt;
 		const auto matrix = XMLoadFloat4x4(&m_viewProjection);
 		const auto headClip = XMVector3Transform(XMLoadFloat3(&head), matrix);
 		const auto tailClip = XMVector3Transform(XMLoadFloat3(&tail), matrix);
@@ -48,8 +47,7 @@ namespace Game {
 		for (size_t plane = 0; plane < std::size(headDistances); ++plane) {
 			const float from = headDistances[plane];
 			const float to = tailDistances[plane];
-			if (!std::isfinite(from) || !std::isfinite(to) || (from < 0 && to < 0))
-				return std::nullopt;
+			if (!std::isfinite(from) || !std::isfinite(to) || (from < 0 && to < 0)) return std::nullopt;
 			if ((from < 0) != (to < 0)) {
 				const float fraction = from / (from - to);
 				if (from < 0)
@@ -58,8 +56,7 @@ namespace Game {
 					exit = std::min(exit, fraction);
 			}
 		}
-		if (enter > exit)
-			return std::nullopt;
+		if (enter > exit) return std::nullopt;
 		const auto toPixel = [&](float fraction) {
 			const auto clip = XMVectorLerp(headClip, tailClip, fraction);
 			const float w = std::max(XMVectorGetW(clip), 1e-5f);

@@ -647,4 +647,32 @@
       <Filter>Game\Weapons</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Assets\Sound">
+      <UniqueIdentifier>{4EF4EBCA-1969-4D05-8BA3-536DEF23C1A9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Sound\プレイヤーミサイル発射音.mp3">
+      <Filter>Assets\Sound</Filter>
+    </None>
+    <None Include="Assets\Sound\プレイヤーミサイル被弾.mp3">
+      <Filter>Assets\Sound</Filter>
+    </None>
+    <None Include="Assets\Sound\プレイヤー機関銃発射音(5秒間).mp3">
+      <Filter>Assets\Sound</Filter>
+    </None>
+    <None Include="Assets\Sound\プレイヤー機関銃被弾.mp3">
+      <Filter>Assets\Sound</Filter>
+    </None>
+    <None Include="Assets\Sound\プレイヤー飛行音(50秒).mp3">
+      <Filter>Assets\Sound</Filter>
+    </None>
+    <None Include="Assets\Sound\敵戦艦爆発.mp3">
+      <Filter>Assets\Sound</Filter>
+    </None>
+    <None Include="Assets\Sound\敵航空機爆発.mp3">
+      <Filter>Assets\Sound</Filter>
+    </None>
+  </ItemGroup>
 </Project>

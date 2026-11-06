@@ -120,9 +120,7 @@ namespace Engine {
 
 	  private:
 		void Reset() noexcept {
-			if (m_handle == 0) {
-				return;
-			}
+			if (m_handle == 0) return;
 
 			try {
 				using ReleaseDocument = int(__cdecl*)(std::intptr_t);

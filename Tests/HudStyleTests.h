@@ -73,8 +73,7 @@ void TestHudTypography() {
 			Game::CombatHudPresenter{}.Build(snapshot, view, list);
 			for (size_t i = 0; i < list.GetVertices().size(); i += 6) {
 				const auto uv = list.GetVertices()[i].uv;
-				if (uv.x == Engine::HudFont::SolidUv.x && uv.y == Engine::HudFont::SolidUv.y)
-					continue;
+				if (uv.x == Engine::HudFont::SolidUv.x && uv.y == Engine::HudFont::SolidUv.y) continue;
 				const auto column =
 					unsigned(std::lround(uv.x * Engine::HudFont::Width)) / Engine::HudFont::Cell;
 				const auto row =

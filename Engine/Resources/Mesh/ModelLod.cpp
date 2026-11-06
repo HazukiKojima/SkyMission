@@ -4,8 +4,7 @@
 #include <cmath>
 namespace Engine::ModelProcessing {
 	MeshGeometry SimplifyGeometry(const MeshGeometry& source, float extent, unsigned lod) {
-		if (lod == 0 || source.isRotatingNode)
-			return source;
+		if (lod == 0 || source.isRotatingNode) return source;
 		auto low = source.vertices.front().position, high = low;
 		for (const auto& v : source.vertices) {
 			low.x = std::min(low.x, v.position.x);
@@ -16,8 +15,7 @@ namespace Engine::ModelProcessing {
 			high.z = std::max(high.z, v.position.z);
 		}
 		const float componentSize = std::max({high.x - low.x, high.y - low.y, high.z - low.z});
-		if (componentSize < extent * (lod == 1 ? 0.006f : 0.018f))
-			return {};
+		if (componentSize < extent * (lod == 1 ? 0.006f : 0.018f)) return {};
 		struct Key {
 			std::array<int, 7> values;
 			bool operator==(const Key&) const = default;
@@ -41,10 +39,8 @@ namespace Engine::ModelProcessing {
 			const auto& v = source.vertices[i];
 			const float n[] = {v.normal.x, v.normal.y, v.normal.z};
 			int axis = 0;
-			if (std::abs(n[1]) > std::abs(n[axis]))
-				axis = 1;
-			if (std::abs(n[2]) > std::abs(n[axis]))
-				axis = 2;
+			if (std::abs(n[1]) > std::abs(n[axis])) axis = 1;
+			if (std::abs(n[2]) > std::abs(n[axis])) axis = 2;
 			const Key key{{int(std::floor(v.position.x / cell)), int(std::floor(v.position.y / cell)),
 				int(std::floor(v.position.z / cell)),
 				int(std::floor(std::clamp(v.texcoord.x, -1e6f, 1e6f) * 32)),
@@ -78,8 +74,7 @@ namespace Engine::ModelProcessing {
 		for (size_t i = 0; i < source.indices.size(); i += 3) {
 			const auto a = remap[source.indices[i]], b = remap[source.indices[i + 1]],
 					   c = remap[source.indices[i + 2]];
-			if (a != b && b != c && a != c)
-				result.indices.insert(result.indices.end(), {a, b, c});
+			if (a != b && b != c && a != c) result.indices.insert(result.indices.end(), {a, b, c});
 		}
 		// Discard vertices no longer referenced by surviving triangles.
 		std::vector<ModelVertex> compact;

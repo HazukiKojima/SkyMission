@@ -25,8 +25,7 @@ using namespace Game;
 namespace fs = std::filesystem;
 
 void Require(bool condition, const char* description) {
-	if (!condition)
-		throw std::runtime_error(description);
+	if (!condition) throw std::runtime_error(description);
 }
 
 #include "WeaponTests.h"
@@ -93,8 +92,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 			}
 		});
 		worker.join();
-		if (workerError)
-			std::rethrow_exception(workerError);
+		if (workerError) std::rethrow_exception(workerError);
 		Require(apartmentResult == originalApartmentResult &&
 				(FAILED(apartmentResult) ||
 					(apartment == originalApartment && qualifier == originalQualifier)),
@@ -472,8 +470,7 @@ void RequireDefaultBufferContent(ID3D12Device* device, ID3D12GraphicsCommandList
 
 void TestGpuTextures(const fs::path& fixture) {
 	ComPtr<ID3D12Debug> debug;
-	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug))))
-		debug->EnableDebugLayer();
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) debug->EnableDebugLayer();
 	ComPtr<IDXGIFactory4> factory;
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
 	ComPtr<IDXGIAdapter> warp;

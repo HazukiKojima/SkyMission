@@ -16,15 +16,13 @@ namespace Game {
 		template <class Effect>
 		void AddBoundedEffect(std::vector<Effect>& effects, Effect effect, size_t maximumCount) {
 			// 上限では最も古い演出を置き換え、新しい命中と撃破を優先する
-			if (effects.size() >= maximumCount)
-				effects.erase(effects.begin());
+			if (effects.size() >= maximumCount) effects.erase(effects.begin());
 			effects.push_back(std::move(effect));
 		}
 	} // namespace
 
 	void CombatEffectSystem::Update(float deltaSeconds) {
-		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0)
-			return;
+		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0) return;
 		const float step = std::min(deltaSeconds, CombatEffectSettings::maximumFrameSeconds);
 		AdvanceEffects(m_snapshot.gunFlashes, step, GunEffectSettings::flashLifetimeSeconds);
 		AdvanceEffects(m_snapshot.gunSmoke, step, GunEffectSettings::smokeLifetimeSeconds);
@@ -75,8 +73,7 @@ namespace Game {
 	}
 
 	void CombatEffectSystem::SpawnRocketSmoke(const DirectX::XMFLOAT3& position, float age) {
-		if (!std::isfinite(age) || age < 0 || age >= RocketEffectSettings::smokeLifetimeSeconds)
-			return;
+		if (!std::isfinite(age) || age < 0 || age >= RocketEffectSettings::smokeLifetimeSeconds) return;
 		AddBoundedEffect(
 			m_snapshot.rocketSmoke, RocketTrailSample{position, age}, RocketEffectSettings::maxSmokeCount);
 	}

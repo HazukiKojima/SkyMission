@@ -7,10 +7,8 @@
 namespace Engine {
 	void HudDrawList::Quad(const DirectX::XMFLOAT2 (&positions)[4], DirectX::XMFLOAT2 uv0,
 		DirectX::XMFLOAT2 uv1, DirectX::XMFLOAT4 color) {
-		if (m_width == 0 || m_height == 0)
-			return;
-		if (m_vertices.size() + 6 > MaxVertices)
-			throw std::length_error("HUD vertex capacity exceeded");
+		if (m_width == 0 || m_height == 0) return;
+		if (m_vertices.size() + 6 > MaxVertices) throw std::length_error("HUD vertex capacity exceeded");
 		const DirectX::XMFLOAT2 uv[] = {uv0, {uv1.x, uv0.y}, uv1, {uv0.x, uv1.y}};
 		for (const int index : {0, 1, 2, 0, 2, 3})
 			m_vertices.push_back(
@@ -19,8 +17,7 @@ namespace Engine {
 	}
 	void HudDrawList::FilledRect(
 		DirectX::XMFLOAT2 position, DirectX::XMFLOAT2 size, DirectX::XMFLOAT4 color) {
-		if (size.x <= 0 || size.y <= 0 || color.w <= 0)
-			return;
+		if (size.x <= 0 || size.y <= 0 || color.w <= 0) return;
 		const DirectX::XMFLOAT2 p[] = {position, {position.x + size.x, position.y},
 			{position.x + size.x, position.y + size.y}, {position.x, position.y + size.y}};
 		Quad(p, HudFont::SolidUv, HudFont::SolidUv, color);
@@ -29,8 +26,7 @@ namespace Engine {
 		const float dx = b.x - a.x;
 		const float dy = b.y - a.y;
 		const float length = std::hypot(dx, dy);
-		if (length < 0.001f)
-			return;
+		if (length < 0.001f) return;
 		const float x = -dy / length * width * 0.5f;
 		const float y = dx / length * width * 0.5f;
 		const DirectX::XMFLOAT2 p[] = {
@@ -39,8 +35,7 @@ namespace Engine {
 	}
 	void HudDrawList::CloudPuff(
 		DirectX::XMFLOAT2 center, float radius, float rotation, unsigned seed, DirectX::XMFLOAT4 color) {
-		if (radius <= 0 || color.w <= 0)
-			return;
+		if (radius <= 0 || color.w <= 0) return;
 		const float c = std::cos(rotation);
 		const float s = std::sin(rotation);
 		DirectX::XMFLOAT2 points[4];
@@ -53,8 +48,7 @@ namespace Engine {
 		Quad(points, {-3, offset}, {-1, offset + 2}, color);
 	}
 	void HudDrawList::SoftDisc(DirectX::XMFLOAT2 center, float radius, DirectX::XMFLOAT4 color) {
-		if (m_width == 0 || m_height == 0 || radius <= 0 || color.w <= 0)
-			return;
+		if (m_width == 0 || m_height == 0 || radius <= 0 || color.w <= 0) return;
 		constexpr int segments = 24;
 		if (m_vertices.size() + segments * 3 > MaxVertices)
 			throw std::length_error("HUD vertex capacity exceeded");

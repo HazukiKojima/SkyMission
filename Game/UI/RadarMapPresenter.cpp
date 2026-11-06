@@ -7,8 +7,7 @@ namespace Game {
 	using namespace DirectX;
 	RadarLayout RadarMapPresenter::Layout(const Engine::RenderView& view) {
 		RadarLayout layout;
-		if (view.width == 0 || view.height == 0)
-			return layout;
+		if (view.width == 0 || view.height == 0) return layout;
 		layout.scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		layout.size = 320 * layout.scale;
 		layout.origin = {48 * layout.scale, view.height - (48 + 320) * layout.scale};
@@ -22,8 +21,7 @@ namespace Game {
 		// 左手座標系で-Zを北にすると、北向きカメラの右方向は-Xになる
 		const float dx = player.x - world.x, dz = world.z - player.z;
 		const float distance = std::hypot(dx, dz);
-		if (layout.scale <= 0 || !std::isfinite(distance))
-			return point;
+		if (layout.scale <= 0 || !std::isfinite(distance)) return point;
 		point.valid = true;
 		point.outside = distance > RangeMeters;
 		point.direction = distance > 0.001f ? XMFLOAT2{dx / distance, dz / distance} : XMFLOAT2{0, -1};
@@ -35,8 +33,7 @@ namespace Game {
 	void RadarMapPresenter::Build(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		const auto layout = Layout(view);
-		if (layout.scale <= 0)
-			return;
+		if (layout.scale <= 0) return;
 		const float scale = layout.scale, lineWidth = std::max(1.0f, 1.4f * scale);
 		const auto border = HudStyle::Ink;
 		const auto grid = HudStyle::Faded(border, 0.23f);
@@ -49,8 +46,9 @@ namespace Game {
 		for (float inset : {0.0f, 12.0f}) {
 			const XMFLOAT2 corners[] = {panelPoint(inset, inset), panelPoint(320 - inset, inset),
 				panelPoint(320 - inset, 320 - inset), panelPoint(inset, 320 - inset)};
-			for (size_t i = 0; i < std::size(corners); ++i)
+			for (size_t i = 0; i < std::size(corners); ++i) {
 				list.Line(corners[i], corners[(i + 1) % std::size(corners)], lineWidth, border);
+			}
 		}
 		for (int tick = 1; tick < 8; ++tick) {
 			const float offset = float(tick) * 40;
@@ -82,8 +80,7 @@ namespace Game {
 		};
 		for (const auto& enemy : snapshot.enemies) {
 			const auto point = Project(enemy.center, snapshot.playerPosition, layout);
-			if (!point.valid)
-				continue;
+			if (!point.valid) continue;
 			const bool selected = enemy.id == snapshot.selected;
 			const auto color = selected ? selectedColor : enemyColor;
 			if (point.outside) {
@@ -99,7 +96,7 @@ namespace Game {
 			}
 			if (selected) {
 				const float size = 12 * scale, corner = 5 * scale;
-				for (float x : {-1.0f, 1.0f})
+				for (float x : {-1.0f, 1.0f}) {
 					for (float y : {-1.0f, 1.0f}) {
 						const XMFLOAT2 cornerPoint{point.pixel.x + x * size, point.pixel.y + y * size};
 						list.Line(cornerPoint, {cornerPoint.x - x * corner, cornerPoint.y}, lineWidth,
@@ -107,6 +104,7 @@ namespace Game {
 						list.Line(cornerPoint, {cornerPoint.x, cornerPoint.y - y * corner}, lineWidth,
 							selectedColor);
 					}
+				}
 			}
 		}
 		aircraft(layout.center, snapshot.playerHeading, 9 * scale, border);

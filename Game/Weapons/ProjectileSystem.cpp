@@ -10,10 +10,8 @@ namespace Game {
 	void ProjectileSystem::Configure(
 		const GunSettings& settings, std::shared_ptr<Engine::Model> model, const XMFLOAT3& modelForward) {
 		ValidateGunSettings(settings);
-		if (!model)
-			throw std::invalid_argument("ammunition model is required");
-		if (!m_projectiles.empty())
-			throw std::logic_error("Cannot reconfigure active projectiles");
+		if (!model) throw std::invalid_argument("ammunition model is required");
+		if (!m_projectiles.empty()) throw std::logic_error("Cannot reconfigure active projectiles");
 		const auto source = XMLoadFloat3(&modelForward);
 		const float length = XMVectorGetX(XMVector3Length(source));
 		if (!std::isfinite(length) || length < 0.001f)
@@ -48,16 +46,14 @@ namespace Game {
 	}
 
 	void ProjectileSystem::AddTracer(const Projectile& projectile, const XMFLOAT3& head) {
-		if (!projectile.isTracer || m_tracers.size() >= GunEffectSettings::maxTracerCount)
-			return;
+		if (!projectile.isTracer || m_tracers.size() >= GunEffectSettings::maxTracerCount) return;
 		const auto velocity = XMLoadFloat3(&projectile.velocity);
 		const float speed = XMVectorGetX(XMVector3Length(velocity));
 		const float distance =
 			XMVectorGetX(XMVector3Length(XMLoadFloat3(&head) - XMLoadFloat3(&projectile.birthPosition)));
 		const float length = std::min(
 			{distance, speed * GunEffectSettings::tracerSeconds, GunEffectSettings::tracerMaxLength});
-		if (!std::isfinite(length) || length <= 0 || speed <= 0)
-			return;
+		if (!std::isfinite(length) || length <= 0 || speed <= 0) return;
 		GunTracerSegment segment;
 		segment.head = head;
 		XMStoreFloat3(&segment.tail, XMLoadFloat3(&head) - velocity * (length / speed));
@@ -73,8 +69,7 @@ namespace Game {
 
 	bool ProjectileSystem::MoveAndCollide(Projectile& projectile, float duration, float frameOffset,
 		float frameSeconds, std::span<const CollisionTarget> targets) {
-		if (projectile.position.y <= 0 || projectile.remainingLifetime <= 0)
-			return false;
+		if (projectile.position.y <= 0 || projectile.remainingLifetime <= 0) return false;
 		float valid = std::min(duration, projectile.remainingLifetime);
 		if (projectile.velocity.y < 0)
 			valid = std::min(valid, -projectile.position.y / projectile.velocity.y);
@@ -113,8 +108,7 @@ namespace Game {
 	}
 
 	void ProjectileSystem::Update(Engine::Scene& scene, float dt, std::span<const CollisionTarget> targets) {
-		if (!std::isfinite(dt) || dt <= 0)
-			return;
+		if (!std::isfinite(dt) || dt <= 0) return;
 		dt = std::min(dt, 0.25f);
 		// 前フレームの通知と、消滅した弾の描画区間を持ち越さない
 		m_shotEvents.clear();
@@ -135,12 +129,10 @@ namespace Game {
 
 	bool ProjectileSystem::FireSingle(Engine::Scene& scene, const XMFLOAT3& position,
 		const XMFLOAT3& velocity, AttackSource source, float damage) {
-		if (!m_model || m_projectiles.size() >= m_settings.maxProjectiles)
-			return false;
+		if (!m_model || m_projectiles.size() >= m_settings.maxProjectiles) return false;
 		const auto velocityVector = XMLoadFloat3(&velocity);
 		const float speedSquared = XMVectorGetX(XMVector3LengthSq(velocityVector));
-		if (!std::isfinite(speedSquared) || speedSquared < 1e-8f)
-			return false;
+		if (!std::isfinite(speedSquared) || speedSquared < 1e-8f) return false;
 		const auto direction = XMVector3Normalize(velocityVector);
 		const auto forward = XMVectorSet(0, 0, -1, 0);
 		const float dot = std::clamp(XMVectorGetX(XMVector3Dot(forward, direction)), -1.0f, 1.0f);
@@ -166,8 +158,7 @@ namespace Game {
 	}
 
 	bool ProjectileSystem::FireVolley(Engine::Scene& scene, const GunVolley& volley) {
-		if (!m_model || m_settings.maxProjectiles - m_projectiles.size() < 4)
-			return false;
+		if (!m_model || m_settings.maxProjectiles - m_projectiles.size() < 4) return false;
 		auto aircraftRotation = XMLoadFloat4x4(&volley.aircraftPose);
 		aircraftRotation.r[3] = XMVectorSet(0, 0, 0, 1);
 		for (size_t muzzleIndex = 0; muzzleIndex < volley.muzzles.size(); ++muzzleIndex) {
@@ -201,8 +192,7 @@ namespace Game {
 			const auto to = XMLoadFloat3(&direction);
 			const float dot = std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f);
 			auto correction = XMMatrixIdentity();
-			if (dot < 0.999999f)
-				correction = XMMatrixRotationAxis(XMVector3Cross(from, to), std::acos(dot));
+			if (dot < 0.999999f) correction = XMMatrixRotationAxis(XMVector3Cross(from, to), std::acos(dot));
 			XMFLOAT4X4 transform;
 			XMStoreFloat4x4(&transform,
 				XMLoadFloat4x4(&m_modelRotation) * aircraftRotation * correction *

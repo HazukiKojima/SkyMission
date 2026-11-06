@@ -7,8 +7,7 @@ namespace Game {
 		const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const {
 		using namespace DirectX;
 		for (const auto& smoke : snapshot.deckSmoke) {
-			if (!context.HasVertexBudget(6))
-				break;
+			if (!context.HasVertexBudget(6)) break;
 			const auto location = XMLoadFloat3(&smoke.position) +
 				XMVectorSet(smoke.age * 12, smoke.age * CarrierEffectSettings::smokeRiseSpeed, 0, 0);
 			const EffectRandom random(smoke.position);
@@ -22,8 +21,7 @@ namespace Game {
 		}
 		// 放出済みの煙は機体から独立して残し、時間とともに広げて消す
 		for (const auto& smoke : snapshot.rocketSmoke) {
-			if (!context.HasVertexBudget(6))
-				break;
+			if (!context.HasVertexBudget(6)) break;
 			const float fade =
 				std::clamp(1 - smoke.age / RocketEffectSettings::smokeLifetimeSeconds, 0.0f, 1.0f);
 			const EffectRandom random(smoke.position);
@@ -32,8 +30,7 @@ namespace Game {
 				{0.65f, 0.65f, 0.62f, fade * 0.32f});
 		}
 		for (const auto& exhaust : snapshot.rocketExhausts) {
-			if (!context.HasVertexBudget(222))
-				break;
+			if (!context.HasVertexBudget(222)) break;
 			const auto tail = XMLoadFloat3(&exhaust.position);
 			const auto direction = XMLoadFloat3(&exhaust.direction);
 			context.DrawGlow(tail, 2.0f, {1, 0.75f, 0.25f, 0.85f});

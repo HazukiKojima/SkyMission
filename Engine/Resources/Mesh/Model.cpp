@@ -58,12 +58,10 @@ namespace Engine {
 
 		Assimp::Importer importer;
 		const aiScene* scene = ModelImport::ImportScene(importer, importerPath);
-		if (!scene)
-			return false;
+		if (!scene) return false;
 		auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
 		m_sourceMeshCount = geometries.size();
-		if (geometries.empty())
-			return false;
+		if (geometries.empty()) return false;
 		const auto bounds = CalculateModelBounds(geometries);
 		m_localBounds = bounds;
 		m_cullingRadius = CalculateCullingRadius(geometries, bounds);
@@ -100,8 +98,7 @@ namespace Engine {
 				const unsigned level = m_lodCount - 1 - lod;
 				auto reduced = level == 0 ? MeshGeometry{} : SimplifyGeometry(geometry, extent, level);
 				auto& data = level == 0 ? geometry : reduced;
-				if (data.indices.empty())
-					continue;
+				if (data.indices.empty()) continue;
 				auto& list = batches[level];
 				auto batch = list.end();
 				if (options.mergeStaticMeshes && !geometry.isRotatingNode)
@@ -151,11 +148,9 @@ namespace Engine {
 				std::vector<uint32_t>().swap(batch.indices);
 				m_lodMeshes[level].push_back(std::move(mesh));
 			}
-			if (m_lodMeshes[level].empty() && level > 0)
-				m_lodMeshes[level] = m_lodMeshes[level - 1];
+			if (m_lodMeshes[level].empty() && level > 0) m_lodMeshes[level] = m_lodMeshes[level - 1];
 		}
-		if (!IsLoaded())
-			return false;
+		if (!IsLoaded()) return false;
 		UploadGeometry(device, commandList, vertices.data(), vertices.size() * sizeof(ModelVertex),
 			indices.data(), indices.size() * sizeof(uint32_t));
 		Log("Model batches {}, triangles {}/{}/{}\n", GetMeshCount(), GetTriangleCount(0),
@@ -170,8 +165,7 @@ namespace Engine {
 
 	std::optional<DirectX::XMFLOAT3> Model::FindNodePosition(std::string_view name) const {
 		const auto found = m_nodePositions.find(std::string(name));
-		if (found == m_nodePositions.end() || found->second.size() != 1)
-			return std::nullopt;
+		if (found == m_nodePositions.end() || found->second.size() != 1) return std::nullopt;
 		return found->second.front();
 	}
 
@@ -277,8 +271,7 @@ namespace Engine {
 			if (path.empty())
 				path = MaterialTexturePaths::FindNamedMaterialTexturePath(
 					modelDirectory, materialName.C_Str(), resolvedTexturePath, suffix, options);
-			if (path.empty())
-				return std::shared_ptr<Texture>{};
+			if (path.empty()) return std::shared_ptr<Texture>{};
 			return Texture::LoadCached(device, commandList, path.wstring(),
 				{.useSrgb = false,
 					.generateMipmaps = true,

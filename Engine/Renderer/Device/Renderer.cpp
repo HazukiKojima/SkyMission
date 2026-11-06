@@ -68,8 +68,7 @@ namespace Engine {
 	}
 
 	void Renderer::Render(UINT width, UINT height, const Scene& runtimeScene, const HudDrawList* hud) {
-		if (width == 0 || height == 0)
-			return;
+		if (width == 0 || height == 0) return;
 		m_context->BeginFrame();
 
 		auto cmd = m_context->GetCommandList();
@@ -102,8 +101,7 @@ namespace Engine {
 			sceneDepth, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		RecordRetroFilmPass();
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::PostProcessEnd);
-		if (hud)
-			m_hudRenderer.Record(*m_device, cmd, *hud);
+		if (hud) m_hudRenderer.Record(*m_device, cmd, *hud);
 
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::HudEnd);
 		m_gpuProfiler.Resolve(cmd);
@@ -150,9 +148,7 @@ namespace Engine {
 	}
 
 	void Renderer::Resize(UINT width, UINT height) {
-		if (width == 0 || height == 0 || !m_context || !m_device) {
-			return;
-		}
+		if (width == 0 || height == 0 || !m_context || !m_device) return;
 
 		m_context->WaitForGpu();
 		m_device->Resize(width, height);

@@ -4,8 +4,7 @@
 namespace {
 	std::wstring ToWide(const char* text) {
 		const int length = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
-		if (length <= 0)
-			return L"Unknown error.";
+		if (length <= 0) return L"Unknown error.";
 
 		std::wstring result(static_cast<size_t>(length), L'\0');
 		MultiByteToWideChar(CP_UTF8, 0, text, -1, result.data(), length);

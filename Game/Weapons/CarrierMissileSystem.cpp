@@ -21,8 +21,7 @@ namespace Game {
 		const float length = XMVectorGetX(XMVector3Length(forward));
 		if (!std::isfinite(length) || length < 0.001f)
 			throw std::invalid_argument("Missile modelForward must be finite and nonzero");
-		if (!m_missiles.empty())
-			throw std::logic_error("Cannot configure active missiles");
+		if (!m_missiles.empty()) throw std::logic_error("Cannot configure active missiles");
 		m_ammo = 2;
 		m_model = std::move(model);
 		XMStoreFloat3(&m_modelForward, XMVector3Normalize(forward));
@@ -47,8 +46,7 @@ namespace Game {
 	}
 	bool CarrierMissileSystem::TryLaunch(Engine::Scene& scene, const XMFLOAT3& position,
 		const XMFLOAT3& velocity, const XMFLOAT3& forward, Engine::ObjectId target) {
-		if (!m_model || m_ammo == 0 || m_cooldownSeconds > 0)
-			return false;
+		if (!m_model || m_ammo == 0 || m_cooldownSeconds > 0) return false;
 		auto release = position;
 		const float side = m_ammo == 2 ? -kMissileReleaseSideOffsetMeters : kMissileReleaseSideOffsetMeters;
 		release.x -= forward.z * side;
@@ -60,19 +58,16 @@ namespace Game {
 			{scene.AddObject(m_model, BuildProjectileTransform(release, launch, m_modelForward)), target,
 				{release, launch}});
 		--m_ammo;
-		if (m_ammo == 0)
-			m_cooldownSeconds = m_reloadSeconds;
+		if (m_ammo == 0) m_cooldownSeconds = m_reloadSeconds;
 		return true;
 	}
 	void CarrierMissileSystem::Update(
 		Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& hull) {
-		if (!std::isfinite(dt) || dt <= 0)
-			return;
+		if (!std::isfinite(dt) || dt <= 0) return;
 		dt = std::min(dt, 0.25f);
 		if (m_cooldownSeconds > 0) {
 			m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
-			if (m_cooldownSeconds <= 0)
-				m_ammo = 2;
+			if (m_cooldownSeconds <= 0) m_ammo = 2;
 		}
 		std::erase_if(m_missiles, [&](Missile& missile) {
 			const auto start = missile.flight.position;

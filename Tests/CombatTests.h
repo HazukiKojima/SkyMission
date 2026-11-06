@@ -17,8 +17,7 @@ void TestEnemyGunBehavior() {
 		for (size_t slot = 0; slot < patterns.size(); ++slot) {
 			cooldown[slot] = std::max(0.0f, cooldown[slot] - 1 / 60.0f);
 			if (patterns[slot].Update(1 / 60.0f, slot) && cooldown[slot] <= 0) {
-				if (firstShot[slot] < 0)
-					firstShot[slot] = frame / 60.0f;
+				if (firstShot[slot] < 0) firstShot[slot] = frame / 60.0f;
 				++shots[slot];
 				cooldown[slot] = patterns[slot].Interval(0.22f, slot);
 				patterns[slot].NotifyShot();
@@ -71,8 +70,7 @@ void TestEnemyCombatAI() {
 	bool fired = false, warnedBeforeLaunch = false;
 	for (int i = 0; i < 400; ++i) {
 		const auto decision = controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, true);
-		if (i < 299)
-			Require(!decision.fire, "Enemy launched during opening grace");
+		if (i < 299) Require(!decision.fire, "Enemy launched during opening grace");
 		warnedBeforeLaunch |= decision.locking && !decision.fire;
 		fired |= decision.fire;
 	}
@@ -100,8 +98,7 @@ void TestEnemyCombatAI() {
 	float fixedTurn = 0;
 	for (int i = 0; i < 95; ++i) {
 		const auto d = pass.ReadCombatInput(aircraft, close, forward, 0.1f, p, 0, true);
-		if (i == 0)
-			fixedTurn = d.flight.turn;
+		if (i == 0) fixedTurn = d.flight.turn;
 		if (i < 60)
 			Require(pass.GetMode() == AircraftCombatMode::Disengage && d.flight.turn == fixedTurn &&
 					!d.locking && !d.fire,
@@ -438,8 +435,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 									  : XMFLOAT3{0, 1500, -battleSpeed * seconds};
 			target.velocity = {battleSpeed * std::sin(angle), 0, -battleSpeed * std::cos(angle)};
 			target.forward = {std::sin(angle), 0, -std::cos(angle)};
-			if (physicalPlayer)
-				target = {player.GetPosition(), player.GetVelocity(), player.GetForward()};
+			if (physicalPlayer) target = {player.GetPosition(), player.GetVelocity(), player.GetForward()};
 			const auto position = fighter.GetPosition();
 			const auto delta = XMLoadFloat3(&target.position) - XMLoadFloat3(&position);
 			const float distance = XMVectorGetX(XMVector3Length(delta));
@@ -476,33 +472,27 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			const bool rear = distance <= definition.enemyAIParameters.attackDistance &&
 				XMVectorGetX(XMVector3Dot(XMLoadFloat3(&direction), XMLoadFloat3(&target.forward))) >= 0.5f;
 			if (rear) {
-				if (firstRear < 0)
-					firstRear = seconds;
+				if (firstRear < 0) firstRear = seconds;
 				rearSeconds += 1 / 60.0f;
-				if (!wasRear)
-					++rearEntries;
+				if (!wasRear) ++rearEntries;
 			}
 			wasRear = rear;
 			if (decision.locking) {
-				if (!wasLocking)
-					++acquisitions;
+				if (!wasLocking) ++acquisitions;
 				Require(distance >= (missionGun ? 2200.0f : definition.enemyAIParameters.disengageDistance) &&
 						distance <= definition.enemyAIParameters.attackDistance && allowed && cooldown <= 0,
 					"Enemy locked outside its medium-range attack window");
-				if (firstLock < 0)
-					firstLock = seconds;
+				if (firstLock < 0) firstLock = seconds;
 			}
 			wasLocking = decision.locking;
 			if (decision.fire) {
 				++shots;
 				cooldown = missionGun ? gunPattern.Interval(0.22f, slot) : 3.0f;
-				if (missionGun)
-					gunPattern.NotifyShot();
+				if (missionGun) gunPattern.NotifyShot();
 				controller.NotifyWeaponFired();
 			}
 			if (controller.GetMode() == AircraftCombatMode::Disengage) {
-				if (!wasPassing)
-					++passes;
+				if (!wasPassing) ++passes;
 				wasPassing = true;
 				breakSeconds += 1 / 60.0f;
 				maximumBreak = std::max(maximumBreak, breakSeconds);
