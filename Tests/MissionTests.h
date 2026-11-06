@@ -460,7 +460,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		checkDefeatRetry(scene);
 		removeEnemies();
 		Require(scene.GetCombatSnapshot().enemies.size() == 1 &&
-				scene.GetCombatSnapshot().enemies[0].name == "SQUADRON LEADER" &&
+				scene.GetCombatSnapshot().enemies[0].name == "敵編隊長機" &&
 				scene.GetCombatSnapshot().enemies[0].health == combat.enemyHealth * 1.5f,
 			"Commander settings/phase incorrect");
 		checkDefeatRetry(scene);

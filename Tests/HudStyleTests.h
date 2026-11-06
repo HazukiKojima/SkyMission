@@ -78,14 +78,15 @@ void TestHudTypography() {
 					unsigned(std::lround(uv.x * Engine::HudFont::Width)) / Engine::HudFont::Cell;
 				const auto row =
 					unsigned(std::lround(uv.y * Engine::HudFont::Height)) / Engine::HudFont::Cell;
-				Require(row * Engine::HudFont::Columns + column < Engine::HudFont::AsciiCount,
-					"A built-in flight HUD or radar label is not English/ASCII");
+				Require(row * Engine::HudFont::Columns + column < Engine::HudFont::GlyphCount &&
+						row * Engine::HudFont::Columns + column != unsigned('?' - 32),
+					"A built-in HUD label uses an unsupported glyph");
 			}
 		}
 	const auto ink = Engine::HudSettings{}.color;
 	Require(ink.x == Game::HudStyle::Ink.x && ink.y == Game::HudStyle::Ink.y &&
 			ink.z == Game::HudStyle::Ink.z && ink.w == Game::HudStyle::Ink.w,
-		"English HUD changed the current parchment palette");
+		"Japanese HUD changed the current parchment palette");
 	std::cout
-		<< "PASS: HUD typography, UTF-8 fallback, English labels, preserved palette and undecorated frame\n";
+		<< "PASS: HUD typography, UTF-8 fallback, Japanese labels, preserved palette and undecorated frame\n";
 }

@@ -231,7 +231,7 @@ namespace Game {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
 				const CombatTarget carrier{
-					m_mission.GetCarrierId(), *center, {}, "CARRIER", m_mission.GetCarrierHealth()};
+					m_mission.GetCarrierId(), *center, {}, "敵空母", m_mission.GetCarrierHealth()};
 				m_targeting.Update(std::span(&carrier, 1), geometry.muzzle, geometry.forward, next, dt);
 				return;
 			}
@@ -328,7 +328,7 @@ namespace Game {
 		enemy.previousPosition = position;
 		enemy.health = health;
 		++m_enemySequence;
-		enemy.name = name.empty() ? "ENEMY " + std::to_string(m_enemySequence) : std::move(name);
+		enemy.name = name.empty() ? "敵機 " + std::to_string(m_enemySequence) : std::move(name);
 		const auto id = enemy.objectId;
 		m_enemies.push_back(std::move(enemy));
 		return id;

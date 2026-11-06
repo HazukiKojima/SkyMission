@@ -34,7 +34,7 @@ namespace Game {
 			const float labelSize = 30 * scale;
 			const std::string hp = std::to_string(static_cast<int>(std::ceil(health))) + " / " +
 				std::to_string(static_cast<int>(std::ceil(snapshot.carrierMaxHealth)));
-			list.Text({x, 26 * scale}, health > 0 ? "CARRIER" : "CARRIER DESTROYED", labelSize, color);
+			list.Text({x, 26 * scale}, health > 0 ? "敵空母" : "敵空母を撃破", labelSize, color);
 			list.Text({x + width - Engine::HudDrawList::MeasureTextWidth(hp, labelSize), 26 * scale}, hp,
 				labelSize, color);
 			list.FilledRect({x, y}, {width, height}, {0.025f, 0.025f, 0.025f, 0.8f});
@@ -80,15 +80,15 @@ namespace Game {
 			const float textWidth = Engine::HudDrawList::MeasureTextWidth(text, m_settings.fontSize);
 			drawLabel(x + right - 12 - textWidth, top + (height - m_settings.fontSize) * 0.5f, text);
 		};
-		drawFlightValue(100, true, "SPEED", snapshot.playerSpeedMetersPerSecond * 3.6f);
-		drawFlightValue(1580, false, "ALT", snapshot.playerAltitudeMeters);
+		drawFlightValue(100, true, "速度 km/h", snapshot.playerSpeedMetersPerSecond * 3.6f);
+		drawFlightValue(1580, false, "高度 m", snapshot.playerAltitudeMeters);
 		drawStatus(108,
-			"HULL " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
+			"機体 " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
 				std::to_string(static_cast<int>(snapshot.playerMaxHealth)));
 		if (snapshot.result != CombatResult::Active &&
 			(snapshot.result != CombatResult::Victory || snapshot.allDownSeconds <= 0)) {
-			drawLabel(740, 380, snapshot.result == CombatResult::Victory ? "MISSION COMPLETE" : "SHOT DOWN");
-			drawLabel(740, 440, "R: RETRY");
+			drawLabel(740, 380, snapshot.result == CombatResult::Victory ? "任務達成" : "自機撃墜");
+			drawLabel(740, 440, "R：再挑戦");
 		}
 		if (snapshot.playerHitSeconds > 0) {
 			const auto& d = snapshot.playerHitDirection;
@@ -102,7 +102,7 @@ namespace Game {
 				lineWidth * 2, warning);
 			list.Line(tip, {tip.x - x * 25 * scale + y * 12 * scale, tip.y - y * 25 * scale - x * 12 * scale},
 				lineWidth * 2, warning);
-			drawLabel(820, 800, "TAKING FIRE");
+			drawLabel(820, 800, "被弾");
 		}
 	}
 
@@ -204,21 +204,21 @@ namespace Game {
 					if (snapshot.lockState == LockState::Locked)
 						list.Text({centerPixel.x - radius,
 									  std::max(0.0f, centerPixel.y - radius - fontSize - 4 * scale)},
-							"LOCK", fontSize, color);
+							"ロック完了", fontSize, color);
 				}
 			}
 		}
 		if (snapshot.selected == Engine::InvalidObjectId) {
 			m_arrowTarget = Engine::InvalidObjectId;
 			m_arrowSeconds = -1;
-			drawLabel(80, 80, "NO TARGET");
+			drawLabel(80, 80, "目標なし");
 		} else if (!snapshot.aim)
-			drawLabel(80, 80, "OUT OF RANGE");
+			drawLabel(80, 80, "射程外");
 		if (snapshot.destroyedSeconds > 0)
-			drawLabel(800, 720, "DESTROYED");
+			drawLabel(800, 720, "撃墜");
 		else if (snapshot.hitSeconds > 0)
-			drawLabel(920, 640, "HIT");
-		if (snapshot.allDownSeconds > 0) drawLabel(760, 180, "ALL TARGETS DOWN");
+			drawLabel(920, 640, "命中");
+		if (snapshot.allDownSeconds > 0) drawLabel(760, 180, "全目標撃破");
 	}
 
 	void CombatHudPresenter::DrawMissionStatus(
@@ -243,58 +243,60 @@ namespace Game {
 			std::string objective;
 			switch (phase) {
 			case MissionPhase::Patrol:
-				objective = "1/3 DESTROY PATROL";
+				objective = "1/3：哨戒機をすべて撃墜せよ";
 				break;
 			case MissionPhase::CarrierAttack:
-				objective = "2/3 DESTROY CARRIER";
+				objective = "2/3：ミサイルで敵空母を撃破せよ";
 				break;
 			case MissionPhase::FinalFighters:
-				objective = "3/3 DESTROY REMAINING FIGHTERS";
+				objective = "3/3：残りの敵戦闘機をすべて撃墜せよ";
 				break;
 			case MissionPhase::Commander:
-				objective = "3/3 DESTROY SQUADRON LEADER";
+				objective = "3/3：敵編隊長機を撃墜せよ";
 				break;
 			case MissionPhase::Complete:
-				objective = "BASE SECURED";
+				objective = "任務達成";
 				break;
 			case MissionPhase::Failed:
-				objective = "MISSION FAILED";
+				objective = "任務失敗";
 				break;
 			}
 			drawLabel(540, 116, objective);
-			drawLabel(540, 160, "AIRCRAFT REMAINING: " + std::to_string(snapshot.enemies.size()));
-			if (snapshot.deckDisabled) drawLabel(540, 204, "CARRIER DESTROYED");
+			drawLabel(540, 160, "残りの敵機：" + std::to_string(snapshot.enemies.size()));
+			if (snapshot.deckDisabled) drawLabel(540, 204, "敵空母を撃破");
 			if (snapshot.missionMessageSeconds > 0 && snapshot.result == CombatResult::Active) {
 				if (phase == MissionPhase::Patrol)
-					drawLabel(540, 248, "LMB: CANNON  TAB: TARGET  WASD: FLIGHT");
+					drawLabel(540, 248, "左クリック：機銃  Tab：目標切替  WASD：操縦");
 				else if (phase == MissionPhase::CarrierAttack)
-					drawLabel(540, 248, "AIM AT CARRIER TO LOCK  RMB: FIRE MISSILE");
+					drawLabel(540, 248, "敵空母を照準に捉え、ロック後に右クリックで発射");
+				else if (phase == MissionPhase::FinalFighters)
+					drawLabel(540, 248, "艦隊の外の交戦区域で、敵戦闘機を撃墜せよ");
 				else
-					drawLabel(540, 248, "ENGAGE OUTSIDE THE FLEET - NO MORE REINFORCEMENTS");
+					drawLabel(540, 248, "敵編隊長機が出現。撃墜して任務を完了せよ");
 			}
 			if (snapshot.result == CombatResult::Active && phase != MissionPhase::Patrol) {
 				const auto marker = projector.Project(snapshot.objectivePosition);
 				if (marker.visible) {
 					list.Circle(marker.pixel, 26 * scale, 1, lineWidth * 2, color);
 					list.Text({marker.pixel.x + 32 * scale, marker.pixel.y},
-						phase == MissionPhase::CarrierAttack ? "CARRIER" : "COMBAT AREA", fontSize, color);
+						phase == MissionPhase::CarrierAttack ? "敵空母" : "交戦区域", fontSize, color);
 				} else
 					DrawOffscreenIndicator(marker, color, view, list);
 			}
 			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active) {
-				std::string lock = "CARRIER: AIM TO LOCK";
+				std::string lock = "敵空母：照準を合わせてロック";
 				if (snapshot.lockState == LockState::Locked)
-					lock = "CARRIER: LOCKED";
+					lock = "敵空母：ロック完了";
 				else if (snapshot.lockState == LockState::Acquiring)
-					lock = "CARRIER: LOCK " + std::to_string(int(snapshot.acquireProgress * 100)) + "%";
+					lock = "敵空母：ロック中 " + std::to_string(int(snapshot.acquireProgress * 100)) + "%";
 				drawStatus(236, lock);
 				std::ostringstream bomb;
-				bomb << "MISSILE " << snapshot.carrierMissileAmmo << "/2 ";
+				bomb << "ミサイル " << snapshot.carrierMissileAmmo << "/2 ";
 				if (snapshot.missileCooldownSeconds <= 0)
-					bomb << "[RMB]";
+					bomb << "[右クリック]";
 				else
-					bomb << "RELOAD " << std::fixed << std::setprecision(1) << snapshot.missileCooldownSeconds
-						 << "s";
+					bomb << "再装填 " << std::fixed << std::setprecision(1) << snapshot.missileCooldownSeconds
+						 << "秒";
 				drawStatus(188, bomb.str());
 				if (snapshot.missileImpactPoint) {
 					const auto impact = projector.Project(*snapshot.missileImpactPoint);
@@ -387,7 +389,7 @@ namespace Game {
 		list.Line(ridge, left, lineWidth, ridgeColor);
 		list.Line(ridge, right, lineWidth, ridgeColor);
 		if (behind) {
-			constexpr std::string_view label = "BEHIND";
+			constexpr std::string_view label = "後方";
 			const float labelSize = 24 * scale;
 			list.Text({anchor.x - Engine::HudDrawList::MeasureTextWidth(label, labelSize) * 0.5f,
 						  anchor.y + 70 * scale},
