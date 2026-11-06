@@ -90,7 +90,7 @@ namespace Game {
 				DWORD length = 0;
 				if (FAILED(buffer->Lock(&data, nullptr, &length)))
 					return false;
-				// Bound startup memory use even if a damaged file claims an excessive duration.
+				// 破損ファイルでも起動時のメモリ使用量を制限する
 				if (decoded.samples.size() + length > 64 * 1024 * 1024) {
 					buffer->Unlock();
 					return false;
@@ -177,7 +177,7 @@ namespace Game {
 			StopVoice(voice);
 		StopVoice(m_warningVoice);
 		m_loopPlaying = {};
-		m_warningCountdown = 0;
+		m_warningCountdownSeconds = 0;
 		m_warningKind = 0;
 	}
 
@@ -228,19 +228,25 @@ namespace Game {
 			ResetPlayback();
 		SetLoop(0, ClipKind::Flight, state.flying, kFlightVolume);
 		SetLoop(1, ClipKind::Gun, state.flying && state.gunFiring, kGunVolume);
-		const int warning = !state.flying ? 0 : missileWarning ? 2 : lockWarning ? 1 : 0;
+		UpdateWarning(state.flying, lockWarning, missileWarning, deltaSeconds);
+		PlayEvents(state, hitCount);
+	}
+	void CombatAudio::UpdateWarning(bool flying, bool lockWarning, bool missileWarning, float deltaSeconds) {
+		const int warning = !flying ? 0 : missileWarning ? 2 : lockWarning ? 1 : 0;
 		if (warning != m_warningKind) {
 			StopVoice(m_warningVoice);
 			m_warningKind = warning;
-			m_warningCountdown = 0;
+			m_warningCountdownSeconds = 0;
 		}
 		if (std::isfinite(deltaSeconds) && deltaSeconds > 0)
-			m_warningCountdown -= std::min(deltaSeconds, 0.25f);
-		if (warning && m_warningCountdown <= 0) {
+			m_warningCountdownSeconds -= std::min(deltaSeconds, 0.25f);
+		if (warning && m_warningCountdownSeconds <= 0) {
 			Play(missileWarning ? m_missileWarning : m_lockWarning, kWarningVolume, true);
-			m_warningCountdown = missileWarning ? 0.22f : 0.65f;
+			m_warningCountdownSeconds = missileWarning ? 0.22f : 0.65f;
 		}
-		// Collapse same-kind events within a frame to avoid abrupt volume increases.
+	}
+	void CombatAudio::PlayEvents(const CombatAudioState& state, unsigned hitCount) {
+		// 同じフレームの同種イベントをまとめ、急な音量増加を防ぐ
 		if (state.missileLaunches)
 			PlayClip(ClipKind::Launch, kLaunchVolume);
 		if (state.gunHits)
@@ -305,7 +311,7 @@ namespace Game {
 	}
 
 	void CombatAudio::Shutdown() {
-		// XAudio2 keeps references to PCM memory; destroy all voices first.
+		// XAudio2はPCMバッファを参照するため、先にすべてのボイスを破棄する
 		for (auto*& voice : m_voices) {
 			if (voice)
 				voice->DestroyVoice();
@@ -333,7 +339,7 @@ namespace Game {
 		m_comInitialized = false;
 		m_suspended = false;
 		m_loopPlaying = {};
-		m_warningCountdown = 0;
+		m_warningCountdownSeconds = 0;
 		m_warningKind = 0;
 	}
 } // namespace Game

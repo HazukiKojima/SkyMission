@@ -86,6 +86,11 @@ namespace Game {
 	}
 
 	void AircraftCameraController::UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input) {
+		UpdateLookOffset(deltaSeconds, input);
+		UpdateFollowOrientation(deltaSeconds);
+		UpdateFollowPosition(deltaSeconds);
+	}
+	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
 		if (input.IsKeyDown('Z')) {
 			m_lookYaw = std::remainder(
 				m_lookYaw - static_cast<float>(input.mouseDeltaX) * m_mouseSensitivity, XM_2PI);
@@ -97,7 +102,8 @@ namespace Game {
 			m_lookYaw *= decay;
 			m_lookPitch *= decay;
 		}
-		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
+	}
+	void AircraftCameraController::UpdateFollowOrientation(float deltaSeconds) {
 		XMVECTOR followDirection = XMVector3Normalize(XMLoadFloat3(&m_followHeading));
 		if (!m_followPitchInputActive) {
 			const XMVECTOR forward = XMLoadFloat3(&m_followForward);
@@ -119,6 +125,9 @@ namespace Game {
 			std::clamp(std::atan2(XMVectorGetY(forward), horizontalForwardLength) * 0.4f, -0.35f, 0.35f);
 		const float pitchBlend = 1.0f - std::exp(-m_followDirectionSmoothing * deltaSeconds);
 		m_followCameraPitch += (targetPitch - m_followCameraPitch) * pitchBlend;
+	}
+	void AircraftCameraController::UpdateFollowPosition(float deltaSeconds) {
+		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
 		const float orbitYaw = m_followCameraYaw + m_lookYaw;
 		const float orbitPitch = std::clamp(m_followCameraPitch + m_lookPitch, -1.15f, 1.15f);
 		const float pitchCosine = std::cos(orbitPitch);

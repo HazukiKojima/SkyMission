@@ -97,8 +97,13 @@ namespace Game {
 				&position, XMVectorLerp(XMLoadFloat3(&start), XMLoadFloat3(&projectile.position), *first));
 			XMFLOAT3 direction;
 			XMStoreFloat3(&direction, XMVector3Normalize(XMLoadFloat3(&projectile.velocity)));
-			m_hits.push_back({hit, frameOffset + *first * valid, position, direction, ProjectileKind::Gun,
-				projectile.source, projectile.damage});
+			m_hits.push_back({.target = hit,
+				.frameSeconds = frameOffset + *first * valid,
+				.position = position,
+				.direction = direction,
+				.kind = ProjectileKind::Gun,
+				.source = projectile.source,
+				.damage = projectile.damage});
 			// 接触点を終端にして、敵を貫く光の筋を残さない
 			AddTracer(projectile, position);
 			return false;
@@ -153,7 +158,8 @@ namespace Game {
 		projectile.damage = damage;
 		XMFLOAT4X4 transform;
 		XMStoreFloat4x4(&transform,
-			XMLoadFloat4x4(&m_modelRotation) * rotation * XMMatrixTranslation(position.x, position.y, position.z));
+			XMLoadFloat4x4(&m_modelRotation) * rotation *
+				XMMatrixTranslation(position.x, position.y, position.z));
 		projectile.objectId = scene.AddObject(m_model, transform);
 		m_projectiles.push_back(projectile);
 		return true;

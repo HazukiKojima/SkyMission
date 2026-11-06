@@ -382,7 +382,10 @@ namespace Game {
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
 			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
-			.bomb = LoadBomb(reader, paths.bomb.empty() ? paths.environment.parent_path().parent_path() / L"Ammunition/Bomb/ammunition.json" : paths.bomb),
+			.bomb = LoadBomb(reader,
+				paths.bomb.empty()
+					? paths.environment.parent_path().parent_path() / L"Ammunition/Bomb/ammunition.json"
+					: paths.bomb),
 			.combat = LoadCombatSettings(
 				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),
 			.hud =

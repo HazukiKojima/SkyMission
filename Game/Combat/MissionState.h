@@ -22,9 +22,9 @@ namespace Game {
 			if (patrolCount < 1 || patrolCount > 8 || finalFighterCount < 1 || finalFighterCount > 8 ||
 				maxHostileProjectiles < 4 || maxHostileProjectiles > 512)
 				throw std::invalid_argument("Mission aircraft/projectile counts outside valid ranges");
-			for (float value : {carrierHealth, bombDamage, bombReloadSeconds, carrierMissileSpeed, commanderHealthMultiplier,
-					 enemyGunSpeed, enemyGunInterval, commanderGunInterval, aaRange, aaInterval,
-					 deckHeightFraction, deckWidthFraction, deckLengthFraction})
+			for (float value : {carrierHealth, bombDamage, bombReloadSeconds, carrierMissileSpeed,
+					 commanderHealthMultiplier, enemyGunSpeed, enemyGunInterval, commanderGunInterval,
+					 aaRange, aaInterval, deckHeightFraction, deckWidthFraction, deckLengthFraction})
 				if (!std::isfinite(value) || value <= 0)
 					throw std::invalid_argument("Mission settings must be positive and finite");
 			if (deckHeightFraction > 1 || deckWidthFraction > 1 || deckLengthFraction > 1)
@@ -62,7 +62,9 @@ namespace Game {
 			m_carrierHealth = std::max(0.0f, m_carrierHealth - damage);
 			return true;
 		}
-		void ConfirmDeckHit() { ApplyCarrierDamage(m_carrierHealth); }
+		void ConfirmDeckHit() {
+			ApplyCarrierDamage(m_carrierHealth);
+		}
 		// 1回の呼び出しで最大1段階進め、フェーズが変化した場合にtrueを返す
 		// 完了・失敗は終端状態。自機撃墜は敵残数より優先して失敗へ移る
 		bool Advance(size_t remainingAircraft, bool playerAlive) {

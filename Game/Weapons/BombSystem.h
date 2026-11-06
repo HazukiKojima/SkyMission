@@ -15,9 +15,15 @@ namespace Game {
 		// ロック状態の確認は呼び出し側で行い、targetには誘導先のIDを渡す
 		bool TryLaunch(Engine::Scene& scene, const DirectX::XMFLOAT3& position,
 			const DirectX::XMFLOAT3& velocity, const DirectX::XMFLOAT3& forward, Engine::ObjectId target);
-		unsigned GetAmmo() const { return m_ammo; }
+		unsigned GetAmmo() const {
+			return m_ammo;
+		}
 		// 航跡サンプルをまとめて取り出し、内部の未取得分を消去する
-		std::vector<DirectX::XMFLOAT3> TakeTrail() { auto result = std::move(m_trail); m_trail.clear(); return result; }
+		std::vector<DirectX::XMFLOAT3> TakeTrail() {
+			auto result = std::move(m_trail);
+			m_trail.clear();
+			return result;
+		}
 		void Update(Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& deck);
 		bool TryDrop(Engine::Scene& scene, const DirectX::XMFLOAT3& aircraftPosition,
 			const DirectX::XMFLOAT3& aircraftVelocity);

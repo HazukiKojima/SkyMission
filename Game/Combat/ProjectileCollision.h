@@ -7,4 +7,4 @@ namespace Game {
 	// 交差しない場合や対象のworld行列が逆変換不能な場合はnulloptを返す
 	std::optional<float> IntersectMovingTarget(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end,
 		const CollisionTarget& target, float startFraction, float endFraction);
-}
+} // namespace Game

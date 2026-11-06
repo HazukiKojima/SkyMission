@@ -207,7 +207,8 @@ namespace Game {
 	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, bool next, float dt) {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
-				const CombatTarget carrier{m_mission.GetCarrierId(), *center, {}, "CARRIER", m_mission.GetCarrierHealth()};
+				const CombatTarget carrier{
+					m_mission.GetCarrierId(), *center, {}, "CARRIER", m_mission.GetCarrierHealth()};
 				m_targeting.Update(std::span(&carrier, 1), geometry.muzzle, geometry.forward, next, dt);
 				return;
 			}
@@ -322,8 +323,10 @@ namespace Game {
 		for (const auto& enemy : m_enemies)
 			if (const auto* object = m_scene.FindObject(enemy.objectId);
 				object && object->model->GetLocalBounds())
-				targets.push_back({enemy.objectId, *object->model->GetLocalBounds(), enemy.previousPosition,
-					object->worldTransform});
+				targets.push_back({.id = enemy.objectId,
+					.bounds = *object->model->GetLocalBounds(),
+					.previousPosition = enemy.previousPosition,
+					.world = object->worldTransform});
 		return targets;
 	}
 
@@ -339,8 +342,12 @@ namespace Game {
 			XMFLOAT3 worldCenter;
 			XMStoreFloat3(&worldCenter,
 				XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&object->worldTransform)));
-			geometry.enemies.push_back({enemy.objectId, worldCenter, enemy.flightModel.GetVelocity(),
-				enemy.name, enemy.health, enemy.flightModel.GetHeading()});
+			geometry.enemies.push_back({.id = enemy.objectId,
+				.center = worldCenter,
+				.velocity = enemy.flightModel.GetVelocity(),
+				.name = enemy.name,
+				.health = enemy.health,
+				.heading = enemy.flightModel.GetHeading()});
 		}
 		geometry.forward = m_player.GetForward();
 		geometry.muzzle = m_player.GetPosition();
@@ -374,16 +381,17 @@ namespace Game {
 			DirectX::XMStoreFloat3(&m_combat.objectivePosition,
 				DirectX::XMVector3TransformCoord(
 					DirectX::XMLoadFloat3(&center), DirectX::XMLoadFloat4x4(&deck->world)));
-			m_combat.bombImpactPoint =
-				[&] {
-					auto release = m_player.GetPosition();
-					release.y -= BombTuning::releaseOffsetMeters;
-					DirectX::XMFLOAT3 velocity;
-					const auto forward = m_player.GetForward(), inherited = m_player.GetVelocity();
-					DirectX::XMStoreFloat3(&velocity, DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&inherited),
-						DirectX::XMVectorScale(DirectX::XMLoadFloat3(&forward), m_mission.GetSettings().carrierMissileSpeed)));
-					return CarrierMissileFlight{release, velocity}.Predict(m_combat.objectivePosition.y);
-				}();
+			m_combat.bombImpactPoint = [&] {
+				auto release = m_player.GetPosition();
+				release.y -= BombTuning::releaseOffsetMeters;
+				DirectX::XMFLOAT3 velocity;
+				const auto forward = m_player.GetForward(), inherited = m_player.GetVelocity();
+				DirectX::XMStoreFloat3(&velocity,
+					DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&inherited),
+						DirectX::XMVectorScale(
+							DirectX::XMLoadFloat3(&forward), m_mission.GetSettings().carrierMissileSpeed)));
+				return CarrierMissileFlight{release, velocity}.Predict(m_combat.objectivePosition.y);
+			}();
 		}
 		if (m_mission.GetPhase() == MissionPhase::FinalFighters ||
 			m_mission.GetPhase() == MissionPhase::Commander)
@@ -413,12 +421,15 @@ namespace Game {
 		});
 		std::vector<Engine::ObjectId> destroyed;
 		for (const auto& hit : hits) {
-			if (hit.target == m_mission.GetCarrierId() && (hit.kind == ProjectileKind::Rocket || hit.kind == ProjectileKind::Bomb)) {
+			if (hit.target == m_mission.GetCarrierId() &&
+				(hit.kind == ProjectileKind::Rocket || hit.kind == ProjectileKind::Bomb)) {
 				if (m_mission.ApplyCarrierDamage(hit.damage)) {
 					if (m_mission.IsDeckDisabled()) {
 						++m_combat.audio.shipExplosions;
-						if (auto center = m_mission.GetCarrierCenter(m_scene)) m_effects.SpawnCarrierExplosion(*center);
-					} else m_effects.SpawnExplosion(hit.position, {});
+						if (auto center = m_mission.GetCarrierCenter(m_scene))
+							m_effects.SpawnCarrierExplosion(*center);
+					} else
+						m_effects.SpawnExplosion(hit.position, {});
 				}
 				continue;
 			}
@@ -426,8 +437,10 @@ namespace Game {
 				if (m_combat.playerHealth <= 0)
 					continue;
 				m_combat.playerHealth = std::max(0.0f, m_combat.playerHealth - hit.damage);
-				if (hit.kind == ProjectileKind::Gun) ++m_combat.audio.gunHits;
-				else ++m_combat.audio.missileHits;
+				if (hit.kind == ProjectileKind::Gun)
+					++m_combat.audio.gunHits;
+				else
+					++m_combat.audio.missileHits;
 				m_combat.playerHitSeconds = 0.7f;
 				m_combat.playerHitDirection = {-hit.direction.x, -hit.direction.y, -hit.direction.z};
 				m_effects.SpawnExplosion(hit.position, m_player.GetVelocity());

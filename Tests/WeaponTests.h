@@ -5,9 +5,9 @@
 void TestHostileProjectileOrientation() {
 	using namespace DirectX;
 	for (const XMFLOAT3 modelForward : {XMFLOAT3{0, 1, 0}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 0, -1}})
-		for (const XMFLOAT3 velocity : {XMFLOAT3{1000, 0, 0}, XMFLOAT3{-1000, 0, 0},
-			XMFLOAT3{0, 1000, 0}, XMFLOAT3{0, -1000, 0}, XMFLOAT3{0, 0, 1000},
-			XMFLOAT3{0, 0, -1000}, XMFLOAT3{600, 300, -800}, XMFLOAT3{-300, -400, 700}}) {
+		for (const XMFLOAT3 velocity : {XMFLOAT3{1000, 0, 0}, XMFLOAT3{-1000, 0, 0}, XMFLOAT3{0, 1000, 0},
+				 XMFLOAT3{0, -1000, 0}, XMFLOAT3{0, 0, 1000}, XMFLOAT3{0, 0, -1000}, XMFLOAT3{600, 300, -800},
+				 XMFLOAT3{-300, -400, 700}}) {
 			GunSettings settings;
 			settings.muzzleNames = {"a", "b", "c", "d"};
 			ProjectileSystem projectiles;
@@ -17,9 +17,10 @@ void TestHostileProjectileOrientation() {
 				"Hostile projectile did not spawn");
 			for (int frame = 0; frame < 2; ++frame) {
 				const auto& world = scene.GetObjects().front().worldTransform;
-				const auto axis = XMVector3Normalize(XMVector3TransformNormal(
-					XMLoadFloat3(&modelForward), XMLoadFloat4x4(&world)));
-				Require(XMVectorGetX(XMVector3Dot(axis, XMVector3Normalize(XMLoadFloat3(&velocity)))) > 0.99999f,
+				const auto axis = XMVector3Normalize(
+					XMVector3TransformNormal(XMLoadFloat3(&modelForward), XMLoadFloat4x4(&world)));
+				Require(
+					XMVectorGetX(XMVector3Dot(axis, XMVector3Normalize(XMLoadFloat3(&velocity)))) > 0.99999f,
 					"Hostile projectile model pointed sideways relative to its velocity");
 				projectiles.Update(scene, 0.01f);
 			}

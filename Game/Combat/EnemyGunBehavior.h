@@ -16,7 +16,8 @@ namespace Game {
 	class EnemyGunPattern {
 	  public:
 		bool Update(float dt, size_t slot) {
-			if (!std::isfinite(dt) || dt <= 0) return false;
+			if (!std::isfinite(dt) || dt <= 0)
+				return false;
 			if (!m_initialized) {
 				m_remaining = 0.35f + EnemyVariation(slot, 0, 11) * 2.4f;
 				m_initialized = true;
@@ -29,11 +30,16 @@ namespace Game {
 			}
 			return m_burst;
 		}
-		uint32_t GetShotIndex() const { return m_shots; }
-		void NotifyShot() { ++m_shots; }
+		uint32_t GetShotIndex() const {
+			return m_shots;
+		}
+		void NotifyShot() {
+			++m_shots;
+		}
 		float Interval(float base, size_t slot) const {
 			return base * (0.85f + EnemyVariation(slot, m_shots, 37) * 0.4f);
 		}
+
 	  private:
 		float m_remaining = 0;
 		uint32_t m_sequence = 0, m_shots = 0;
@@ -41,11 +47,12 @@ namespace Game {
 	};
 
 	inline DirectX::XMFLOAT3 EnemyGunDirection(const DirectX::XMFLOAT3& position,
-		const DirectX::XMFLOAT3& velocity, const CombatTarget& target, float speed,
-		size_t slot, uint32_t shot) {
+		const DirectX::XMFLOAT3& velocity, const CombatTarget& target, float speed, size_t slot,
+		uint32_t shot) {
 		using namespace DirectX;
 		auto direction = XMLoadFloat3(&target.center) - XMLoadFloat3(&position);
-		if (XMVectorGetX(XMVector3LengthSq(direction)) < 0.0001f) return {0, 0, -1};
+		if (XMVectorGetX(XMVector3LengthSq(direction)) < 0.0001f)
+			return {0, 0, -1};
 		direction = XMVector3Normalize(direction);
 		if (const auto aim = SolveGunAim(position, velocity, target, speed, 5)) {
 			const float lead = 0.45f + EnemyVariation(slot, shot, 41) * 0.2f;
@@ -54,11 +61,13 @@ namespace Game {
 		const float yaw = XMConvertToRadians((EnemyVariation(slot, shot, 53) * 2 - 1) * 2.2f);
 		const float pitch = XMConvertToRadians((EnemyVariation(slot, shot, 67) * 2 - 1) * 1.6f);
 		auto right = XMVector3Cross(direction, XMVectorSet(0, 1, 0, 0));
-		if (XMVectorGetX(XMVector3LengthSq(right)) < 0.0001f) right = XMVectorSet(1, 0, 0, 0);
-		direction = XMVector3TransformNormal(direction, XMMatrixRotationAxis(XMVector3Normalize(right), pitch));
+		if (XMVectorGetX(XMVector3LengthSq(right)) < 0.0001f)
+			right = XMVectorSet(1, 0, 0, 0);
+		direction =
+			XMVector3TransformNormal(direction, XMMatrixRotationAxis(XMVector3Normalize(right), pitch));
 		direction = XMVector3TransformNormal(direction, XMMatrixRotationY(yaw));
 		XMFLOAT3 result;
 		XMStoreFloat3(&result, XMVector3Normalize(direction));
 		return result;
 	}
-}
+} // namespace Game

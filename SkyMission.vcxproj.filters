@@ -192,6 +192,9 @@
     <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp">
       <Filter>Game\Aircraft</Filter>
     </ClCompile>
+    <ClCompile Include="Game\Aircraft\AircraftAIController.cpp">
+      <Filter>Game\Aircraft</Filter>
+    </ClCompile>
     <ClCompile Include="Game\Audio\CombatAudio.cpp">
       <Filter>Game\Audio</Filter>
     </ClCompile>

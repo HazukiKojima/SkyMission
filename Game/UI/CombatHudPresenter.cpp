@@ -86,8 +86,8 @@ namespace Game {
 			auto direction = cameraDirection / distance;
 			XMFLOAT3 d;
 			XMStoreFloat3(&d, direction);
-			const bool continuing = m_arrowTarget == snapshot.selected &&
-				m_arrowSeconds >= 0 && snapshot.elapsedSeconds >= m_arrowSeconds;
+			const bool continuing = m_arrowTarget == snapshot.selected && m_arrowSeconds >= 0 &&
+				snapshot.elapsedSeconds >= m_arrowSeconds;
 			if (!continuing)
 				m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
 			const bool behind = d.z < 0;
@@ -102,8 +102,7 @@ namespace Game {
 				const float blend = std::clamp(-d.z / 0.35f, 0.0f, 1.0f);
 				direction = XMVector3Normalize(XMVectorLerp(direction, turn, blend));
 				XMStoreFloat3(&d, direction);
-			}
-			else
+			} else
 				m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
 			// 方向変更時は中央の周囲を連続して回す。左右の座標を直接切り替えない
 			const float lateral = std::hypot(d.x, d.y);
@@ -155,7 +154,8 @@ namespace Game {
 				constexpr std::string_view label = "BEHIND";
 				const float labelSize = 24 * scale;
 				list.Text({anchor.x - Engine::HudDrawList::MeasureTextWidth(label, labelSize) * 0.5f,
-					anchor.y + 70 * scale}, label, labelSize, arrowColor);
+							  anchor.y + 70 * scale},
+					label, labelSize, arrowColor);
 			}
 		};
 		const auto drawFlightValue = [&](float x, bool pointsRight, std::string_view label, float value) {
@@ -252,9 +252,8 @@ namespace Game {
 				const float frameWidth = selected ? lineWidth * 1.5f : lineWidth;
 				// 選択枠だけを毎秒2回明滅させ、暗い瞬間も位置を追える濃さを残す
 				const float pulse = 0.5f + 0.5f * std::cos(snapshot.elapsedSeconds * XM_2PI * 2);
-				const auto frameColor = selected
-					? HudStyle::Faded(HudStyle::Selected, 0.2f + 0.8f * pulse)
-					: color;
+				const auto frameColor =
+					selected ? HudStyle::Faded(HudStyle::Selected, 0.2f + 0.8f * pulse) : color;
 				for (float x : {-1.0f, 1.0f})
 					for (float y : {-1.0f, 1.0f}) {
 						const XMFLOAT2 a{centerPixel.x + x * radius, centerPixel.y + y * radius};
@@ -287,8 +286,7 @@ namespace Game {
 			m_arrowTarget = Engine::InvalidObjectId;
 			m_arrowSeconds = -1;
 			drawLabel(80, 80, "NO TARGET");
-		}
-		else if (!snapshot.aim)
+		} else if (!snapshot.aim)
 			drawLabel(80, 80, "OUT OF RANGE");
 		if (snapshot.destroyedSeconds > 0)
 			drawLabel(800, 720, "DESTROYED");
@@ -336,15 +334,16 @@ namespace Game {
 				if (marker.visible) {
 					list.Circle(marker.pixel, 26 * scale, 1, lineWidth * 2, color);
 					list.Text({marker.pixel.x + 32 * scale, marker.pixel.y},
-						phase == MissionPhase::CarrierAttack ? "CARRIER" : "COMBAT AREA", fontSize,
-						color);
+						phase == MissionPhase::CarrierAttack ? "CARRIER" : "COMBAT AREA", fontSize, color);
 				} else
 					drawOffscreenIndicator(marker, color);
 			}
 			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active) {
 				std::string lock = "CARRIER: AIM TO LOCK";
-				if (snapshot.lockState == LockState::Locked) lock = "CARRIER: LOCKED";
-				else if (snapshot.lockState == LockState::Acquiring) lock = "CARRIER: LOCK " + std::to_string(int(snapshot.acquireProgress * 100)) + "%";
+				if (snapshot.lockState == LockState::Locked)
+					lock = "CARRIER: LOCKED";
+				else if (snapshot.lockState == LockState::Acquiring)
+					lock = "CARRIER: LOCK " + std::to_string(int(snapshot.acquireProgress * 100)) + "%";
 				drawStatus(236, lock);
 				std::ostringstream bomb;
 				bomb << "MISSILE " << snapshot.carrierMissileAmmo << "/2 ";
