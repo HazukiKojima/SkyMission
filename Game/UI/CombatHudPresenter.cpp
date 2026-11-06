@@ -85,6 +85,12 @@ namespace Game {
 		drawStatus(108,
 			"機体 " + std::to_string(static_cast<int>(snapshot.playerHealth)) + "/" +
 				std::to_string(static_cast<int>(snapshot.playerMaxHealth)));
+		if (snapshot.result == CombatResult::Active && snapshot.enemyFireWarningSeconds > 0) {
+			constexpr std::string_view warning = "敵機射撃！";
+			const float textWidth = Engine::HudDrawList::MeasureTextWidth(warning, fontSize);
+			list.Text(
+				{(view.width - textWidth) * 0.5f, offsetY + 330 * scale}, warning, fontSize, HudStyle::Alert);
+		}
 		if (snapshot.result != CombatResult::Active &&
 			(snapshot.result != CombatResult::Victory || snapshot.allDownSeconds <= 0)) {
 			drawLabel(740, 380, snapshot.result == CombatResult::Victory ? "任務達成" : "自機撃墜");

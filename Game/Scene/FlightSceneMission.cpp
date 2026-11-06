@@ -130,6 +130,7 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateEnemyGuns() {
+		constexpr float kEnemyFireWarningDurationSeconds = 1.0f;
 		for (auto& enemy : m_enemies) {
 			if (!enemy.fire || enemy.weaponCooldownSeconds > 0) continue;
 			const CombatTarget player{m_playerId, m_player.GetPosition(), m_player.GetVelocity()};
@@ -150,6 +151,7 @@ namespace Game {
 					: m_enemyGunSettings.fireInterval;
 				enemy.weaponCooldownSeconds = interval;
 				enemy.gunPattern.NotifyShot();
+				m_combat.enemyFireWarningSeconds = kEnemyFireWarningDurationSeconds;
 			}
 		}
 	}
