@@ -75,14 +75,11 @@ namespace Engine {
 	}
 
 	void RendererAssets::ReleaseUploadResources() {
-		if (m_skySphere)
-			m_skySphere->ReleaseUploadResources();
+		if (m_skySphere) m_skySphere->ReleaseUploadResources();
 		for (const auto& texture :
 			{m_oceanTexture, m_oceanNormalTexture, m_oceanNormalTexture2, m_skyTexture})
-			if (texture)
-				texture->ReleaseUploadResources();
+			if (texture) texture->ReleaseUploadResources();
 		for (const auto& [id, model] : m_models)
-			if (model)
-				model->ReleaseUploadResources();
+			if (model) model->ReleaseUploadResources();
 	}
 } // namespace Engine

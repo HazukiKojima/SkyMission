@@ -77,8 +77,7 @@ namespace Engine {
 
 	// リソースを安全に解放するため、投入済みコマンドのGPU完了を待つ
 	void CommandContext::WaitForGpu() {
-		if (!m_targetQueue || !m_fence)
-			return;
+		if (!m_targetQueue || !m_fence) return;
 
 		ThrowIfFailed(m_targetQueue->Signal(m_fence.Get(), m_fenceValues[m_currentFrameIndex]));
 		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_currentFrameIndex], m_fenceEvent));

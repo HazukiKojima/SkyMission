@@ -16,8 +16,7 @@ namespace Engine {
 		AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 		m_hwnd = CreateWindowExW(0, wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
 			CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, this);
-		if (!m_hwnd)
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+		if (!m_hwnd) ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 
 		// 前面時のみ受信し、ウィンドウ操作やAlt+F4用の従来メッセージは残す
 		const RAWINPUTDEVICE devices[] = {
@@ -32,13 +31,11 @@ namespace Engine {
 
 	Window::~Window() {
 		m_onResize = {};
-		if (m_hwnd && IsWindow(m_hwnd))
-			DestroyWindow(m_hwnd);
+		if (m_hwnd && IsWindow(m_hwnd)) DestroyWindow(m_hwnd);
 	}
 
 	InputSnapshot Window::ConsumeInput() {
-		if (GetForegroundWindow() != m_hwnd)
-			DeactivateInput();
+		if (GetForegroundWindow() != m_hwnd) DeactivateInput();
 		return m_input.ConsumeFrame();
 	}
 
@@ -49,25 +46,21 @@ namespace Engine {
 
 	void Window::BeginCameraLook() {
 		// 標準のウィンドウ移動・サイズ変更が所有するキャプチャは奪わない。
-		if (m_cameraMouseCaptured || GetCapture() != nullptr)
-			return;
+		if (m_cameraMouseCaptured || GetCapture() != nullptr) return;
 		SetCapture(m_hwnd);
 		m_cameraMouseCaptured = GetCapture() == m_hwnd;
 	}
 
 	void Window::EndCameraLook() {
-		if (!m_cameraMouseCaptured)
-			return;
+		if (!m_cameraMouseCaptured) return;
 		m_cameraMouseCaptured = false;
-		if (GetCapture() == m_hwnd)
-			ReleaseCapture();
+		if (GetCapture() == m_hwnd) ReleaseCapture();
 	}
 
 	void Window::UnregisterRawInput() {
 		// プロセス共通の入力登録を、別のWindowから解除しない
 		UINT count = 0;
-		if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
-			return;
+		if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1)) return;
 		std::vector<RAWINPUTDEVICE> registered(count), remove;
 		if (count &&
 			GetRegisteredRawInputDevices(registered.data(), &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
@@ -88,10 +81,8 @@ namespace Engine {
 			return;
 		}
 		UINT size = 0;
-		if (GetRawInputData(handle, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER)) == UINT(-1))
-			return;
-		if (size < sizeof(RAWINPUTHEADER))
-			return;
+		if (GetRawInputData(handle, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER)) == UINT(-1)) return;
+		if (size < sizeof(RAWINPUTHEADER)) return;
 		// GetRawInputDataの受信領域をDWORD境界にそろえる
 		std::vector<DWORD> storage((size + sizeof(DWORD) - 1) / sizeof(DWORD));
 		const UINT bytes = GetRawInputData(handle, RID_INPUT, storage.data(), &size, sizeof(RAWINPUTHEADER));
@@ -133,8 +124,7 @@ namespace Engine {
 				break;
 			case WM_KEYUP:
 				if (wParam == 'Z') {
-					if (!self->m_input.IsKeyDown('Z'))
-						self->EndCameraLook();
+					if (!self->m_input.IsKeyDown('Z')) self->EndCameraLook();
 					return 0;
 				}
 				break;
@@ -155,14 +145,12 @@ namespace Engine {
 				self->DeactivateInput();
 				break;
 			case WM_ACTIVATEAPP:
-				if (!wParam)
-					self->DeactivateInput();
+				if (!wParam) self->DeactivateInput();
 				break;
 			case WM_INPUT_DEVICE_CHANGE:
 				if (wParam == GIDC_REMOVAL) {
 					self->m_input.ForgetDevice(reinterpret_cast<HANDLE>(lParam));
-					if (!self->m_input.IsKeyDown('Z'))
-						self->EndCameraLook();
+					if (!self->m_input.IsKeyDown('Z')) self->EndCameraLook();
 				}
 				return 0;
 			case WM_CAPTURECHANGED:
@@ -178,8 +166,7 @@ namespace Engine {
 			case WM_SIZE:
 				self->m_width = LOWORD(lParam);
 				self->m_height = HIWORD(lParam);
-				if (self->m_onResize)
-					self->m_onResize(self->m_width, self->m_height);
+				if (self->m_onResize) self->m_onResize(self->m_width, self->m_height);
 				return 0;
 			case WM_DESTROY:
 				self->DeactivateInput();

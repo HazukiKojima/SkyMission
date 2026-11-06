@@ -16,18 +16,14 @@ namespace Engine::ModelImport {
 			auto extension = source.extension().wstring();
 			std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
 			// FBX contains its geometry and material definitions; OBJ can depend on an external MTL.
-			if (extension != L".fbx")
-				return {};
+			if (extension != L".fbx") return {};
 			std::error_code error;
 			const auto canonical = std::filesystem::weakly_canonical(source, error);
-			if (error)
-				return {};
+			if (error) return {};
 			const auto size = std::filesystem::file_size(source, error);
-			if (error)
-				return {};
+			if (error) return {};
 			const auto modified = std::filesystem::last_write_time(source, error);
-			if (error)
-				return {};
+			if (error) return {};
 			const auto pathText = canonical.u8string();
 			const auto key = std::string(reinterpret_cast<const char*>(pathText.data()), pathText.size()) +
 				"|scene-v2-static|" + std::to_string(size) + "|" +

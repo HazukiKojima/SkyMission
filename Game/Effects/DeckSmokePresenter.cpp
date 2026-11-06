@@ -7,8 +7,7 @@ namespace Game {
 		const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const {
 		using namespace DirectX;
 		for (const auto& smoke : snapshot.deckSmoke) {
-			if (!context.HasVertexBudget(6))
-				break;
+			if (!context.HasVertexBudget(6)) break;
 			const auto location =
 				XMLoadFloat3(&smoke.position) + XMVectorSet(smoke.age * 12, smoke.age * 65, 0, 0);
 			const EffectRandom random(smoke.position);

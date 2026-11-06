@@ -74,8 +74,7 @@ namespace Game {
 		// 1回の呼び出しで最大1段階進め、フェーズが変化した場合にtrueを返す
 		// 完了・失敗は終端状態。自機撃墜は敵残数より優先して失敗へ移る
 		bool Advance(size_t remainingAircraft, bool playerAlive) {
-			if (m_phase == MissionPhase::Complete || m_phase == MissionPhase::Failed)
-				return false;
+			if (m_phase == MissionPhase::Complete || m_phase == MissionPhase::Failed) return false;
 			const auto before = m_phase;
 			if (!playerAlive)
 				m_phase = MissionPhase::Failed;

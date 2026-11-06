@@ -15,8 +15,7 @@ namespace Engine::HudFont {
 	inline char32_t Next(std::string_view& text) {
 		const auto first = static_cast<unsigned char>(text.front());
 		text.remove_prefix(1);
-		if (first < 0x80)
-			return first;
+		if (first < 0x80) return first;
 		unsigned count = 0;
 		char32_t value = 0, minimum = 0;
 		if (first >= 0xc2 && first <= 0xdf) {
@@ -33,20 +32,17 @@ namespace Engine::HudFont {
 			minimum = 0x10000;
 		} else
 			return U'?';
-		if (text.size() < count)
-			return U'?';
+		if (text.size() < count) return U'?';
 		for (unsigned i = 0; i < count; ++i) {
 			const auto next = static_cast<unsigned char>(text[i]);
-			if ((next & 0xc0) != 0x80)
-				return U'?';
+			if ((next & 0xc0) != 0x80) return U'?';
 			value = (value << 6) | (next & 0x3f);
 		}
 		text.remove_prefix(count);
 		return value < minimum || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff) ? U'?' : value;
 	}
 	inline unsigned Glyph(char32_t character) {
-		if (character >= 32 && character <= 126)
-			return unsigned(character - 32);
+		if (character >= 32 && character <= 126) return unsigned(character - 32);
 		const auto index = Japanese.find(character);
 		return index == Japanese.npos ? unsigned('?' - 32) : AsciiCount + unsigned(index);
 	}

@@ -10,8 +10,7 @@ namespace Game {
 	using namespace DirectX;
 	void CombatHudPresenter::Build(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
-		if (view.width == 0 || view.height == 0)
-			return;
+		if (view.width == 0 || view.height == 0) return;
 		RadarMapPresenter{}.Build(snapshot, view, list);
 		DrawCarrierHealth(snapshot, view, list);
 		DrawFlightStatus(snapshot, view, list);
@@ -171,8 +170,7 @@ namespace Game {
 		for (const auto& enemy : snapshot.enemies) {
 			const auto projected = projector.Project(enemy.center);
 			const bool selected = enemy.id == snapshot.selected;
-			if (selected)
-				DrawEnemyDirection(enemy.center, snapshot, view, list);
+			if (selected) DrawEnemyDirection(enemy.center, snapshot, view, list);
 			if (projected.visible) {
 				const auto centerPixel = projected.pixel;
 				const float radius = (selected ? 32.0f : 22.0f) * scale;
@@ -220,8 +218,7 @@ namespace Game {
 			drawLabel(800, 720, "DESTROYED");
 		else if (snapshot.hitSeconds > 0)
 			drawLabel(920, 640, "HIT");
-		if (snapshot.allDownSeconds > 0)
-			drawLabel(760, 180, "ALL TARGETS DOWN");
+		if (snapshot.allDownSeconds > 0) drawLabel(760, 180, "ALL TARGETS DOWN");
 	}
 
 	void CombatHudPresenter::DrawMissionStatus(
@@ -266,8 +263,7 @@ namespace Game {
 			}
 			drawLabel(540, 116, objective);
 			drawLabel(540, 160, "AIRCRAFT REMAINING: " + std::to_string(snapshot.enemies.size()));
-			if (snapshot.deckDisabled)
-				drawLabel(540, 204, "CARRIER DESTROYED");
+			if (snapshot.deckDisabled) drawLabel(540, 204, "CARRIER DESTROYED");
 			if (snapshot.missionMessageSeconds > 0 && snapshot.result == CombatResult::Active) {
 				if (phase == MissionPhase::Patrol)
 					drawLabel(540, 248, "LMB: CANNON  TAB: TARGET  WASD: FLIGHT");
@@ -324,21 +320,18 @@ namespace Game {
 		const auto worldDirection = XMLoadFloat3(&target) - XMLoadFloat3(&snapshot.muzzle);
 		const auto cameraDirection = XMVector3TransformNormal(worldDirection, XMLoadFloat4x4(&view.view));
 		const float distance = XMVectorGetX(XMVector3Length(cameraDirection));
-		if (!std::isfinite(distance) || distance < 0.001f)
-			return;
+		if (!std::isfinite(distance) || distance < 0.001f) return;
 		auto direction = cameraDirection / distance;
 		XMFLOAT3 d;
 		XMStoreFloat3(&d, direction);
 		const bool continuing = m_arrowTarget == snapshot.selected && m_arrowSeconds >= 0 &&
 			snapshot.elapsedSeconds >= m_arrowSeconds;
-		if (!continuing)
-			m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
+		if (!continuing) m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
 		const bool behind = d.z < 0;
 		if (behind) {
 			// 後方は方位角を展開して旋回方向を示し、奥行きによる矢印の潰れを防ぐ
 			// 真後ろ付近では直前の旋回側を保持し、左右の微小な変化では反転させない
-			if (std::abs(d.x) > 0.5f)
-				m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
+			if (std::abs(d.x) > 0.5f) m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
 			const float yaw = std::abs(std::atan2(d.x, d.z)) * m_rearTurnSide;
 			const float pitch = std::atan2(d.y, std::hypot(d.x, d.z));
 			const auto turn = XMVector3Normalize(XMVectorSet(yaw, pitch, -0.35f, 0));
@@ -412,8 +405,7 @@ namespace Game {
 		const float centerY = view.height * 0.5f;
 		float deltaX = projection.pixel.x - centerX;
 		float deltaY = projection.pixel.y - centerY;
-		if (std::hypot(deltaX, deltaY) < 0.001f)
-			deltaY = 1;
+		if (std::hypot(deltaX, deltaY) < 0.001f) deltaY = 1;
 		const float ratio = 1 /
 			std::max(std::abs(deltaX) / std::max(1.0f, centerX - 50 * scale),
 				std::abs(deltaY) / std::max(1.0f, centerY - 50 * scale));

@@ -25,14 +25,10 @@ namespace Engine {
 			const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 			std::error_code error;
 			const auto fileSize = std::filesystem::file_size(filePath, error);
-			if (error) {
-				return {};
-			}
+			if (error) return {};
 
 			const auto lastWriteTime = std::filesystem::last_write_time(filePath, error);
-			if (error) {
-				return {};
-			}
+			if (error) return {};
 
 			std::filesystem::path normalizedPath = std::filesystem::weakly_canonical(filePath, error);
 			if (error) {
@@ -62,14 +58,11 @@ namespace Engine {
 			mix(useSrgb ? 1 : 0);
 			mix(generateMipmaps ? 1 : 0);
 			mix(invertNormalGreen ? 1 : 0);
-			if (maxDimension != 0)
-				mix(maxDimension);
+			if (maxDimension != 0) mix(maxDimension);
 
 			error.clear();
 			const std::filesystem::path tempDirectory = std::filesystem::temp_directory_path(error);
-			if (error) {
-				return {};
-			}
+			if (error) return {};
 
 			return tempDirectory / L"SkyMissionTextureCache" / (std::to_wstring(hash) + L".dds");
 		}
@@ -98,15 +91,11 @@ namespace Engine {
 		std::lock_guard<std::mutex> lock(cacheMutex);
 		const auto cached = cache.find(cacheKey);
 		if (cached != cache.end()) {
-			if (std::shared_ptr<Texture> texture = cached->second.lock()) {
-				return texture;
-			}
+			if (std::shared_ptr<Texture> texture = cached->second.lock()) return texture;
 		}
 
 		auto texture = std::make_shared<Texture>();
-		if (!texture->LoadFromFile(device, cmdList, filePath, options)) {
-			return {};
-		}
+		if (!texture->LoadFromFile(device, cmdList, filePath, options)) return {};
 
 		cache[std::move(cacheKey)] = texture;
 		return texture;
@@ -114,8 +103,7 @@ namespace Engine {
 
 	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
 		const std::wstring& filePath, const TextureLoadOptions& options) {
-		if (!DecodeAndProcessImage(filePath, options))
-			return false;
+		if (!DecodeAndProcessImage(filePath, options)) return false;
 		UploadImage(device, cmdList);
 		m_image.Release();
 		return true;
@@ -125,13 +113,10 @@ namespace Engine {
 		const auto cachePath = IsBlockCompressedFormat(options.targetFormat)
 			? GetDiskCachePath(filePath, options)
 			: std::filesystem::path{};
-		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath))
-			return true;
-		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options))
-			return false;
+		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath)) return true;
+		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options)) return false;
 		CorrectNormalGreen(options.invertNormalGreen);
-		if (!ResizeToLimit(options.maxDimension))
-			return false;
+		if (!ResizeToLimit(options.maxDimension)) return false;
 		// BC圧縮形式はミップ生成に非対応のため、生成後に圧縮する
 		if (!GenerateMipChain(options.generateMipmaps) || !ConvertFormat(options.targetFormat, filePath))
 			return false;
@@ -141,11 +126,9 @@ namespace Engine {
 
 	bool Texture::TryLoadDiskCache(
 		const std::filesystem::path& cachePath, DXGI_FORMAT targetFormat, const std::wstring& source) {
-		if (cachePath.empty())
-			return false;
+		if (cachePath.empty()) return false;
 		std::error_code error;
-		if (!std::filesystem::exists(cachePath, error) || error)
-			return false;
+		if (!std::filesystem::exists(cachePath, error) || error) return false;
 		const HRESULT hr =
 			DirectX::LoadFromDDSFile(cachePath.c_str(), DirectX::DDS_FLAGS_NONE, &m_meta, m_image);
 		if (FAILED(hr) || m_meta.format != targetFormat) {
@@ -203,17 +186,14 @@ namespace Engine {
 
 	bool Texture::ResizeToLimit(UINT maxDimension) {
 		const size_t extent = std::max(m_meta.width, m_meta.height);
-		if (maxDimension == 0 || extent <= maxDimension)
-			return true;
-		if (m_meta.dimension != DirectX::TEX_DIMENSION_TEXTURE2D)
-			return false;
+		if (maxDimension == 0 || extent <= maxDimension) return true;
+		if (m_meta.dimension != DirectX::TEX_DIMENSION_TEXTURE2D) return false;
 		const size_t width = std::max<size_t>(1, m_meta.width * maxDimension / extent);
 		const size_t height = std::max<size_t>(1, m_meta.height * maxDimension / extent);
 		DirectX::ScratchImage resized;
 		const auto hr = DirectX::Resize(m_image.GetImages(), m_image.GetImageCount(), m_meta, width, height,
 			DirectX::TEX_FILTER_DEFAULT, resized);
-		if (FAILED(hr))
-			return false;
+		if (FAILED(hr)) return false;
 		m_image = std::move(resized);
 		m_meta = m_image.GetMetadata();
 		return true;
@@ -311,8 +291,7 @@ namespace Engine {
 	}
 
 	void Texture::TrySaveDiskCache(const std::filesystem::path& diskCachePath) const {
-		if (diskCachePath.empty())
-			return;
+		if (diskCachePath.empty()) return;
 
 		std::error_code error;
 		std::filesystem::create_directories(diskCachePath.parent_path(), error);
@@ -376,9 +355,7 @@ namespace Engine {
 	bool Texture::CreateFromSolidColor(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, uint8_t r,
 		uint8_t g, uint8_t b, uint8_t a) {
 		HRESULT hr = m_image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, 1, 1, 1, 1);
-		if (FAILED(hr)) {
-			return false;
-		}
+		if (FAILED(hr)) return false;
 
 		m_meta = m_image.GetMetadata();
 		const DirectX::Image* image = m_image.GetImage(0, 0, 0);

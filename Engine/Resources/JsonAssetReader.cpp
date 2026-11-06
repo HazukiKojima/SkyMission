@@ -35,8 +35,7 @@ namespace Engine {
 
 	const RedoxDocument& JsonAssetReader::AcquireDocument(
 		const std::filesystem::path& path, RedoxDocument& transient) const {
-		if (m_documents)
-			return m_documents->Get(path);
+		if (m_documents) return m_documents->Get(path);
 		if (m_files)
 			transient = RedoxDocument(m_files->Read(path));
 		else

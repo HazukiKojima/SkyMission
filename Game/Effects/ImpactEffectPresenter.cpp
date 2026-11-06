@@ -64,8 +64,7 @@ namespace Game {
 			for (int i = 0; i < ImpactEffectSettings::fragmentCount; ++i) {
 				const float lifetimeSeconds = ImpactEffectSettings::fragmentMinLifetime +
 					random.Sample(i + 32) * ImpactEffectSettings::fragmentLifetimeRange;
-				if (ageSeconds >= lifetimeSeconds)
-					continue;
+				if (ageSeconds >= lifetimeSeconds) continue;
 				const float angle = random.Sample(i + 52) * XM_2PI;
 				const float outward = 0.2f + random.Sample(i + 72) * 0.8f;
 				const auto direction = XMVector3Normalize(
@@ -86,8 +85,7 @@ namespace Game {
 				};
 				const auto segment = context.ProjectSegment(positionAt(ageSeconds),
 					positionAt(std::max(0.0f, ageSeconds - (0.012f + random.Sample(i + 112) * 0.024f))));
-				if (!segment)
-					continue;
+				if (!segment) continue;
 				const float heat = 1 - ageSeconds / lifetimeSeconds;
 				const float width = std::max(1.1f, scale * (1.8f + random.Sample(i + 132) * 2.2f));
 				context.DrawStreak(*segment, width * 2, {1, 0.38f, 0.06f, heat * 0.3f}, width,

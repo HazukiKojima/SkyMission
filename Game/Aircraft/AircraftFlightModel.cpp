@@ -21,9 +21,7 @@ namespace Game {
 	} // namespace
 
 	void AircraftFlightModel::Update(const AircraftInput& input, float deltaSeconds) {
-		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0.0f) {
-			return;
-		}
+		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0.0f) return;
 
 		// 経過時間を制限し、最大1/60秒刻みで挙動を安定させる
 		float remainingSeconds = std::min(deltaSeconds, kMaximumFrameSeconds);
@@ -105,8 +103,7 @@ namespace Game {
 		const float levelRoll = std::cos(m_pitch) < 0.0f ? XM_PI : 0.0f;
 		const float currentRoll = m_roll;
 		float turnRollBase = levelRoll;
-		if (pitchInputActive)
-			turnRollBase = std::cos(currentRoll) < 0.0f ? XM_PI : 0.0f;
+		if (pitchInputActive) turnRollBase = std::cos(currentRoll) < 0.0f ? XM_PI : 0.0f;
 		const float turnDirection = OrientationSign(turnRollBase);
 		const float turnBank = std::clamp(
 			-m_turnControl * turnDirection * m_flightParameters.maximumBankRadians * state.turnSpeedFactor,

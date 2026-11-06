@@ -122,8 +122,7 @@ namespace Engine {
 		const auto& objects = scene.GetObjects();
 
 		for (size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex) {
-			if (!m_drawDecisions[objectIndex].visible)
-				continue;
+			if (!m_drawDecisions[objectIndex].visible) continue;
 			const SceneObject& object = objects[objectIndex];
 			ModelConstantBufferData* modelData = constantBuffers.GetModelData(frameIndex, objectIndex);
 			const XMMATRIX objectWorld = XMLoadFloat4x4(&object.worldTransform);

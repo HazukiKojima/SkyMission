@@ -87,9 +87,7 @@ namespace Engine {
 					++statistics.culledObjects;
 					continue;
 				}
-				if (!object.model || !object.model->IsLoaded()) {
-					continue;
-				}
+				if (!object.model || !object.model->IsLoaded()) continue;
 
 				commandList->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
 					constantBuffers.GetModelResource(frameIndex, objectIndex)->GetGPUVirtualAddress());

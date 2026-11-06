@@ -32,7 +32,8 @@ namespace Engine {
 		const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_DEFAULT);
 		const auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
 		ThrowIfFailed(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
-			D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&resource)));
+			D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&resource)));
+		// コピー時にCOMMONからCOPY_DESTへ自動的に遷移する。
 		commands->CopyBufferRegion(resource.Get(), 0, upload.Get(), 0, size);
 		const auto barrier =
 			CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, finalState);

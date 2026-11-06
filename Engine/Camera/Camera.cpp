@@ -9,8 +9,7 @@ namespace Engine {
 	}
 
 	void Camera::OnResize(UINT width, UINT height) {
-		if (!height)
-			return;
+		if (!height) return;
 		m_aspect = static_cast<float>(width) / height;
 		UpdateProjection();
 	}

@@ -44,8 +44,7 @@ namespace Game {
 			Engine::HudSettings settings;
 			const auto rgb = reader.ResolveFloatArray(path, "color");
 			const float alpha = reader.ResolveFloat(path, "alpha");
-			if (rgb.size() != 3)
-				throw std::invalid_argument("color must contain three components");
+			if (rgb.size() != 3) throw std::invalid_argument("color must contain three components");
 			for (float component : {rgb[0], rgb[1], rgb[2], alpha})
 				if (!std::isfinite(component) || component < 0 || component > 1)
 					throw std::invalid_argument("color/alpha must be within [0,1]");
