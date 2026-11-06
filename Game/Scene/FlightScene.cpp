@@ -391,17 +391,9 @@ namespace Game {
 			DirectX::XMStoreFloat3(&m_combat.objectivePosition,
 				DirectX::XMVector3TransformCoord(
 					DirectX::XMLoadFloat3(&center), DirectX::XMLoadFloat4x4(&deck->world)));
-			m_combat.missileImpactPoint = [&] {
-				auto release = m_player.GetPosition();
-				release.y -= CarrierMissileFlight::releaseOffsetMeters;
-				DirectX::XMFLOAT3 velocity;
-				const auto forward = m_player.GetForward(), inherited = m_player.GetVelocity();
-				DirectX::XMStoreFloat3(&velocity,
-					DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&inherited),
-						DirectX::XMVectorScale(
-							DirectX::XMLoadFloat3(&forward), m_mission.GetSettings().carrierMissileSpeed)));
-				return CarrierMissileFlight{release, velocity}.Predict(m_combat.objectivePosition.y);
-			}();
+			const auto launch = m_carrierMissiles.BuildLaunchFlight(
+				m_player.GetPosition(), m_player.GetVelocity(), m_player.GetForward());
+			m_combat.missileImpactPoint = launch.Predict(m_combat.objectivePosition.y);
 		}
 		if (m_mission.GetPhase() == MissionPhase::FinalFighters ||
 			m_mission.GetPhase() == MissionPhase::Commander)
