@@ -1,14 +1,10 @@
 #include "BombSystem.h"
+#include "ProjectilePose.h"
 #include "Game/Combat/ProjectileCollision.h"
 #include <stdexcept>
 
 namespace Game {
 	using namespace DirectX;
-	namespace {
-		constexpr float kMissileSmokeIntervalSeconds = 0.06f;
-		constexpr float kMissileTurnRateRadiansPerSecond = XM_PIDIV2;
-		constexpr float kMissileReleaseSideOffsetMeters = 14.0f;
-	} // namespace
 
 	void BombSystem::Configure(
 		float reloadSeconds, std::shared_ptr<Engine::Model> model, const XMFLOAT3& modelForward) {
@@ -19,10 +15,8 @@ namespace Game {
 		const float length = XMVectorGetX(XMVector3Length(forward));
 		if (!std::isfinite(length) || length < 0.001f)
 			throw std::invalid_argument("Bomb modelForward must be finite and nonzero");
-		if (!m_bombs.empty() || !m_missiles.empty())
+		if (!m_bombs.empty())
 			throw std::logic_error("Cannot configure active bombs");
-		m_missileMode = false;
-		m_ammo = 2;
 		m_model = std::move(model);
 		XMStoreFloat3(&m_modelForward, XMVector3Normalize(forward));
 		m_reloadSeconds = reloadSeconds;
@@ -42,30 +36,13 @@ namespace Game {
 		return static_cast<size_t>(std::ceil(BombTuning::lifetimeSeconds / reloadSeconds)) + 2;
 	}
 
-	XMFLOAT4X4 BombSystem::BuildTransform(const BombFlight& flight) const {
-		const auto from = XMLoadFloat3(&m_modelForward);
-		const auto velocity = XMLoadFloat3(&flight.velocity);
-		const auto to =
-			XMVectorGetX(XMVector3LengthSq(velocity)) > 0.0001f ? XMVector3Normalize(velocity) : from;
-		const float dot = std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f);
-		auto rotation = XMMatrixIdentity();
-		if (dot < -0.9999f) {
-			const auto reference =
-				std::abs(m_modelForward.y) < 0.9f ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
-			rotation = XMMatrixRotationAxis(XMVector3Cross(from, reference), XM_PI);
-		} else if (dot < 0.9999f)
-			rotation = XMMatrixRotationAxis(XMVector3Cross(from, to), std::acos(dot));
-		const auto& p = flight.position;
-		XMFLOAT4X4 transform;
-		XMStoreFloat4x4(&transform, rotation * XMMatrixTranslation(p.x, p.y, p.z));
-		return transform;
-	}
-
 	bool BombSystem::TryDrop(Engine::Scene& scene, const XMFLOAT3& position, const XMFLOAT3& velocity) {
 		if (!m_model || m_cooldownSeconds > 0)
 			return false;
 		const auto flight = ReleaseFlight(position, velocity);
-		m_bombs.push_back({scene.AddObject(m_model, BuildTransform(flight)), flight});
+		m_bombs.push_back({scene.AddObject(m_model,
+							   BuildProjectileTransform(flight.position, flight.velocity, m_modelForward)),
+			flight});
 		m_cooldownSeconds = m_reloadSeconds;
 		return true;
 	}
@@ -74,10 +51,6 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0)
 			return;
 		dt = std::min(dt, 0.25f);
-		if (m_missileMode) {
-			UpdateMissiles(scene, dt, deck);
-			return;
-		}
 		m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
 		std::erase_if(m_bombs, [&](Bomb& bomb) {
 			const auto start = bomb.flight.position;
@@ -107,88 +80,8 @@ namespace Game {
 				return true;
 			}
 			if (auto* object = scene.FindObject(bomb.id))
-				object->worldTransform = BuildTransform(bomb.flight);
-			return false;
-		});
-	}
-
-	void BombSystem::ConfigureMissiles(float speed, float damage) {
-		if (!std::isfinite(speed) || speed <= 0 || !std::isfinite(damage) || damage <= 0)
-			throw std::invalid_argument("Missile speed/damage must be positive and finite");
-		m_missileMode = true;
-		m_missileSpeed = speed;
-		m_missileDamage = damage;
-	}
-	bool BombSystem::TryLaunch(Engine::Scene& scene, const XMFLOAT3& position, const XMFLOAT3& velocity,
-		const XMFLOAT3& forward, Engine::ObjectId target) {
-		if (!m_model || !m_missileMode || m_ammo == 0 || m_cooldownSeconds > 0)
-			return false;
-		auto release = position;
-		const float side = m_ammo == 2 ? -kMissileReleaseSideOffsetMeters : kMissileReleaseSideOffsetMeters;
-		release.x -= forward.z * side;
-		release.y -= BombTuning::releaseOffsetMeters;
-		release.z += forward.x * side;
-		XMFLOAT3 launch;
-		XMStoreFloat3(&launch, XMLoadFloat3(&velocity) + XMLoadFloat3(&forward) * m_missileSpeed);
-		m_missiles.push_back(
-			{scene.AddObject(m_model, BuildTransform({release, launch})), target, {release, launch}});
-		--m_ammo;
-		if (m_ammo == 0)
-			m_cooldownSeconds = m_reloadSeconds;
-		return true;
-	}
-	void BombSystem::UpdateMissiles(
-		Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& hull) {
-		if (m_cooldownSeconds > 0) {
-			m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
-			if (m_cooldownSeconds <= 0)
-				m_ammo = 2;
-		}
-		std::erase_if(m_missiles, [&](Missile& missile) {
-			const auto start = missile.flight.position;
-			if (missile.target != Engine::InvalidObjectId) {
-				if (hull && hull->id == missile.target) {
-					XMFLOAT3 target;
-					const auto center = hull->bounds.Center();
-					XMStoreFloat3(&target,
-						XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&hull->world)));
-					missile.flight.GuideTo(target, kMissileTurnRateRadiansPerSecond * dt);
-				} else
-					missile.target = Engine::InvalidObjectId;
-			}
-			const float valid =
-				std::min({dt, missile.remaining, missile.flight.TimeToHeight(0).value_or(dt)});
-			missile.flight.Advance(valid);
-			missile.remaining -= dt;
-			missile.smokeSeconds -= dt;
-			if (missile.smokeSeconds <= 0) {
-				m_trail.push_back(missile.flight.position);
-				missile.smokeSeconds = kMissileSmokeIntervalSeconds;
-			}
-			if (hull) {
-				if (const auto contact = IntersectMovingTarget(start, missile.flight.position, *hull, 0, 1)) {
-					XMFLOAT3 point;
-					XMStoreFloat3(&point,
-						XMVectorLerp(XMLoadFloat3(&start), XMLoadFloat3(&missile.flight.position), *contact));
-					// ミサイルの命中演出は入射方向を使わないため、方向をゼロで渡す
-					m_hits.push_back({.target = hull->id,
-						.frameSeconds = valid * *contact,
-						.position = point,
-						.direction = {},
-						.kind = ProjectileKind::Rocket,
-						.source = AttackSource::Player,
-						.damage = m_missileDamage});
-					scene.RemoveObject(missile.id);
-					return true;
-				}
-			}
-			if (missile.flight.position.y <= 0.001f || missile.remaining <= 0) {
-				m_missImpacts.push_back(missile.flight.position);
-				scene.RemoveObject(missile.id);
-				return true;
-			}
-			if (auto* object = scene.FindObject(missile.id))
-				object->worldTransform = BuildTransform({missile.flight.position, missile.flight.velocity});
+				object->worldTransform =
+					BuildProjectileTransform(bomb.flight.position, bomb.flight.velocity, m_modelForward);
 			return false;
 		});
 	}

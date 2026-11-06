@@ -517,4 +517,13 @@
     <ClCompile Include="Game\Combat\CombatSnapshotBuilder.cpp" />
     <ClInclude Include="Game\Combat\CombatSnapshotBuilder.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Weapons\CarrierMissileSystem.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\CarrierMissileSystem.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\ProjectilePose.h" />
+  </ItemGroup>
 </Project>

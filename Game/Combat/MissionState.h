@@ -8,16 +8,22 @@
 namespace Game {
 	enum class MissionPhase { Patrol, CarrierAttack, FinalFighters, Commander, Complete, Failed };
 	struct MissionSettings {
-		size_t patrolCount = 6, finalFighterCount = 6;
+		size_t patrolCount = 6;
+		size_t finalFighterCount = 6;
 		float bombReloadSeconds = 4;
 		float carrierMissileSpeed = 6000;
-		float carrierHealth = 300, bombDamage = 150;
+		float carrierHealth = 300;
+		float bombDamage = 150;
 		float commanderHealthMultiplier = 1.5f;
 		float enemyGunSpeed = 1800;
-		float enemyGunInterval = 0.22f, commanderGunInterval = 0.16f;
-		float aaRange = 6500, aaInterval = 0.8f;
+		float enemyGunInterval = 0.22f;
+		float commanderGunInterval = 0.16f;
+		float aaRange = 6500;
+		float aaInterval = 0.8f;
 		size_t maxHostileProjectiles = 256;
-		float deckHeightFraction = 0.445f, deckWidthFraction = 0.75f, deckLengthFraction = 0.9f;
+		float deckHeightFraction = 0.445f;
+		float deckWidthFraction = 0.75f;
+		float deckLengthFraction = 0.9f;
 		void Validate() const {
 			if (patrolCount < 1 || patrolCount > 8 || finalFighterCount < 1 || finalFighterCount > 8 ||
 				maxHostileProjectiles < 4 || maxHostileProjectiles > 512)
@@ -86,6 +92,7 @@ namespace Game {
 
 	  private:
 		MissionPhase m_phase = MissionPhase::Patrol;
-		float m_carrierHealth, m_carrierMaxHealth;
+		float m_carrierHealth;
+		float m_carrierMaxHealth;
 	};
 } // namespace Game

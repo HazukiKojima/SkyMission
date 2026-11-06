@@ -56,7 +56,8 @@ namespace Game {
 			assets.enemyAircraft.flightParameters, assets.enemyAIParameters);
 		scene.ConfigurePlayerWeapon(assets.playerWeapon, requireModel(AmmunitionModelId));
 		scene.ConfigureEnemyWeapons(assets.playerWeapon, assets.mission, requireModel(AmmunitionModelId));
-		scene.ConfigureBombWeapon(assets.bomb, assets.mission.bombReloadSeconds, requireModel(BombModelId));
+		scene.ConfigureCarrierMissileWeapon(
+			assets.bomb, assets.mission.bombReloadSeconds, requireModel(BombModelId));
 		for (size_t i = 0; i < assets.ships.size(); ++i) {
 			const auto& ship = assets.ships[i];
 			const auto id = scene.AddObject(requireModel(ship.asset.id), ship.BuildTransform());
@@ -168,12 +169,21 @@ namespace Game {
 						assistance.target = target;
 			}
 			for (const float age : ages)
-				if (m_projectiles.FireVolley(m_scene, m_gun.GetMuzzles(), world, pose, m_player.GetForward(),
-						m_player.GetVelocity(), age, assistance, targets, dt, m_combatSettings.bulletDamage))
+				if (m_projectiles.FireVolley(m_scene,
+						{.muzzles = m_gun.GetMuzzles(),
+							.aircraftWorld = world,
+							.aircraftPose = pose,
+							.forward = m_player.GetForward(),
+							.aircraftVelocity = m_player.GetVelocity(),
+							.ageSeconds = age,
+							.assistance = assistance,
+							.targets = targets,
+							.frameSeconds = dt,
+							.damage = m_combatSettings.bulletDamage}))
 					++m_combat.firedVolleys;
 		}
 		UpdateGunEffects();
-		UpdateBombs(input, dt);
+		UpdateCarrierMissiles(input, dt);
 
 		UpdateHostileWeapons(dt);
 	}
@@ -370,20 +380,20 @@ namespace Game {
 		m_combat.carrierPresent = m_scene.FindObject(m_mission.GetCarrierId()) != nullptr;
 		m_combat.carrierHealth = m_mission.GetCarrierHealth();
 		m_combat.carrierMaxHealth = m_mission.GetCarrierMaxHealth();
-		m_combat.carrierMissileAmmo = m_bombs.GetAmmo();
+		m_combat.carrierMissileAmmo = m_carrierMissiles.GetAmmo();
 		m_combat.missionPhase = m_mission.GetPhase();
 		m_combat.deckDisabled = m_mission.IsDeckDisabled();
-		m_combat.bombCooldown = m_bombs.GetCooldownSeconds();
+		m_combat.missileCooldownSeconds = m_carrierMissiles.GetCooldownSeconds();
 		m_combat.missionMessageSeconds = m_mission.GetMessageSeconds();
-		m_combat.bombImpactPoint.reset();
+		m_combat.missileImpactPoint.reset();
 		if (const auto deck = GetDeckTarget()) {
 			const auto center = deck->bounds.Center();
 			DirectX::XMStoreFloat3(&m_combat.objectivePosition,
 				DirectX::XMVector3TransformCoord(
 					DirectX::XMLoadFloat3(&center), DirectX::XMLoadFloat4x4(&deck->world)));
-			m_combat.bombImpactPoint = [&] {
+			m_combat.missileImpactPoint = [&] {
 				auto release = m_player.GetPosition();
-				release.y -= BombTuning::releaseOffsetMeters;
+				release.y -= CarrierMissileFlight::releaseOffsetMeters;
 				DirectX::XMFLOAT3 velocity;
 				const auto forward = m_player.GetForward(), inherited = m_player.GetVelocity();
 				DirectX::XMStoreFloat3(&velocity,
@@ -412,8 +422,8 @@ namespace Game {
 	void FlightScene::ApplyHits() {
 		// 武器ごとの命中をまとめ、フレーム内の接触時刻順にダメージを反映する
 		auto hits = m_projectiles.TakeHits();
-		const auto bombHits = m_bombs.TakeHits();
-		hits.insert(hits.end(), bombHits.begin(), bombHits.end());
+		const auto missileHits = m_carrierMissiles.TakeHits();
+		hits.insert(hits.end(), missileHits.begin(), missileHits.end());
 		auto hostileHits = m_hostileProjectiles.TakeHits();
 		hits.insert(hits.end(), hostileHits.begin(), hostileHits.end());
 		std::stable_sort(hits.begin(), hits.end(), [](const HitEvent& a, const HitEvent& b) {

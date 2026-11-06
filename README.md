@@ -106,7 +106,8 @@ GPU時間は数フレーム遅れて取得し、計測のためのGPU待機は�
 | AircraftFlightModel / AircraftAIController | 飛行モデルと敵機の操縦入力 |
 | TargetingSystem / GunAimSolver | 対象選択・ロック状態と迎撃位置の計算 |
 | AircraftGun / ProjectileSystem | 機関砲の発射タイミング、弾の移動と命中収集 |
-| BombSystem / BombFlight | 爆弾の生成・再装填・落下・命中収集・描画姿勢と弾道予測 |
+| CarrierMissileSystem / CarrierMissileFlight | 対艦ミサイルの発射・再装填・誘導・命中収集と予測位置 |
+| BombSystem / BombFlight | 独立した投下爆弾の自由落下と命中処理（現在のミッションでは未使用） |
 | CombatEffectSystem / CombatEffectPresenter | 演出の生成・寿命管理と描画データの作成 |
 | CombatHudPresenter / HudRenderer | 戦闘情報の表示とGPUへの描画 |
 | Renderer / RenderDevice / CommandContext | 描画パス、D3D12リソース、コマンド記録とGPU同期 |
@@ -192,7 +193,7 @@ Assimpによるモデル読み込み、DirectXTexによる画像処理、RE:Dox 
 ## ミッション設定
 
 `Assets/Combat/mission.json` の `patrolCount` / `finalFighterCount` で各通常編隊の機数（1〜8）、
-`bombReloadSeconds` で再装填時間（1〜120秒）、`commanderHealthMultiplier` と各 `GunInterval` で空戦難度を調整できます。
+`bombReloadSeconds` で再装填時間（1〜120秒）、`commanderHealthMultiplier` と `enemyGunInterval` / `commanderGunInterval` で空戦難度を調整できます。
 `aaRange` / `aaInterval` / `maxHostileProjectiles` は対空砲の射程、射撃間隔、敵弾の総上限です。
 対艦ミサイルの弾速は `carrierMissileSpeed`（初期値6,000m/s）で設定します。
 命中は配置・回転・サイズを反映した母艦全体の境界で判定します。`deckHeightFraction` / `deckWidthFraction` /
@@ -202,3 +203,21 @@ Assimpによるモデル読み込み、DirectXTexによる画像処理、RE:Dox 
 母艦のHPは画面上部に表示します。設定の carrierHealth（初期値300）と bombDamage（初期値150）で、
 対艦ミサイルの命中による耐久値を調整できます。HPが0になると母艦中央で一度だけ大爆発し、
 大きな煙を出し続けます。勝敗確定後も煙は継続し、リトライでHPと演出を初期状態に戻します。
+
+## 調整値とコードの読み方
+
+敵機銃の弾速は`mission.json`の`enemyGunSpeed`、通常機と編隊長機の発射間隔は
+`enemyGunInterval`と`commanderGunInterval`で指定します。プレイヤー武器の発射間隔からは計算しません。
+敵の照準角度と保持時間は`aiParameters.json`の`aimAngleDegrees`と`aimHoldSeconds`を使います。
+
+AI設定の`reactionSeconds`、`maneuverSeconds`、`threatDistance`、`aimErrorDegrees`、`attackSpeed`、
+`attackRunSeconds`、`flankDistance`、`maximumDisengageSeconds`、`repositionSeconds`は旧設定との互換用です。
+現在の戦闘AIでは参照しません。C#との配置を維持するため残しており、変更しても戦闘中の動きは変わりません。
+方位・高度の周期設定は非戦闘用の操縦処理で使用します。
+
+実行中の対艦武器は`CarrierMissileSystem`が担当します。`BombSystem`は投下爆弾だけを扱います。
+`bombReloadSeconds`、`bombDamage`、`Assets/Ammunition/Bomb/`などの既存JSONキー・パスは互換性のため維持しています。
+
+HUDは母艦HP、飛行状態、照準、敵表示、任務表示の順に描きます。
+AIは行動判断と操縦入力の計算を、モデル読み込みは形状集計とメッシュ構築を分けています。
+機関砲の発射要求は`GunVolley`のメンバー名で位置・姿勢・速度・時刻を明示します。

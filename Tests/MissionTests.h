@@ -178,7 +178,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 					restored.enemies.size() == definition.mission.patrolCount &&
 					restored.enemies.front().center.z == initialEnemyPosition.z &&
 					initialized.GetProjectileCount() == 0 && initialized.GetHostileProjectileCount() == 0 &&
-					initialized.GetBombCount() == 0 && initialized.GetEffectSnapshot().explosions.empty(),
+					initialized.GetCarrierMissileCount() == 0 &&
+					initialized.GetEffectSnapshot().explosions.empty(),
 				"Factory retry did not restore the completed initial state");
 			XMFLOAT4X4 projection;
 			XMStoreFloat4x4(&projection, initialized.GetRenderScene().GetCamera().GetProjection());
@@ -216,7 +217,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			const auto configureWeapons = [&] {
 				candidate.ConfigureEnemyWeapons(definition.playerWeapon, weaponSettings, player);
 				candidate.ConfigurePlayerWeapon(definition.playerWeapon, player);
-				candidate.ConfigureBombWeapon(definition.bomb, weaponSettings.bombReloadSeconds, box);
+				candidate.ConfigureCarrierMissileWeapon(
+					definition.bomb, weaponSettings.bombReloadSeconds, box);
 			};
 			if (weaponsFirst)
 				configureWeapons();
@@ -252,7 +254,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		const auto playerId = scene.AddPlayerObject(player);
 		scene.ConfigureMission(definition.mission, box, 1, definition.enemyAircraft.flightParameters,
 			definition.enemyAIParameters);
-		scene.ConfigureBombWeapon(definition.bomb, definition.mission.bombReloadSeconds, box);
+		scene.ConfigureCarrierMissileWeapon(definition.bomb, definition.mission.bombReloadSeconds, box);
 		scene.ConfigureEnemyWeapons(definition.playerWeapon, definition.mission, player);
 		scene.ConfigurePlayerWeapon(definition.playerWeapon, player);
 		XMFLOAT4X4 carrierWorld;
@@ -313,7 +315,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 					!checkpoint.GetCombatSnapshot().deckDisabled &&
 					checkpoint.GetCombatSnapshot().carrierHealth == 300 &&
 					checkpoint.GetEffectSnapshot().deckSmoke.empty() &&
-					checkpoint.GetCombatSnapshot().bombCooldown == 0 &&
+					checkpoint.GetCombatSnapshot().missileCooldownSeconds == 0 &&
 					checkpoint.GetCombatSnapshot().carrierMissileAmmo == 2 &&
 					checkpoint.GetEffectSnapshot().explosions.empty() &&
 					checkpoint.GetCombatSnapshot().result == CombatResult::Active,
@@ -340,7 +342,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		scene.Update({}, 0.01f, {}, retry);
 		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::Patrol &&
 				scene.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount &&
-				scene.GetCombatSnapshot().bombCooldown == 0,
+				scene.GetCombatSnapshot().missileCooldownSeconds == 0,
 			"Defeat retry did not restore mission");
 		scene = carrierPhase;
 		CombatInput gunfire;
@@ -354,32 +356,32 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		// Two quick presses fire both missiles; missing either never prevents reloading.
 		scene.SetPlayerAircraftPosition({100000, 1500, 0});
 		CombatInput drop;
-		drop.bombPressCount = 1;
+		drop.missilePressCount = 1;
 		scene.Update({}, 0.01f, {}, drop);
-		Require(
-			scene.GetCombatSnapshot().carrierMissileAmmo == 1 && scene.GetCombatSnapshot().bombCooldown == 0,
+		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 1 &&
+				scene.GetCombatSnapshot().missileCooldownSeconds == 0,
 			"First missile blocked the second shot");
 		Require(scene.GetCombatSnapshot().audio.missileLaunches == 1, "Missile launch audio missing");
 		scene.Update({}, 0.01f, {}, drop);
-		Require(
-			scene.GetCombatSnapshot().carrierMissileAmmo == 0 && scene.GetCombatSnapshot().bombCooldown == 4,
+		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 0 &&
+				scene.GetCombatSnapshot().missileCooldownSeconds == 4,
 			"Second missile did not start magazine reload");
 		const auto objectsAfterLaunch = scene.GetObjects().size();
 		scene.Update({}, 0.01f, {}, drop);
 		Require(scene.GetObjects().size() == objectsAfterLaunch, "Empty magazine fired a third missile");
 		for (int i = 0; i < 15; ++i)
 			scene.Update({}, 0.25f);
-		Require(
-			scene.GetCombatSnapshot().carrierMissileAmmo == 0 && scene.GetCombatSnapshot().bombCooldown > 0,
+		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 0 &&
+				scene.GetCombatSnapshot().missileCooldownSeconds > 0,
 			"Missile magazine reloaded before four seconds");
 		scene.Update({}, 0.25f);
-		Require(
-			scene.GetCombatSnapshot().carrierMissileAmmo == 2 && scene.GetCombatSnapshot().bombCooldown == 0,
+		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 2 &&
+				scene.GetCombatSnapshot().missileCooldownSeconds == 0,
 			"Missile magazine did not reload after four seconds");
 		for (int i = 0; i < 20; ++i)
 			scene.Update({}, 0.25f);
 		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
-				scene.GetCombatSnapshot().bombCooldown == 0 &&
+				scene.GetCombatSnapshot().missileCooldownSeconds == 0 &&
 				scene.GetCombatSnapshot().carrierMissileAmmo == 2 &&
 				scene.GetCombatSnapshot().carrierHealth == 300,
 			"Missed missiles did not reload a full magazine without damaging carrier");
@@ -408,7 +410,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			auto volley = scene;
 			lockCarrier(volley);
 			CombatInput doubleClick;
-			doubleClick.bombPressCount = 3;
+			doubleClick.missilePressCount = 3;
 			volley.Update({}, 0.01f, {}, doubleClick);
 			Require(volley.GetCombatSnapshot().audio.missileLaunches == 2 &&
 					volley.GetCombatSnapshot().carrierMissileAmmo == 0,

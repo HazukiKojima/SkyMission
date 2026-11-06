@@ -165,40 +165,39 @@ namespace Game {
 		return true;
 	}
 
-	bool ProjectileSystem::FireVolley(Engine::Scene& scene, const std::array<XMFLOAT3, 4>& muzzles,
-		const XMFLOAT4X4& aircraftWorld, const XMFLOAT4X4& aircraftPose, const XMFLOAT3& forward,
-		const XMFLOAT3& aircraftVelocity, float age, const AimAssistance& assistance,
-		std::span<const CollisionTarget> targets, float frameSeconds, float damage) {
+	bool ProjectileSystem::FireVolley(Engine::Scene& scene, const GunVolley& volley) {
 		if (!m_model || m_settings.maxProjectiles - m_projectiles.size() < 4)
 			return false;
-		auto aircraftRotation = XMLoadFloat4x4(&aircraftPose);
+		auto aircraftRotation = XMLoadFloat4x4(&volley.aircraftPose);
 		aircraftRotation.r[3] = XMVectorSet(0, 0, 0, 1);
-		for (size_t muzzleIndex = 0; muzzleIndex < muzzles.size(); ++muzzleIndex) {
-			const auto& muzzle = muzzles[muzzleIndex];
+		for (size_t muzzleIndex = 0; muzzleIndex < volley.muzzles.size(); ++muzzleIndex) {
+			const auto& muzzle = volley.muzzles[muzzleIndex];
 			Projectile projectile{};
 			XMStoreFloat3(&projectile.position,
-				XMVector3TransformCoord(XMLoadFloat3(&muzzle), XMLoadFloat4x4(&aircraftWorld)));
-			XMFLOAT3 direction = forward;
-			if (assistance.target) {
-				const auto aim = SolveGunAim(projectile.position, aircraftVelocity, *assistance.target,
-					m_settings.muzzleSpeed, m_settings.lifetime);
-				if (aim && IsWithinAngle(forward, aim->direction, assistance.angleDegrees))
+				XMVector3TransformCoord(XMLoadFloat3(&muzzle), XMLoadFloat4x4(&volley.aircraftWorld)));
+			XMFLOAT3 direction = volley.forward;
+			if (volley.assistance.target) {
+				const auto aim = SolveGunAim(projectile.position, volley.aircraftVelocity,
+					*volley.assistance.target, m_settings.muzzleSpeed, m_settings.lifetime);
+				if (aim && IsWithinAngle(volley.forward, aim->direction, volley.assistance.angleDegrees))
 					direction = aim->direction;
 			}
 			XMStoreFloat3(&projectile.velocity,
-				XMLoadFloat3(&aircraftVelocity) + XMLoadFloat3(&direction) * m_settings.muzzleSpeed);
+				XMLoadFloat3(&volley.aircraftVelocity) + XMLoadFloat3(&direction) * m_settings.muzzleSpeed);
 			projectile.remainingLifetime = m_settings.lifetime;
-			projectile.damage = damage;
+			projectile.damage = volley.damage;
 			projectile.birthPosition = projectile.position;
 			// L1・R2とL2・R1を交互に光らせ、4門が同時に消える周期を作らない
 			const unsigned phase = muzzleIndex == 0 || muzzleIndex == 3 ? 0u : 1u;
 			projectile.isTracer = (m_volleySequence + phase) % 2 == 0;
-			m_shotEvents.push_back(
-				{muzzleIndex, projectile.position, aircraftVelocity, direction, age, m_volleySequence});
-			if (!MoveAndCollide(projectile, age, std::max(0.0f, frameSeconds - age), frameSeconds, targets))
+			m_shotEvents.push_back({muzzleIndex, projectile.position, volley.aircraftVelocity, direction,
+				volley.ageSeconds, m_volleySequence});
+			if (!MoveAndCollide(projectile, volley.ageSeconds,
+					std::max(0.0f, volley.frameSeconds - volley.ageSeconds), volley.frameSeconds,
+					volley.targets))
 				continue;
 			// ロールを維持しつつ、弾モデルの機首方向を補正後の射線へ合わせる
-			const auto from = XMLoadFloat3(&forward);
+			const auto from = XMLoadFloat3(&volley.forward);
 			const auto to = XMLoadFloat3(&direction);
 			const float dot = std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f);
 			auto correction = XMMatrixIdentity();

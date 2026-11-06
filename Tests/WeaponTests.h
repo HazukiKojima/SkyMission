@@ -248,7 +248,13 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		XMFLOAT4X4 world, pose;
 		XMStoreFloat4x4(&pose, XMMatrixTranslation(10, 100, 20));
 		XMStoreFloat4x4(&world, XMMatrixScaling(2, 2, 2) * XMLoadFloat4x4(&pose));
-		projectiles.FireVolley(scene, gun.GetMuzzles(), world, pose, {0, 0, -1}, {5, 2, -100}, 0.02f);
+		projectiles.FireVolley(scene,
+			{.muzzles = gun.GetMuzzles(),
+				.aircraftWorld = world,
+				.aircraftPose = pose,
+				.forward = {0, 0, -1},
+				.aircraftVelocity = {5, 2, -100},
+				.ageSeconds = 0.02f});
 		Require(projectiles.GetCount() == 4 && scene.GetObjects().size() == 4,
 			"Volley did not create four projectiles");
 		const auto start = scene.GetObjects()[0].worldTransform;
@@ -265,15 +271,33 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		Require(std::abs(scene.GetObjects()[0].worldTransform._43 + 100) < 0.001f,
 			"Projectile velocity changed after firing");
 		for (int i = 0; i < 40; ++i)
-			projectiles.FireVolley(scene, gun.GetMuzzles(), world, pose, {0, 0, -1}, {}, 0);
+			projectiles.FireVolley(scene,
+				{.muzzles = gun.GetMuzzles(),
+					.aircraftWorld = world,
+					.aircraftPose = pose,
+					.forward = {0, 0, -1},
+					.aircraftVelocity = {},
+					.ageSeconds = 0});
 		Require(projectiles.GetCount() == 128, "Projectile cap did not prevent overflow");
 		for (int i = 0; i < 13; ++i)
 			projectiles.Update(scene, 0.25f);
 		Require(projectiles.GetCount() == 0 && scene.GetObjects().empty(),
 			"Expired projectiles left render objects");
-		projectiles.FireVolley(scene, gun.GetMuzzles(), world, pose, {0, -1, 0}, {}, 0.2f);
+		projectiles.FireVolley(scene,
+			{.muzzles = gun.GetMuzzles(),
+				.aircraftWorld = world,
+				.aircraftPose = pose,
+				.forward = {0, -1, 0},
+				.aircraftVelocity = {},
+				.ageSeconds = 0.2f});
 		Require(projectiles.GetCount() == 0, "New projectile below sea level survived");
-		projectiles.FireVolley(scene, gun.GetMuzzles(), world, pose, {0, -1, 0}, {}, 0);
+		projectiles.FireVolley(scene,
+			{.muzzles = gun.GetMuzzles(),
+				.aircraftWorld = world,
+				.aircraftPose = pose,
+				.forward = {0, -1, 0},
+				.aircraftVelocity = {},
+				.ageSeconds = 0});
 		projectiles.Update(scene, 0.25f);
 		Require(projectiles.GetCount() == 0, "Sea crossing did not remove existing projectiles");
 		auto limited = settings;
@@ -285,8 +309,20 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		XMFLOAT3 rotatedForward;
 		XMStoreFloat3(
 			&rotatedForward, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), XMLoadFloat4x4(&pose)));
-		projectiles.FireVolley(scene, gun.GetMuzzles(), world, pose, rotatedForward, {}, 0);
-		projectiles.FireVolley(scene, gun.GetMuzzles(), world, pose, rotatedForward, {}, 0);
+		projectiles.FireVolley(scene,
+			{.muzzles = gun.GetMuzzles(),
+				.aircraftWorld = world,
+				.aircraftPose = pose,
+				.forward = rotatedForward,
+				.aircraftVelocity = {},
+				.ageSeconds = 0});
+		projectiles.FireVolley(scene,
+			{.muzzles = gun.GetMuzzles(),
+				.aircraftWorld = world,
+				.aircraftPose = pose,
+				.forward = rotatedForward,
+				.aircraftVelocity = {},
+				.ageSeconds = 0});
 		Require(projectiles.GetCount() == 4, "Less than four slots allowed a partial volley");
 		const auto rotated = scene.GetObjects()[0].worldTransform;
 		const auto rotatedAxis = XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), XMLoadFloat4x4(&rotated));

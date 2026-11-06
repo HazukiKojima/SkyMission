@@ -33,7 +33,6 @@ namespace Game {
 		dt = std::min(dt, 0.25f);
 		m_combatTime += dt;
 		m_modeSeconds += dt;
-		const auto& style = kCombatStyles[slot % std::size(kCombatStyles)];
 		const auto position = aircraft.GetPosition(), forward = aircraft.GetForward();
 		const auto velocity = aircraft.GetVelocity();
 		const auto delta = XMLoadFloat3(&target.position) - XMLoadFloat3(&position);
@@ -41,10 +40,6 @@ namespace Game {
 		const auto toTarget = distance > 0.001f ? delta / distance : XMLoadFloat3(&forward);
 		const auto relativeVelocity = XMLoadFloat3(&velocity) - XMLoadFloat3(&target.velocity);
 		const float relativeSquared = XMVectorGetX(XMVector3LengthSq(relativeVelocity));
-		const float passTime = relativeSquared > 0.001f
-			? std::max(0.0f, XMVectorGetX(XMVector3Dot(delta, relativeVelocity)) / relativeSquared)
-			: 0;
-		const float passDistance = XMVectorGetX(XMVector3Length(delta - relativeVelocity * passTime));
 		const float closestTime = relativeSquared > 0.001f
 			? std::clamp(XMVectorGetX(XMVector3Dot(delta, relativeVelocity)) / relativeSquared, 0.0f,
 				  p.separationLookAheadSeconds)
@@ -63,94 +58,32 @@ namespace Game {
 				m_returning = false;
 		} else
 			m_returning = false;
-		const auto enter = [&](AircraftCombatMode mode) {
-			m_mode = mode;
-			m_modeSeconds = 0;
-			m_collisionAvoidance = false;
-			m_spacingBreak = false;
-		};
-		const auto chooseTurn = [&](XMVECTOR direction) {
-			const float error =
-				std::remainder(std::atan2(XMVectorGetX(direction), -XMVectorGetZ(direction)) - yaw, XM_2PI);
-			m_flankSide =
-				std::abs(error) > 0.05f ? std::copysign(1.0f, error) : (slot % 2 == 0 ? 1.0f : -1.0f);
-		};
-		const auto beginPass = [&] {
-			enter(AircraftCombatMode::Disengage);
-			m_flankSide = slot % 2 == 0 ? 1.0f : -1.0f;
-			if (defenseCenter && std::hypot(XMVectorGetX(home), XMVectorGetZ(home)) > 10000)
-				chooseTurn(home);
-			const auto maneuver = m_passSequence++;
-			m_passMinimum = kMinimumPassSeconds + style.passDelay + EnemyVariation(slot, maneuver, 83) * 0.9f;
-			m_passMaximum = std::min(kMaximumPassSeconds,
-				7.0f + float(slot % 6) * 0.38f + EnemyVariation(slot, maneuver, 89) * 0.6f);
-			static constexpr float legs[] = {3200, 4700, 3900, 6000, 5200, 6800};
-			m_passLeg = (legs[slot % std::size(legs)] + EnemyVariation(slot, maneuver, 97) * 900) *
-				(p.tailDistance / 4500.0f);
-			m_passStart = position;
-			m_reentrySeconds = 1.2f + EnemyVariation(slot, maneuver, 103) * 1.8f;
-			const auto targetForward = XMLoadFloat3(&target.forward);
-			auto targetRight = XMVector3Cross(targetForward, XMVectorSet(0, 1, 0, 0));
-			if (XMVectorGetX(XMVector3LengthSq(targetRight)) < 0.001f)
-				targetRight = XMVectorSet(1, 0, 0, 0);
-			static constexpr float lanes[] = {-900, 700, -1400, 1200, -500, 1700};
-			XMStoreFloat3(&m_reentryOffset,
-				XMVector3Normalize(targetRight) * lanes[slot % std::size(lanes)] *
-						(0.8f + EnemyVariation(slot, maneuver, 107) * 0.4f) +
-					targetForward * (float(slot % 3) * 600 - 500) + XMVectorSet(0, style.climb * 2000, 0, 0));
-			m_turnBurstSeconds = style.highGSeconds * (0.8f + EnemyVariation(slot, maneuver, 101) * 0.4f);
-			auto escape = XMVector3TransformNormal(XMLoadFloat3(&forward),
-				XMMatrixRotationY(
-					-(style.exitAngle + 0.12f + EnemyVariation(slot, maneuver, 109) * 0.35f) * m_flankSide));
-			// 直進離脱ではプレイヤーの位置を貫かず、機体の脇を通過する
-			if (passTime > 0 && passDistance < std::min(1800.0f, p.disengageDistance * 0.65f)) {
-				const auto right = XMVectorSet(-forward.z, 0, forward.x, 0);
-				const float lateral = XMVectorGetX(XMVector3Dot(delta, right));
-				const float side = std::abs(lateral) > 100 ? std::copysign(-1.0f, lateral) : m_flankSide;
-				const float angle =
-					XMConvertToRadians(55 + float(slot % 6) * 5 + EnemyVariation(slot, maneuver, 113) * 5);
-				escape = XMLoadFloat3(&forward) * std::cos(angle) + right * (side * std::sin(angle));
-				m_spacingBreak = true;
-			}
-			const float preferredClimb = style.climb + (EnemyVariation(slot, maneuver, 127) - 0.5f) * 0.08f;
-			const float climb =
-				position.y < p.lowAltitude + 350 ? std::max(0.0f, preferredClimb) : preferredClimb;
-			// 離脱を繰り返しても、現在の上昇角へ上昇指示を積み増さない
-			escape = XMVectorSetY(escape, std::clamp(climb, -0.18f, 0.18f));
-			XMStoreFloat3(&m_escapeDirection, XMVector3Normalize(escape));
-		};
 		if (position.y < p.lowAltitude)
-			enter(AircraftCombatMode::Recover);
+			EnterMode(AircraftCombatMode::Recover);
 		else if (m_returning) {
 			if (m_mode != AircraftCombatMode::ReturnToCarrier) {
-				enter(AircraftCombatMode::ReturnToCarrier);
-				chooseTurn(home);
+				EnterMode(AircraftCombatMode::ReturnToCarrier);
+				ChooseTurn(yaw, home, slot);
 			}
 		} else if (m_mode == AircraftCombatMode::Recover || m_mode == AircraftCombatMode::ReturnToCarrier) {
-			enter(AircraftCombatMode::Reengage);
-			chooseTurn(delta);
+			EnterMode(AircraftCombatMode::Reengage);
+			ChooseTurn(yaw, delta, slot);
 		} else if (m_mode == AircraftCombatMode::Disengage) {
 			const float traveled = XMVectorGetX(XMVector3Dot(
 				XMLoadFloat3(&position) - XMLoadFloat3(&m_passStart), XMLoadFloat3(&m_escapeDirection)));
 			if ((m_modeSeconds >= m_passMinimum && traveled >= m_passLeg &&
 					distance >= p.disengageDistance * (1.42f + float(slot % 6) * 0.06f)) ||
 				m_modeSeconds >= m_passMaximum) {
-				enter(AircraftCombatMode::Reengage);
-				chooseTurn(delta + XMLoadFloat3(&m_reentryOffset));
+				EnterMode(AircraftCombatMode::Reengage);
+				ChooseTurn(yaw, delta + XMLoadFloat3(&m_reentryOffset), slot);
 			}
 		} else if (m_mode == AircraftCombatMode::Reengage) {
 			const float ahead = XMVectorGetX(XMVector3Dot(toTarget, XMLoadFloat3(&forward)));
-			if (needsSpacing && distance < p.disengageDistance && ahead > 0.3f) {
-				beginPass();
-			} else if (ahead > 0.85f && m_modeSeconds >= m_reentrySeconds * 0.5f) {
-				if (needsSpacing) {
-					beginPass();
-				} else
-					enter(AircraftCombatMode::Pursuit);
-			}
+			if (!needsSpacing && ahead > 0.85f && m_modeSeconds >= m_reentrySeconds * 0.5f)
+				EnterMode(AircraftCombatMode::Pursuit);
 		} else if (needsSpacing) {
 			// 機体ごとの上昇・旋回傾向を維持したまま直進離脱へ移る
-			beginPass();
+			BeginDisengagement(aircraft, target, p, slot, defenseCenter);
 		} else {
 			m_mode = attackAllowed && distance <= p.attackDistance ? AircraftCombatMode::Attack
 																   : AircraftCombatMode::Pursuit;
@@ -176,7 +109,9 @@ namespace Game {
 		const float prediction =
 			std::min(p.pursuitPredictionSeconds, distance / std::max(1.0f, aircraft.GetSpeed()));
 		XMVECTOR steering = delta + XMLoadFloat3(&target.velocity) * prediction;
-		if (m_mode == AircraftCombatMode::Disengage)
+		// 離脱時間が上限に達しても、安全距離に戻るまでは敵へ旋回しない
+		if (m_mode == AircraftCombatMode::Disengage ||
+			(m_mode == AircraftCombatMode::Reengage && needsSpacing))
 			steering = XMLoadFloat3(&m_escapeDirection);
 		else if (m_mode == AircraftCombatMode::ReturnToCarrier) {
 			steering = home;
@@ -195,46 +130,7 @@ namespace Game {
 		if (XMVectorGetX(XMVector3LengthSq(steering)) < 0.001f)
 			steering = XMLoadFloat3(&forward);
 		XMStoreFloat3(&m_steering, XMVector3Normalize(steering));
-		float yawError = std::remainder(std::atan2(m_steering.x, -m_steering.z) - yaw, XM_2PI);
-		if ((m_mode == AircraftCombatMode::Reengage || m_mode == AircraftCombatMode::ReturnToCarrier) &&
-			!m_collisionAvoidance && yawError * m_flankSide < 0 && std::abs(yawError) > 0.35f)
-			yawError += m_flankSide * XM_2PI;
-		result.flight.autoLevelRoll = true;
-		result.flight.turn = std::abs(yawError) > 0.15f ? std::clamp(yawError * p.turnGain, -1.0f, 1.0f) : 0;
-		if (!m_collisionAvoidance && m_mode != AircraftCombatMode::Recover &&
-			m_mode != AircraftCombatMode::ReturnToCarrier)
-			result.flight.turn *= style.turnScale;
-		result.flight.yaw =
-			std::abs(yawError) <= 0.6f ? std::clamp(-yawError * p.turnGain * 2, -1.0f, 1.0f) : 0;
-		const float pitch = std::atan2(forward.y, std::hypot(forward.x, forward.z));
-		float desiredPitch =
-			std::clamp(std::atan2(m_steering.y, std::hypot(m_steering.x, m_steering.z)), -0.6f, 0.6f);
-		if (m_mode != AircraftCombatMode::Recover) {
-			// 自機を追う高度は確保しつつ、離脱・回避で戦闘高度から上がり続けるのを抑える
-			const float ceiling = std::max(p.highAltitude, target.position.y + 300.0f);
-			const float altitudePitch = std::clamp(
-				std::atan2(ceiling - position.y, std::max(1.0f, p.pitchLookAheadDistance)), -0.25f, 0.6f);
-			desiredPitch = std::min(desiredPitch, altitudePitch);
-		}
-		result.flight.pitch = std::clamp((desiredPitch - pitch) * p.pitchGain, -1.0f, 1.0f);
-		float targetSpeed = p.cruiseSpeed;
-		if (m_mode == AircraftCombatMode::Disengage ||
-			(m_mode == AircraftCombatMode::Pursuit && distance > p.reengageDistance) ||
-			(m_mode == AircraftCombatMode::Attack && distance > p.reengageDistance))
-			targetSpeed = p.escapeSpeed;
-		if (m_mode == AircraftCombatMode::Disengage)
-			targetSpeed = std::max(targetSpeed,
-				XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.velocity))) +
-					p.disengageDistance / kMinimumPassSeconds);
-		targetSpeed = std::min(targetSpeed, aircraft.GetMaximumSpeed());
-		result.flight.throttle =
-			std::clamp((targetSpeed - aircraft.GetSpeed()) * p.speedMatchGain, -1.0f, 1.0f);
-		// 再接近時だけ短くハイG旋回し、近距離で旋回し続けるのを防ぐ
-		result.flight.highGTurn = (imminentCollision && m_mode != AircraftCombatMode::Recover) ||
-			(m_mode == AircraftCombatMode::Disengage && m_spacingBreak && m_modeSeconds < 1.8f) ||
-			(m_mode == AircraftCombatMode::Reengage &&
-				m_modeSeconds < (m_passSequence > 0 ? m_turnBurstSeconds : style.highGSeconds) &&
-				distance >= p.disengageDistance && std::abs(yawError) > 0.7f);
+		result.flight = BuildFlightInput(aircraft, target, p, slot, distance, imminentCollision);
 		// 離脱中も短い連射を完了させるが、移動の離脱距離は変えない
 		const float minimumFireDistance =
 			opportunisticGun ? std::min(2200.0f, p.disengageDistance) : p.disengageDistance;
@@ -252,6 +148,133 @@ namespace Game {
 		result.fire =
 			(aligned && m_aimTime >= p.aimHoldSeconds) || (m_returning && opportunisticGun && safeShot);
 		return result;
+	}
+
+	void AircraftAIController::EnterMode(AircraftCombatMode mode) {
+		m_mode = mode;
+		m_modeSeconds = 0;
+		m_collisionAvoidance = false;
+		m_spacingBreak = false;
+	}
+	void AircraftAIController::ChooseTurn(float yaw, DirectX::FXMVECTOR direction, size_t slot) {
+		using namespace DirectX;
+		const float error =
+			std::remainder(std::atan2(XMVectorGetX(direction), -XMVectorGetZ(direction)) - yaw, XM_2PI);
+		m_flankSide = std::abs(error) > 0.05f ? std::copysign(1.0f, error) : (slot % 2 == 0 ? 1.0f : -1.0f);
+	}
+	void AircraftAIController::BeginDisengagement(const AircraftFlightModel& aircraft,
+		const AircraftAITarget& target, const AircraftAIParameters& p, size_t slot,
+		std::optional<DirectX::XMFLOAT3> defenseCenter) {
+		using namespace DirectX;
+		const auto& style = kCombatStyles[slot % std::size(kCombatStyles)];
+		const auto position = aircraft.GetPosition();
+		const auto forward = aircraft.GetForward();
+		const auto velocity = aircraft.GetVelocity();
+		const float yaw = std::atan2(forward.x, -forward.z);
+		const auto delta = XMLoadFloat3(&target.position) - XMLoadFloat3(&position);
+		const auto relativeVelocity = XMLoadFloat3(&velocity) - XMLoadFloat3(&target.velocity);
+		const float relativeSquared = XMVectorGetX(XMVector3LengthSq(relativeVelocity));
+		const auto home =
+			defenseCenter ? XMLoadFloat3(&*defenseCenter) - XMLoadFloat3(&position) : XMVectorZero();
+		const float passTime = relativeSquared > 0.001f
+			? std::max(0.0f, XMVectorGetX(XMVector3Dot(delta, relativeVelocity)) / relativeSquared)
+			: 0;
+		const float passDistance = XMVectorGetX(XMVector3Length(delta - relativeVelocity * passTime));
+
+		EnterMode(AircraftCombatMode::Disengage);
+		m_flankSide = slot % 2 == 0 ? 1.0f : -1.0f;
+		if (defenseCenter && std::hypot(XMVectorGetX(home), XMVectorGetZ(home)) > 10000)
+			ChooseTurn(yaw, home, slot);
+		const auto maneuver = m_passSequence++;
+		m_passMinimum = kMinimumPassSeconds + style.passDelay + EnemyVariation(slot, maneuver, 83) * 0.9f;
+		m_passMaximum = std::min(
+			kMaximumPassSeconds, 7.0f + float(slot % 6) * 0.38f + EnemyVariation(slot, maneuver, 89) * 0.6f);
+		static constexpr float legs[] = {3200, 4700, 3900, 6000, 5200, 6800};
+		m_passLeg = (legs[slot % std::size(legs)] + EnemyVariation(slot, maneuver, 97) * 900) *
+			(p.tailDistance / 4500.0f);
+		m_passStart = position;
+		m_reentrySeconds = 1.2f + EnemyVariation(slot, maneuver, 103) * 1.8f;
+		const auto targetForward = XMLoadFloat3(&target.forward);
+		auto targetRight = XMVector3Cross(targetForward, XMVectorSet(0, 1, 0, 0));
+		if (XMVectorGetX(XMVector3LengthSq(targetRight)) < 0.001f)
+			targetRight = XMVectorSet(1, 0, 0, 0);
+		static constexpr float lanes[] = {-900, 700, -1400, 1200, -500, 1700};
+		XMStoreFloat3(&m_reentryOffset,
+			XMVector3Normalize(targetRight) * lanes[slot % std::size(lanes)] *
+					(0.8f + EnemyVariation(slot, maneuver, 107) * 0.4f) +
+				targetForward * (float(slot % 3) * 600 - 500) + XMVectorSet(0, style.climb * 2000, 0, 0));
+		m_turnBurstSeconds = style.highGSeconds * (0.8f + EnemyVariation(slot, maneuver, 101) * 0.4f);
+		auto escape = XMVector3TransformNormal(XMLoadFloat3(&forward),
+			XMMatrixRotationY(
+				-(style.exitAngle + 0.12f + EnemyVariation(slot, maneuver, 109) * 0.35f) * m_flankSide));
+		// 直進離脱ではプレイヤーの位置を貫かず、機体の脇を通過する
+		if (passTime > 0 && passDistance < std::min(1800.0f, p.disengageDistance * 0.65f)) {
+			const auto right = XMVectorSet(-forward.z, 0, forward.x, 0);
+			const float lateral = XMVectorGetX(XMVector3Dot(delta, right));
+			const float side = std::abs(lateral) > 100 ? std::copysign(-1.0f, lateral) : m_flankSide;
+			const float angle =
+				XMConvertToRadians(55 + float(slot % 6) * 5 + EnemyVariation(slot, maneuver, 113) * 5);
+			escape = XMLoadFloat3(&forward) * std::cos(angle) + right * (side * std::sin(angle));
+			m_spacingBreak = true;
+		}
+		const float preferredClimb = style.climb + (EnemyVariation(slot, maneuver, 127) - 0.5f) * 0.08f;
+		const float climb =
+			position.y < p.lowAltitude + 350 ? std::max(0.0f, preferredClimb) : preferredClimb;
+		// 離脱を繰り返しても、現在の上昇角へ上昇指示を積み増さない
+		escape = XMVectorSetY(escape, std::clamp(climb, -0.18f, 0.18f));
+		XMStoreFloat3(&m_escapeDirection, XMVector3Normalize(escape));
+	}
+
+	AircraftInput AircraftAIController::BuildFlightInput(const AircraftFlightModel& aircraft,
+		const AircraftAITarget& target, const AircraftAIParameters& p, size_t slot, float distance,
+		bool imminentCollision) const {
+		using namespace DirectX;
+		AircraftInput input;
+		const auto position = aircraft.GetPosition();
+		const auto forward = aircraft.GetForward();
+		const float yaw = std::atan2(forward.x, -forward.z);
+		const auto& style = kCombatStyles[slot % std::size(kCombatStyles)];
+		float yawError = std::remainder(std::atan2(m_steering.x, -m_steering.z) - yaw, XM_2PI);
+		if ((m_mode == AircraftCombatMode::Reengage || m_mode == AircraftCombatMode::ReturnToCarrier) &&
+			!m_collisionAvoidance && yawError * m_flankSide < 0 && std::abs(yawError) > 0.35f)
+			yawError += m_flankSide * XM_2PI;
+		input.autoLevelRoll = true;
+		input.turn = std::abs(yawError) > 0.15f ? std::clamp(yawError * p.turnGain, -1.0f, 1.0f) : 0;
+		if (!m_collisionAvoidance && m_mode != AircraftCombatMode::Recover &&
+			m_mode != AircraftCombatMode::ReturnToCarrier)
+			input.turn *= style.turnScale;
+		input.yaw = std::abs(yawError) <= 0.6f ? std::clamp(-yawError * p.turnGain * 2, -1.0f, 1.0f) : 0;
+		const float pitch = std::atan2(forward.y, std::hypot(forward.x, forward.z));
+		float desiredPitch =
+			std::clamp(std::atan2(m_steering.y, std::hypot(m_steering.x, m_steering.z)), -0.6f, 0.6f);
+		if (m_mode != AircraftCombatMode::Recover) {
+			// 自機を追う高度は確保しつつ、離脱・回避で戦闘高度から上がり続けるのを抑える
+			const float ceiling = std::max(p.highAltitude, target.position.y + 300.0f);
+			const float altitudePitch = std::clamp(
+				std::atan2(ceiling - position.y, std::max(1.0f, p.pitchLookAheadDistance)), -0.25f, 0.6f);
+			desiredPitch = std::min(desiredPitch, altitudePitch);
+		}
+		input.pitch = std::clamp((desiredPitch - pitch) * p.pitchGain, -1.0f, 1.0f);
+		// 安全距離に戻るまでの再接近待ちでは、巡航速度へ減速しない
+		const bool separating = m_mode == AircraftCombatMode::Disengage ||
+			(m_mode == AircraftCombatMode::Reengage && distance < p.disengageDistance);
+		float targetSpeed = p.cruiseSpeed;
+		if (separating || (m_mode == AircraftCombatMode::Pursuit && distance > p.reengageDistance) ||
+			(m_mode == AircraftCombatMode::Attack && distance > p.reengageDistance))
+			targetSpeed = p.escapeSpeed;
+		if (separating)
+			targetSpeed = std::max(targetSpeed,
+				XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.velocity))) +
+					p.disengageDistance / kMinimumPassSeconds);
+		targetSpeed = std::min(targetSpeed, aircraft.GetMaximumSpeed());
+		input.throttle = std::clamp((targetSpeed - aircraft.GetSpeed()) * p.speedMatchGain, -1.0f, 1.0f);
+		// 再接近時だけ短くハイG旋回し、近距離で旋回し続けるのを防ぐ
+		input.highGTurn = (imminentCollision && m_mode != AircraftCombatMode::Recover) ||
+			(m_mode == AircraftCombatMode::Disengage && m_spacingBreak && m_modeSeconds < 1.8f) ||
+			(m_mode == AircraftCombatMode::Reengage &&
+				m_modeSeconds < (m_passSequence > 0 ? m_turnBurstSeconds : style.highGSeconds) &&
+				distance >= p.disengageDistance && std::abs(yawError) > 0.7f);
+		return input;
 	}
 
 	AircraftInput AircraftAIController::ReadInput(const AircraftFlightModel& aircraft, float targetSpeed,

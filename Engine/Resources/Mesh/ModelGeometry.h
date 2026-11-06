@@ -1,5 +1,6 @@
 #pragma once
 #include "ModelLoadOptions.h"
+#include "Engine/Scene/Bounds3.h"
 #include <DirectXMath.h>
 #include <cstdint>
 #include <string>
@@ -25,5 +26,7 @@ namespace Engine::ModelProcessing {
 
 	std::vector<MeshGeometry> BuildModelGeometry(const aiScene& scene, const ModelLoadOptions& options,
 		std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>>& positions);
+	Bounds3 CalculateModelBounds(const std::vector<MeshGeometry>& geometries);
+	float CalculateCullingRadius(const std::vector<MeshGeometry>& geometries, const Bounds3& bounds);
 	MeshGeometry SimplifyGeometry(const MeshGeometry& source, float extent, unsigned lod);
 } // namespace Engine::ModelProcessing

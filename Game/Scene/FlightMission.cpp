@@ -137,9 +137,7 @@ namespace Game {
 	}
 	AircraftAIParameters FlightMission::BuildWaveAI(size_t formationSlot) const {
 		auto ai = m_missionEnemyAI;
-		// 共通の飛行方針を維持しつつ、射撃の機会を増やす
-		ai.aimAngleDegrees = 10;
-		ai.aimHoldSeconds = 0.08f;
+		// 射撃条件はJSONを使い、初動の待ち時間だけ機体ごとにずらす
 		ai.openingGraceSeconds += EnemyVariation(formationSlot, 0, 79) * kMaximumOpeningDelaySeconds;
 		return ai;
 	}

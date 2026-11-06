@@ -9,7 +9,7 @@
 #include "Game/Combat/CombatController.h"
 #include "Game/Combat/TargetingSystem.h"
 #include "Game/Effects/CombatEffectSystem.h"
-#include "Game/Weapons/BombSystem.h"
+#include "Game/Weapons/CarrierMissileSystem.h"
 #include "Game/Combat/EnemyGunBehavior.h"
 #include "Game/Weapons/BombDefinition.h"
 
@@ -34,7 +34,7 @@ namespace Game {
 			const WeaponDefinition& definition, std::shared_ptr<Engine::Model> ammunition);
 		void ConfigureEnemyWeapons(const WeaponDefinition& definition, const MissionSettings& settings,
 			std::shared_ptr<Engine::Model> ammunition);
-		void ConfigureBombWeapon(
+		void ConfigureCarrierMissileWeapon(
 			const BombDefinition& definition, float reloadSeconds, std::shared_ptr<Engine::Model> model);
 		void SetEnvironment(const Engine::SceneEnvironment& environment) {
 			m_scene.SetEnvironment(environment);
@@ -87,8 +87,8 @@ namespace Game {
 		size_t GetProjectileCount() const {
 			return m_projectiles.GetCount();
 		}
-		size_t GetBombCount() const {
-			return m_bombs.GetCount();
+		size_t GetCarrierMissileCount() const {
+			return m_carrierMissiles.GetCount();
 		}
 		size_t GetHostileProjectileCount() const {
 			return m_hostileProjectiles.GetCount();
@@ -127,7 +127,7 @@ namespace Game {
 		void UpdateCombatTimers(float dt);
 		void UpdateMission(float dt);
 		void UpdateWeapons(const CombatInput& input, float dt);
-		void UpdateBombs(const CombatInput& input, float dt);
+		void UpdateCarrierMissiles(const CombatInput& input, float dt);
 		void UpdateHostileWeapons(float dt);
 		void UpdateEnemyGuns();
 		void UpdateTargeting(const CombatGeometry& geometry, bool next, float dt);
@@ -151,7 +151,7 @@ namespace Game {
 
 		// 任務と敵側の武器
 		FlightMission m_mission;
-		BombSystem m_bombs;
+		CarrierMissileSystem m_carrierMissiles;
 		ProjectileSystem m_hostileProjectiles;
 		GunSettings m_enemyGunSettings;
 		float m_commanderGunInterval = 0.1f;

@@ -17,6 +17,21 @@ namespace Game {
 			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
 
 	  private:
+		void DrawCarrierHealth(
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+		void DrawFlightStatus(
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+		void DrawGunSight(
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+		void DrawEnemyMarkers(
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+		void DrawMissionStatus(
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+		void DrawEnemyDirection(const DirectX::XMFLOAT3& target, const CombatSnapshot& snapshot,
+			const Engine::RenderView& view, Engine::HudDrawList& list) const;
+		void DrawOffscreenIndicator(const HudProjection& projection, DirectX::XMFLOAT4 tint,
+			const Engine::RenderView& view, Engine::HudDrawList& list) const;
+
 		Engine::HudSettings m_settings;
 		// 描画上の補間状態のみ保持する。対象変更・リトライ時は新しい方向から開始する
 		mutable Engine::ObjectId m_arrowTarget = Engine::InvalidObjectId;

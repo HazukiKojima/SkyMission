@@ -714,7 +714,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			retry.retry = true;
 			scene.Update({}, 0.01f, {}, retry);
 			Require(state.result == CombatResult::Active && state.enemies.size() == 1 &&
-					scene.GetProjectileCount() == 0 && scene.GetBombCount() == 0 &&
+					scene.GetProjectileCount() == 0 && scene.GetCarrierMissileCount() == 0 &&
 					state.playerHealth == combat.playerHealth,
 				"Retry retained damage or weapons");
 		}
@@ -733,7 +733,16 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		ProjectileSystem bullets;
 		bullets.Configure(gun, player, {0, 1, 0});
 		Scene scene;
-		bullets.FireVolley(scene, muzzles, world, pose, {0, 0, -1}, {}, 0.25f, {}, boxes, 0.25f);
+		bullets.FireVolley(scene,
+			{.muzzles = muzzles,
+				.aircraftWorld = world,
+				.aircraftPose = pose,
+				.forward = {0, 0, -1},
+				.aircraftVelocity = {},
+				.ageSeconds = 0.25f,
+				.assistance = {},
+				.targets = boxes,
+				.frameSeconds = 0.25f});
 		const auto hits = bullets.TakeHits();
 		Require(hits.size() == 4 &&
 				std::all_of(hits.begin(), hits.end(),
@@ -751,12 +760,28 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			"Consumed projectile generated duplicate hit");
 		gun.lifetime = 0.05f;
 		bullets.Configure(gun, player, {0, 1, 0});
-		bullets.FireVolley(scene, muzzles, world, pose, {0, 0, -1}, {}, 0.25f, {}, boxes, 0.25f);
+		bullets.FireVolley(scene,
+			{.muzzles = muzzles,
+				.aircraftWorld = world,
+				.aircraftPose = pose,
+				.forward = {0, 0, -1},
+				.aircraftVelocity = {},
+				.ageSeconds = 0.25f,
+				.assistance = {},
+				.targets = boxes,
+				.frameSeconds = 0.25f});
 		Require(bullets.TakeHits().empty(), "Expired projectile hit beyond its lifetime");
 		gun.lifetime = 3;
 		bullets.Configure(gun, player, {0, 1, 0});
 		AimAssistance assistance{CombatTarget{3, {30, 20, -1000}, {}, "TEST", 100}, 3};
-		bullets.FireVolley(scene, muzzles, world, pose, {0, 0, -1}, {}, 0, assistance);
+		bullets.FireVolley(scene,
+			{.muzzles = muzzles,
+				.aircraftWorld = world,
+				.aircraftPose = pose,
+				.forward = {0, 0, -1},
+				.aircraftVelocity = {},
+				.ageSeconds = 0,
+				.assistance = assistance});
 		bullets.Update(scene, 0.1f);
 		Require(scene.GetObjects().front().worldTransform._41 > 1,
 			"Locked in-cone target did not adjust projectile direction");
@@ -1008,8 +1033,8 @@ void TestHudRendering(const fs::path& fixture) {
 			snapshot.missionPhase = MissionPhase::CarrierAttack;
 			snapshot.enemies.clear();
 			snapshot.objectivePosition = {180, -100, 1500};
-			snapshot.bombImpactPoint = XMFLOAT3{100, -100, 1500};
-			snapshot.bombCooldown = 4.2f;
+			snapshot.missileImpactPoint = XMFLOAT3{100, -100, 1500};
+			snapshot.missileCooldownSeconds = 4.2f;
 			buildFrame();
 			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices,
 				"Mission objective and bomb HUD overflowed");

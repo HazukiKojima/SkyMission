@@ -632,4 +632,19 @@
     <ClCompile Include="Game\Combat\CombatSnapshotBuilder.cpp"><Filter>Game\Combat</Filter></ClCompile>
     <ClInclude Include="Game\Combat\CombatSnapshotBuilder.h"><Filter>Game\Combat</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Weapons\CarrierMissileSystem.cpp">
+      <Filter>Game\Weapons</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\CarrierMissileSystem.h">
+      <Filter>Game\Weapons</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\ProjectilePose.h">
+      <Filter>Game\Weapons</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

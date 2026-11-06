@@ -5,6 +5,19 @@
 #include "GunShotEvent.h"
 
 namespace Game {
+	struct GunVolley {
+		std::array<DirectX::XMFLOAT3, 4> muzzles{};
+		DirectX::XMFLOAT4X4 aircraftWorld{};
+		DirectX::XMFLOAT4X4 aircraftPose{};
+		DirectX::XMFLOAT3 forward{0, 0, -1};
+		DirectX::XMFLOAT3 aircraftVelocity{};
+		float ageSeconds = 0;
+		AimAssistance assistance;
+		std::span<const CollisionTarget> targets;
+		float frameSeconds = 0;
+		float damage = 10;
+	};
+
 	// 弾の寿命・等速移動・連続衝突判定を管理し、命中と描画用イベントを蓄積する
 	class ProjectileSystem {
 	  public:
@@ -14,13 +27,9 @@ namespace Game {
 		void Update(Engine::Scene& scene, float dt, std::span<const CollisionTarget> targets = {});
 		bool FireSingle(Engine::Scene& scene, const DirectX::XMFLOAT3& position,
 			const DirectX::XMFLOAT3& velocity, AttackSource source, float damage);
-		// ageはフレーム末までに弾が経過した秒数。新規弾もその時間だけ進めて衝突判定する
+		// ageSecondsはフレーム末までに弾が経過した秒数。新規弾もその時間だけ進めて衝突判定する
 		// muzzlesはモデル座標、forwardとaircraftVelocityはワールド座標系
-		bool FireVolley(Engine::Scene& scene, const std::array<DirectX::XMFLOAT3, 4>& muzzles,
-			const DirectX::XMFLOAT4X4& aircraftWorld, const DirectX::XMFLOAT4X4& aircraftPose,
-			const DirectX::XMFLOAT3& forward, const DirectX::XMFLOAT3& aircraftVelocity, float age,
-			const AimAssistance& assistance = {}, std::span<const CollisionTarget> targets = {},
-			float frameSeconds = 0, float damage = 10);
+		bool FireVolley(Engine::Scene& scene, const GunVolley& volley);
 		// 未取得の命中通知を返して内部キューを空にする。同じ通知は二度取得できない
 		std::vector<HitEvent> TakeHits() {
 			auto hits = std::move(m_hits);
