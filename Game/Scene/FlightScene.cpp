@@ -141,6 +141,7 @@ namespace Game {
 
 	void FlightScene::UpdateCombatTimers(float dt) {
 		m_combat.enemyFireWarningSeconds = std::max(0.0f, m_combat.enemyFireWarningSeconds - dt);
+		m_combat.enemyRearFireWarningSeconds = std::max(0.0f, m_combat.enemyRearFireWarningSeconds - dt);
 		m_combat.playerHitSeconds = std::max(0.0f, m_combat.playerHitSeconds - dt);
 		m_combat.hitSeconds = std::max(0.0f, m_combat.hitSeconds - dt);
 		m_combat.destroyedSeconds = std::max(0.0f, m_combat.destroyedSeconds - dt);

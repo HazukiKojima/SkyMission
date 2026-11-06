@@ -96,7 +96,8 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		.bomb = config / L"Ammunition/Bomb/ammunition.json"});
 	auto settings = definition.playerWeapon.gun;
 	JsonAssetReader reader;
-	Require(settings.maxProjectiles == 128 && settings.fireInterval == 0.1f &&
+	Require(settings.maxProjectiles == 384 && settings.fireInterval == 0.1f && settings.lifetime == 3.0f &&
+			settings.muzzleSpeed == 7500.0f &&
 			definition.playerWeapon.ammunition.options.origin == ModelOrigin::BoundsCenter &&
 			definition.playerWeapon.ammunition.options.normalizedExtent ==
 				reader.ResolveFloat(config / L"Ammunition/20mmAmmo/modelImport.json", "normalizedExtent"),
@@ -270,7 +271,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		projectiles.Update(scene, 0.1f);
 		Require(std::abs(scene.GetObjects()[0].worldTransform._43 + 100) < 0.001f,
 			"Projectile velocity changed after firing");
-		for (int i = 0; i < 40; ++i)
+		for (size_t i = 0; i <= settings.maxProjectiles / 4; ++i)
 			projectiles.FireVolley(scene,
 				{.muzzles = gun.GetMuzzles(),
 					.aircraftWorld = world,
@@ -278,8 +279,8 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 					.forward = {0, 0, -1},
 					.aircraftVelocity = {},
 					.ageSeconds = 0});
-		Require(projectiles.GetCount() == 128, "Projectile cap did not prevent overflow");
-		for (int i = 0; i < 13; ++i)
+		Require(projectiles.GetCount() == settings.maxProjectiles, "Projectile cap did not prevent overflow");
+		for (int i = 0; i <= static_cast<int>(std::ceil(settings.lifetime / 0.25f)); ++i)
 			projectiles.Update(scene, 0.25f);
 		Require(projectiles.GetCount() == 0 && scene.GetObjects().empty(),
 			"Expired projectiles left render objects");

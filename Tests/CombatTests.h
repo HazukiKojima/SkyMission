@@ -34,8 +34,10 @@ void TestEnemyGunBehavior() {
 	const auto repeat = EnemyGunDirection(position, inherited, target, 1800, 2, 0);
 	const auto next = EnemyGunDirection(position, inherited, target, 1800, 2, 1);
 	Require(exact &&
-			XMVectorGetX(XMVector3Dot(XMLoadFloat3(&direction), XMLoadFloat3(&exact->direction))) < 0.999f,
-		"Enemy gun retained perfect future-position aiming");
+			XMVectorGetX(XMVector3Dot(XMLoadFloat3(&direction), XMLoadFloat3(&exact->direction))) <
+				0.999999f &&
+			!IsWithinAngle(exact->direction, direction, 6.0f),
+		"Enemy suppression fire retained overly accurate future-position aiming");
 	Require(direction.x == repeat.x && direction.y == repeat.y && direction.z == repeat.z &&
 			(direction.x != next.x || direction.y != next.y),
 		"Shot errors were unstable or identical for all shots");

@@ -6,6 +6,6 @@
     "fireInterval": 0.1,
     "muzzleSpeed": 7500.0,
     "lifetime": 3.0,
-    "maxProjectiles": 128,
+    "maxProjectiles": 384,
     "ammunition": "../../Ammunition/20mmAmmo/ammunition.json"
 }
