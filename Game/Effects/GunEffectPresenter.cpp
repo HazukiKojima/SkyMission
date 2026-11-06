@@ -14,14 +14,11 @@ namespace Game {
 			std::min(snapshot.impacts.size(), ImpactEffectSettings::maxCount) *
 				EffectDrawSettings::impactVertexBudget +
 			std::min(snapshot.deckSmoke.size(), DeckSmokeSettings::maxCount) * 6;
-		if (!context.HasVertexBudget(otherBudget + count * 6))
-			return;
+		if (!context.HasVertexBudget(otherBudget + count * 6)) return;
 		for (size_t index = 0; index < count; ++index) {
-			if (!context.HasVertexBudget(6))
-				break;
+			if (!context.HasVertexBudget(6)) break;
 			const auto& smoke = snapshot.gunSmoke[index];
-			if (smoke.age < 0 || smoke.age >= GunEffectSettings::smokeLifetimeSeconds)
-				continue;
+			if (smoke.age < 0 || smoke.age >= GunEffectSettings::smokeLifetimeSeconds) continue;
 			const float progress = smoke.age / GunEffectSettings::smokeLifetimeSeconds;
 			// 減衰速度の積分値を使い、FPSに依存しない煙の位置を求める
 			const float driftSeconds =
@@ -43,8 +40,7 @@ namespace Game {
 		const float scale = context.GetScale();
 		const size_t tracerCount = std::min(snapshot.gunTracers.size(), GunEffectSettings::maxTracerCount);
 		for (size_t index = 0; index < tracerCount; ++index) {
-			if (!context.HasVertexBudget(GunEffectSettings::tracerVertexBudget))
-				break;
+			if (!context.HasVertexBudget(GunEffectSettings::tracerVertexBudget)) break;
 			const auto& tracer = snapshot.gunTracers[index];
 			if (const auto segment = context.ProjectClippedSegment(tracer.head, tracer.tail))
 				context.DrawStreak(*segment, GunEffectSettings::tracerOuterWidth * scale,
@@ -54,11 +50,9 @@ namespace Game {
 
 		const size_t flashCount = std::min(snapshot.gunFlashes.size(), GunEffectSettings::maxFlashCount);
 		for (size_t index = 0; index < flashCount; ++index) {
-			if (!context.HasVertexBudget(GunEffectSettings::flashVertexBudget))
-				break;
+			if (!context.HasVertexBudget(GunEffectSettings::flashVertexBudget)) break;
 			const auto& flash = snapshot.gunFlashes[index];
-			if (flash.age < 0 || flash.age >= GunEffectSettings::flashLifetimeSeconds)
-				continue;
+			if (flash.age < 0 || flash.age >= GunEffectSettings::flashLifetimeSeconds) continue;
 			const float fade = 1 - flash.age / GunEffectSettings::flashLifetimeSeconds;
 			// 発射ごとの形を固定し、機体の移動による乱数のちらつきを防ぐ
 			const float phase = float(flash.sequence % 1024) * 1.73f + float(flash.muzzleIndex) * 2.41f;

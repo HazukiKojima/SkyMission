@@ -7,7 +7,7 @@ BreakBeforeBraces: Attach
 NamespaceIndentation: All
 AccessModifierOffset: -2
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: false
 AllowShortBlocksOnASingleLine: Never
 AllowShortLambdasOnASingleLine: Empty

@@ -21,13 +21,18 @@ namespace Game {
 		constexpr float kDeckSmokeIntervalSeconds = 0.12f;
 		constexpr float kAntiAircraftMuzzleSpeedMetersPerSecond = 1800;
 		constexpr float kAntiAircraftDamage = 8;
+		constexpr float kAntiAircraftMuzzleHeightMeters = 220;
+		constexpr float kEscortOpeningDelaySeconds = 2;
+		constexpr float kEscortOpeningStaggerSeconds = 0.4f;
+		constexpr float kMissionMessageDurationSeconds = 6;
 	} // namespace
 
 	void FlightMission::Configure(const MissionSettings& settings, std::shared_ptr<Engine::Model> enemyModel,
 		float enemyScale, const AircraftFlightParameters& flight, const AircraftAIParameters& ai) {
 		settings.Validate();
-		if (!enemyModel)
+		if (!enemyModel) {
 			throw std::invalid_argument("Mission requires an enemy model");
+		}
 		m_missionSettings = settings;
 		m_mission = MissionState(settings.carrierHealth);
 		m_missionEnemyModel = std::move(enemyModel);
@@ -38,26 +43,28 @@ namespace Game {
 	bool FlightMission::Advance(size_t remaining, bool alive, float dt) {
 		m_missionMessageSeconds = std::max(0.0f, m_missionMessageSeconds - dt);
 		const bool changed = m_mission.Advance(remaining, alive);
-		if (changed)
-			m_missionMessageSeconds = 6;
+		if (changed) {
+			m_missionMessageSeconds = kMissionMessageDurationSeconds;
+		}
 		return changed;
 	}
 	void FlightMission::RegisterShip(Engine::Scene& scene, Engine::ObjectId id, bool carrier) {
 		const auto* ship = scene.FindObject(id);
-		if (!ship || !ship->model->GetLocalBounds())
+		if (!ship || !ship->model->GetLocalBounds()) {
 			throw std::invalid_argument("Mission ship must have loaded bounds");
+		}
 		if (carrier) {
 			m_carrierId = id;
 			m_defenseCenter = GetCarrierCenter(scene);
 		} else {
-			const float openingDelay = 2 + static_cast<float>(m_escorts.size() + 1) * 0.4f;
+			const float openingDelay = kEscortOpeningDelaySeconds +
+				static_cast<float>(m_escorts.size() + 1) * kEscortOpeningStaggerSeconds;
 			m_escorts.push_back({.objectId = id, .cooldownSeconds = openingDelay});
 		}
 	}
 	std::optional<CollisionTarget> FlightMission::GetDeckTarget(Engine::Scene& scene) const {
 		const auto* carrier = scene.FindObject(m_carrierId);
-		if (!carrier || !carrier->model->GetLocalBounds())
-			return std::nullopt;
+		if (!carrier || !carrier->model->GetLocalBounds()) return std::nullopt;
 		auto bounds = *carrier->model->GetLocalBounds();
 		const auto center = bounds.Center();
 		const float halfX =
@@ -82,20 +89,23 @@ namespace Game {
 		XMFLOAT3 away{0, 0, 1};
 		if (const auto* carrier = scene.FindObject(m_carrierId)) {
 			away = {player.x - carrier->worldTransform._41, 0, player.z - carrier->worldTransform._43};
-			if (std::hypot(away.x, away.z) < 1)
+			if (std::hypot(away.x, away.z) < 1) {
 				away = {0, 0, 1};
+			}
 			XMStoreFloat3(&away, XMVector3Normalize(XMLoadFloat3(&away)));
 		}
 		GetDefenseCenter(scene);
 		m_airCombatPosition = {player.x + away.x * kCombatAreaDistanceMeters,
 			std::max(kMinimumCombatAltitudeMeters, player.y), player.z + away.z * kCombatAreaDistanceMeters};
-		if (m_defenseCenter)
+		if (m_defenseCenter) {
 			m_airCombatPosition = {m_defenseCenter->x + away.x * kCarrierCombatAreaDistanceMeters,
 				std::max(kMinimumCombatAltitudeMeters, player.y),
 				m_defenseCenter->z + away.z * kCarrierCombatAreaDistanceMeters};
+		}
 		XMFLOAT3 approach{forward.x, 0, forward.z};
-		if (std::hypot(approach.x, approach.z) < 0.001f)
+		if (std::hypot(approach.x, approach.z) < 0.001f) {
 			approach = {0, 0, -1};
+		}
 		XMStoreFloat3(&approach, XMVector3Normalize(XMLoadFloat3(&approach)));
 		for (size_t i = 0; i < count; ++i) {
 			const auto position = CalculateWavePosition(player, count, i, opening, approach, away);
@@ -143,8 +153,7 @@ namespace Game {
 	}
 	std::optional<XMFLOAT3> FlightMission::GetCarrierCenter(Engine::Scene& scene) const {
 		const auto* carrier = scene.FindObject(m_carrierId);
-		if (!carrier || !carrier->model->GetLocalBounds())
-			return std::nullopt;
+		if (!carrier || !carrier->model->GetLocalBounds()) return std::nullopt;
 		const auto center = carrier->model->GetLocalBounds()->Center();
 		XMFLOAT3 result;
 		XMStoreFloat3(&result,
@@ -155,8 +164,9 @@ namespace Game {
 		if (m_mission.IsDeckDisabled()) {
 			m_deckSmokeSeconds -= dt;
 			if (m_deckSmokeSeconds <= 0) {
-				if (const auto center = GetCarrierCenter(scene))
+				if (const auto center = GetCarrierCenter(scene)) {
 					effects.SpawnDeckSmoke(*center);
+				}
 				m_deckSmokeSeconds = CarrierEffectSettings::smokeIntervalSeconds;
 			}
 		}
@@ -166,17 +176,15 @@ namespace Game {
 		for (size_t i = 0; i < m_escorts.size(); ++i) {
 			m_escorts[i].cooldownSeconds = std::max(0.0f, m_escorts[i].cooldownSeconds - dt);
 			const auto* ship = scene.FindObject(m_escorts[i].objectId);
-			if (!ship || m_escorts[i].cooldownSeconds > 0)
-				continue;
-			XMFLOAT3 origin{
-				ship->worldTransform._41, ship->worldTransform._42 + 220, ship->worldTransform._43};
+			if (!ship || m_escorts[i].cooldownSeconds > 0) continue;
+			XMFLOAT3 origin{ship->worldTransform._41,
+				ship->worldTransform._42 + kAntiAircraftMuzzleHeightMeters, ship->worldTransform._43};
 			const auto playerPosition = player.GetPosition();
 			const auto delta = XMLoadFloat3(&playerPosition) - XMLoadFloat3(&origin);
-			if (XMVectorGetX(XMVector3Length(delta)) > m_missionSettings.aaRange)
-				continue;
+			const float distanceMeters = XMVectorGetX(XMVector3Length(delta));
+			if (distanceMeters > m_missionSettings.aaRange) continue;
 			// 予測時間を制限し照準を揺らすことで、見える曳光弾を回避する余地を残す
-			const float travelSeconds =
-				XMVectorGetX(XMVector3Length(delta)) / kAntiAircraftMuzzleSpeedMetersPerSecond;
+			const float travelSeconds = distanceMeters / kAntiAircraftMuzzleSpeedMetersPerSecond;
 			const auto playerVelocity = player.GetVelocity();
 			const auto predictedDisplacement =
 				XMLoadFloat3(&playerVelocity) * std::min(travelSeconds, kAntiAircraftMaximumLeadSeconds);
@@ -190,8 +198,9 @@ namespace Game {
 			XMStoreFloat3(&velocity,
 				XMVector3Normalize(point - XMLoadFloat3(&origin)) * kAntiAircraftMuzzleSpeedMetersPerSecond);
 			if (projectiles.FireSingle(
-					scene, origin, velocity, AttackSource::AntiAircraft, kAntiAircraftDamage))
+					scene, origin, velocity, AttackSource::AntiAircraft, kAntiAircraftDamage)) {
 				m_escorts[i].cooldownSeconds = m_missionSettings.aaInterval;
+			}
 		}
 	}
 } // namespace Game

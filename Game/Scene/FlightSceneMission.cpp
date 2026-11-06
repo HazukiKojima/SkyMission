@@ -12,9 +12,10 @@ namespace Game {
 		std::shared_ptr<Engine::Model> enemyModel, float enemyScale, const AircraftFlightParameters& flight,
 		const AircraftAIParameters& ai) {
 		settings.Validate();
-		if (!enemyModel || !m_enemies.empty() || m_initialState)
+		if (!enemyModel || !m_enemies.empty() || m_initialState) {
 			throw std::invalid_argument(
 				"Configure mission with loaded models before adding enemies/updating");
+		}
 		m_mission.Configure(settings, std::move(enemyModel), enemyScale, flight, ai);
 		m_carrierMissiles.ConfigureFlight(settings.carrierMissileSpeed, settings.bombDamage);
 		SpawnMissionAircraft(settings.patrolCount, SquadronKind::Patrol);
@@ -27,8 +28,9 @@ namespace Game {
 			if (spawn.heading) {
 				auto& enemy = m_enemies.back();
 				enemy.flightModel.SetHeading(*spawn.heading);
-				if (auto* object = m_scene.FindObject(id))
+				if (auto* object = m_scene.FindObject(id)) {
 					object->worldTransform = enemy.flightModel.GetWorldTransform();
+				}
 			}
 		}
 	}
@@ -82,36 +84,42 @@ namespace Game {
 		std::optional<CollisionTarget> hull;
 		if (carrierAttackActive) {
 			if (const auto* carrier = m_scene.FindObject(m_mission.GetCarrierId());
-				carrier && carrier->model->GetLocalBounds())
+				carrier && carrier->model->GetLocalBounds()) {
 				hull = CollisionTarget{carrier->id, *carrier->model->GetLocalBounds(),
 					{carrier->worldTransform._41, carrier->worldTransform._42, carrier->worldTransform._43},
 					carrier->worldTransform};
+			}
 		}
 		m_carrierMissiles.Update(m_scene, dt, hull);
-		for (const auto& position : m_carrierMissiles.TakeMissImpacts())
+		for (const auto& position : m_carrierMissiles.TakeMissImpacts()) {
 			m_effects.SpawnExplosion(position, {});
-		for (const auto& position : m_carrierMissiles.TakeTrail())
+		}
+		for (const auto& position : m_carrierMissiles.TakeTrail()) {
 			m_effects.SpawnRocketSmoke(position, 0);
+		}
 		if (carrierAttackActive && m_scene.FindObject(m_playerId)) {
 			const unsigned count = std::min(input.missilePressCount, m_carrierMissiles.GetAmmo());
 			const auto target = m_targeting.GetState() == LockState::Locked &&
 					m_targeting.GetSelected() == m_mission.GetCarrierId()
 				? m_mission.GetCarrierId()
 				: Engine::InvalidObjectId;
-			for (unsigned i = 0; i < count; ++i)
+			for (unsigned i = 0; i < count; ++i) {
 				if (m_carrierMissiles.TryLaunch(m_scene, m_player.GetPosition(), m_player.GetVelocity(),
-						m_player.GetForward(), target))
+						m_player.GetForward(), target)) {
 					++m_combat.audio.missileLaunches;
+				}
+			}
 		}
 	}
 
 	void FlightScene::UpdateHostileWeapons(float dt) {
 		std::vector<CollisionTarget> playerTargets;
-		if (const auto* player = m_scene.FindObject(m_playerId); player && player->model->GetLocalBounds())
+		if (const auto* player = m_scene.FindObject(m_playerId); player && player->model->GetLocalBounds()) {
 			playerTargets.push_back({.id = m_playerId,
 				.bounds = *player->model->GetLocalBounds(),
 				.previousPosition = m_previousPlayerPosition,
 				.world = player->worldTransform});
+		}
 		m_hostileProjectiles.Update(m_scene, dt, playerTargets);
 		UpdateEnemyGuns();
 		m_mission.UpdateAntiAircraftGuns(m_scene, m_player, m_hostileProjectiles, m_battleSeconds, dt);
@@ -123,14 +131,15 @@ namespace Game {
 
 	void FlightScene::UpdateEnemyGuns() {
 		for (auto& enemy : m_enemies) {
-			if (!enemy.fire || enemy.weaponCooldownSeconds > 0)
-				continue;
+			if (!enemy.fire || enemy.weaponCooldownSeconds > 0) continue;
 			const CombatTarget player{m_playerId, m_player.GetPosition(), m_player.GetVelocity()};
 			const auto enemyVelocity = enemy.flightModel.GetVelocity();
 			const auto direction = EnemyGunDirection(enemy.flightModel.GetPosition(), enemyVelocity, player,
 				m_enemyGunSettings.muzzleSpeed, enemy.slot, enemy.gunPattern.GetShotIndex());
-			if (!IsWithinAngle(enemy.flightModel.GetForward(), direction, enemy.aiParameters.aimAngleDegrees))
+			if (!IsWithinAngle(
+					enemy.flightModel.GetForward(), direction, enemy.aiParameters.aimAngleDegrees)) {
 				continue;
+			}
 			XMFLOAT3 velocity;
 			XMStoreFloat3(&velocity,
 				XMLoadFloat3(&enemyVelocity) + XMLoadFloat3(&direction) * m_enemyGunSettings.muzzleSpeed);

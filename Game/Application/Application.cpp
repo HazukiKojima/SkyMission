@@ -66,8 +66,7 @@ namespace Game {
 		// ウィンドウリサイズ時のコールバックを設定
 		m_window->SetOnResize([this](UINT w, UINT h) {
 			// 最小化などで幅/高さが0のときは処理しない
-			if (w == 0 || h == 0)
-				return;
+			if (w == 0 || h == 0) return;
 
 			m_renderer->Resize(w, h);
 

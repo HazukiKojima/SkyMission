@@ -15,8 +15,7 @@ namespace Game {
 		const float length = XMVectorGetX(XMVector3Length(forward));
 		if (!std::isfinite(length) || length < 0.001f)
 			throw std::invalid_argument("Bomb modelForward must be finite and nonzero");
-		if (!m_bombs.empty())
-			throw std::logic_error("Cannot configure active bombs");
+		if (!m_bombs.empty()) throw std::logic_error("Cannot configure active bombs");
 		m_model = std::move(model);
 		XMStoreFloat3(&m_modelForward, XMVector3Normalize(forward));
 		m_reloadSeconds = reloadSeconds;
@@ -37,8 +36,7 @@ namespace Game {
 	}
 
 	bool BombSystem::TryDrop(Engine::Scene& scene, const XMFLOAT3& position, const XMFLOAT3& velocity) {
-		if (!m_model || m_cooldownSeconds > 0)
-			return false;
+		if (!m_model || m_cooldownSeconds > 0) return false;
 		const auto flight = ReleaseFlight(position, velocity);
 		m_bombs.push_back({scene.AddObject(m_model,
 							   BuildProjectileTransform(flight.position, flight.velocity, m_modelForward)),
@@ -48,8 +46,7 @@ namespace Game {
 	}
 
 	void BombSystem::Update(Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& deck) {
-		if (!std::isfinite(dt) || dt <= 0)
-			return;
+		if (!std::isfinite(dt) || dt <= 0) return;
 		dt = std::min(dt, 0.25f);
 		m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
 		std::erase_if(m_bombs, [&](Bomb& bomb) {

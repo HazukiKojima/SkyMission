@@ -17,16 +17,14 @@ namespace Game {
 	}
 
 	void AircraftCameraController::Update(float deltaSeconds, const Engine::InputSnapshot& input) {
-		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0)
-			return;
+		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
 		if (m_following) {
 			UpdateFollow(deltaSeconds, input);
 			UpdateView();
 			return;
 		}
 
-		if (!input.active)
-			return;
+		if (!input.active) return;
 
 		XMFLOAT3 forward;
 		XMFLOAT3 right;

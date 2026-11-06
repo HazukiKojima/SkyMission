@@ -21,6 +21,11 @@ namespace Game {
 		constexpr float kLaunchVolume = 0.65f, kGunHitVolume = 0.65f, kMissileHitVolume = 0.75f;
 		constexpr float kAircraftVolume = 0.65f, kShipVolume = 0.75f;
 		constexpr float kHitVolume = 0.32f, kWarningVolume = 0.45f;
+		constexpr int kNoWarning = 0;
+		constexpr int kLockWarning = 1;
+		constexpr int kMissileWarning = 2;
+		constexpr float kMissileWarningIntervalSeconds = 0.22f;
+		constexpr float kLockWarningIntervalSeconds = 0.65f;
 		WAVEFORMATEX PcmFormat() {
 			WAVEFORMATEX format{};
 			format.wFormatTag = WAVE_FORMAT_PCM;
@@ -46,11 +51,9 @@ namespace Game {
 	bool CombatAudio::LoadClip(const std::filesystem::path& path, Clip& clip) {
 		using Microsoft::WRL::ComPtr;
 		ComPtr<IMFSourceReader> reader;
-		if (FAILED(MFCreateSourceReaderFromURL(path.c_str(), nullptr, &reader)))
-			return false;
+		if (FAILED(MFCreateSourceReaderFromURL(path.c_str(), nullptr, &reader))) return false;
 		ComPtr<IMFMediaType> requested;
-		if (FAILED(MFCreateMediaType(&requested)))
-			return false;
+		if (FAILED(MFCreateMediaType(&requested))) return false;
 		if (FAILED(requested->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio)) ||
 			FAILED(requested->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM)) ||
 			FAILED(requested->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, 1)) ||
@@ -60,36 +63,35 @@ namespace Game {
 			FAILED(requested->SetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, kSampleRate * 2)) ||
 			FAILED(reader->SetStreamSelection(kAllStreams, FALSE)) ||
 			FAILED(reader->SetStreamSelection(kAudioStream, TRUE)) ||
-			FAILED(reader->SetCurrentMediaType(kAudioStream, nullptr, requested.Get())))
+			FAILED(reader->SetCurrentMediaType(kAudioStream, nullptr, requested.Get()))) {
 			return false;
+		}
 		ComPtr<IMFMediaType> actual;
-		if (FAILED(reader->GetCurrentMediaType(kAudioStream, &actual)))
-			return false;
+		if (FAILED(reader->GetCurrentMediaType(kAudioStream, &actual))) return false;
 		WAVEFORMATEX* wave = nullptr;
 		UINT32 waveBytes = 0;
-		if (FAILED(MFCreateWaveFormatExFromMFMediaType(actual.Get(), &wave, &waveBytes)))
-			return false;
+		if (FAILED(MFCreateWaveFormatExFromMFMediaType(actual.Get(), &wave, &waveBytes))) return false;
 		const auto format = *wave;
 		CoTaskMemFree(wave);
 		if (format.wFormatTag != WAVE_FORMAT_PCM || format.nChannels != 1 ||
-			format.nSamplesPerSec != kSampleRate || format.wBitsPerSample != 16 || format.nBlockAlign != 2)
+			format.nSamplesPerSec != kSampleRate || format.wBitsPerSample != 16 || format.nBlockAlign != 2) {
 			return false;
+		}
 		Clip decoded;
 		decoded.format = format;
 		for (;;) {
 			DWORD flags = 0;
 			ComPtr<IMFSample> sample;
 			if (FAILED(reader->ReadSample(kAudioStream, 0, nullptr, &flags, nullptr, &sample)) ||
-				(flags & (MF_SOURCE_READERF_ERROR | MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)))
+				(flags & (MF_SOURCE_READERF_ERROR | MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED))) {
 				return false;
+			}
 			if (sample) {
 				ComPtr<IMFMediaBuffer> buffer;
-				if (FAILED(sample->ConvertToContiguousBuffer(&buffer)))
-					return false;
+				if (FAILED(sample->ConvertToContiguousBuffer(&buffer))) return false;
 				BYTE* data = nullptr;
 				DWORD length = 0;
-				if (FAILED(buffer->Lock(&data, nullptr, &length)))
-					return false;
+				if (FAILED(buffer->Lock(&data, nullptr, &length))) return false;
 				// 破損ファイルでも起動時のメモリ使用量を制限する
 				if (decoded.samples.size() + length > 64 * 1024 * 1024) {
 					buffer->Unlock();
@@ -103,11 +105,11 @@ namespace Game {
 				}
 				buffer->Unlock();
 			}
-			if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
+			if (flags & MF_SOURCE_READERF_ENDOFSTREAM) {
 				break;
+			}
 		}
-		if (decoded.samples.empty() || decoded.samples.size() % format.nBlockAlign)
-			return false;
+		if (decoded.samples.empty() || decoded.samples.size() % format.nBlockAlign) return false;
 		clip = std::move(decoded);
 		return true;
 	}
@@ -116,16 +118,16 @@ namespace Game {
 		Shutdown();
 		const HRESULT comResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 		m_comInitialized = SUCCEEDED(comResult);
-		if (FAILED(comResult) && comResult != RPC_E_CHANGED_MODE)
-			return;
+		if (FAILED(comResult) && comResult != RPC_E_CHANGED_MODE) return;
 		m_mediaInitialized = SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET));
 		const wchar_t* names[] = {L"プレイヤー飛行音(50秒).mp3", L"プレイヤー機関銃発射音(5秒間).mp3",
 			L"プレイヤーミサイル発射音.mp3", L"プレイヤー機関銃被弾.mp3", L"プレイヤーミサイル被弾.mp3",
 			L"敵航空機爆発.mp3", L"敵戦艦爆発.mp3"};
 		for (std::size_t i = 0; i < m_clips.size(); ++i) {
 			const auto path = soundDirectory / names[i];
-			if (!m_mediaInitialized || !LoadClip(path, m_clips[i]))
+			if (!m_mediaInitialized || !LoadClip(path, m_clips[i])) {
 				Engine::Log(L"CombatAudio: could not load {}\n", path.wstring());
+			}
 		}
 		if (FAILED(XAudio2Create(m_engine.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR)) ||
 			FAILED(m_engine->CreateMasteringVoice(&m_master))) {
@@ -148,8 +150,9 @@ namespace Game {
 				return;
 			}
 		}
-		if (FAILED(m_engine->CreateSourceVoice(&m_warningVoice, &format)))
+		if (FAILED(m_engine->CreateSourceVoice(&m_warningVoice, &format))) {
 			Shutdown();
+		}
 	}
 
 	std::size_t CombatAudio::GetLoadedSoundCount() const {
@@ -159,22 +162,23 @@ namespace Game {
 	}
 
 	void CombatAudio::SetSuspended(bool suspended) {
-		if (m_suspended == suspended)
-			return;
+		if (m_suspended == suspended) return;
 		m_suspended = suspended;
-		if (!m_engine)
-			return;
-		if (suspended)
+		if (!m_engine) return;
+		if (suspended) {
 			m_engine->StopEngine();
-		else
+		} else {
 			m_engine->StartEngine();
+		}
 	}
 
 	void CombatAudio::ResetPlayback() {
-		for (auto* voice : m_voices)
+		for (auto* voice : m_voices) {
 			StopVoice(voice);
-		for (auto* voice : m_loops)
+		}
+		for (auto* voice : m_loops) {
 			StopVoice(voice);
+		}
 		StopVoice(m_warningVoice);
 		m_loopPlaying = {};
 		m_warningCountdownSeconds = 0;
@@ -184,81 +188,94 @@ namespace Game {
 	void CombatAudio::SetLoop(std::size_t index, ClipKind kind, bool playing, float volume) {
 		auto* voice = m_loops[index];
 		const auto& clip = m_clips[static_cast<std::size_t>(kind)];
-		if (!voice || clip.samples.empty() || playing == m_loopPlaying[index])
-			return;
+		if (!voice || clip.samples.empty() || playing == m_loopPlaying[index]) return;
 		StopVoice(voice);
 		m_loopPlaying[index] = false;
-		if (!playing)
-			return;
+		if (!playing) return;
 		XAUDIO2_BUFFER buffer{};
 		buffer.AudioBytes = static_cast<UINT32>(clip.samples.size());
 		buffer.pAudioData = clip.samples.data();
 		buffer.Flags = XAUDIO2_END_OF_STREAM;
 		buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
 		voice->SetVolume(volume);
-		if (SUCCEEDED(voice->SubmitSourceBuffer(&buffer)) && SUCCEEDED(voice->Start()))
+		if (SUCCEEDED(voice->SubmitSourceBuffer(&buffer)) && SUCCEEDED(voice->Start())) {
 			m_loopPlaying[index] = true;
+		}
 	}
 
 	void CombatAudio::PlayClip(ClipKind kind, float volume) {
 		const auto& clip = m_clips[static_cast<std::size_t>(kind)];
-		if (clip.samples.empty())
-			return;
+		if (clip.samples.empty()) return;
 		for (auto* voice : m_voices) {
-			if (!voice)
-				continue;
+			if (!voice) continue;
 			XAUDIO2_VOICE_STATE state{};
 			voice->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
-			if (state.BuffersQueued)
-				continue;
+			if (state.BuffersQueued) continue;
 			XAUDIO2_BUFFER buffer{};
 			buffer.AudioBytes = static_cast<UINT32>(clip.samples.size());
 			buffer.pAudioData = clip.samples.data();
 			buffer.Flags = XAUDIO2_END_OF_STREAM;
 			voice->SetVolume(volume);
-			if (SUCCEEDED(voice->SubmitSourceBuffer(&buffer)))
+			if (SUCCEEDED(voice->SubmitSourceBuffer(&buffer))) {
 				voice->Start();
+			}
 			return;
 		}
 	}
 
 	void CombatAudio::Update(const CombatAudioState& state, unsigned hitCount, bool lockWarning,
 		bool missileWarning, float deltaSeconds) {
-		if (state.restarted)
+		if (state.restarted) {
 			ResetPlayback();
+		}
 		SetLoop(0, ClipKind::Flight, state.flying, kFlightVolume);
 		SetLoop(1, ClipKind::Gun, state.flying && state.gunFiring, kGunVolume);
 		UpdateWarning(state.flying, lockWarning, missileWarning, deltaSeconds);
 		PlayEvents(state, hitCount);
 	}
 	void CombatAudio::UpdateWarning(bool flying, bool lockWarning, bool missileWarning, float deltaSeconds) {
-		const int warning = !flying ? 0 : missileWarning ? 2 : lockWarning ? 1 : 0;
+		int warning = kNoWarning;
+		if (flying) {
+			if (missileWarning) {
+				warning = kMissileWarning;
+			} else if (lockWarning) {
+				warning = kLockWarning;
+			}
+		}
 		if (warning != m_warningKind) {
 			StopVoice(m_warningVoice);
 			m_warningKind = warning;
 			m_warningCountdownSeconds = 0;
 		}
-		if (std::isfinite(deltaSeconds) && deltaSeconds > 0)
+		if (std::isfinite(deltaSeconds) && deltaSeconds > 0) {
 			m_warningCountdownSeconds -= std::min(deltaSeconds, 0.25f);
-		if (warning && m_warningCountdownSeconds <= 0) {
+		}
+		if (warning != kNoWarning && m_warningCountdownSeconds <= 0) {
 			Play(missileWarning ? m_missileWarning : m_lockWarning, kWarningVolume, true);
-			m_warningCountdownSeconds = missileWarning ? 0.22f : 0.65f;
+			m_warningCountdownSeconds =
+				missileWarning ? kMissileWarningIntervalSeconds : kLockWarningIntervalSeconds;
 		}
 	}
 	void CombatAudio::PlayEvents(const CombatAudioState& state, unsigned hitCount) {
 		// 同じフレームの同種イベントをまとめ、急な音量増加を防ぐ
-		if (state.missileLaunches)
+		if (state.missileLaunches) {
 			PlayClip(ClipKind::Launch, kLaunchVolume);
-		if (state.gunHits)
+		}
+		if (state.gunHits) {
 			PlayClip(ClipKind::GunHit, kGunHitVolume);
-		if (state.missileHits)
+		}
+		if (state.missileHits) {
 			PlayClip(ClipKind::MissileHit, kMissileHitVolume);
-		if (state.aircraftExplosions)
+		}
+		if (state.aircraftExplosions) {
 			PlayClip(ClipKind::Aircraft, kAircraftVolume);
-		if (state.shipExplosions)
+		}
+		if (state.shipExplosions) {
 			PlayClip(ClipKind::Ship, kShipVolume);
-		if (hitCount)
+		}
+		if (hitCount) {
 			Play(m_hit, kHitVolume);
+		}
 	}
 
 	std::vector<int16_t> CombatAudio::Synthesize(SoundKind kind) {
@@ -284,58 +301,66 @@ namespace Game {
 	}
 
 	void CombatAudio::Play(const std::vector<int16_t>& samples, float volume, bool warning) {
-		if (samples.empty())
-			return;
+		if (samples.empty()) return;
 		const auto submit = [&](IXAudio2SourceVoice* voice) {
-			if (!voice)
-				return false;
+			if (!voice) return false;
 			XAUDIO2_VOICE_STATE state{};
 			voice->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
-			if (state.BuffersQueued)
-				return false;
+			if (state.BuffersQueued) return false;
 			XAUDIO2_BUFFER buffer{};
 			buffer.AudioBytes = static_cast<UINT32>(samples.size() * sizeof(int16_t));
 			buffer.pAudioData = reinterpret_cast<const BYTE*>(samples.data());
 			buffer.Flags = XAUDIO2_END_OF_STREAM;
 			voice->SetVolume(volume);
-			if (SUCCEEDED(voice->SubmitSourceBuffer(&buffer)))
+			if (SUCCEEDED(voice->SubmitSourceBuffer(&buffer))) {
 				voice->Start();
+			}
 			return true;
 		};
-		if (warning)
+		if (warning) {
 			submit(m_warningVoice);
-		else
-			for (auto* voice : m_voices)
-				if (submit(voice))
+		} else {
+			for (auto* voice : m_voices) {
+				if (submit(voice)) {
 					break;
+				}
+			}
+		}
 	}
 
 	void CombatAudio::Shutdown() {
 		// XAudio2はPCMバッファを参照するため、先にすべてのボイスを破棄する
 		for (auto*& voice : m_voices) {
-			if (voice)
+			if (voice) {
 				voice->DestroyVoice();
+			}
 			voice = nullptr;
 		}
 		for (auto*& voice : m_loops) {
-			if (voice)
+			if (voice) {
 				voice->DestroyVoice();
+			}
 			voice = nullptr;
 		}
-		if (m_warningVoice)
+		if (m_warningVoice) {
 			m_warningVoice->DestroyVoice();
+		}
 		m_warningVoice = nullptr;
-		if (m_master)
+		if (m_master) {
 			m_master->DestroyVoice();
+		}
 		m_master = nullptr;
 		m_engine.Reset();
-		for (auto& clip : m_clips)
+		for (auto& clip : m_clips) {
 			clip = {};
-		if (m_mediaInitialized)
+		}
+		if (m_mediaInitialized) {
 			MFShutdown();
+		}
 		m_mediaInitialized = false;
-		if (m_comInitialized)
+		if (m_comInitialized) {
 			CoUninitialize();
+		}
 		m_comInitialized = false;
 		m_suspended = false;
 		m_loopPlaying = {};

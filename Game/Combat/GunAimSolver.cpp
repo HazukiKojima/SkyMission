@@ -29,22 +29,17 @@ namespace Game {
 		const double c = rx * rx + ry * ry + rz * rz;
 		double time = std::numeric_limits<double>::infinity();
 		if (std::abs(a) <= 1e-8 * (double(speed) * speed + 1)) {
-			if (std::abs(b) > 1e-8)
-				time = -c / b;
+			if (std::abs(b) > 1e-8) time = -c / b;
 		} else {
 			const double discriminant = b * b - 4 * a * c;
-			if (discriminant < 0)
-				return std::nullopt;
+			if (discriminant < 0) return std::nullopt;
 			const double q = -0.5 * (b + std::copysign(std::sqrt(discriminant), b));
 			const double t1 = q / a;
 			const double t2 = q == 0 ? time : c / q;
-			if (t1 > 1e-6)
-				time = t1;
-			if (t2 > 1e-6)
-				time = std::min(time, t2);
+			if (t1 > 1e-6) time = t1;
+			if (t2 > 1e-6) time = std::min(time, t2);
 		}
-		if (!std::isfinite(time) || time <= 1e-6 || time > lifetime)
-			return std::nullopt;
+		if (!std::isfinite(time) || time <= 1e-6 || time > lifetime) return std::nullopt;
 		const auto relative =
 			XMVectorSet(float(rx + ux * time), float(ry + uy * time), float(rz + uz * time), 0);
 		AimSolution solution;

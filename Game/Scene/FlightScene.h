@@ -127,6 +127,8 @@ namespace Game {
 		void UpdateCombatTimers(float dt);
 		void UpdateMission(float dt);
 		void UpdateWeapons(const CombatInput& input, float dt);
+		void FirePlayerGun(const CombatInput& input, float dt, const CombatGeometry& geometry,
+			std::span<const CollisionTarget> targets);
 		void UpdateCarrierMissiles(const CombatInput& input, float dt);
 		void UpdateHostileWeapons(float dt);
 		void UpdateEnemyGuns();

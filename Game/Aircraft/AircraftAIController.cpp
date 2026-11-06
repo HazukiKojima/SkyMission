@@ -28,8 +28,7 @@ namespace Game {
 		std::optional<DirectX::XMFLOAT3> defenseCenter, bool opportunisticGun) {
 		using namespace DirectX;
 		AircraftAIDecision result;
-		if (!std::isfinite(dt) || dt <= 0)
-			return result;
+		if (!std::isfinite(dt) || dt <= 0) return result;
 		dt = std::min(dt, 0.25f);
 		m_combatTime += dt;
 		m_modeSeconds += dt;
@@ -71,9 +70,11 @@ namespace Game {
 		} else if (m_mode == AircraftCombatMode::Disengage) {
 			const float traveled = XMVectorGetX(XMVector3Dot(
 				XMLoadFloat3(&position) - XMLoadFloat3(&m_passStart), XMLoadFloat3(&m_escapeDirection)));
-			if ((m_modeSeconds >= m_passMinimum && traveled >= m_passLeg &&
-					distance >= p.disengageDistance * (1.42f + float(slot % 6) * 0.06f)) ||
-				m_modeSeconds >= m_passMaximum) {
+			const float safeDistance = p.disengageDistance * (1.42f + float(slot % 6) * 0.06f);
+			const bool spacingComplete =
+				m_modeSeconds >= m_passMinimum && traveled >= m_passLeg && distance >= safeDistance;
+			const bool escapeTimedOut = m_modeSeconds >= m_passMaximum;
+			if (spacingComplete || escapeTimedOut) {
 				EnterMode(AircraftCombatMode::Reengage);
 				ChooseTurn(yaw, delta + XMLoadFloat3(&m_reentryOffset), slot);
 			}
@@ -91,8 +92,7 @@ namespace Game {
 		const bool imminentCollision = closestTime > 0 &&
 			closest < std::min(1000.0f, p.disengageDistance * 0.34f) &&
 			distance < std::min(3500.0f, p.disengageDistance * 1.2f);
-		if (!imminentCollision)
-			m_collisionAvoidance = false;
+		if (!imminentCollision) m_collisionAvoidance = false;
 		m_avoidanceRecheck -= dt;
 		if (imminentCollision && m_mode != AircraftCombatMode::Recover &&
 			(!m_collisionAvoidance || m_avoidanceRecheck <= 0)) {
@@ -127,8 +127,7 @@ namespace Game {
 		}
 		if (m_collisionAvoidance && m_mode != AircraftCombatMode::Recover)
 			steering = XMLoadFloat3(&m_escapeDirection);
-		if (XMVectorGetX(XMVector3LengthSq(steering)) < 0.001f)
-			steering = XMLoadFloat3(&forward);
+		if (XMVectorGetX(XMVector3LengthSq(steering)) < 0.001f) steering = XMLoadFloat3(&forward);
 		XMStoreFloat3(&m_steering, XMVector3Normalize(steering));
 		result.flight = BuildFlightInput(aircraft, target, p, slot, distance, imminentCollision);
 		// 離脱中も短い連射を完了させるが、移動の離脱距離は変えない
@@ -160,7 +159,12 @@ namespace Game {
 		using namespace DirectX;
 		const float error =
 			std::remainder(std::atan2(XMVectorGetX(direction), -XMVectorGetZ(direction)) - yaw, XM_2PI);
-		m_flankSide = std::abs(error) > 0.05f ? std::copysign(1.0f, error) : (slot % 2 == 0 ? 1.0f : -1.0f);
+		constexpr float kTurnDirectionThresholdRadians = 0.05f;
+		if (std::abs(error) > kTurnDirectionThresholdRadians) {
+			m_flankSide = std::copysign(1.0f, error);
+		} else {
+			m_flankSide = slot % 2 == 0 ? 1.0f : -1.0f;
+		}
 	}
 	void AircraftAIController::BeginDisengagement(const AircraftFlightModel& aircraft,
 		const AircraftAITarget& target, const AircraftAIParameters& p, size_t slot,
@@ -196,8 +200,7 @@ namespace Game {
 		m_reentrySeconds = 1.2f + EnemyVariation(slot, maneuver, 103) * 1.8f;
 		const auto targetForward = XMLoadFloat3(&target.forward);
 		auto targetRight = XMVector3Cross(targetForward, XMVectorSet(0, 1, 0, 0));
-		if (XMVectorGetX(XMVector3LengthSq(targetRight)) < 0.001f)
-			targetRight = XMVectorSet(1, 0, 0, 0);
+		if (XMVectorGetX(XMVector3LengthSq(targetRight)) < 0.001f) targetRight = XMVectorSet(1, 0, 0, 0);
 		static constexpr float lanes[] = {-900, 700, -1400, 1200, -500, 1700};
 		XMStoreFloat3(&m_reentryOffset,
 			XMVector3Normalize(targetRight) * lanes[slot % std::size(lanes)] *
@@ -280,9 +283,7 @@ namespace Game {
 	AircraftInput AircraftAIController::ReadInput(const AircraftFlightModel& aircraft, float targetSpeed,
 		float deltaSeconds, const AircraftAIParameters& parameters) {
 		AircraftInput input;
-		if (deltaSeconds <= 0.0f) {
-			return input;
-		}
+		if (deltaSeconds <= 0.0f) return input;
 		m_elapsedSeconds += std::min(deltaSeconds, 0.25f);
 
 		const DirectX::XMFLOAT3 position = aircraft.GetPosition();

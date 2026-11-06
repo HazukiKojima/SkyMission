@@ -50,8 +50,7 @@ namespace Game {
 				const float delay = i == 0 ? 0 : (i % 5) * 0.025f;
 				const float particleAgeSeconds = ageSeconds - delay;
 				const float lifetimeSeconds = 0.48f + (i % 5) * 0.095f;
-				if (particleAgeSeconds < 0 || particleAgeSeconds >= lifetimeSeconds)
-					continue;
+				if (particleAgeSeconds < 0 || particleAgeSeconds >= lifetimeSeconds) continue;
 				const float heat = 1 - particleAgeSeconds / lifetimeSeconds;
 				const float phase = i * EffectDrawSettings::goldenAngleRadians;
 				const float spread = radiusScale * (0.15f + particleAgeSeconds * 1.15f) * (i == 0 ? 0 : 0.9f);
@@ -90,8 +89,7 @@ namespace Game {
 			// 重力で落下する破片と燃える軌跡
 			for (int i = 0; i < ExplosionEffectSettings::fragmentCount; ++i) {
 				const float lifetimeSeconds = 1.1f + (i % 7) * 0.22f;
-				if (ageSeconds >= lifetimeSeconds)
-					continue;
+				if (ageSeconds >= lifetimeSeconds) continue;
 				const float phase = i * EffectDrawSettings::goldenAngleRadians;
 				const float y = std::sin(i * 17.31f) * 0.85f;
 				const float radial = std::sqrt(1 - y * y);
@@ -109,8 +107,7 @@ namespace Game {
 				};
 				const auto segment = context.ProjectSegment(positionAt(ageSeconds),
 					positionAt(std::max(0.0f, ageSeconds - ExplosionEffectSettings::fragmentTrailSeconds)));
-				if (!segment)
-					continue;
+				if (!segment) continue;
 				const float fade = 1 - ageSeconds / lifetimeSeconds;
 				if (i % 3 == 0) {
 					for (int puff = 1; puff <= 3; ++puff) {

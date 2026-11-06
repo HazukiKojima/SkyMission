@@ -9,8 +9,7 @@ namespace Engine {
 	namespace {
 		std::vector<uint8_t> CreateFontAtlas() {
 			const HDC dc = CreateCompatibleDC(nullptr);
-			if (!dc)
-				throw std::runtime_error("Could not create HUD font DC");
+			if (!dc) throw std::runtime_error("Could not create HUD font DC");
 			BITMAPINFO info{};
 			info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 			info.bmiHeader.biWidth = HudFont::Width;
@@ -25,12 +24,9 @@ namespace Engine {
 				SHIFTJIS_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH,
 				L"UD デジタル 教科書体 N");
 			if (!bitmap || !font || !japaneseFont) {
-				if (font)
-					DeleteObject(font);
-				if (bitmap)
-					DeleteObject(bitmap);
-				if (japaneseFont)
-					DeleteObject(japaneseFont);
+				if (font) DeleteObject(font);
+				if (bitmap) DeleteObject(bitmap);
+				if (japaneseFont) DeleteObject(japaneseFont);
 				DeleteDC(dc);
 				throw std::runtime_error("Could not create HUD font bitmap");
 			}
@@ -123,8 +119,7 @@ namespace Engine {
 	void HudRenderer::Record(
 		RenderDevice& device, ID3D12GraphicsCommandList* commands, const HudDrawList& list) {
 		const auto& vertices = list.GetVertices();
-		if (vertices.empty())
-			return;
+		if (vertices.empty()) return;
 		if (vertices.size() > HudDrawList::MaxVertices)
 			throw std::length_error("HUD vertex capacity exceeded");
 		const auto frame = device.GetFrameIndex();

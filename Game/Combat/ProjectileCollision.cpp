@@ -9,8 +9,7 @@ namespace Game {
 		const auto world = XMLoadFloat4x4(&target.world);
 		XMVECTOR determinant;
 		const auto inverse = XMMatrixInverse(&determinant, world);
-		if (std::abs(XMVectorGetX(determinant)) < 1e-12f)
-			return std::nullopt;
+		if (std::abs(XMVectorGetX(determinant)) < 1e-12f) return std::nullopt;
 		const auto displacement = world.r[3] - XMLoadFloat3(&target.previousPosition);
 		// 敵の移動量を差し戻し、相対的な弾道を現在のOBBのローカル空間で判定する
 		XMFLOAT3 localStart;
@@ -28,17 +27,14 @@ namespace Game {
 		for (int axis = 0; axis < 3; ++axis) {
 			const float delta = ends[axis] - origins[axis];
 			if (std::abs(delta) < 1e-8f) {
-				if (origins[axis] < minimum[axis] || origins[axis] > maximum[axis])
-					return std::nullopt;
+				if (origins[axis] < minimum[axis] || origins[axis] > maximum[axis]) return std::nullopt;
 			} else {
 				float nearFraction = (minimum[axis] - origins[axis]) / delta;
 				float farFraction = (maximum[axis] - origins[axis]) / delta;
-				if (nearFraction > farFraction)
-					std::swap(nearFraction, farFraction);
+				if (nearFraction > farFraction) std::swap(nearFraction, farFraction);
 				enterFraction = std::max(enterFraction, nearFraction);
 				exitFraction = std::min(exitFraction, farFraction);
-				if (enterFraction > exitFraction)
-					return std::nullopt;
+				if (enterFraction > exitFraction) return std::nullopt;
 			}
 		}
 		return enterFraction;

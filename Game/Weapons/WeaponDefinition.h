@@ -23,8 +23,7 @@ namespace Game {
 			if (!std::isfinite(value) || value <= 0)
 				throw std::invalid_argument(std::string(name) + " must be positive and finite");
 		}
-		if (settings.maxProjectiles < 4)
-			throw std::invalid_argument("maxProjectiles must be at least 4");
+		if (settings.maxProjectiles < 4) throw std::invalid_argument("maxProjectiles must be at least 4");
 		std::unordered_set<std::string> names;
 		for (const auto& name : settings.muzzleNames)
 			if (name.empty() || !names.insert(name).second)

@@ -41,8 +41,7 @@ namespace Game {
 				.groundOffset = reader.ResolveFloat(path, "groundOffset")};
 			if (!std::isfinite(options.normalizedExtent) || options.normalizedExtent <= 0.0f)
 				throw std::runtime_error("normalizedExtent must be positive and finite");
-			if (!std::isfinite(options.groundOffset))
-				throw std::runtime_error("groundOffset must be finite");
+			if (!std::isfinite(options.groundOffset)) throw std::runtime_error("groundOffset must be finite");
 			return options;
 		}
 
@@ -61,18 +60,12 @@ namespace Game {
 
 		DirectX::XMFLOAT3 LoadModelForward(const JsonAssetReader& reader, const std::filesystem::path& path) {
 			const auto axis = reader.ResolveString(path, "modelForward");
-			if (axis == "+X")
-				return {1, 0, 0};
-			if (axis == "-X")
-				return {-1, 0, 0};
-			if (axis == "+Y")
-				return {0, 1, 0};
-			if (axis == "-Y")
-				return {0, -1, 0};
-			if (axis == "+Z")
-				return {0, 0, 1};
-			if (axis == "-Z")
-				return {0, 0, -1};
+			if (axis == "+X") return {1, 0, 0};
+			if (axis == "-X") return {-1, 0, 0};
+			if (axis == "+Y") return {0, 1, 0};
+			if (axis == "-Y") return {0, -1, 0};
+			if (axis == "+Z") return {0, 0, 1};
+			if (axis == "-Z") return {0, 0, -1};
 			throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
 		}
 
@@ -192,8 +185,7 @@ namespace Game {
 
 		void RequireEnvironment(
 			const std::filesystem::path& path, const std::string& field, bool valid, const char* reason) {
-			if (valid)
-				return;
+			if (valid) return;
 			const auto text = path.u8string();
 			throw std::runtime_error("JSON '" +
 				std::string(reinterpret_cast<const char*>(text.data()), text.size()) + "', field '" + field +

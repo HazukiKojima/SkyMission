@@ -33,8 +33,7 @@ namespace Engine::ModelProcessing {
 			const MeshInstance& instance, const ModelNormalization& normalization) {
 			MeshGeometry result;
 			const aiMesh* sourceMesh = instance.mesh;
-			if (!sourceMesh->HasPositions() || !sourceMesh->HasFaces())
-				return result;
+			if (!sourceMesh->HasPositions() || !sourceMesh->HasFaces()) return result;
 			result.materialIndex = sourceMesh->mMaterialIndex;
 			auto& vertices = result.vertices;
 			vertices.reserve(sourceMesh->mNumVertices);
@@ -176,12 +175,10 @@ namespace Engine::ModelProcessing {
 		std::vector<MeshGeometry> geometries;
 		for (const auto& instance : meshInstances) {
 			auto geometry = BuildMeshGeometry(instance, normalization);
-			if (!geometry.indices.empty())
-				geometries.push_back(std::move(geometry));
+			if (!geometry.indices.empty()) geometries.push_back(std::move(geometry));
 		}
 
-		if (geometries.empty())
-			return {};
+		if (geometries.empty()) return {};
 
 		return geometries;
 	}

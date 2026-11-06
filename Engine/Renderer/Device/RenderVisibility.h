@@ -15,7 +15,15 @@ namespace Engine {
 	};
 
 	inline unsigned SelectModelLod(float diameterPixels, unsigned count) {
-		return std::min(diameterPixels < 70 ? 2u : diameterPixels < 200 ? 1u : 0u, count - 1);
+		constexpr float kLowDetailThresholdPixels = 70;
+		constexpr float kMediumDetailThresholdPixels = 200;
+		unsigned lod = 0;
+		if (diameterPixels < kLowDetailThresholdPixels) {
+			lod = 2;
+		} else if (diameterPixels < kMediumDetailThresholdPixels) {
+			lod = 1;
+		}
+		return std::min(lod, count - 1);
 	}
 	inline DirectX::BoundingSphere WorldCullingSphere(
 		const Bounds3& bounds, float radius, const DirectX::XMFLOAT4X4& world) {

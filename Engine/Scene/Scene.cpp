@@ -10,16 +10,14 @@ namespace Engine {
 	}
 
 	ObjectId Scene::AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& transform) {
-		if (!model)
-			return InvalidObjectId;
+		if (!model) return InvalidObjectId;
 		m_objects.emplace_back(std::move(model), transform);
 		m_objects.back().id = m_nextObjectId++;
 		return m_objects.back().id;
 	}
 
 	ObjectId Scene::AddObject(std::shared_ptr<Model> model) {
-		if (!model)
-			return InvalidObjectId;
+		if (!model) return InvalidObjectId;
 		m_objects.emplace_back(std::move(model));
 		m_objects.back().id = m_nextObjectId++;
 		return m_objects.back().id;

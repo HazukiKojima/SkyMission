@@ -41,8 +41,7 @@ namespace Engine {
 		void Begin(ID3D12GraphicsCommandList* commands, UINT frame) {
 			m_frame = frame;
 			m_capture = m_pending[frame] == 0 || m_fence->GetCompletedValue() >= m_pending[frame];
-			if (!m_capture)
-				return;
+			if (!m_capture) return;
 			if (m_pending[frame] != 0) {
 				const SIZE_T offset = sizeof(uint64_t) * Marks * frame;
 				const CD3DX12_RANGE reads(offset, offset + sizeof(uint64_t) * Marks);

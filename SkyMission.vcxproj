@@ -360,12 +360,20 @@
     <Error Condition="!Exists('packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />
   </Target>
   <ItemGroup>
-    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\**\*.cs" Exclude="$(ProjectDir)External\REDoxWrapper\bin\**;$(ProjectDir)External\REDoxWrapper\obj\**" />
+    <REDoxWrapperPublishInput Include="$(MSBuildProjectFullPath)" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedAircraftAIParameters.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxApi.cs" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxWrapper.csproj" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)global.json" />
-    <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\**\*.cs" Exclude="$(ProjectDir)tools\AircraftParameterGenerator\bin\**;$(ProjectDir)tools\AircraftParameterGenerator\obj\**" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\Program.cs" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
-    <REDoxWrapperPublishInput Include="$(ProjectDir)Game\Aircraft\AircraftFlightParameters.h;$(ProjectDir)Game\Aircraft\AircraftAIController.h;$(ProjectDir)Engine\Scene\OceanParameters.h;$(ProjectDir)Engine\Scene\SkyParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Game\Aircraft\AircraftFlightParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Game\Aircraft\AircraftAIController.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Engine\Scene\OceanParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Engine\Scene\SkyParameters.h" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)Directory.Build.props" Condition="Exists('$(ProjectDir)Directory.Build.props')" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)Directory.Build.targets" Condition="Exists('$(ProjectDir)Directory.Build.targets')" />
   </ItemGroup>
@@ -491,7 +499,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="global.json" />
-    <None Include="Assets\Sound\*.mp3" />
+    <None Include="Assets\Sound\プレイヤーミサイル発射音.mp3" />
+    <None Include="Assets\Sound\プレイヤーミサイル被弾.mp3" />
+    <None Include="Assets\Sound\プレイヤー機関銃発射音(5秒間).mp3" />
+    <None Include="Assets\Sound\プレイヤー機関銃被弾.mp3" />
+    <None Include="Assets\Sound\プレイヤー飛行音(50秒).mp3" />
+    <None Include="Assets\Sound\敵戦艦爆発.mp3" />
+    <None Include="Assets\Sound\敵航空機爆発.mp3" />
     <ClInclude Include="Tests\EnvironmentSettingsTests.h"></ClInclude>
   </ItemGroup>
   <ItemGroup>

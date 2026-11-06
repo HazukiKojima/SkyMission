@@ -51,8 +51,7 @@ namespace Game {
 		}
 		std::optional<DirectX::XMFLOAT3> GetCarrierCenter(Engine::Scene& scene) const;
 		std::optional<DirectX::XMFLOAT3> GetDefenseCenter(Engine::Scene& scene) {
-			if (auto center = GetCarrierCenter(scene))
-				m_defenseCenter = center;
+			if (auto center = GetCarrierCenter(scene)) m_defenseCenter = center;
 			return m_defenseCenter;
 		}
 		float GetCarrierHealth() const {

@@ -72,8 +72,7 @@ namespace Engine {
 	}
 
 	void OceanGeometry::ReleaseUploadResources() {
-		if (m_vertexBuffer)
-			m_vertexBuffer->ReleaseUploadResources();
+		if (m_vertexBuffer) m_vertexBuffer->ReleaseUploadResources();
 		m_indexUpload.Reset();
 	}
 

@@ -13,9 +13,7 @@ namespace Engine::MaterialTexturePaths {
 			texturesDirectory / texturePath, texturesDirectory / texturePath.filename()};
 
 		for (const auto& candidate : candidates) {
-			if (std::filesystem::is_regular_file(candidate)) {
-				return candidate;
-			}
+			if (std::filesystem::is_regular_file(candidate)) return candidate;
 		}
 		// Some FBX exports retain .jpg references when the supplied image is .jpeg.
 		auto extension = texturePath.extension().wstring();
@@ -23,8 +21,7 @@ namespace Engine::MaterialTexturePaths {
 		if (extension == L".jpg" || extension == L".jpeg") {
 			auto alternate = texturesDirectory / texturePath.filename();
 			alternate.replace_extension(extension == L".jpg" ? L".jpeg" : L".jpg");
-			if (std::filesystem::is_regular_file(alternate))
-				return alternate;
+			if (std::filesystem::is_regular_file(alternate)) return alternate;
 		}
 
 		return {};
@@ -43,8 +40,7 @@ namespace Engine::MaterialTexturePaths {
 	std::filesystem::path FindNamedMaterialTexturePath(const std::filesystem::path& modelDirectory,
 		const std::string& materialName, const std::filesystem::path& baseColorPath,
 		const std::wstring& suffix, const ModelLoadOptions& options) {
-		if (suffix.empty())
-			return {};
+		if (suffix.empty()) return {};
 		const std::filesystem::path texturesDirectory = modelDirectory / options.textureDirectory;
 		const std::wstring& baseColorSuffix = options.baseColorStemSuffix;
 		std::wstring baseName = baseColorPath.stem().wstring();
@@ -55,9 +51,7 @@ namespace Engine::MaterialTexturePaths {
 		const size_t baseColorPosition = baseNameLower.find(baseSuffixLower);
 		if (!baseColorSuffix.empty() && baseColorPosition != std::wstring::npos) {
 			const auto candidate = texturesDirectory / (baseName.substr(0, baseColorPosition) + suffix);
-			if (std::filesystem::exists(candidate)) {
-				return candidate;
-			}
+			if (std::filesystem::exists(candidate)) return candidate;
 		}
 
 		std::string materialNameLower = materialName;
@@ -67,9 +61,7 @@ namespace Engine::MaterialTexturePaths {
 			});
 		std::error_code error;
 		for (const auto& entry : std::filesystem::directory_iterator(texturesDirectory, error)) {
-			if (error || !entry.is_regular_file()) {
-				continue;
-			}
+			if (error || !entry.is_regular_file()) continue;
 			std::wstring filename = entry.path().filename().wstring();
 			std::wstring filenameLower = filename;
 			std::transform(filenameLower.begin(), filenameLower.end(), filenameLower.begin(), towlower);
@@ -87,9 +79,7 @@ namespace Engine::MaterialTexturePaths {
 			std::transform(prefixLower.begin(), prefixLower.end(), prefixLower.begin(), [](unsigned char c) {
 				return static_cast<char>(std::tolower(c));
 			});
-			if (prefixLower == materialNameLower) {
-				return entry.path();
-			}
+			if (prefixLower == materialNameLower) return entry.path();
 		}
 
 		return {};

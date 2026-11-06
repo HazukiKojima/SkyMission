@@ -34,9 +34,7 @@ namespace Engine {
 
 			DXGI_ADAPTER_DESC1 description = {};
 			ThrowIfFailed(adapter->GetDesc1(&description));
-			if ((description.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0) {
-				continue;
-			}
+			if ((description.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0) continue;
 
 			deviceResult = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
 			if (SUCCEEDED(deviceResult)) {
@@ -193,9 +191,7 @@ namespace Engine {
 	}
 
 	void RenderDevice::Resize(UINT width, UINT height) {
-		if (width == 0 || height == 0 || (width == m_width && height == m_height)) {
-			return;
-		}
+		if (width == 0 || height == 0 || (width == m_width && height == m_height)) return;
 
 		m_width = width;
 		m_height = height;
