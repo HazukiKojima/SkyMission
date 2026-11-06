@@ -6,11 +6,10 @@ namespace Engine {
 
 	class CommandContext {
 	  public:
-		UINT GetRenderHeight() const {
-			return m_renderDevice->GetHeight();
-		}
 		CommandContext() = default;
 		~CommandContext();
+		CommandContext(const CommandContext&) = delete;
+		CommandContext& operator=(const CommandContext&) = delete;
 
 		void Initialize(RenderDevice* renderDevice);
 
@@ -28,6 +27,10 @@ namespace Engine {
 
 		void TransitionResource(
 			ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
+
+		UINT GetRenderHeight() const {
+			return m_renderDevice->GetHeight();
+		}
 
 		ID3D12GraphicsCommandList* GetCommandList() const {
 			return m_commandList.Get();

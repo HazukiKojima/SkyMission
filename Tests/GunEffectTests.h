@@ -18,7 +18,13 @@ void TestGunFireEffects() {
 	XMFLOAT4X4 world;
 	XMStoreFloat4x4(&world, XMMatrixTranslation(0, 20, 0));
 	const auto fire = [&](float age) {
-		return bullets.FireVolley(scene, muzzles, world, world, {0, 0, -1}, {20, 0, 0}, age);
+		return bullets.FireVolley(scene,
+			{.muzzles = muzzles,
+				.aircraftWorld = world,
+				.aircraftPose = world,
+				.forward = {0, 0, -1},
+				.aircraftVelocity = {20, 0, 0},
+				.ageSeconds = age});
 	};
 	Require(fire(0.01f), "Gun effect volley failed");
 	auto shots = bullets.TakeShotEvents();
@@ -61,7 +67,16 @@ void TestGunFireEffects() {
 	CollisionTarget target{7, {{-10, -5, -1}, {10, 5, 1}}, {0, 20, -10}, {}};
 	XMStoreFloat4x4(&target.world, XMMatrixTranslation(0, 20, -10));
 	bullets.Configure(settings, model, {0, 0, -1});
-	bullets.FireVolley(scene, muzzles, world, world, {0, 0, -1}, {}, 0.02f, {}, std::span{&target, 1}, 0.02f);
+	bullets.FireVolley(scene,
+		{.muzzles = muzzles,
+			.aircraftWorld = world,
+			.aircraftPose = world,
+			.forward = {0, 0, -1},
+			.aircraftVelocity = {},
+			.ageSeconds = 0.02f,
+			.assistance = {},
+			.targets = std::span{&target, 1},
+			.frameSeconds = 0.02f});
 	const auto hits = bullets.TakeHits();
 	tracers = bullets.TakeTracers();
 	Require(hits.size() == 4 && bullets.TakeShotEvents().size() == 4 && bullets.GetCount() == 0 &&
@@ -74,7 +89,13 @@ void TestGunFireEffects() {
 		"Tracer and ordinary bullet collisions differ");
 	bullets.Update(scene, 0.01f);
 	Require(bullets.TakeTracers().empty(), "Contact tracer persisted");
-	bullets.FireVolley(scene, muzzles, world, world, {0, -1, 0}, {}, 0.05f);
+	bullets.FireVolley(scene,
+		{.muzzles = muzzles,
+			.aircraftWorld = world,
+			.aircraftPose = world,
+			.forward = {0, -1, 0},
+			.aircraftVelocity = {},
+			.ageSeconds = 0.05f});
 	tracers = bullets.TakeTracers();
 	Require(bullets.GetCount() == 0 && tracers.size() == 2 && std::abs(tracers.front().head.y) < 0.001f,
 		"Sea contact did not terminate the tracer");
@@ -90,7 +111,14 @@ void TestGunFireEffects() {
 	settings.muzzleSpeed = 1000;
 	bullets.Configure(settings, model, {0, 0, -1});
 	const AimAssistance assistance{CombatTarget{9, {10, 20, -100}, {}, "TEST", 100}, 30};
-	bullets.FireVolley(scene, muzzles, world, world, {0, 0, -1}, {20, 0, 0}, 0.05f, assistance);
+	bullets.FireVolley(scene,
+		{.muzzles = muzzles,
+			.aircraftWorld = world,
+			.aircraftPose = world,
+			.forward = {0, 0, -1},
+			.aircraftVelocity = {20, 0, 0},
+			.ageSeconds = 0.05f,
+			.assistance = assistance});
 	tracers = bullets.TakeTracers();
 	const auto& assistedWorld = scene.GetObjects().front().worldTransform;
 	Require(std::abs(tracers.front().head.x - assistedWorld._41) < 0.001f &&

@@ -27,6 +27,7 @@
     <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h" />
     <None Include="Engine\Renderer\Shader\OceanFog.hlsli" />
     <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
+    <ClCompile Include="Game\Aircraft\AircraftAIController.cpp" />
     <ClCompile Include="Game\Audio\CombatAudio.cpp" />
     <ClCompile Include="Game\Application\Application.cpp" />
     <ClCompile Include="Game\Aircraft\AircraftController.cpp" />
@@ -515,5 +516,14 @@
   <ItemGroup>
     <ClCompile Include="Game\Combat\CombatSnapshotBuilder.cpp" />
     <ClInclude Include="Game\Combat\CombatSnapshotBuilder.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Weapons\CarrierMissileSystem.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\CarrierMissileSystem.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\ProjectilePose.h" />
   </ItemGroup>
 </Project>

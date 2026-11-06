@@ -101,11 +101,11 @@ namespace Engine {
 		m_context->TransitionResource(
 			sceneDepth, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		RecordRetroFilmPass();
-		m_gpuProfiler.Mark(cmd, 4);
+		m_gpuProfiler.Mark(cmd, GpuTimestamp::PostProcessEnd);
 		if (hud)
 			m_hudRenderer.Record(*m_device, cmd, *hud);
 
-		m_gpuProfiler.Mark(cmd, 5);
+		m_gpuProfiler.Mark(cmd, GpuTimestamp::HudEnd);
 		m_gpuProfiler.Resolve(cmd);
 
 		// 描画したフレームを表示する
@@ -131,11 +131,11 @@ namespace Engine {
 		const FrameContext frame{
 			cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()};
 		m_skyPass.Record(frame, m_assets);
-		m_gpuProfiler.Mark(cmd, 1);
+		m_gpuProfiler.Mark(cmd, GpuTimestamp::SkyEnd);
 		m_oceanPass.Record(frame, m_assets, m_oceanGeometry);
-		m_gpuProfiler.Mark(cmd, 2);
+		m_gpuProfiler.Mark(cmd, GpuTimestamp::OceanEnd);
 		m_modelPass.Record(frame, scene, m_frameUpdater.GetDrawDecisions(), m_statistics);
-		m_gpuProfiler.Mark(cmd, 3);
+		m_gpuProfiler.Mark(cmd, GpuTimestamp::ModelsEnd);
 	}
 
 	void Renderer::RecordRetroFilmPass() {

@@ -4,7 +4,7 @@ namespace Game {
 	// 画面寸法、再挑戦用データ自体、外部のRenderer/Applicationは含めない。
 	struct FlightScene::RestartState {
 		FlightMission mission;
-		BombSystem bombs;
+		CarrierMissileSystem carrierMissiles;
 		ProjectileSystem hostileProjectiles;
 		GunSettings enemyGunSettings;
 		float commanderGunInterval;
@@ -29,7 +29,7 @@ namespace Game {
 	};
 	void FlightScene::SaveInitialState() {
 		m_initialState = std::make_shared<const RestartState>(RestartState{.mission = m_mission,
-			.bombs = m_bombs,
+			.carrierMissiles = m_carrierMissiles,
 			.hostileProjectiles = m_hostileProjectiles,
 			.enemyGunSettings = m_enemyGunSettings,
 			.commanderGunInterval = m_commanderGunInterval,
@@ -55,7 +55,7 @@ namespace Game {
 	void FlightScene::Restart(float dt) {
 		const auto& initial = *m_initialState;
 		m_mission = initial.mission;
-		m_bombs = initial.bombs;
+		m_carrierMissiles = initial.carrierMissiles;
 		m_hostileProjectiles = initial.hostileProjectiles;
 		m_enemyGunSettings = initial.enemyGunSettings;
 		m_commanderGunInterval = initial.commanderGunInterval;

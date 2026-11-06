@@ -59,7 +59,7 @@ namespace Game {
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +
 			assets.mission.finalFighterCount + 1 +
-			BombSystem::RequiredModelCapacity(assets.mission.bombReloadSeconds));
+			CarrierMissileSystem::RequiredModelCapacity(assets.mission.bombReloadSeconds));
 	}
 
 	void Application::ConfigureResizeHandling() {

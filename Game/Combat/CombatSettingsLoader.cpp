@@ -8,7 +8,7 @@ namespace Game {
 			const auto utf8 = path.u8string();
 			return std::string(reinterpret_cast<const char*>(utf8.data()), utf8.size());
 		}
-		float Positive(
+		float ReadPositiveFloat(
 			const Engine::JsonAssetReader& reader, const std::filesystem::path& path, const char* field) {
 			const float value = reader.ResolveFloat(path, field);
 			if (!std::isfinite(value) || value <= 0)
@@ -21,18 +21,18 @@ namespace Game {
 		try {
 			CombatSettings settings;
 			auto& t = settings.targeting;
-			t.selectionDistance = Positive(reader, path, "selectionDistance");
-			t.acquireDistance = Positive(reader, path, "acquireDistance");
-			t.acquireAngleDegrees = Positive(reader, path, "acquireAngleDegrees");
-			t.acquireSeconds = Positive(reader, path, "acquireSeconds");
-			t.maintainDistance = Positive(reader, path, "maintainDistance");
-			t.maintainAngleDegrees = Positive(reader, path, "maintainAngleDegrees");
-			t.lossGraceSeconds = Positive(reader, path, "lossGraceSeconds");
-			t.assistAngleDegrees = Positive(reader, path, "assistAngleDegrees");
+			t.selectionDistance = ReadPositiveFloat(reader, path, "selectionDistance");
+			t.acquireDistance = ReadPositiveFloat(reader, path, "acquireDistance");
+			t.acquireAngleDegrees = ReadPositiveFloat(reader, path, "acquireAngleDegrees");
+			t.acquireSeconds = ReadPositiveFloat(reader, path, "acquireSeconds");
+			t.maintainDistance = ReadPositiveFloat(reader, path, "maintainDistance");
+			t.maintainAngleDegrees = ReadPositiveFloat(reader, path, "maintainAngleDegrees");
+			t.lossGraceSeconds = ReadPositiveFloat(reader, path, "lossGraceSeconds");
+			t.assistAngleDegrees = ReadPositiveFloat(reader, path, "assistAngleDegrees");
 			TargetingSystem{}.Configure(t);
-			settings.enemyHealth = Positive(reader, path, "enemyHealth");
-			settings.playerHealth = Positive(reader, path, "playerHealth");
-			settings.bulletDamage = Positive(reader, path, "bulletDamage");
+			settings.enemyHealth = ReadPositiveFloat(reader, path, "enemyHealth");
+			settings.playerHealth = ReadPositiveFloat(reader, path, "playerHealth");
+			settings.bulletDamage = ReadPositiveFloat(reader, path, "bulletDamage");
 			return settings;
 		} catch (const std::exception& error) {
 			throw std::runtime_error(PathText(path) + ": " + error.what());
@@ -50,8 +50,8 @@ namespace Game {
 				if (!std::isfinite(component) || component < 0 || component > 1)
 					throw std::invalid_argument("color/alpha must be within [0,1]");
 			settings.color = {rgb[0], rgb[1], rgb[2], alpha};
-			settings.lineWidth = Positive(reader, path, "lineWidth");
-			settings.fontSize = Positive(reader, path, "fontSize");
+			settings.lineWidth = ReadPositiveFloat(reader, path, "lineWidth");
+			settings.fontSize = ReadPositiveFloat(reader, path, "fontSize");
 			return settings;
 		} catch (const std::exception& error) {
 			throw std::runtime_error(PathText(path) + ": " + error.what());

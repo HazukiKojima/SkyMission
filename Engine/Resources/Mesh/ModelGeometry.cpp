@@ -185,4 +185,33 @@ namespace Engine::ModelProcessing {
 
 		return geometries;
 	}
+	Bounds3 CalculateModelBounds(const std::vector<MeshGeometry>& geometries) {
+		Bounds3 bounds{
+			geometries.front().vertices.front().position, geometries.front().vertices.front().position};
+		for (const auto& geometry : geometries)
+			for (const auto& vertex : geometry.vertices) {
+				bounds.minimum.x = std::min(bounds.minimum.x, vertex.position.x);
+				bounds.minimum.y = std::min(bounds.minimum.y, vertex.position.y);
+				bounds.minimum.z = std::min(bounds.minimum.z, vertex.position.z);
+				bounds.maximum.x = std::max(bounds.maximum.x, vertex.position.x);
+				bounds.maximum.y = std::max(bounds.maximum.y, vertex.position.y);
+				bounds.maximum.z = std::max(bounds.maximum.z, vertex.position.z);
+			}
+		return bounds;
+	}
+	float CalculateCullingRadius(const std::vector<MeshGeometry>& geometries, const Bounds3& bounds) {
+		float radius = 0;
+		const auto center = bounds.Center();
+		const auto distance = [](const DirectX::XMFLOAT3& a, const DirectX::XMFLOAT3& b) {
+			return std::sqrt(
+				(a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
+		};
+		for (const auto& geometry : geometries)
+			for (const auto& vertex : geometry.vertices)
+				radius = std::max(radius,
+					geometry.isRotatingNode ? distance(center, geometry.nodeRotationPivot) +
+							distance(vertex.position, geometry.nodeRotationPivot)
+											: distance(center, vertex.position));
+		return radius;
+	}
 } // namespace Engine::ModelProcessing

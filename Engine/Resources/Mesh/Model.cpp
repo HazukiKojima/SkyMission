@@ -64,32 +64,18 @@ namespace Engine {
 		m_sourceMeshCount = geometries.size();
 		if (geometries.empty())
 			return false;
-		Bounds3 bounds{
-			geometries.front().vertices.front().position, geometries.front().vertices.front().position};
-		for (const auto& geometry : geometries)
-			for (const auto& vertex : geometry.vertices) {
-				bounds.minimum.x = std::min(bounds.minimum.x, vertex.position.x);
-				bounds.minimum.y = std::min(bounds.minimum.y, vertex.position.y);
-				bounds.minimum.z = std::min(bounds.minimum.z, vertex.position.z);
-				bounds.maximum.x = std::max(bounds.maximum.x, vertex.position.x);
-				bounds.maximum.y = std::max(bounds.maximum.y, vertex.position.y);
-				bounds.maximum.z = std::max(bounds.maximum.z, vertex.position.z);
-			}
+		const auto bounds = CalculateModelBounds(geometries);
 		m_localBounds = bounds;
-
-		const auto center = bounds.Center();
-		const auto distance = [](const DirectX::XMFLOAT3& a, const DirectX::XMFLOAT3& b) {
-			return std::sqrt(
-				(a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
-		};
-		for (const auto& geometry : geometries)
-			for (const auto& vertex : geometry.vertices)
-				m_cullingRadius = std::max(m_cullingRadius,
-					geometry.isRotatingNode ? distance(center, geometry.nodeRotationPivot) +
-							distance(vertex.position, geometry.nodeRotationPivot)
-											: distance(center, vertex.position));
+		m_cullingRadius = CalculateCullingRadius(geometries, bounds);
 		InitializeFallbackTextures(device, commandList);
 		const auto modelDirectory = modelPath.parent_path();
+		return CreateMeshes(*scene, geometries, options, modelDirectory, device, commandList, renderDevice);
+	}
+
+	bool Model::CreateMeshes(const aiScene& scene, std::vector<ModelProcessing::MeshGeometry>& geometries,
+		const ModelLoadOptions& options, const std::filesystem::path& modelDirectory, ID3D12Device* device,
+		ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice) {
+		const auto& bounds = *m_localBounds;
 		struct Batch {
 			Mesh mesh;
 			std::vector<ModelVertex> vertices;
@@ -104,8 +90,8 @@ namespace Engine {
 			const auto materialIndex = geometry.materialIndex;
 			auto [material, inserted] = materials.try_emplace(materialIndex);
 			if (inserted) {
-				if (materialIndex < scene->mNumMaterials)
-					LoadMaterialTextures(material->second, scene->mMaterials[materialIndex], modelDirectory,
+				if (materialIndex < scene.mNumMaterials)
+					LoadMaterialTextures(material->second, scene.mMaterials[materialIndex], modelDirectory,
 						options, device, commandList);
 				AssignMaterialDescriptors(material->second, device, renderDevice, textureDescriptorSets);
 			}

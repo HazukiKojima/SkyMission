@@ -5,7 +5,6 @@
 #include <memory>
 #include <filesystem>
 
-struct aiMaterial;
 #include <string>
 #include <vector>
 #include <optional>
@@ -14,6 +13,12 @@ struct aiMaterial;
 #include <array>
 #include <algorithm>
 #include "Engine/Scene/Bounds3.h"
+
+struct aiMaterial;
+struct aiScene;
+namespace Engine::ModelProcessing {
+	struct MeshGeometry;
+}
 
 namespace Engine {
 	class RenderDevice;
@@ -24,6 +29,8 @@ namespace Engine {
 			const std::wstring& filePath, const ModelLoadOptions& options = {});
 		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 			float nodeRotationAngle = 0.0f, unsigned lod = 0) const;
+		void ReleaseUploadResources();
+
 		unsigned GetLodCount() const {
 			return m_lodCount;
 		}
@@ -42,7 +49,6 @@ namespace Engine {
 		size_t GetSourceMeshCount() const {
 			return m_sourceMeshCount;
 		}
-		void ReleaseUploadResources();
 		// 同名ノードが複数ある場合も曖昧な位置を返さない
 		std::optional<DirectX::XMFLOAT3> FindNodePosition(std::string_view name) const;
 		size_t CountNodes(std::string_view name) const;
@@ -75,6 +81,9 @@ namespace Engine {
 			const Texture* normal;
 			UINT srvIndex;
 		};
+		bool CreateMeshes(const aiScene& scene, std::vector<ModelProcessing::MeshGeometry>& geometries,
+			const ModelLoadOptions& options, const std::filesystem::path& directory, ID3D12Device* device,
+			ID3D12GraphicsCommandList* commands, RenderDevice* renderDevice);
 		void AssignMaterialDescriptors(Mesh& mesh, ID3D12Device* device, RenderDevice* renderDevice,
 			std::vector<TextureDescriptorSet>& sets);
 		void UploadGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commands, const void* vertices,
@@ -84,8 +93,10 @@ namespace Engine {
 		void LoadMaterialTextures(Mesh& mesh, const aiMaterial* material,
 			const std::filesystem::path& directory, const ModelLoadOptions& options, ID3D12Device* device,
 			ID3D12GraphicsCommandList* commandList);
-		ComPtr<ID3D12Resource> m_vertexBuffer, m_indexBuffer;
-		ComPtr<ID3D12Resource> m_vertexUpload, m_indexUpload;
+		ComPtr<ID3D12Resource> m_vertexBuffer;
+		ComPtr<ID3D12Resource> m_indexBuffer;
+		ComPtr<ID3D12Resource> m_vertexUpload;
+		ComPtr<ID3D12Resource> m_indexUpload;
 		std::unique_ptr<Texture> m_fallbackTexture;
 		std::unique_ptr<Texture> m_fallbackMetallicTexture;
 		std::unique_ptr<Texture> m_fallbackRoughnessTexture;

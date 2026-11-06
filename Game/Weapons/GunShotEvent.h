@@ -10,7 +10,7 @@ namespace Game {
 		DirectX::XMFLOAT3 position{};
 		DirectX::XMFLOAT3 aircraftVelocity{};
 		DirectX::XMFLOAT3 direction{0, 0, -1};
-		float age = 0; // 発射からフレーム末までの経過秒数。演出の開始時刻補正に使う
+		float age = 0;				// 発射からフレーム末までの経過秒数。演出の開始時刻補正に使う
 		std::uint64_t sequence = 0; // 発射ごとの識別値。演出のばらつきを安定させる
 	};
 

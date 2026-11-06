@@ -21,8 +21,8 @@ namespace Game {
 		~AircraftCameraController() = default;
 
 		// 射影と初期視点を設定する（fovYはラジアン、nearZ・farZはワールド単位）
-		void Initialize(float fovY = DefaultFovY, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,
-			float farZ = 1000.0f);
+		void Initialize(
+			float fovY = DefaultFovY, float aspect = 16.0f / 9.0f, float nearZ = 0.1f, float farZ = 1000.0f);
 
 		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
@@ -44,6 +44,9 @@ namespace Game {
 	  private:
 		void UpdateView();
 		void UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input);
+		void UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input);
+		void UpdateFollowOrientation(float deltaSeconds);
+		void UpdateFollowPosition(float deltaSeconds);
 
 		DirectX::XMFLOAT3 m_position = {0.0f, 10.0f, -10.0f};
 		float m_yaw = 0.0f;			// ラジアン

@@ -21,18 +21,24 @@ namespace Game {
 		m_settings = settings;
 		m_selected = Engine::InvalidObjectId;
 		m_state = LockState::None;
-		m_acquired = 0;
-		m_lost = 0;
+		m_acquiredSeconds = 0;
+		m_lostSeconds = 0;
 	}
 	float TargetingSystem::GetProgress() const {
-		return std::clamp(m_acquired / m_settings.acquireSeconds, 0.0f, 1.0f);
+		return std::clamp(m_acquiredSeconds / m_settings.acquireSeconds, 0.0f, 1.0f);
 	}
 
 	void TargetingSystem::Update(std::span<const CombatTarget> enemies, const XMFLOAT3& position,
-		const XMFLOAT3& forward, bool next, float dt) {
-		if (!std::isfinite(dt) || dt < 0)
+		const XMFLOAT3& forward, bool cycleRequested, float deltaSeconds) {
+		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0)
 			return;
-		dt = std::min(dt, 0.25f);
+		deltaSeconds = std::min(deltaSeconds, 0.25f);
+		const auto candidates = CollectCandidates(enemies, position);
+		const auto* target = SelectTarget(candidates, position, forward, cycleRequested);
+		UpdateLock(target, position, forward, deltaSeconds);
+	}
+	std::vector<const CombatTarget*> TargetingSystem::CollectCandidates(
+		std::span<const CombatTarget> enemies, const XMFLOAT3& position) const {
 		std::vector<const CombatTarget*> candidates;
 		const auto distance = [&](const CombatTarget& target) {
 			return XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center) - XMLoadFloat3(&position)));
@@ -40,15 +46,24 @@ namespace Game {
 		for (const auto& enemy : enemies)
 			if (enemy.health > 0 && distance(enemy) <= m_settings.selectionDistance)
 				candidates.push_back(&enemy);
-		std::sort(candidates.begin(), candidates.end(), [](auto* a, auto* b) {
-			return a->id < b->id;
+		std::sort(candidates.begin(), candidates.end(), [](const auto* left, const auto* right) {
+			return left->id < right->id;
 		});
-		const auto old = m_selected;
-		auto found = std::find_if(candidates.begin(), candidates.end(), [&](auto* p) {
-			return p->id == m_selected;
+		return candidates;
+	}
+	const CombatTarget* TargetingSystem::SelectTarget(std::span<const CombatTarget* const> candidates,
+		const XMFLOAT3& position, const XMFLOAT3& forward, bool cycleRequested) {
+		const auto distance = [&](const CombatTarget& target) {
+			return XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center) - XMLoadFloat3(&position)));
+		};
+		const auto previousSelectedId = m_selected;
+		auto found = std::find_if(candidates.begin(), candidates.end(), [&](auto* candidate) {
+			return candidate->id == m_selected;
 		});
-		if (next && !candidates.empty()) {
-			if (found == candidates.end() || ++found == candidates.end())
+		if (cycleRequested && !candidates.empty()) {
+			if (found != candidates.end())
+				++found;
+			if (found == candidates.end())
 				found = candidates.begin();
 			m_selected = (*found)->id;
 		} else if (found == candidates.end()) {
@@ -60,7 +75,7 @@ namespace Game {
 					XMVector3Normalize(XMLoadFloat3(&candidate->center) - XMLoadFloat3(&position));
 				const float dot = XMVectorGetX(XMVector3Dot(direction, XMLoadFloat3(&forward)));
 				// 初回は前方を優先するが、選択対象の撃墜・喪失後は後方の敵も引き継ぐ
-				if (dot <= 0 && old == Engine::InvalidObjectId)
+				if (dot <= 0 && previousSelectedId == Engine::InvalidObjectId)
 					continue;
 				const auto score = std::tuple{1 - dot, distance(*candidate), candidate->id};
 				if (score < best) {
@@ -69,41 +84,47 @@ namespace Game {
 				}
 			}
 		}
-		if (old != m_selected) {
-			m_acquired = 0;
-			m_lost = 0;
+		if (previousSelectedId != m_selected) {
+			m_acquiredSeconds = 0;
+			m_lostSeconds = 0;
 			m_state = LockState::Selected;
 		}
-		if (m_selected == Engine::InvalidObjectId) {
+		const auto selected = std::find_if(candidates.begin(), candidates.end(), [&](const auto* candidate) {
+			return candidate->id == m_selected;
+		});
+		return selected == candidates.end() ? nullptr : *selected;
+	}
+	void TargetingSystem::UpdateLock(
+		const CombatTarget* target, const XMFLOAT3& position, const XMFLOAT3& forward, float deltaSeconds) {
+		if (!target) {
 			m_state = LockState::None;
-			m_acquired = 0;
-			m_lost = 0;
+			m_acquiredSeconds = 0;
+			m_lostSeconds = 0;
 			return;
 		}
-		const auto target = std::find_if(candidates.begin(), candidates.end(), [&](auto* p) {
-			return p->id == m_selected;
-		});
+		const float targetDistance =
+			XMVectorGetX(XMVector3Length(XMLoadFloat3(&target->center) - XMLoadFloat3(&position)));
 		XMFLOAT3 direction;
-		XMStoreFloat3(&direction, XMLoadFloat3(&(*target)->center) - XMLoadFloat3(&position));
+		XMStoreFloat3(&direction, XMLoadFloat3(&target->center) - XMLoadFloat3(&position));
 		if (m_state == LockState::Locked) {
-			if (distance(**target) <= m_settings.maintainDistance &&
+			if (targetDistance <= m_settings.maintainDistance &&
 				IsWithinAngle(forward, direction, m_settings.maintainAngleDegrees))
-				m_lost = 0;
+				m_lostSeconds = 0;
 			else
-				m_lost += dt;
-			if (m_lost + 1e-6f < m_settings.lossGraceSeconds)
+				m_lostSeconds += deltaSeconds;
+			if (m_lostSeconds + 1e-6f < m_settings.lossGraceSeconds)
 				return;
 			m_state = LockState::Selected;
-			m_acquired = 0;
-			m_lost = 0;
+			m_acquiredSeconds = 0;
+			m_lostSeconds = 0;
 		}
-		if (distance(**target) <= m_settings.acquireDistance &&
+		if (targetDistance <= m_settings.acquireDistance &&
 			IsWithinAngle(forward, direction, m_settings.acquireAngleDegrees)) {
-			m_acquired = std::min(m_acquired + dt, m_settings.acquireSeconds);
-			m_state =
-				m_acquired + 1e-6f >= m_settings.acquireSeconds ? LockState::Locked : LockState::Acquiring;
+			m_acquiredSeconds = std::min(m_acquiredSeconds + deltaSeconds, m_settings.acquireSeconds);
+			m_state = m_acquiredSeconds + 1e-6f >= m_settings.acquireSeconds ? LockState::Locked
+																			 : LockState::Acquiring;
 		} else {
-			m_acquired = 0;
+			m_acquiredSeconds = 0;
 			m_state = LockState::Selected;
 		}
 	}

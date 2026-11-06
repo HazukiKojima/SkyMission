@@ -87,12 +87,13 @@ namespace Game {
 			const bool selected = enemy.id == snapshot.selected;
 			const auto color = selected ? selectedColor : enemyColor;
 			if (point.outside) {
-				const auto& d = point.direction;
-				const XMFLOAT2 tail{point.pixel.x - d.x * 9 * scale, point.pixel.y - d.y * 9 * scale};
-				list.Line(
-					point.pixel, {tail.x - d.y * 5 * scale, tail.y + d.x * 5 * scale}, lineWidth, color);
-				list.Line(
-					point.pixel, {tail.x + d.y * 5 * scale, tail.y - d.x * 5 * scale}, lineWidth, color);
+				const auto& direction = point.direction;
+				const XMFLOAT2 tail{
+					point.pixel.x - direction.x * 9 * scale, point.pixel.y - direction.y * 9 * scale};
+				list.Line(point.pixel, {tail.x - direction.y * 5 * scale, tail.y + direction.x * 5 * scale},
+					lineWidth, color);
+				list.Line(point.pixel, {tail.x + direction.y * 5 * scale, tail.y - direction.x * 5 * scale},
+					lineWidth, color);
 			} else {
 				aircraft(point.pixel, enemy.heading, 7 * scale, color);
 			}
@@ -100,9 +101,11 @@ namespace Game {
 				const float size = 12 * scale, corner = 5 * scale;
 				for (float x : {-1.0f, 1.0f})
 					for (float y : {-1.0f, 1.0f}) {
-						const XMFLOAT2 p{point.pixel.x + x * size, point.pixel.y + y * size};
-						list.Line(p, {p.x - x * corner, p.y}, lineWidth, selectedColor);
-						list.Line(p, {p.x, p.y - y * corner}, lineWidth, selectedColor);
+						const XMFLOAT2 cornerPoint{point.pixel.x + x * size, point.pixel.y + y * size};
+						list.Line(cornerPoint, {cornerPoint.x - x * corner, cornerPoint.y}, lineWidth,
+							selectedColor);
+						list.Line(cornerPoint, {cornerPoint.x, cornerPoint.y - y * corner}, lineWidth,
+							selectedColor);
 					}
 			}
 		}

@@ -18,9 +18,23 @@ namespace Engine {
 
 	class Renderer {
 	  public:
+		Renderer() = default;
+		~Renderer() noexcept;
+
+		// 初期化・設定
+		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
+		void InitializeConstantBuffers(const Scene& scene);
+		void ReserveModelCapacity(size_t objectCount);
 		void SetVerticalSync(bool enabled) {
 			m_device->SetVerticalSync(enabled);
 		}
+
+		// フレーム更新・描画
+		RenderView UpdateFrameConstants(const Scene& scene, float elapsedTime);
+		void Render(UINT width, UINT height, const Scene& scene, const HudDrawList* hud = nullptr);
+		void Resize(UINT width, UINT height);
+
+		// 状態・アセットの取得
 		bool IsVerticalSyncEnabled() const {
 			return m_device->IsVerticalSyncEnabled();
 		}
@@ -30,18 +44,9 @@ namespace Engine {
 		const RenderStatistics& GetRenderStatistics() const {
 			return m_statistics;
 		}
-		Renderer() = default;
-		~Renderer() noexcept;
-
-		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
-		void InitializeConstantBuffers(const Scene& scene);
-		void ReserveModelCapacity(size_t objectCount);
 		size_t GetModelCapacity() const {
 			return m_constantBuffers.GetModelCapacity();
 		}
-		RenderView UpdateFrameConstants(const Scene& scene, float elapsedTime);
-		void Render(UINT width, UINT height, const Scene& scene, const HudDrawList* hud = nullptr);
-		void Resize(UINT width, UINT height);
 		float GetOceanSize() const {
 			return m_frameUpdater.GetOceanSize();
 		}
@@ -59,11 +64,14 @@ namespace Engine {
 		std::unique_ptr<RenderDevice> m_device;
 		std::unique_ptr<CommandContext> m_context;
 
+		// 描画リソースとフレーム更新
 		OceanGeometry m_oceanGeometry;
 		RendererPipelines m_pipelines;
 		RendererAssets m_assets;
 		RendererFrameUpdater m_frameUpdater;
 		RendererConstantBuffers m_constantBuffers;
+
+		// 描画パスと計測
 		SkyRenderPass m_skyPass;
 		OceanRenderPass m_oceanPass;
 		ModelRenderPass m_modelPass;

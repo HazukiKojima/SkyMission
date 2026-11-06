@@ -718,12 +718,12 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		}
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
 		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles +
-			BombSystem::RequiredModelCapacity(definition.mission.bombReloadSeconds));
+			CarrierMissileSystem::RequiredModelCapacity(definition.mission.bombReloadSeconds));
 		const auto reserved = renderer.GetModelCapacity();
 		Engine::HudDrawList hud;
 		Game::CombatHudPresenter presenter;
 		for (int i = 0; i < 6; ++i) {
-			scene.Update({}, 0.05f, {}, {.weapon = {true}, .bombPressCount = i == 0 ? 2u : 0u});
+			scene.Update({}, 0.05f, {}, {.weapon = {true}, .missilePressCount = i == 0 ? 2u : 0u});
 			if (scene.GetCombatSnapshot().firedVolleys > 0) {
 				Require(!scene.GetEffectSnapshot().gunFlashes.empty(),
 					"FlightScene did not forward gun shot effects");
