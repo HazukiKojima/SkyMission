@@ -47,7 +47,12 @@
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
     <ClCompile Include="Engine\Resources\JsonAssetReader.cpp" />
-    <ClCompile Include="Engine\Resources\Mesh\Model.cpp" />
+    <ClCompile Include="Engine\Resources\Mesh\Model.cpp">
+      <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
+      <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp" />
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp" />
     <ClCompile Include="main.cpp" />
@@ -520,8 +525,27 @@
   <ItemGroup>
     <ClCompile Include="Game\Scene\FlightMission.cpp" />
     <ClCompile Include="Game\Scene\FlightSceneRestart.cpp" />
-    <ClCompile Include="Engine\Resources\Mesh\ModelGeometry.cpp" />
-    <ClCompile Include="Engine\Resources\Mesh\ModelLod.cpp" />
+    <!-- Keep CPU-heavy model preparation fast in Debug, retaining symbols and the debug CRT. -->
+    <ClCompile Include="Engine\Resources\Mesh\ModelGeometry.cpp">
+      <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
+      <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\ModelGeometryCache.cpp">
+      <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
+      <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClInclude Include="Engine\Resources\Mesh\ModelGeometryCache.h" />
+    <ClInclude Include="Engine\StartupTiming.h" />
+    <ClCompile Include="Engine\Resources\Mesh\ModelLod.cpp">
+      <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
+      <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\ModelImporter.cpp" />
     <ClInclude Include="Game\Scene\FlightMission.h" />
     <ClInclude Include="Engine\Resources\Mesh\ModelGeometry.h" />

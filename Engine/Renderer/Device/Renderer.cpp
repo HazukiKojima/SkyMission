@@ -3,6 +3,7 @@
 #include "../RendererDefinition.h"
 #include <DirectXMath.h>
 #include <exception>
+#include "Engine/StartupTiming.h"
 
 namespace Engine {
 
@@ -23,6 +24,7 @@ namespace Engine {
 	}
 
 	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets) {
+		StartupTiming timing("renderer.device");
 		m_frameUpdater.Configure(assets.environment.ocean);
 		m_retroFilmParameters = assets.environment.retroFilm;
 		m_device = std::make_unique<RenderDevice>();
@@ -32,13 +34,16 @@ namespace Engine {
 		m_context->Initialize(m_device.get());
 		m_gpuProfiler.Initialize(m_device->GetDevice(), m_device->GetCommandQueue());
 
+		timing.Mark("renderer.pipelines");
 		m_pipelines.Initialize(m_device->GetDevice());
+		timing.Mark("renderer.assets");
 
 		m_context->BeginFrame();
 		auto* commands = m_context->GetCommandList();
 		m_assets.InitializeSkySphere(m_device->GetDevice(), commands, assets.environment.sky.radius);
 		m_oceanGeometry.Initialize(m_device->GetDevice(), commands, m_frameUpdater.GetOceanSize());
 		m_assets.Load(m_device.get(), m_context.get(), assets);
+		timing.Mark("renderer.hud_and_upload_wait");
 		m_hudRenderer.Initialize(*m_device, commands);
 		m_context->EndFrame();
 		m_context->WaitForGpu();

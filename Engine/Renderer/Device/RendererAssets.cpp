@@ -1,6 +1,7 @@
 #include "RendererAssets.h"
 #include "../../Log.h"
 #include <cassert>
+#include <chrono>
 #include <stdexcept>
 
 namespace Engine {
@@ -67,10 +68,13 @@ namespace Engine {
 		};
 		finishBatch();
 		for (const auto& asset : assets.models) {
+			const auto started = std::chrono::steady_clock::now();
 			if (asset.id.empty() || m_models.contains(asset.id))
 				throw std::invalid_argument("Model asset IDs must be unique and nonempty.");
 			m_models.emplace(asset.id, LoadModel(*device, *context, asset));
 			finishBatch();
+			Log("Model '{}' ready in {:.0f} ms\n", asset.id,
+				std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count());
 		}
 	}
 

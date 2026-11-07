@@ -110,9 +110,8 @@ namespace Engine {
 	}
 
 	bool Texture::DecodeAndProcessImage(const std::wstring& filePath, const TextureLoadOptions& options) {
-		const auto cachePath = IsBlockCompressedFormat(options.targetFormat)
-			? GetDiskCachePath(filePath, options)
-			: std::filesystem::path{};
+		// HDR decoding and float mip generation are expensive too; retain their processed DDS.
+		const auto cachePath = GetDiskCachePath(filePath, options);
 		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath)) return true;
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options)) return false;
 		CorrectNormalGreen(options.invertNormalGreen);
@@ -131,7 +130,7 @@ namespace Engine {
 		if (!std::filesystem::exists(cachePath, error) || error) return false;
 		const HRESULT hr =
 			DirectX::LoadFromDDSFile(cachePath.c_str(), DirectX::DDS_FLAGS_NONE, &m_meta, m_image);
-		if (FAILED(hr) || m_meta.format != targetFormat) {
+		if (FAILED(hr) || (targetFormat != DXGI_FORMAT_UNKNOWN && m_meta.format != targetFormat)) {
 			m_image.Release();
 			return false;
 		}

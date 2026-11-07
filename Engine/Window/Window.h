@@ -12,6 +12,7 @@ namespace Engine {
 		Window& operator=(const Window&) = delete;
 
 		InputSnapshot ConsumeInput();
+		void SetLoading(bool loading);
 
 		HWND GetHandle() const {
 			return m_hwnd;
@@ -40,6 +41,8 @@ namespace Engine {
 		RawInputState m_input;
 		HWND m_hwnd = nullptr;
 		bool m_cameraMouseCaptured = false;
+		bool m_loading = false;
+		bool m_closeRequested = false;
 		UINT m_width = 0;
 		UINT m_height = 0;
 		std::function<void(UINT, UINT)> m_onResize;

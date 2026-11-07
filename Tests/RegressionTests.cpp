@@ -39,6 +39,7 @@ void Require(bool condition, const char* description) {
 #include "RenderOptimizationTests.h"
 #include "MissionTests.h"
 #include "BombTests.h"
+#include "ModelLoadingTests.h"
 
 void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -531,6 +532,20 @@ void TestGpuTextures(const fs::path& fixture) {
 			submit();
 		}
 	}
+	// The default (unknown target) path must also retain HDR precision and generated mips.
+	DirectX::ScratchImage hdrImage;
+	ThrowIfFailed(hdrImage.Initialize2D(DXGI_FORMAT_R32G32B32A32_FLOAT, 16, 8, 1, 1));
+	const auto hdrPath = fixture / L"sky.hdr";
+	ThrowIfFailed(DirectX::SaveToHDRFile(*hdrImage.GetImage(0, 0, 0), hdrPath.c_str()));
+	for (int load = 0; load < 2; ++load) {
+		Texture sky;
+		Require(sky.LoadFromFile(device.Get(), commands.Get(), hdrPath.wstring()), "HDR load/cache reload failed");
+		const auto desc = sky.GetResource()->GetDesc();
+		Require(desc.Width == 16 && desc.Height == 8 && desc.MipLevels == 5 &&
+				desc.Format == DXGI_FORMAT_R32G32B32A32_FLOAT,
+			"HDR cache changed dimensions, mip levels or float precision");
+		submit();
+	}
 	Texture noExtension;
 	// A resolution cap must preserve aspect ratio, rebuild mips, and have a distinct cache key.
 	for (int load = 0; load < 2; ++load) {
@@ -816,6 +831,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestEnvironmentSettings(argv[1], fixture);
 		TestShips(argv[1], fixture);
 		TestRenderOptimizationMath();
+		TestPreparedModelCache(argv[1], fixture);
 		TestGpuTextures(fixture);
 		TestWeapons(argv[1], fixture);
 		TestCombatDamage(argv[1], fixture);

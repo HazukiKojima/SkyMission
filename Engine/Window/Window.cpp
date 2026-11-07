@@ -39,6 +39,12 @@ namespace Engine {
 		return m_input.ConsumeFrame();
 	}
 
+	void Window::SetLoading(bool loading) {
+		m_loading = loading;
+		InvalidateRect(m_hwnd, nullptr, FALSE);
+		if (!loading && m_closeRequested) DestroyWindow(m_hwnd);
+	}
+
 	void Window::DeactivateInput() {
 		m_input.SetActive(false);
 		EndCameraLook();
@@ -116,6 +122,28 @@ namespace Engine {
 		}
 		if (self) {
 			switch (message) {
+			case WM_CLOSE:
+				// Keep the HWND alive while the renderer's loading thread creates its swap chain.
+				if (self->m_loading) {
+					self->m_closeRequested = true;
+					return 0;
+				}
+				break;
+			case WM_PAINT:
+				if (self->m_loading) {
+					PAINTSTRUCT paint{};
+					const HDC dc = BeginPaint(hwnd, &paint);
+					RECT area{};
+					GetClientRect(hwnd, &area);
+					FillRect(dc, &area, static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+					SetBkMode(dc, TRANSPARENT);
+					SetTextColor(dc, RGB(230, 230, 230));
+					DrawTextW(dc, L"Loading SkyMission...", -1, &area,
+						DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+					EndPaint(hwnd, &paint);
+					return 0;
+				}
+				break;
 			case WM_KEYDOWN:
 				if (wParam == 'Z') {
 					self->BeginCameraLook();

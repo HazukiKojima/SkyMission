@@ -34,7 +34,11 @@ namespace Engine::ModelProcessing {
 		MeshGeometry result;
 		result.materialIndex = source.materialIndex;
 		std::unordered_map<Key, uint32_t, Hash> clusters;
+		clusters.reserve(source.vertices.size());
+		result.vertices.reserve(source.vertices.size());
+		result.indices.reserve(source.indices.size());
 		std::vector<uint32_t> remap(source.vertices.size()), counts;
+		counts.reserve(source.vertices.size());
 		for (size_t i = 0; i < source.vertices.size(); ++i) {
 			const auto& v = source.vertices[i];
 			const float n[] = {v.normal.x, v.normal.y, v.normal.z};
@@ -78,6 +82,7 @@ namespace Engine::ModelProcessing {
 		}
 		// Discard vertices no longer referenced by surviving triangles.
 		std::vector<ModelVertex> compact;
+		compact.reserve(result.vertices.size());
 		std::vector<uint32_t> used(result.vertices.size(), UINT32_MAX);
 		for (auto& index : result.indices) {
 			if (used[index] == UINT32_MAX) {

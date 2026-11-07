@@ -18,8 +18,11 @@ namespace Engine::ModelImport {
 			// FBX contains its geometry and material definitions; OBJ can depend on an external MTL.
 			if (extension != L".fbx") return {};
 			std::error_code error;
-			const auto canonical = std::filesystem::weakly_canonical(source, error);
-			if (error) return {};
+			auto canonical = std::filesystem::weakly_canonical(source, error);
+			if (error) {
+				canonical = std::filesystem::absolute(source, error).lexically_normal();
+				if (error) return {};
+			}
 			const auto size = std::filesystem::file_size(source, error);
 			if (error) return {};
 			const auto modified = std::filesystem::last_write_time(source, error);
