@@ -6,6 +6,9 @@
 #include <chrono>
 #include <filesystem>
 #include <format>
+#include <future>
+#include "Engine/Log.h"
+#include "Engine/StartupTiming.h"
 #include "Engine/ExecutablePath.h"
 #include "Game/Weapons/WeaponController.h"
 #include "Game/Combat/CombatController.h"
@@ -19,8 +22,12 @@ namespace Game {
 
 	// アプリケーション初期化処理
 	void Application::Initialize() {
+		StartupTiming timing("application.window_and_json");
+		const auto startupTime = std::chrono::steady_clock::now();
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
+		m_window->SetLoading(true);
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
+		UpdateWindow(m_window->GetHandle());
 
 		const auto exeDir = ExecutableDirectory();
 		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
@@ -33,18 +40,47 @@ namespace Game {
 			.mission = assetsDir / L"Combat/mission.json",
 			.bomb = assetsDir / L"Ammunition/Bomb/ammunition.json"};
 		const FlightSceneDefinition assets = sceneLoader.Load(scenePaths);
+		timing.Mark("application.renderer");
 
 		m_renderer = std::make_unique<Renderer>();
-		m_renderer->Initialize(m_window->GetHandle(), m_window->GetWidth(), m_window->GetHeight(),
-			assets.BuildRendererDefinition());
+		const HWND hwnd = m_window->GetHandle();
+		const UINT width = m_window->GetWidth(), height = m_window->GetHeight();
+		auto loading = std::async(std::launch::async, [&, hwnd, width, height]() {
+			ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
+			struct ComScope {
+				~ComScope() {
+					CoUninitialize();
+				}
+			} comScope;
+			m_renderer->Initialize(hwnd, width, height, assets.BuildRendererDefinition());
+		});
+		// DXGI may send window messages during swap-chain creation, so keep the UI thread pumping.
+		while (loading.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
+			MSG message{};
+			while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
+				TranslateMessage(&message);
+				DispatchMessageW(&message);
+			}
+			MsgWaitForMultipleObjectsEx(0, nullptr, 16, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+		}
+		loading.get(); // Propagate initialization errors after the worker has stopped.
+		m_window->SetLoading(false);
+		if (!m_window->GetHandle()) return;
+		if (width != m_window->GetWidth() || height != m_window->GetHeight()) {
+			if (m_window->GetWidth() && m_window->GetHeight())
+				m_renderer->Resize(m_window->GetWidth(), m_window->GetHeight());
+		}
 		m_windowTitle = L"SkyMission | GPU: " + m_renderer->GetAdapterName();
 		SetWindowTextW(m_window->GetHandle(), m_windowTitle.c_str());
 
 		InitializeFlightScene(assets);
+		timing.Mark("application.audio");
 		m_combatAudio.Initialize(assetsDir / L"Sound");
 		ConfigureResizeHandling();
 
 		m_lastTime = std::chrono::steady_clock::now();
+		Log("Startup completed in {:.0f} ms\n",
+			std::chrono::duration<double, std::milli>(m_lastTime - startupTime).count());
 	}
 
 	void Application::InitializeFlightScene(const FlightSceneDefinition& assets) {

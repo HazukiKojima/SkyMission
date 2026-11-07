@@ -51,6 +51,18 @@ $batch = Join-Path $build 'build-tests.cmd'
     ('cl.exe @"{0}"' -f $responsePath), 'if errorlevel 1 exit /b %errorlevel%') + $shaderCommands + @('exit /b 0')) | Set-Content -LiteralPath $batch -Encoding utf8
 & $env:ComSpec /d /c $batch
 if ($LASTEXITCODE -ne 0) { throw "Regression test compilation failed: $LASTEXITCODE" }
-& (Join-Path $build 'RegressionTests.exe') $repository (Join-Path $build 'fixtures')
-if ($LASTEXITCODE -ne 0) { throw "Regression tests failed: $LASTEXITCODE" }
+# Keep disk-cache tests isolated from the user's cache and temporary sandbox paths.
+$testCache = Join-Path $build 'cache'
+New-Item -ItemType Directory -Force $testCache | Out-Null
+$previousTestTemp = $env:TEMP
+$previousTestTmp = $env:TMP
+try {
+    $env:TEMP = $testCache
+    $env:TMP = $testCache
+    & (Join-Path $build 'RegressionTests.exe') $repository (Join-Path $build 'fixtures')
+    if ($LASTEXITCODE -ne 0) { throw "Regression tests failed: $LASTEXITCODE" }
+} finally {
+    $env:TEMP = $previousTestTemp
+    $env:TMP = $previousTestTmp
+}
 Write-Host "Regression tests passed. Build directory: $build"

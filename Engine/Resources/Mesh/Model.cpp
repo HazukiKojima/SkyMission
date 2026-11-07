@@ -1,18 +1,17 @@
 #include "../../Renderer/RootBindings.h"
 #include "Model.h"
 #include "ModelGeometry.h"
-#include "ModelImporter.h"
+#include "ModelGeometryCache.h"
 #include "MaterialTexturePaths.h"
 #include "../Buffer/BufferUtilities.h"
 #include "../../Log.h"
 #include "../../Renderer/Device/RenderDevice.h"
-#include <assimp/Importer.hpp>
 #include <assimp/material.h>
-#include <assimp/scene.h>
 #include <algorithm>
 #include <cmath>
 #include <cwctype>
 #include <limits>
+#include "Engine/StartupTiming.h"
 namespace Engine {
 	using namespace ModelProcessing;
 	namespace {
@@ -53,27 +52,21 @@ namespace Engine {
 		m_fallbackNormalTexture.reset();
 
 		const std::filesystem::path modelPath(filePath);
-		const auto utf8Path = modelPath.u8string();
-		const std::string importerPath(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
-
-		Assimp::Importer importer;
-		const aiScene* scene = ModelImport::ImportScene(importer, importerPath);
-		if (!scene) return false;
-		auto geometries = BuildModelGeometry(*scene, options, m_nodePositions);
-		m_sourceMeshCount = geometries.size();
-		if (geometries.empty()) return false;
-		const auto bounds = CalculateModelBounds(geometries);
-		m_localBounds = bounds;
-		m_cullingRadius = CalculateCullingRadius(geometries, bounds);
+		auto prepared = PrepareModelGeometry(modelPath, options);
+		m_sourceMeshCount = prepared.levels[0].size();
+		if (prepared.levels[0].empty()) return false;
+		m_nodePositions = std::move(prepared.nodePositions);
+		m_localBounds = prepared.bounds;
+		m_cullingRadius = prepared.cullingRadius;
+		StartupTiming timing("model.materials_and_upload");
 		InitializeFallbackTextures(device, commandList);
 		const auto modelDirectory = modelPath.parent_path();
-		return CreateMeshes(*scene, geometries, options, modelDirectory, device, commandList, renderDevice);
+		return CreateMeshes(prepared, options, modelDirectory, device, commandList, renderDevice);
 	}
 
-	bool Model::CreateMeshes(const aiScene& scene, std::vector<ModelProcessing::MeshGeometry>& geometries,
-		const ModelLoadOptions& options, const std::filesystem::path& modelDirectory, ID3D12Device* device,
+	bool Model::CreateMeshes(PreparedModelGeometry& prepared, const ModelLoadOptions& options,
+		const std::filesystem::path& modelDirectory, ID3D12Device* device,
 		ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice) {
-		const auto& bounds = *m_localBounds;
 		struct Batch {
 			Mesh mesh;
 			std::vector<ModelVertex> vertices;
@@ -82,22 +75,19 @@ namespace Engine {
 		std::array<std::vector<Batch>, 3> batches;
 		std::vector<TextureDescriptorSet> textureDescriptorSets;
 		std::unordered_map<unsigned, Mesh> materials;
-		const float extent = std::max({bounds.maximum.x - bounds.minimum.x,
-			bounds.maximum.y - bounds.minimum.y, bounds.maximum.z - bounds.minimum.z});
-		for (auto& geometry : geometries) {
+		for (size_t geometryIndex = 0; geometryIndex < prepared.levels[0].size(); ++geometryIndex) {
+			auto& geometry = prepared.levels[0][geometryIndex];
 			const auto materialIndex = geometry.materialIndex;
 			auto [material, inserted] = materials.try_emplace(materialIndex);
 			if (inserted) {
-				if (materialIndex < scene.mNumMaterials)
-					LoadMaterialTextures(material->second, scene.mMaterials[materialIndex], modelDirectory,
+				if (materialIndex < prepared.materials.size())
+					LoadMaterialTextures(material->second, prepared.materials[materialIndex], modelDirectory,
 						options, device, commandList);
 				AssignMaterialDescriptors(material->second, device, renderDevice, textureDescriptorSets);
 			}
 			for (unsigned lod = 0; lod < m_lodCount; ++lod) {
-				// Full detail is moved last, so simplification can still read its original topology.
 				const unsigned level = m_lodCount - 1 - lod;
-				auto reduced = level == 0 ? MeshGeometry{} : SimplifyGeometry(geometry, extent, level);
-				auto& data = level == 0 ? geometry : reduced;
+				auto& data = prepared.levels[level][geometryIndex];
 				if (data.indices.empty()) continue;
 				auto& list = batches[level];
 				auto batch = list.end();
@@ -121,6 +111,10 @@ namespace Engine {
 			}
 			std::vector<ModelVertex>().swap(geometry.vertices);
 			std::vector<uint32_t>().swap(geometry.indices);
+			for (unsigned level = 1; level < m_lodCount; ++level) {
+				std::vector<ModelVertex>().swap(prepared.levels[level][geometryIndex].vertices);
+				std::vector<uint32_t>().swap(prepared.levels[level][geometryIndex].indices);
+			}
 		}
 		std::vector<ModelVertex> vertices;
 		std::vector<uint32_t> indices;
@@ -235,9 +229,20 @@ namespace Engine {
 		}
 	}
 
-	void Model::LoadMaterialTextures(Mesh& mesh, const aiMaterial* material,
+	void Model::LoadMaterialTextures(Mesh& mesh, const PreparedMaterial& source,
 		const std::filesystem::path& modelDirectory, const ModelLoadOptions& options, ID3D12Device* device,
 		ID3D12GraphicsCommandList* commandList) {
+		aiMaterial materialData;
+		const aiString sourceName(source.name);
+		materialData.AddProperty(&sourceName, AI_MATKEY_NAME);
+		constexpr aiTextureType types[] = {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE,
+			aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_NORMALS};
+		for (size_t type = 0; type < std::size(types); ++type) {
+			if (source.textures[type].empty()) continue;
+			const aiString path(source.textures[type]);
+			materialData.AddProperty(&path, AI_MATKEY_TEXTURE(types[type], 0));
+		}
+		const aiMaterial* material = &materialData;
 		aiString materialName;
 		material->Get(AI_MATKEY_NAME, materialName);
 		std::filesystem::path resolvedTexturePath =

@@ -14,11 +14,10 @@
 #include <algorithm>
 #include "Engine/Scene/Bounds3.h"
 
-struct aiMaterial;
-struct aiScene;
 namespace Engine::ModelProcessing {
-	struct MeshGeometry;
-}
+	struct PreparedModelGeometry;
+	struct PreparedMaterial;
+} // namespace Engine::ModelProcessing
 
 namespace Engine {
 	class RenderDevice;
@@ -81,16 +80,16 @@ namespace Engine {
 			const Texture* normal;
 			UINT srvIndex;
 		};
-		bool CreateMeshes(const aiScene& scene, std::vector<ModelProcessing::MeshGeometry>& geometries,
-			const ModelLoadOptions& options, const std::filesystem::path& directory, ID3D12Device* device,
-			ID3D12GraphicsCommandList* commands, RenderDevice* renderDevice);
+		bool CreateMeshes(ModelProcessing::PreparedModelGeometry& prepared, const ModelLoadOptions& options,
+			const std::filesystem::path& directory, ID3D12Device* device, ID3D12GraphicsCommandList* commands,
+			RenderDevice* renderDevice);
 		void AssignMaterialDescriptors(Mesh& mesh, ID3D12Device* device, RenderDevice* renderDevice,
 			std::vector<TextureDescriptorSet>& sets);
 		void UploadGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commands, const void* vertices,
 			size_t vertexBytes, const void* indices, size_t indexBytes);
 
 		void InitializeFallbackTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commands);
-		void LoadMaterialTextures(Mesh& mesh, const aiMaterial* material,
+		void LoadMaterialTextures(Mesh& mesh, const ModelProcessing::PreparedMaterial& source,
 			const std::filesystem::path& directory, const ModelLoadOptions& options, ID3D12Device* device,
 			ID3D12GraphicsCommandList* commandList);
 		ComPtr<ID3D12Resource> m_vertexBuffer;

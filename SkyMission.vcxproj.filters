@@ -622,6 +622,8 @@
     <ClCompile Include="Game\Scene\FlightMission.cpp"><Filter>Game\Scene</Filter></ClCompile>
     <ClCompile Include="Game\Scene\FlightSceneRestart.cpp"><Filter>Game\Scene</Filter></ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\ModelGeometry.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\ModelGeometryCache.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
+    <ClInclude Include="Engine\Resources\Mesh\ModelGeometryCache.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
     <ClCompile Include="Engine\Resources\Mesh\ModelLod.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\ModelImporter.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
     <ClInclude Include="Game\Scene\FlightMission.h"><Filter>Game\Scene</Filter></ClInclude>
