@@ -116,8 +116,8 @@ namespace Game {
 				.flight = m_missionEnemyFlight,
 				.ai = ai,
 				.health = enemyHealth * (commander ? m_missionSettings.commanderHealthMultiplier : 1),
-				.name = commander ? "SQUADRON LEADER"
-								  : (opening ? "PATROL " : "FIGHTER ") + std::to_string(i + 1),
+				.name =
+					commander ? "敵編隊長機" : (opening ? "哨戒機 " : "敵戦闘機 ") + std::to_string(i + 1),
 				.facePlayer = opening,
 				.heading = opening ? std::nullopt : std::optional<XMFLOAT3>{away}});
 		}

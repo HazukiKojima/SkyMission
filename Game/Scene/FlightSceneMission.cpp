@@ -6,7 +6,7 @@
 namespace Game {
 	using namespace DirectX;
 	namespace {
-		constexpr float kAircraftGunDamage = 5;
+		constexpr float kAircraftGunDamage = 2;
 	}
 	void FlightScene::ConfigureMission(const MissionSettings& settings,
 		std::shared_ptr<Engine::Model> enemyModel, float enemyScale, const AircraftFlightParameters& flight,
@@ -63,7 +63,7 @@ namespace Game {
 		settings.Validate();
 		auto gun = definition.gun;
 		gun.maxProjectiles = settings.maxHostileProjectiles;
-		gun.lifetime = 5;
+		gun.lifetime = EnemyGunLifetimeSeconds;
 		gun.muzzleSpeed = settings.enemyGunSpeed;
 		gun.fireInterval = settings.enemyGunInterval;
 		m_hostileProjectiles.Configure(gun, std::move(ammunition), definition.modelForward);
@@ -130,6 +130,7 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateEnemyGuns() {
+		constexpr float kEnemyFireWarningDurationSeconds = 1.0f;
 		for (auto& enemy : m_enemies) {
 			if (!enemy.fire || enemy.weaponCooldownSeconds > 0) continue;
 			const CombatTarget player{m_playerId, m_player.GetPosition(), m_player.GetVelocity()};
@@ -140,16 +141,32 @@ namespace Game {
 					enemy.flightModel.GetForward(), direction, enemy.aiParameters.aimAngleDegrees)) {
 				continue;
 			}
-			XMFLOAT3 velocity;
-			XMStoreFloat3(&velocity,
-				XMLoadFloat3(&enemyVelocity) + XMLoadFloat3(&direction) * m_enemyGunSettings.muzzleSpeed);
-			if (m_hostileProjectiles.FireSingle(m_scene, enemy.flightModel.GetPosition(), velocity,
-					AttackSource::EnemyAircraft, kAircraftGunDamage)) {
+			// 2発分の空きがないときは発射せず、片方だけの斉射を避ける。
+			if (m_hostileProjectiles.GetCount() + 2 > m_enemyGunSettings.maxProjectiles) continue;
+			const auto directions =
+				SpreadEnemyGunDirections(direction, enemy.slot, enemy.gunPattern.GetShotIndex());
+			bool fired = false;
+			for (const auto& shotDirection : directions) {
+				XMFLOAT3 velocity;
+				XMStoreFloat3(&velocity,
+					XMLoadFloat3(&enemyVelocity) +
+						XMLoadFloat3(&shotDirection) * m_enemyGunSettings.muzzleSpeed);
+				fired |= m_hostileProjectiles.FireSingle(m_scene, enemy.flightModel.GetPosition(), velocity,
+					AttackSource::EnemyAircraft, kAircraftGunDamage);
+			}
+			if (fired) {
 				const float interval = m_mission.GetPhase() == MissionPhase::Commander
 					? m_commanderGunInterval
 					: m_enemyGunSettings.fireInterval;
 				enemy.weaponCooldownSeconds = interval;
 				enemy.gunPattern.NotifyShot();
+				m_combat.enemyFireWarningSeconds = kEnemyFireWarningDurationSeconds;
+				const auto enemyPosition = enemy.flightModel.GetPosition();
+				const auto playerForward = m_player.GetForward();
+				const auto toEnemy = XMLoadFloat3(&enemyPosition) - XMLoadFloat3(&player.center);
+				if (XMVectorGetX(XMVector3Dot(toEnemy, XMLoadFloat3(&playerForward))) < 0) {
+					m_combat.enemyRearFireWarningSeconds = kEnemyFireWarningDurationSeconds;
+				}
 			}
 		}
 	}

@@ -15,12 +15,12 @@ namespace Game {
 		float carrierHealth = 300;
 		float bombDamage = 150;
 		float commanderHealthMultiplier = 1.5f;
-		float enemyGunSpeed = 1800;
-		float enemyGunInterval = 0.22f;
-		float commanderGunInterval = 0.16f;
+		float enemyGunSpeed = 7500;
+		float enemyGunInterval = 0.10f;
+		float commanderGunInterval = 0.08f;
 		float aaRange = 6500;
 		float aaInterval = 0.8f;
-		size_t maxHostileProjectiles = 256;
+		size_t maxHostileProjectiles = 512;
 		float deckHeightFraction = 0.445f;
 		float deckWidthFraction = 0.75f;
 		float deckLengthFraction = 0.9f;

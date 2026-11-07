@@ -95,6 +95,8 @@ namespace Game {
 		float playerHealth = 100;
 		float playerMaxHealth = 100;
 		float playerHitSeconds = 0;
+		float enemyRearFireWarningSeconds = 0;
+		float enemyFireWarningSeconds = 0; // 敵機の実際の発射から警告を表示する残り時間
 		DirectX::XMFLOAT3 playerHitDirection{};
 		CombatResult result = CombatResult::Active;
 		static constexpr float gunSightDistance = 1500.0f;

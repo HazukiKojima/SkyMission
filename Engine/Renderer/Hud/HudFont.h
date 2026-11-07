@@ -6,7 +6,9 @@ namespace Engine::HudFont {
 	inline constexpr unsigned Width = 1024, Height = 768, Cell = 48, Columns = Width / Cell;
 	inline constexpr std::u32string_view Japanese =
 		U"敵機接近照準速度高度北体ロケット使用可秒再装填挑戦捕捉警告被弾任務達成自撃墜目標なし射程外命中全ミ"
-		U"サイル左右▶：";
+		U"サイル左右▶："
+		U"空母を破ク完了哨戒すべてせよで残りの闘編隊長失敗リ銃切替操縦にえ、後発艦交。増援はこれ最だ区域合わ"
+		U"方が出現！から";
 	inline constexpr unsigned AsciiCount = 95;
 	inline constexpr unsigned GlyphCount = AsciiCount + unsigned(Japanese.size());
 	static_assert(((GlyphCount + Columns - 1) / Columns) * Cell < Height - 8);

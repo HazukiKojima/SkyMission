@@ -9,6 +9,9 @@ namespace Game {
 		void Configure(
 			float reloadSeconds, std::shared_ptr<Engine::Model> model, const DirectX::XMFLOAT3& modelForward);
 		void ConfigureFlight(float speed, float damage);
+		// 次の弾の発射位置と初速を返す。再装填中は装填後の左側を予測する
+		CarrierMissileFlight BuildLaunchFlight(const DirectX::XMFLOAT3& position,
+			const DirectX::XMFLOAT3& velocity, const DirectX::XMFLOAT3& forward) const;
 		bool TryLaunch(Engine::Scene& scene, const DirectX::XMFLOAT3& position,
 			const DirectX::XMFLOAT3& velocity, const DirectX::XMFLOAT3& forward, Engine::ObjectId target);
 		void Update(Engine::Scene& scene, float deltaSeconds, const std::optional<CollisionTarget>& hull);

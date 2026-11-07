@@ -140,6 +140,8 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateCombatTimers(float dt) {
+		m_combat.enemyFireWarningSeconds = std::max(0.0f, m_combat.enemyFireWarningSeconds - dt);
+		m_combat.enemyRearFireWarningSeconds = std::max(0.0f, m_combat.enemyRearFireWarningSeconds - dt);
 		m_combat.playerHitSeconds = std::max(0.0f, m_combat.playerHitSeconds - dt);
 		m_combat.hitSeconds = std::max(0.0f, m_combat.hitSeconds - dt);
 		m_combat.destroyedSeconds = std::max(0.0f, m_combat.destroyedSeconds - dt);
@@ -231,7 +233,7 @@ namespace Game {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
 				const CombatTarget carrier{
-					m_mission.GetCarrierId(), *center, {}, "CARRIER", m_mission.GetCarrierHealth()};
+					m_mission.GetCarrierId(), *center, {}, "敵空母", m_mission.GetCarrierHealth()};
 				m_targeting.Update(std::span(&carrier, 1), geometry.muzzle, geometry.forward, next, dt);
 				return;
 			}
@@ -328,7 +330,7 @@ namespace Game {
 		enemy.previousPosition = position;
 		enemy.health = health;
 		++m_enemySequence;
-		enemy.name = name.empty() ? "ENEMY " + std::to_string(m_enemySequence) : std::move(name);
+		enemy.name = name.empty() ? "敵機 " + std::to_string(m_enemySequence) : std::move(name);
 		const auto id = enemy.objectId;
 		m_enemies.push_back(std::move(enemy));
 		return id;
@@ -410,17 +412,9 @@ namespace Game {
 			DirectX::XMStoreFloat3(&m_combat.objectivePosition,
 				DirectX::XMVector3TransformCoord(
 					DirectX::XMLoadFloat3(&center), DirectX::XMLoadFloat4x4(&deck->world)));
-			m_combat.missileImpactPoint = [&] {
-				auto release = m_player.GetPosition();
-				release.y -= CarrierMissileFlight::releaseOffsetMeters;
-				DirectX::XMFLOAT3 velocity;
-				const auto forward = m_player.GetForward(), inherited = m_player.GetVelocity();
-				DirectX::XMStoreFloat3(&velocity,
-					DirectX::XMVectorAdd(DirectX::XMLoadFloat3(&inherited),
-						DirectX::XMVectorScale(
-							DirectX::XMLoadFloat3(&forward), m_mission.GetSettings().carrierMissileSpeed)));
-				return CarrierMissileFlight{release, velocity}.Predict(m_combat.objectivePosition.y);
-			}();
+			const auto launch = m_carrierMissiles.BuildLaunchFlight(
+				m_player.GetPosition(), m_player.GetVelocity(), m_player.GetForward());
+			m_combat.missileImpactPoint = launch.Predict(m_combat.objectivePosition.y);
 		}
 		if (m_mission.GetPhase() == MissionPhase::FinalFighters ||
 			m_mission.GetPhase() == MissionPhase::Commander) {
