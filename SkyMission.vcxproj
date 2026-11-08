@@ -600,6 +600,7 @@
     <ClInclude Include="Game\Cinematics\OpeningCinematicScene.h" />
     <ClInclude Include="Game\UI\OpeningCinematicPresenter.h" />
     <ClInclude Include="Tests\OpeningCinematicTests.h" />
+    <ClInclude Include="Game\Combat\EnemyEngagementProfile.h" />
     <ClInclude Include="Tests\OpeningCinematicVisualTests.h" />
     <None Include="Assets\Cinematics\opening.json" />
   </ItemGroup>

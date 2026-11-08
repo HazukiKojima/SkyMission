@@ -6,6 +6,7 @@
 #include "Game/Combat/GunAimSolver.h"
 #include "Game/Combat/CombatSnapshotBuilder.h"
 #include "Game/Combat/ProjectileCollision.h"
+#include "Game/Combat/EnemyEngagementProfile.h"
 namespace Game {
 	namespace {
 		constexpr float kPropellerAngularSpeedPerSpeed = 0.06f;
@@ -265,9 +266,12 @@ namespace Game {
 			}
 			enemy.weaponCooldownSeconds = std::max(0.0f, enemy.weaponCooldownSeconds - dt);
 			const bool allowed = true;
-			const bool gunWindow = enemy.gunPattern.Update(dt, enemy.slot);
+			const auto engagement =
+				GetEnemyEngagementProfile(m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId);
+			const auto aiParameters = engagement.Apply(enemy.aiParameters);
+			const bool gunWindow = enemy.gunPattern.Update(dt * engagement.burstTempoScale, enemy.slot);
 			const auto decision = enemy.controller.ReadCombatInput(enemy.flightModel, target, direction, dt,
-				enemy.aiParameters, enemy.slot, allowed, enemy.weaponCooldownSeconds <= 0 && gunWindow,
+				aiParameters, enemy.slot, allowed, enemy.weaponCooldownSeconds <= 0 && gunWindow,
 				m_mission.GetDefenseCenter(m_scene), true);
 			const auto input = decision.flight;
 			enemy.fire = decision.fire;

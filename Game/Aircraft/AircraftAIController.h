@@ -92,6 +92,7 @@ namespace Game {
 		bool m_spacingBreak = false;
 		float m_combatTime = 0;
 		float m_modeSeconds = 0;
+		float m_continuousTurnSeconds = 0;
 		float m_aimTime = 0;
 		float m_passMinimum = 3;
 		float m_passMaximum = 9;

@@ -2,6 +2,7 @@
 #include "Game/Combat/CombatController.h"
 #include "Game/Combat/GunAimSolver.h"
 #include "Game/Combat/TargetingSystem.h"
+#include "Game/Combat/EnemyEngagementProfile.h"
 #include "Game/Combat/ProjectileCollision.h"
 #include "Game/UI/CombatHudPresenter.h"
 #include "Game/Effects/CombatEffectPresenter.h"
@@ -59,6 +60,60 @@ void TestEnemyGunBehavior() {
 			std::abs((end._43 - middle._43) - (middle._43 - position.z)) < 0.001f,
 		"Enemy bullet curved after being fired");
 	std::cout << "PASS: staggered enemy bursts, reduced cadence, imperfect aim and straight bullets\n";
+}
+
+void TestEnemyEngagementProfile() {
+	AircraftAIParameters base;
+	base.attackDistance = 9000;
+	base.disengageDistance = 3000;
+	base.cruiseSpeed = 800;
+	base.tailDistance = 4500;
+	base.aimHoldSeconds = 0.08f;
+	const auto normal = GetEnemyEngagementProfile(LockState::Locked, 7, 7);
+	const auto aggressive = GetEnemyEngagementProfile(LockState::Locked, 7, 8);
+	const auto lockedAI = normal.Apply(base);
+	const auto unlockedAI = aggressive.Apply(base);
+	Require(lockedAI.cruiseSpeed == base.cruiseSpeed && lockedAI.tailDistance == base.tailDistance &&
+			lockedAI.aimHoldSeconds == base.aimHoldSeconds && normal.shotIntervalScale == 1,
+		"Locked enemy did not retain its normal engagement profile");
+	Require(unlockedAI.cruiseSpeed > lockedAI.cruiseSpeed &&
+			unlockedAI.tailDistance < lockedAI.tailDistance &&
+			unlockedAI.aimHoldSeconds < lockedAI.aimHoldSeconds &&
+			unlockedAI.attackDistance > lockedAI.attackDistance &&
+			unlockedAI.disengageDistance == lockedAI.disengageDistance &&
+			unlockedAI.aimAngleDegrees == lockedAI.aimAngleDegrees,
+		"Unlocked profile did not increase aggression while preserving avoidance and accuracy");
+	Require(GetEnemyEngagementProfile(LockState::Acquiring, 7, 7).shotIntervalScale < 1 &&
+			GetEnemyEngagementProfile(LockState::None, 0, 7).shotIntervalScale < 1 &&
+			GetEnemyEngagementProfile(LockState::Locked, 8, 7).shotIntervalScale < 1,
+		"Selection/acquisition or switching targets incorrectly suppressed enemy aggression");
+	const auto countShots = [&](const EnemyEngagementProfile& profile) {
+		EnemyGunPattern pattern;
+		const auto ai = profile.Apply(base);
+		AircraftAIController pilot;
+		AircraftFlightModel aircraft;
+		aircraft.SetPosition({0, 1500, 0});
+		const AircraftAITarget target{{0, 1500, -5000}, {}, {0, 0, -1}};
+		float cooldown = 0;
+		unsigned shots = 0;
+		constexpr float dt = 1.0f / 120;
+		for (int frame = 0; frame < 60 * 120; ++frame) {
+			cooldown = std::max(0.0f, cooldown - dt);
+			const bool ready = pattern.Update(dt * profile.burstTempoScale, 0) && cooldown <= 0;
+			const auto decision = pilot.ReadCombatInput(
+				aircraft, target, {0, 0, -1}, dt, ai, 0, true, ready, std::nullopt, true);
+			if (decision.fire) {
+				++shots;
+				pattern.NotifyShot();
+				cooldown = 0.1f * profile.shotIntervalScale;
+				pilot.NotifyWeaponFired();
+			}
+		}
+		return shots;
+	};
+	Require(countShots(aggressive) > countShots(normal) * 1.15f,
+		"Unlocked enemy did not produce more attack opportunities over repeated bursts");
+	std::cout << "PASS: player-lock engagement profiles, unchanged accuracy and more aggressive bursts\n";
 }
 
 void TestEnemyCombatAI() {
@@ -131,6 +186,27 @@ void TestEnemyCombatAI() {
 		burst = reentry.ReadCombatInput(aircraft, behind, {0, 0, 1}, 0.1f, p, 0, true);
 	Require(!burst.flight.highGTurn, "Reentry kept high G beyond its initial burst");
 	AircraftAIController collision;
+	{
+		AircraftAIController rearEscape;
+		const AircraftAITarget tailing{{0, 300, 2000}, {}, forward};
+		rearEscape.ReadCombatInput(aircraft, tailing, {0, 0, 1}, 0.1f, p, 0, true);
+		Require(rearEscape.GetMode() == AircraftCombatMode::Disengage,
+			"Rear target triggered a circling chase instead of a straight escape");
+		AircraftAIController circling;
+		const AircraftAITarget lateral{{5000, 300, 0}, {}, forward};
+		bool escaped = false;
+		for (int frame = 0; frame < 80; ++frame) {
+			circling.ReadCombatInput(aircraft, lateral, {1, 0, 0}, 0.1f, p, 0, true);
+			escaped |= circling.GetMode() == AircraftCombatMode::Disengage;
+		}
+		Require(escaped, "Continuous pursuit turn never yielded to a straight leg");
+		bool reentryEnded = false;
+		for (int frame = 0; frame < 30; ++frame) {
+			reentry.ReadCombatInput(aircraft, behind, {0, 0, 1}, 0.1f, p, 0, true);
+			reentryEnded |= reentry.GetMode() == AircraftCombatMode::Disengage;
+		}
+		Require(reentryEnded, "Reengagement circled indefinitely without a new straight leg");
+	}
 	const auto avoiding = collision.ReadCombatInput(
 		aircraft, {{0, 300, -100}, {0, 0, 60}, {0, 0, 1}}, forward, 0.1f, p, 0, true);
 	Require(avoiding.flight.highGTurn && std::abs(avoiding.flight.turn) > 0.1f && !avoiding.fire,

@@ -1,6 +1,7 @@
 #include "FlightScene.h"
 #include "Game/Combat/GunAimSolver.h"
 #include "Game/Combat/ProjectileCollision.h"
+#include "Game/Combat/EnemyEngagementProfile.h"
 #include <algorithm>
 #include <cmath>
 namespace Game {
@@ -159,7 +160,9 @@ namespace Game {
 				const float interval = m_mission.GetPhase() == MissionPhase::Commander
 					? m_commanderGunInterval
 					: m_enemyGunSettings.fireInterval;
-				enemy.weaponCooldownSeconds = interval;
+				const auto engagement = GetEnemyEngagementProfile(
+					m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId);
+				enemy.weaponCooldownSeconds = interval * engagement.shotIntervalScale;
 				enemy.gunPattern.NotifyShot();
 				m_combat.enemyFireWarningSeconds = kEnemyFireWarningDurationSeconds;
 				const auto enemyPosition = enemy.flightModel.GetPosition();

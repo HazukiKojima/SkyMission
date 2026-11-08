@@ -851,6 +851,8 @@ int wmain(int argc, wchar_t** argv) {
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
 			TestOpeningCinematic(argv[1], fixture);
 			TestCombatMath();
+			TestEnemyCombatAI();
+			TestEnemyEngagementProfile();
 			TestWeapons(argv[1], fixture);
 			TestCombatDamage(argv[1], fixture);
 			TestMissionScene(argv[1], fixture);
@@ -875,6 +877,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestMissionRules();
 		TestBombSystem();
 		TestEnemyCombatAI();
+		TestEnemyEngagementProfile();
 		TestCombatEffectLifetime();
 		TestGunFireEffects();
 		TestGunSegmentClipping();
