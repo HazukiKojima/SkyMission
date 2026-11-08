@@ -11,7 +11,7 @@ namespace Engine {
 
 	} // namespace
 
-	static_assert(sizeof(OceanFogConstantBufferData) == 160);
+	static_assert(sizeof(OceanFogConstantBufferData) == 208);
 	static_assert(sizeof(FilmConstantBufferData) == 224);
 
 	void RendererConstantBuffers::Initialize(ID3D12Device* device) {

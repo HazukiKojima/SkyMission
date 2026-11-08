@@ -11,6 +11,7 @@ namespace Engine {
 			float farZ = 1000.0f);
 		void OnResize(UINT width, UINT height);
 		void LookAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target);
+		void LookTo(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& direction);
 		DirectX::XMMATRIX GetView() const {
 			return m_view;
 		}

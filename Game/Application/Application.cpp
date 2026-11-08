@@ -156,8 +156,9 @@ namespace Game {
 			title += m_renderer->IsVerticalSyncEnabled() ? L" | VSync ON [F10]" : L" | VSync OFF [F10]";
 			const auto& gpu = m_renderer->GetGpuTimings();
 			if (gpu.valid)
-				title += std::format(L" | GPU {:.2f} ms (Sea {:.2f}, Models {:.2f}, Post {:.2f})",
-					gpu.TotalMs(), gpu.oceanMs, gpu.modelsMs, gpu.postProcessMs);
+				title +=
+					std::format(L" | GPU {:.2f} ms (Sea {:.2f}, Models {:.2f}, Clouds {:.2f}, Post {:.2f})",
+						gpu.TotalMs(), gpu.oceanMs, gpu.modelsMs, gpu.cloudsMs, gpu.postProcessMs);
 			SetWindowTextW(m_window->GetHandle(), title.c_str());
 			m_fpsTimer = 0.0f;
 			m_fpsFrameCount = 0;

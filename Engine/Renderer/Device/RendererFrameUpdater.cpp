@@ -6,8 +6,10 @@
 
 namespace Engine {
 
-	void RendererFrameUpdater::Configure(const OceanSettings& settings) {
+	void RendererFrameUpdater::Configure(const OceanSettings& settings, const CloudSettings& clouds) {
+		ValidateCloudSettings(clouds);
 		m_oceanSettings = settings;
+		m_cloudSettings = clouds;
 	}
 
 	struct RendererFrameUpdater::FrameViewData {
@@ -33,7 +35,10 @@ namespace Engine {
 		const XMMATRIX view = camera.GetView();
 		const XMMATRIX proj = camera.GetProjection(oceanCornerDistance * kProjectionMargin);
 		const XMMATRIX mvp = world * view * proj;
-		const XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, view * proj);
+		// 遠方へ移動しても逆行列の平行移動成分で視線の精度を失わない。
+		XMMATRIX relativeView = view;
+		relativeView.r[3] = XMVectorSet(0, 0, 0, 1);
+		const XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, relativeView * proj);
 		const XMMATRIX mvpT = XMMatrixTranspose(mvp);
 
 		DirectX::XMFLOAT4X4 matrix;
@@ -106,6 +111,11 @@ namespace Engine {
 		oceanFog->oceanEdgeFadeStart = m_oceanSettings.edgeFadeStart;
 		oceanFog->oceanEdgeFadeWidth = m_oceanSettings.edgeFadeWidth;
 		oceanFog->padding1[0] = oceanFog->padding1[1] = 0.0f;
+		const auto& clouds = m_cloudSettings;
+		oceanFog->cloudLayer = {clouds.bottom, clouds.top, clouds.coverage, clouds.density};
+		oceanFog->cloudMotion = {
+			1.0f / clouds.scale, clouds.wind.x, clouds.wind.y, clouds.enabled ? 1.0f : 0.0f};
+		oceanFog->cloudQuality = {clouds.maxDistance, float(clouds.steps), float(clouds.seed), frame.time};
 	}
 
 	void RendererFrameUpdater::UpdateFilmConstants(const FrameViewData& frame,

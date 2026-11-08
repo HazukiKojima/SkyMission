@@ -48,6 +48,9 @@ namespace Engine {
 		float oceanEdgeFadeStart;
 		float oceanEdgeFadeWidth;
 		float padding1[2];
+		DirectX::XMFLOAT4 cloudLayer; // bottom, top, coverage, extinction density
+		DirectX::XMFLOAT4 cloudMotion; // inverse scale, X/Z wind, enabled
+		DirectX::XMFLOAT4 cloudQuality; // max near ray distance, steps, seed, elapsed seconds
 	};
 
 	struct ModelConstantBufferData {
