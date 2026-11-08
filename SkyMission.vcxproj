@@ -588,4 +588,19 @@
       <AdditionalOptions>/O3 %(AdditionalOptions)</AdditionalOptions>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Cinematics\OpeningCinematicSettings.cpp" />
+    <ClCompile Include="Game\Cinematics\OpeningCinematicController.cpp" />
+    <ClCompile Include="Game\Cinematics\OpeningCinematicScene.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneOpening.cpp" />
+    <ClCompile Include="Game\UI\OpeningCinematicPresenter.cpp" />
+    <ClInclude Include="Game\Cinematics\OpeningCinematicSettings.h" />
+    <ClInclude Include="Game\Cinematics\OpeningCinematicTypes.h" />
+    <ClInclude Include="Game\Cinematics\OpeningCinematicController.h" />
+    <ClInclude Include="Game\Cinematics\OpeningCinematicScene.h" />
+    <ClInclude Include="Game\UI\OpeningCinematicPresenter.h" />
+    <ClInclude Include="Tests\OpeningCinematicTests.h" />
+    <ClInclude Include="Tests\OpeningCinematicVisualTests.h" />
+    <None Include="Assets\Cinematics\opening.json" />
+  </ItemGroup>
 </Project>

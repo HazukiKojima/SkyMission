@@ -27,6 +27,8 @@ namespace Game {
 		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
 		void SetFollowTarget(const AircraftCameraTarget& target);
+		// 初回と暗転中の切替に使い、追従開始時の補間移動を画面に出さない
+		void SnapToFollowTarget();
 
 		// レンダーターゲットのサイズが変わったときに通知する
 		void OnResize(UINT width, UINT height);
@@ -45,8 +47,8 @@ namespace Game {
 		void UpdateView();
 		void UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input);
 		void UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input);
-		void UpdateFollowOrientation(float deltaSeconds);
-		void UpdateFollowPosition(float deltaSeconds);
+		void UpdateFollowOrientation(float deltaSeconds, bool snap = false);
+		void UpdateFollowPosition(float deltaSeconds, bool snap = false);
 
 		DirectX::XMFLOAT3 m_position = {0.0f, 10.0f, -10.0f};
 		float m_yaw = 0.0f;			// ラジアン

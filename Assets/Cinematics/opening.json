@@ -1,0 +1,17 @@
+{
+  "durationSeconds": 5,
+  "fadeOutStartSeconds": 3.6,
+  "cutSeconds": 3.8,
+  "fadeInStartSeconds": 4,
+  "fadeInSeconds": 0.7,
+  "formationSpacingMeters": 180,
+  "formationDepthMeters": 200,
+  "flightSpeedMetersPerSecond": 180,
+  "propellerRadiansPerSecond": 35,
+  "cameraStartOffsetMeters": [180, 100, 360],
+  "cameraEndOffsetMeters": [100, 75, 320],
+  "lookAtOffsetMeters": [0, 0, -50],
+  "verticalFovDegrees": 55,
+  "title": "敵哨戒編隊",
+  "subtitle": "正面より接近"
+}

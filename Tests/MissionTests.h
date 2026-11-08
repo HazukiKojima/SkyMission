@@ -125,7 +125,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		.enemyAircraft = assets / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 		.retroFilm = assets / L"Environment/retroFilm.json",
 		.mission = assets / L"Combat/mission.json"});
-	Require(definition.mission.patrolCount == 6 && definition.mission.finalFighterCount == 6 &&
+	Require(definition.mission.patrolCount == 4 && definition.mission.finalFighterCount == 4 &&
 			definition.mission.bombReloadSeconds == 4,
 		"Mission config not loaded");
 	const auto window = CreateWindowW(L"STATIC", L"Mission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0,
@@ -164,6 +164,61 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			"Mission factory returned an incomplete initial snapshot");
 		const auto initialPlayerId = initialized.GetObjects().front().id;
 		const auto initialEnemyPosition = initialized.GetCombatSnapshot().enemies.front().center;
+		{
+			auto natural = initialized;
+			natural.EnableOpening(definition.opening, box, 20, 100000);
+			auto skipped = natural;
+			const auto initial = natural.GetCombatSnapshot();
+			CombatInput noise;
+			noise.weapon.fire = true;
+			noise.missilePressCount = 2;
+			noise.nextTarget = true;
+			for (int frame = 0; frame < 14; ++frame)
+				natural.Update({.pitch = 1, .throttle = 1}, 0.25f, {}, noise);
+			Require(natural.GetCombatSnapshot().opening.active &&
+					natural.GetCombatSnapshot().playerPosition.z == initial.playerPosition.z &&
+					natural.GetCombatSnapshot().enemies.front().center.z ==
+						initial.enemies.front().center.z &&
+					natural.GetCombatSnapshot().playerHealth == initial.playerHealth &&
+					natural.GetCombatSnapshot().acquireProgress == initial.acquireProgress &&
+					natural.GetProjectileCount() == 0 && natural.GetHostileProjectileCount() == 0 &&
+					natural.GetCombatSnapshot().carrierMissileAmmo == 2,
+				"Opening advanced the battle or accepted combat input");
+			// 自機のカットでは無入力飛行を続け、終了後の通常更新へ連続してつなぐ
+			auto neutral = natural;
+			for (int frame = 0; frame < 6; ++frame) {
+				natural.Update({.pitch = 1, .throttle = 1}, 0.25f, {}, noise);
+				neutral.Update({}, 0.25f);
+			}
+			Require(!natural.GetCombatSnapshot().opening.active &&
+					natural.GetCombatSnapshot().playerPosition.z < initial.playerPosition.z &&
+					natural.GetCombatSnapshot().playerPosition.z ==
+						neutral.GetCombatSnapshot().playerPosition.z &&
+					natural.GetCombatSnapshot().playerPosition.y ==
+						neutral.GetCombatSnapshot().playerPosition.y &&
+					natural.GetProjectileCount() == 0 && natural.GetHostileProjectileCount() == 0 &&
+					natural.GetCombatSnapshot().playerHealth == initial.playerHealth &&
+					natural.GetCombatSnapshot().carrierMissileAmmo == 2,
+				"Opening handoff froze flight or accepted control/weapon input");
+			const auto handoffPosition = natural.GetCombatSnapshot().playerPosition;
+			natural.Update({}, 0.01f);
+			Require(natural.GetCombatSnapshot().playerPosition.z < handoffPosition.z,
+				"Player stopped moving after the opening handoff");
+			skipped.OnResize(2560, 1080);
+			noise.skipOpening = true;
+			skipped.Update({}, 0.1f, {}, noise);
+			Require(!skipped.GetCombatSnapshot().opening.active && skipped.GetProjectileCount() == 0 &&
+					skipped.GetCombatSnapshot().elapsedSeconds == initial.elapsedSeconds &&
+					skipped.GetCombatSnapshot().playerPosition.z == initial.playerPosition.z,
+				"Skipped opening consumed inputs or changed the battle start camera");
+			skipped.RemoveObject(initialPlayerId);
+			skipped.Update({}, 0.01f);
+			skipped.Update({}, 0.01f, {}, {.retry = true});
+			Require(skipped.GetCombatSnapshot().opening.active &&
+					skipped.GetCombatSnapshot().opening.elapsedSeconds == 0 &&
+					skipped.GetCombatSnapshot().playerHealth == initial.playerHealth,
+				"Retry did not restart the opening from the initial battle state");
+		}
 		initialized.RemoveObject(initialPlayerId);
 		initialized.Update({}, 0.01f);
 		Require(initialized.GetCombatSnapshot().result == CombatResult::Defeat,
@@ -486,6 +541,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		context.WaitForGpu();
 	}
 	DestroyWindow(window);
-	std::cout << "PASS: full mission scene, automatic carrier selection, timed lock, launch gate, two-hit carrier, one-time waves "
+	std::cout << "PASS: full mission scene, automatic carrier selection, timed lock, launch gate, two-hit "
+				 "carrier, one-time waves "
 				 "and retry\n";
 }

@@ -1,6 +1,7 @@
 #include "CombatHudPresenter.h"
 #include "RadarMapPresenter.h"
 #include "HudStyle.h"
+#include "OpeningCinematicPresenter.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -11,6 +12,10 @@ namespace Game {
 	void CombatHudPresenter::Build(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		if (view.width == 0 || view.height == 0) return;
+		if (snapshot.opening.active) {
+			OpeningCinematicPresenter{}.Build(snapshot.opening, view, list);
+			return;
+		}
 		RadarMapPresenter{}.Build(snapshot, view, list);
 		DrawCarrierHealth(snapshot, view, list);
 		DrawFlightStatus(snapshot, view, list);
@@ -25,8 +30,7 @@ namespace Game {
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		const float fontSize = 36 * scale;
 		const float lineHeight = 48 * scale;
-		std::vector<std::string_view> controls{
-			"WASD：操縦", "Q / E：ヨー", "Ctrl / Space：加速 / 減速",
+		std::vector<std::string_view> controls{"WASD：操縦", "Q / E：ヨー", "Ctrl / Space：加速 / 減速",
 			"Z + マウス：見回し", "左クリック：機銃", "Tab：目標切替"};
 		if (snapshot.missionPhase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active)
 			controls.push_back("右クリック：ミサイル (ロック後)");
@@ -34,8 +38,9 @@ namespace Game {
 
 		float width = Engine::HudDrawList::MeasureTextWidth("操作方法", fontSize);
 		for (const auto text : controls)
-			width = std::max(width, Engine::HudDrawList::MeasureTextWidth("- ", fontSize) +
-				Engine::HudDrawList::MeasureTextWidth(text, fontSize));
+			width = std::max(width,
+				Engine::HudDrawList::MeasureTextWidth("- ", fontSize) +
+					Engine::HudDrawList::MeasureTextWidth(text, fontSize));
 		// 画面右下から配置し、縦横比が変わっても端からの余白を維持する
 		const float x = view.width - 48 * scale - width;
 		float y = view.height - 48 * scale - fontSize - lineHeight * float(controls.size());
@@ -313,8 +318,8 @@ namespace Game {
 				const auto marker = projector.Project(snapshot.objectivePosition);
 				if (marker.visible) {
 					const float radius = 44 * scale;
-					const auto frameColor = snapshot.lockState == LockState::Locked
-						? HudStyle::Alert : HudStyle::Selected;
+					const auto frameColor =
+						snapshot.lockState == LockState::Locked ? HudStyle::Alert : HudStyle::Selected;
 					// 母艦は六角形で囲み、敵機の四隅枠と区別する
 					for (int i = 0; i < 6; ++i) {
 						const float angle = XM_2PI * float(i) / 6;
@@ -325,9 +330,11 @@ namespace Game {
 								marker.pixel.y + std::sin(nextAngle) * radius},
 							lineWidth * 1.5f, frameColor);
 					}
-					list.Text({marker.pixel.x + radius + 8 * scale, marker.pixel.y}, "敵空母", fontSize, color);
+					list.Text(
+						{marker.pixel.x + radius + 8 * scale, marker.pixel.y}, "敵空母", fontSize, color);
 					if (snapshot.lockState == LockState::Acquiring)
-						list.Circle(marker.pixel, radius + 8 * scale, snapshot.acquireProgress, lineWidth, color);
+						list.Circle(
+							marker.pixel, radius + 8 * scale, snapshot.acquireProgress, lineWidth, color);
 					if (snapshot.lockState == LockState::Locked)
 						list.Text({marker.pixel.x - radius, marker.pixel.y - radius - fontSize - 4 * scale},
 							"ロック完了", fontSize, frameColor);
@@ -339,8 +346,7 @@ namespace Game {
 				const auto marker = projector.Project(snapshot.objectivePosition);
 				if (marker.visible) {
 					list.Circle(marker.pixel, 26 * scale, 1, lineWidth * 2, color);
-					list.Text({marker.pixel.x + 32 * scale, marker.pixel.y},
-						"交戦区域", fontSize, color);
+					list.Text({marker.pixel.x + 32 * scale, marker.pixel.y}, "交戦区域", fontSize, color);
 				} else
 					DrawOffscreenIndicator(marker, color, view, list);
 			}

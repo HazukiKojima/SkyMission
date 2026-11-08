@@ -104,10 +104,14 @@ namespace Game {
 		m_combat.hitCount = 0;
 		if (!std::isfinite(dt) || dt <= 0) return;
 		dt = std::min(dt, 0.25f);
-		UpdateCombatTimers(dt);
 		if (!m_initialState) {
 			SaveInitialState();
 		}
+		if (m_opening.GetPresentation().active) {
+			UpdateOpening(dt, combatInput.skipOpening);
+			return;
+		}
+		UpdateCombatTimers(dt);
 		if (m_combat.result != CombatResult::Active) {
 			if (combatInput.retry) {
 				Restart(dt);
@@ -302,6 +306,7 @@ namespace Game {
 		m_width = width;
 		m_height = height;
 		m_cameraController.OnResize(width, height);
+		m_openingScene.OnResize(width, height);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
 

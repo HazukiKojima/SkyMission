@@ -271,7 +271,8 @@ namespace Game {
 
 			return {reader.Resolve(skyJsonPath, "texture"), reader.Resolve(oceanJsonPath, "texture"),
 				reader.Resolve(oceanJsonPath, "normal"), reader.Resolve(oceanJsonPath, "normal2"), ocean, sky,
-				retroFilmParameters, LoadCloudSettings(reader, paths.environment.parent_path() / L"Clouds.json")};
+				retroFilmParameters,
+				LoadCloudSettings(reader, paths.environment.parent_path() / L"Clouds.json")};
 		}
 	} // namespace
 	DirectX::XMFLOAT4X4 ShipDefinition::BuildTransform() const {
@@ -385,6 +386,8 @@ namespace Game {
 				LoadHudSettings(reader, paths.environment.parent_path().parent_path() / L"UI/combatHud.json"),
 			.ships = paths.ships.empty() ? std::vector<ShipDefinition>{}
 										 : LoadShipDefinitions(reader, paths.ships),
-			.mission = mission};
+			.mission = mission,
+			.opening = LoadOpeningCinematicSettings(
+				reader, paths.environment.parent_path().parent_path() / L"Cinematics/opening.json")};
 	}
 } // namespace Game

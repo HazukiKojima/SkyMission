@@ -16,6 +16,13 @@ namespace Engine {
 
 	std::string JsonAssetReader::ResolveString(
 		const std::filesystem::path& jsonPath, const std::string& key) const {
+		const auto result = TryResolveString(jsonPath, key);
+		if (!result) throw std::runtime_error(FieldContext(jsonPath, key) + ": missing field");
+		return *result;
+	}
+
+	std::optional<std::string> JsonAssetReader::TryResolveString(
+		const std::filesystem::path& jsonPath, const std::string& key) const {
 		RedoxDocument transientDocument;
 		const RedoxDocument& document = AcquireDocument(jsonPath, transientDocument);
 
@@ -25,6 +32,7 @@ namespace Engine {
 		unsigned char output[4096] = {};
 		const int result = getString(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
 			static_cast<int>(key.size()), output, sizeof(output));
+		if (result == -3) return std::nullopt; // REDoxの未指定フィールド
 		if (result < 0) {
 			throw std::runtime_error(FieldContext(jsonPath, key) +
 				": failed to read string. REDox error code: " + std::to_string(result));
@@ -53,6 +61,13 @@ namespace Engine {
 
 	std::vector<float> JsonAssetReader::ResolveFloatArray(
 		const std::filesystem::path& jsonPath, const std::string& key) const {
+		const auto result = TryResolveFloatArray(jsonPath, key);
+		if (!result) throw std::runtime_error(FieldContext(jsonPath, key) + ": missing field");
+		return *result;
+	}
+
+	std::optional<std::vector<float>> JsonAssetReader::TryResolveFloatArray(
+		const std::filesystem::path& jsonPath, const std::string& key) const {
 		RedoxDocument transientDocument;
 		const RedoxDocument& document = AcquireDocument(jsonPath, transientDocument);
 
@@ -63,6 +78,7 @@ namespace Engine {
 		const int result =
 			getFloatArray(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
 				static_cast<int>(key.size()), output.data(), static_cast<int>(output.size()));
+		if (result == -3) return std::nullopt; // REDoxの未指定フィールド
 		if (result < 0) {
 			throw std::runtime_error(FieldContext(jsonPath, key) +
 				": failed to read number. REDox error code: " + std::to_string(result));

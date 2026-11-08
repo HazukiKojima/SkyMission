@@ -1,6 +1,6 @@
 {
-  "patrolCount": 6,
-  "finalFighterCount": 6,
+  "patrolCount": 4,
+  "finalFighterCount": 4,
   "bombReloadSeconds": 4,
   "carrierMissileSpeed": 6000,
   "carrierHealth": 300,

@@ -91,6 +91,8 @@ namespace Game {
 				return m_renderer->GetModel(id);
 			},
 			m_window->GetWidth(), m_window->GetHeight(), m_renderer->GetOceanSize()));
+		m_scene->EnableOpening(assets.opening, m_renderer->GetModel(EnemyModelId),
+			assets.enemyAircraft.visualScale, m_renderer->GetOceanSize());
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +

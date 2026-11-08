@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <optional>
 
 namespace Engine {
 	class RedoxDocument;
@@ -19,6 +20,11 @@ namespace Engine {
 		std::filesystem::path Resolve(const std::filesystem::path& jsonPath, const std::string& key) const;
 		float ResolveFloat(const std::filesystem::path& jsonPath, const std::string& key) const;
 		std::vector<float> ResolveFloatArray(
+			const std::filesystem::path& jsonPath, const std::string& key) const;
+		// 未指定のフィールドだけnulloptとし、型不一致や壊れたJSONは例外にする
+		std::optional<std::vector<float>> TryResolveFloatArray(
+			const std::filesystem::path& jsonPath, const std::string& key) const;
+		std::optional<std::string> TryResolveString(
 			const std::filesystem::path& jsonPath, const std::string& key) const;
 
 	  private:

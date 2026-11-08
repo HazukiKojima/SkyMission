@@ -8,8 +8,8 @@
 namespace Game {
 	enum class MissionPhase { Patrol, CarrierAttack, FinalFighters, Commander, Complete, Failed };
 	struct MissionSettings {
-		size_t patrolCount = 6;
-		size_t finalFighterCount = 6;
+		size_t patrolCount = 4;
+		size_t finalFighterCount = 4;
 		float bombReloadSeconds = 4;
 		float carrierMissileSpeed = 6000;
 		float carrierHealth = 300;

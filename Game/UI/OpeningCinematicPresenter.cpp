@@ -1,0 +1,35 @@
+#include "OpeningCinematicPresenter.h"
+#include "HudStyle.h"
+#include <algorithm>
+
+namespace Game {
+	void OpeningCinematicPresenter::Build(const OpeningCinematicPresentation& presentation,
+		const Engine::RenderView& view, Engine::HudDrawList& list) const {
+		if (!presentation.active || view.width == 0 || view.height == 0) return;
+		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
+		const float barHeight = view.height * 0.1f;
+		list.FilledRect({0, 0}, {float(view.width), barHeight}, {0, 0, 0, 1});
+		list.FilledRect({0, view.height - barHeight}, {float(view.width), barHeight}, {0, 0, 0, 1});
+		if (presentation.formationShot) {
+			const float titleSize = std::min(48 * scale,
+				(view.width - 96 * scale) /
+					std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(presentation.title, 1)));
+			const float subtitleSize = std::min(28 * scale,
+				(view.width - 96 * scale) /
+					std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(presentation.subtitle, 1)));
+			list.Text({48 * scale, view.height - barHeight - 120 * scale}, presentation.title, titleSize,
+				HudStyle::Ink);
+			list.Text({48 * scale, view.height - barHeight - 58 * scale}, presentation.subtitle, subtitleSize,
+				HudStyle::Ink);
+		}
+		// フェードは映像と紹介文に重ね、スキップ案内は暗転中も読めるよう最後に描く
+		if (presentation.fadeOpacity > 0)
+			list.FilledRect(
+				{0, 0}, {float(view.width), float(view.height)}, {0, 0, 0, presentation.fadeOpacity});
+		constexpr std::string_view hint = "Enter：スキップ";
+		const float fontSize = 24 * scale;
+		list.Text({view.width - 48 * scale - Engine::HudDrawList::MeasureTextWidth(hint, fontSize),
+					  view.height - barHeight * 0.5f - fontSize * 0.5f},
+			hint, fontSize, HudStyle::Ink);
+	}
+} // namespace Game

@@ -12,6 +12,7 @@
 #include "Game/Weapons/CarrierMissileSystem.h"
 #include "Game/Combat/EnemyGunBehavior.h"
 #include "Game/Weapons/BombDefinition.h"
+#include "Game/Cinematics/OpeningCinematicScene.h"
 
 namespace Game {
 	struct FlightSceneDefinition;
@@ -24,6 +25,9 @@ namespace Game {
 			const std::function<std::shared_ptr<Engine::Model>(const std::string&)>& resolveModel, UINT width,
 			UINT height, float farZ);
 		void Initialize(float aspect, float nearZ, float farZ);
+		// 本番開始時に有効化する。個別構成のテストでは呼ばずに直接戦闘できる
+		void EnableOpening(const OpeningCinematicSettings& settings, std::shared_ptr<Engine::Model> model,
+			float visualScale, float farZ);
 		void ConfigureCombat(const CombatSettings& settings);
 		void ConfigureMission(const MissionSettings& settings, std::shared_ptr<Engine::Model> enemyModel,
 			float enemyScale, const AircraftFlightParameters& flight, const AircraftAIParameters& ai);
@@ -79,7 +83,9 @@ namespace Game {
 			return m_effects.GetSnapshot();
 		}
 		const Engine::Scene& GetRenderScene() const {
-			return m_scene;
+			return m_opening.GetPresentation().active && m_opening.GetPresentation().formationShot
+				? m_openingScene.GetScene()
+				: m_scene;
 		}
 		const std::vector<Engine::SceneObject>& GetObjects() const {
 			return m_scene.GetObjects();
@@ -150,6 +156,13 @@ namespace Game {
 		// 再挑戦
 		void SaveInitialState();
 		void Restart(float dt);
+		void StartOpening();
+		void UpdateOpening(float deltaSeconds, bool skipRequested);
+
+		bool m_openingEnabled = false;
+		OpeningCinematicSettings m_openingSettings;
+		OpeningCinematicController m_opening;
+		OpeningCinematicScene m_openingScene;
 
 		// 任務と敵側の武器
 		FlightMission m_mission;

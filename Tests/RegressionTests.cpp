@@ -41,6 +41,8 @@ void Require(bool condition, const char* description) {
 #include "BombTests.h"
 #include "ModelLoadingTests.h"
 #include "CloudTests.h"
+#include "OpeningCinematicTests.h"
+#include "OpeningCinematicVisualTests.h"
 
 void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -560,7 +562,8 @@ void TestGpuTextures(const fs::path& fixture) {
 	ThrowIfFailed(DirectX::SaveToHDRFile(*hdrImage.GetImage(0, 0, 0), hdrPath.c_str()));
 	for (int load = 0; load < 2; ++load) {
 		Texture sky;
-		Require(sky.LoadFromFile(device.Get(), commands.Get(), hdrPath.wstring()), "HDR load/cache reload failed");
+		Require(sky.LoadFromFile(device.Get(), commands.Get(), hdrPath.wstring()),
+			"HDR load/cache reload failed");
 		const auto desc = sky.GetResource()->GetDesc();
 		Require(desc.Width == 16 && desc.Height == 8 && desc.MipLevels == 5 &&
 				desc.Format == DXGI_FORMAT_R32G32B32A32_FLOAT,
@@ -829,13 +832,24 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 
 int wmain(int argc, wchar_t** argv) {
 	try {
-		Require(argc == 3 || (argc == 4 && (std::wstring_view(argv[3]) == L"--clouds-review" ||
-			std::wstring_view(argv[3]) == L"--mission-review")),
-			"Expected repository and fixture directories, optionally --clouds-review or --mission-review");
+		Require(argc == 3 ||
+				(argc == 4 &&
+					(std::wstring_view(argv[3]) == L"--clouds-review" ||
+						std::wstring_view(argv[3]) == L"--mission-review" ||
+						std::wstring_view(argv[3]) == L"--opening-review")),
+			"Expected repository and fixture directories, optionally --clouds-review, --mission-review or "
+			"--opening-review");
 		ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
+		if (argc == 4 && std::wstring_view(argv[3]) == L"--opening-review") {
+			TestOpeningCinematic(argv[1], fixture);
+			TestOpeningCinematicRendering(argv[1], fixture);
+			CoUninitialize();
+			return 0;
+		}
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
+			TestOpeningCinematic(argv[1], fixture);
 			TestCombatMath();
 			TestWeapons(argv[1], fixture);
 			TestCombatDamage(argv[1], fixture);
@@ -852,6 +866,7 @@ int wmain(int argc, wchar_t** argv) {
 			return 0;
 		}
 		TestFlightAndScene();
+		TestOpeningCinematic(argv[1], fixture);
 		TestCombatAudioLifecycle(argv[1], fixture);
 		TestCombatMath();
 		TestEnemyGunBehavior();

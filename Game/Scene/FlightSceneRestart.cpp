@@ -83,5 +83,6 @@ namespace Game {
 		m_combat.audio.restarted = true;
 		m_combat.audio.flying = true;
 		UpdateCamera({}, dt, {});
+		if (m_openingEnabled) StartOpening();
 	}
 } // namespace Game
