@@ -88,7 +88,7 @@ namespace Engine {
 
 		for (int i = 0; i < 6; ++i) {
 			const float phaseOffset = static_cast<float>(i) * 21.53f;
-			const float randomAngle = std::sin(static_cast<float>(i) * 7.3f) * 1.1f;
+			const float randomAngle = std::sin(static_cast<float>(i) * 7.3f) * 0.22f;
 			const float sinAngle = std::sin(randomAngle);
 			const float cosAngle = std::cos(randomAngle);
 			const float directionX = cosAngle * baseWindX - sinAngle * baseWindZ;

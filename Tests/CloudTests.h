@@ -68,10 +68,10 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 		if (profile) {
 			std::cout << "Cloud review adapter: " << fs::path(device.GetAdapterName()).string()
 				<< ", " << width << "x" << height << '\n';
-			const D3D12_QUERY_HEAP_DESC query{D3D12_QUERY_HEAP_TYPE_TIMESTAMP, 4, 0};
+			const D3D12_QUERY_HEAP_DESC query{D3D12_QUERY_HEAP_TYPE_TIMESTAMP, 6, 0};
 			ThrowIfFailed(device.GetDevice()->CreateQueryHeap(&query, IID_PPV_ARGS(&timestamps)));
 			const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_READBACK);
-			const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(4 * sizeof(UINT64));
+			const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(6 * sizeof(UINT64));
 			ThrowIfFailed(device.GetDevice()->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE,
 				&buffer, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&timestampReadback)));
 			ThrowIfFailed(device.GetCommandQueue()->GetTimestampFrequency(&frequency));
@@ -120,7 +120,13 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			commands->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 			const FrameContext frame{commands, &device, pipelines, buffers, context.GetFrameIndex()};
 			SkyRenderPass{}.Record(frame, assets);
+			if (profile) commands->EndQuery(timestamps.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 4);
 			OceanRenderPass{}.Record(frame, assets, ocean);
+			if (profile) {
+				commands->EndQuery(timestamps.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 5);
+				commands->ResolveQueryData(timestamps.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 4, 2,
+					timestampReadback.Get(), 4 * sizeof(UINT64));
+			}
 			RenderStatistics statistics;
 			ModelRenderPass{}.Record(frame, scene, updater.GetDrawDecisions(), statistics);
 			context.TransitionResource(device.GetSceneRenderTarget(), D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -154,11 +160,13 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			context.WaitForGpu();
 			if (profile) {
 				UINT64* ticks = nullptr;
-				const CD3DX12_RANGE reads(0, 4 * sizeof(UINT64)), noWrites(0, 0);
+				const CD3DX12_RANGE reads(0, 6 * sizeof(UINT64)), noWrites(0, 0);
 				ThrowIfFailed(timestampReadback->Map(0, &reads, reinterpret_cast<void**>(&ticks)));
 				const double cloudMs = double(ticks[1] - ticks[0]) * 1000 / double(frequency) / 8;
 				const double postMs = double(ticks[3] - ticks[2]) * 1000 / double(frequency);
+				const double oceanMs = double(ticks[5] - ticks[4]) * 1000 / double(frequency);
 				timestampReadback->Unmap(0, &noWrites);
+				std::cout << "Ocean GPU ms: " << fs::path(file).string() << " " << oceanMs << '\n';
 				lastCloudMs = cloudMs;
 				lastPostMs = postMs;
 				std::cout << "Cloud GPU ms (8 draws): " << fs::path(file).string() << " " << cloudMs << '\n';
@@ -186,6 +194,9 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			return pixels;
 		};
 		if (profile) {
+			render(definition.environment.clouds, {0, 1145, 0}, {0, 1000, -8000}, L"ocean-flight-level.png", 12);
+			render(definition.environment.clouds, {0, 1145, 0}, {0, -1200, -4000}, L"ocean-flight-down.png", 12);
+			render(definition.environment.clouds, {0, 70, 0}, {0, 40, -3000}, L"ocean-low-level.png", 12);
 			// Fixed raised-cloud settings; capture a full turn below and inside the layer.
 			for (unsigned level = 0; level < 2; ++level) {
 				std::array<double, 12> turnTimes{};
