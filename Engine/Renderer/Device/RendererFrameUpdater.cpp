@@ -67,7 +67,10 @@ namespace Engine {
 	void RendererFrameUpdater::UpdateOceanConstants(const FrameViewData& frame,
 		const SceneEnvironment& environment, OceanConstantBufferData* oceanData) const {
 		oceanData->mvp = frame.oceanMvp;
-		oceanData->time = frame.time;
+		// うねり・法線・波模様を同じ時間倍率で動かす
+		constexpr float kOceanAnimationSpeed = 2.0f;
+		const float oceanTime = frame.time * kOceanAnimationSpeed;
+		oceanData->time = oceanTime;
 		oceanData->cameraPos = frame.cameraPosition;
 		oceanData->oceanOffset[0] = frame.cameraPosition.x;
 		oceanData->oceanOffset[1] = 0.0f;
@@ -87,7 +90,7 @@ namespace Engine {
 		oceanData->oceanEdgeFadeStart = m_oceanSettings.edgeFadeStart;
 		oceanData->oceanEdgeFadeWidth = m_oceanSettings.edgeFadeWidth;
 		oceanData->oceanWaveHeightOffset = OceanGeometry::CalculateWaveHeight(frame.cameraPosition.x,
-			frame.cameraPosition.z, frame.time, m_oceanSettings.waveLength, m_oceanSettings.waveSteepness);
+			frame.cameraPosition.z, oceanTime, m_oceanSettings.waveLength, m_oceanSettings.waveSteepness);
 	}
 
 	void RendererFrameUpdater::UpdateFogConstants(const FrameViewData& frame,
