@@ -34,6 +34,25 @@ Visual Studio C++ x64ツール、.NET 10 SDK、Native AOTツールチェーン�
 - .NET側は各標本前にGCを実行する。GC呼出し自体は測定外、標本中に起きたGCは時間へ含む。
 - メモリ使用量は主評価の比較対象外。管理ヒープだけの値でC++やネイティブメモリの優劣を判断しない。
 
+## 最適化したゲーム側実装との比較
+
+公平に取得アルゴリズムとキャッシュ条件をそろえる場合は、以下を使用する。
+
+```powershell
+./Tools/JsonParserBenchmark/RunBenchmark.ps1 -FairOptimized -OutputDirectory x64/JsonParserFairBenchmark
+```
+
+REDox/STJは`MatchedBridge.cs`を共有し、nlohmann側も同じ一括走査・有限float検証・文書単位の配列キャッシュを使う。
+初回取得とキャッシュ再取得を別々に測る。個別取得は全てDOMからの検索として測る。
+不正値・欠落・所有権・キャッシュ・取得値の一致を確認してから計測する。
+C++直接呼び出しとNative AOT経由の違いは含むため、パーサー内部だけの比較ではない。
+[同条件での計測結果](../../Docs/Benchmarks/JsonParserMatchedOptimization.md)を参照。
+
+`-IncludeGameOptimized`を追加すると、ゲーム本体のラッパーと補助クラスを直接リンクした
+`REDox-game-optimized`も比較する。前回結果を保持するには`-OutputDirectory`で別の出力先を指定する。
+最適化後の一括再取得は、型付きfloat列のキャッシュを使う条件。
+通常のJSONプロパティ再検索と区別して結果を解釈する。
+
 ## 補足：純.NET JIT
 
 `-ManagedSupplement`指定時は、別プロセスで.NET内部の文字列/UTF-8 DOM解析と30項目取得を測る。

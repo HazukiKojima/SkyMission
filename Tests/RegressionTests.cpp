@@ -836,12 +836,22 @@ int wmain(int argc, wchar_t** argv) {
 				(argc == 4 &&
 					(std::wstring_view(argv[3]) == L"--clouds-review" ||
 						std::wstring_view(argv[3]) == L"--mission-review" ||
-						std::wstring_view(argv[3]) == L"--opening-review")),
-			"Expected repository and fixture directories, optionally --clouds-review, --mission-review or "
-			"--opening-review");
+						std::wstring_view(argv[3]) == L"--opening-review" ||
+						std::wstring_view(argv[3]) == L"--json-review")),
+			"Expected repository and fixture directories, optionally --clouds-review, --mission-review, "
+			"--opening-review or --json-review");
 		ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
+		if (argc == 4 && std::wstring_view(argv[3]) == L"--json-review") {
+			TestPathsAndJson(argv[1], fixture);
+			TestAIParameters(argv[1], fixture);
+			TestEnvironmentSettings(argv[1], fixture);
+			TestShips(argv[1], fixture);
+			TestOpeningCinematic(argv[1], fixture);
+			CoUninitialize();
+			return 0;
+		}
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--opening-review") {
 			TestOpeningCinematic(argv[1], fixture);
 			TestOpeningCinematicRendering(argv[1], fixture);

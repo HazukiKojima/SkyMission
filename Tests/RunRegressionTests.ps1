@@ -1,6 +1,8 @@
-param([string]$BuildDirectory, [switch]$MissionReview, [switch]$OpeningReview)
+param([string]$BuildDirectory, [switch]$MissionReview, [switch]$OpeningReview, [string]$RedoxDll, [switch]$JsonReview)
 $ErrorActionPreference = 'Stop'
-if ($MissionReview -and $OpeningReview) { throw 'Choose either MissionReview or OpeningReview.' }
+if (([int][bool]$MissionReview + [int][bool]$OpeningReview + [int][bool]$JsonReview) -gt 1) {
+    throw 'Choose only one review filter.'
+}
 $repository = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (!$BuildDirectory) { $BuildDirectory = Join-Path $env:TEMP ('SkyMissionRegression-' + [guid]::NewGuid().ToString('N')) }
 $build = [IO.Path]::GetFullPath($BuildDirectory)
@@ -11,7 +13,9 @@ if (!$installation) { throw 'Visual Studio C++ tools are required.' }
 $developerCommand = Join-Path $installation 'Common7\Tools\VsDevCmd.bat'
 $directXTex = Join-Path $repository 'packages\directxtex_desktop_win10.2026.5.8.1\native'
 $assimp = Join-Path $repository 'packages\AssimpCpp.5.0.1.6\build\native'
-$redox = Join-Path $repository 'External\REDoxWrapper\bin\Debug\net10.0\win-x64\publish\REDoxWrapper.dll'
+$redox = if ($RedoxDll) { [IO.Path]::GetFullPath($RedoxDll) } else {
+    Join-Path $repository 'External\REDoxWrapper\bin\Debug\net10.0\win-x64\publish\REDoxWrapper.dll'
+}
 if (!(Test-Path -LiteralPath $redox)) { throw 'Build Debug x64 once to publish REDoxWrapper.dll before running these tests.' }
 Copy-Item -LiteralPath $redox -Destination $build
 Copy-Item -LiteralPath (Join-Path $assimp 'bin\Debug\assimp-vc142-mtd.dll') -Destination $build
@@ -63,6 +67,7 @@ try {
     $testArguments = @($repository, (Join-Path $build 'fixtures'))
     if ($MissionReview) { $testArguments += '--mission-review' }
     if ($OpeningReview) { $testArguments += '--opening-review' }
+    if ($JsonReview) { $testArguments += '--json-review' }
     & (Join-Path $build 'RegressionTests.exe') @testArguments
     if ($LASTEXITCODE -ne 0) { throw "Regression tests failed: $LASTEXITCODE" }
 } finally {

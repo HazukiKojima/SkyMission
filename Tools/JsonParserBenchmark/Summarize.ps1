@@ -36,8 +36,18 @@ foreach ($name in @('jit-1.csv','jit-1-environment.txt','processor-brand.txt')) 
     if (Test-Path -LiteralPath $path) { Copy-Item -LiteralPath $path -Destination $OutputDirectory }
 }
 $parsers = @('REDox-current','REDox-utf8','STJ-current','STJ-utf8','nlohmann-json')
+if ($summary.Parser -contains 'REDox-game-optimized') { $parsers += 'REDox-game-optimized' }
 $table = @('| 処理 / データ | REDox現行 | REDox UTF-8 | STJ同一変換経路 | STJ UTF-8 | nlohmann |',
     '| --- | ---: | ---: | ---: | ---: | ---: |')
+if ($parsers -contains 'REDox-game-optimized') {
+    $table[0] += ' ゲーム側最適化 |'
+    $table[1] += ' ---: |'
+}
+if ($summary.Parser -contains 'REDox-matched') {
+    $parsers = @('REDox-matched','STJ-matched','nlohmann-matched')
+    $table = @('| 処理 / データ | REDox 同条件最適化 | STJ 同条件最適化 | nlohmann 同条件最適化 |',
+        '| --- | ---: | ---: | ---: |')
+}
 foreach ($group in ($summary | Group-Object Workload,Dataset)) {
     $first = $group.Group[0]
     $values = foreach ($parser in $parsers) {

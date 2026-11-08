@@ -377,6 +377,8 @@
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxApi.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\NumericParameterLayout.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\ParsedJsonDocument.cs" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxWrapper.csproj" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)global.json" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\Program.cs" />

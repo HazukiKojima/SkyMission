@@ -1,9 +1,12 @@
 param(
     [string]$OutputDirectory,
     [ValidateRange(1, 10)][int]$ProcessRuns = 3,
-    [switch]$ManagedSupplement
+    [switch]$ManagedSupplement,
+    [switch]$IncludeGameOptimized,
+    [switch]$FairOptimized
 )
 $ErrorActionPreference = 'Stop'
+if ($FairOptimized -and $IncludeGameOptimized) { throw 'Choose FairOptimized or IncludeGameOptimized.' }
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $repository 'x64/JsonParserBenchmark' }
 $output = [IO.Path]::GetFullPath($OutputDirectory)
@@ -29,8 +32,13 @@ $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer
 $installation = & $vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 if (!$installation) { throw 'Visual Studio C++ x64 tools are required.' }
 $commands = @('@echo off', ('call "{0}\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 >nul' -f $installation))
-foreach ($parser in @('Redox', 'Standard')) {
+$parsers = @('Redox', 'Standard')
+if ($FairOptimized) { $parsers = @('MatchedRedox', 'MatchedStandard') }
+if ($IncludeGameOptimized) { $parsers += 'GameOptimized' }
+foreach ($parser in $parsers) {
     $project = Join-Path $PSScriptRoot "NativeBridge/$parser/${parser}Benchmark.csproj"
+    if ($parser -eq 'GameOptimized') { $project = Join-Path $PSScriptRoot 'NativeBridge/GameOptimized/GameOptimized.csproj' }
+    if ($parser.StartsWith('Matched')) { $project = Join-Path $PSScriptRoot "NativeBridge/$parser/$parser.csproj" }
     $commands += 'dotnet publish "{0}" -c Release -r win-x64 -o "{1}" --ignore-failed-sources -p:NuGetAudit=false' -f $project, $output
     $commands += 'if errorlevel 1 exit /b %errorlevel%'
 }
@@ -42,7 +50,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Native benchmark build failed.' }
 
 # 計測同士を並行実行しない。プロセスごとに7標本、測定順は巡回して入れ替える
 for ($run = 1; $run -le $ProcessRuns; ++$run) {
-    & (Join-Path $output 'NativeBenchmark.exe') $output $run
+    $nativeArguments = @($output, $run)
+    if ($IncludeGameOptimized) { $nativeArguments += 'optimized' }
+    if ($FairOptimized) { $nativeArguments += 'fair' }
+    & (Join-Path $output 'NativeBenchmark.exe') @nativeArguments
     if ($LASTEXITCODE -ne 0) { throw "Native benchmark run $run failed." }
 }
 if ($ManagedSupplement) {

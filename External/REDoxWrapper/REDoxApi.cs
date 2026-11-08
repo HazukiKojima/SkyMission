@@ -20,8 +20,16 @@ public static unsafe class REDoxApi
     // ハンドルには生ポインターではなく管理テーブルのIDを使う
     // 取得と解放を同じロックで保護し、解放済み文書へのアクセスを防ぐ
     private static readonly object DocumentLock = new();
-    private static readonly Dictionary<nint, JsonDocument> Documents = new();
+    private static readonly Dictionary<nint, ParsedJsonDocument> Documents = new();
     private static long NextDocumentHandle;
+    private static readonly NumericParameterLayout FlightLayout = new(
+        GeneratedAircraftFlightParameters.FieldNames, GeneratedAircraftFlightParameters.FieldLengths);
+    private static readonly NumericParameterLayout AiLayout = new(
+        GeneratedAircraftAIParameters.FieldNames, GeneratedAircraftAIParameters.FieldLengths);
+    private static readonly NumericParameterLayout OceanLayout = new(
+        GeneratedOceanParameters.FieldNames, GeneratedOceanParameters.FieldLengths);
+    private static readonly NumericParameterLayout SkyLayout = new(
+        GeneratedSkyParameters.FieldNames, GeneratedSkyParameters.FieldLengths);
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxCreateDocument", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxCreateDocument(byte* jsonUtf8, int jsonLength, nint* outputHandle)
@@ -35,8 +43,7 @@ public static unsafe class REDoxApi
         JsonDocument document;
         try
         {
-            string json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
-            document = JsonDocument.Parse(json);
+            document = JsonDocument.Parse(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
         }
         catch
         {
@@ -54,7 +61,7 @@ public static unsafe class REDoxApi
                 }
                 while (handle == 0 || Documents.ContainsKey(handle));
 
-                Documents.Add(handle, document);
+                Documents.Add(handle, new ParsedJsonDocument(document));
                 *outputHandle = handle;
             }
             return 0;
@@ -78,7 +85,7 @@ public static unsafe class REDoxApi
         {
             lock (DocumentLock)
             {
-                if (!Documents.Remove(handle, out JsonDocument? document))
+                if (!Documents.Remove(handle, out ParsedJsonDocument? document))
                 {
                     return InvalidArguments;
                 }
@@ -100,44 +107,43 @@ public static unsafe class REDoxApi
         int outputCapacity)
     {
         return ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
-            GeneratedAircraftFlightParameters.FieldNames,
-            GeneratedAircraftFlightParameters.FieldLengths);
+            FlightLayout);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetAircraftFlightParametersFromDocument", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxGetAircraftFlightParametersFromDocument(nint handle, float* output, int outputCapacity) =>
         ReadParametersFromDocument(handle, output, outputCapacity,
-            GeneratedAircraftFlightParameters.FieldNames, GeneratedAircraftFlightParameters.FieldLengths);
+            FlightLayout);
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetAircraftAIParameters", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxGetAircraftAIParameters(byte* jsonUtf8, int jsonLength, float* output, int outputCapacity) =>
         ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
-            GeneratedAircraftAIParameters.FieldNames, GeneratedAircraftAIParameters.FieldLengths);
+            AiLayout);
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetAircraftAIParametersFromDocument", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxGetAircraftAIParametersFromDocument(nint handle, float* output, int outputCapacity) =>
         ReadParametersFromDocument(handle, output, outputCapacity,
-            GeneratedAircraftAIParameters.FieldNames, GeneratedAircraftAIParameters.FieldLengths);
+            AiLayout);
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetOceanParameters", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxGetOceanParameters(byte* jsonUtf8, int jsonLength, float* output, int outputCapacity) =>
         ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
-            GeneratedOceanParameters.FieldNames, GeneratedOceanParameters.FieldLengths);
+            OceanLayout);
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetOceanParametersFromDocument", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxGetOceanParametersFromDocument(nint handle, float* output, int outputCapacity) =>
         ReadParametersFromDocument(handle, output, outputCapacity,
-            GeneratedOceanParameters.FieldNames, GeneratedOceanParameters.FieldLengths);
+            OceanLayout);
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetSkyParameters", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxGetSkyParameters(byte* jsonUtf8, int jsonLength, float* output, int outputCapacity) =>
         ReadParameters(jsonUtf8, jsonLength, output, outputCapacity,
-            GeneratedSkyParameters.FieldNames, GeneratedSkyParameters.FieldLengths);
+            SkyLayout);
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetSkyParametersFromDocument", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxGetSkyParametersFromDocument(nint handle, float* output, int outputCapacity) =>
         ReadParametersFromDocument(handle, output, outputCapacity,
-            GeneratedSkyParameters.FieldNames, GeneratedSkyParameters.FieldLengths);
+            SkyLayout);
 
     [UnmanagedCallersOnly(
         EntryPoint = "MyRedoxGetRetroFilmParameters",
@@ -156,8 +162,7 @@ public static unsafe class REDoxApi
         JsonDocument document;
         try
         {
-            string json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
-            document = JsonDocument.Parse(json);
+            document = JsonDocument.Parse(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
         }
         catch
         {
@@ -176,8 +181,8 @@ public static unsafe class REDoxApi
         if (handle == 0 || output == null || outputCapacity != 52) return InvalidArguments;
         lock (DocumentLock)
         {
-            return Documents.TryGetValue(handle, out JsonDocument? document)
-                ? ReadRetroFilmParameters(document, output, outputCapacity)
+            return Documents.TryGetValue(handle, out ParsedJsonDocument? document)
+                ? ReadRetroFilmParameters(document.Document, output, outputCapacity)
                 : InvalidArguments;
         }
     }
@@ -270,128 +275,41 @@ public static unsafe class REDoxApi
 
     private static int ReadParameters(
         byte* jsonUtf8, int jsonLength, float* output, int outputCapacity,
-        string[] fieldNames, int[] fieldLengths)
+        NumericParameterLayout layout)
     {
-        if (jsonUtf8 == null || jsonLength <= 0 || output == null ||
-            outputCapacity <= 0 || fieldNames.Length != fieldLengths.Length ||
-            fieldLengths.Sum() != outputCapacity)
-        {
+        if (jsonUtf8 == null || jsonLength <= 0 || output == null || outputCapacity != layout.ValueCount)
             return InvalidArguments;
-        }
-
-        string json;
-        try
-        {
-            json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
-        }
-        catch
-        {
-            return InvalidJson;
-        }
-
         JsonDocument document;
-        try
-        {
-            document = JsonDocument.Parse(json);
-        }
-        catch
-        {
-            return InvalidJson;
-        }
-
+        try { document = JsonDocument.Parse(new ReadOnlySpan<byte>(jsonUtf8, jsonLength)); }
+        catch { return InvalidJson; }
         using (document)
         {
-            return ReadParameters(document, output, outputCapacity, fieldNames, fieldLengths);
+            try
+            {
+                // エラー時に呼び出し元の出力を途中まで書き換えない
+                Span<float> values = outputCapacity <= 256 ? stackalloc float[outputCapacity] : new float[outputCapacity];
+                int result = layout.Read(document, values);
+                if (result > 0) values.CopyTo(new Span<float>(output, outputCapacity));
+                return result;
+            }
+            catch { return UnexpectedFailure; }
         }
     }
 
     private static int ReadParametersFromDocument(
-        nint handle, float* output, int outputCapacity,
-        string[] fieldNames, int[] fieldLengths)
+        nint handle, float* output, int outputCapacity, NumericParameterLayout layout)
     {
-        if (handle == 0 || output == null || outputCapacity <= 0 ||
-            fieldNames.Length != fieldLengths.Length || fieldLengths.Sum() != outputCapacity)
-        {
-            return InvalidArguments;
-        }
-
-        lock (DocumentLock)
-        {
-            if (!Documents.TryGetValue(handle, out JsonDocument? document))
-            {
-                return InvalidArguments;
-            }
-
-            return ReadParameters(document, output, outputCapacity, fieldNames, fieldLengths);
-        }
-    }
-
-    private static int ReadParameters(
-        JsonDocument document, float* output, int outputCapacity,
-        string[] fieldNames, int[] fieldLengths)
-    {
+        if (handle == 0 || output == null || outputCapacity != layout.ValueCount) return InvalidArguments;
         try
         {
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
+            lock (DocumentLock)
             {
-                return InvalidSchema;
+                return Documents.TryGetValue(handle, out ParsedJsonDocument? document)
+                    ? document.ReadParameters(layout, new Span<float>(output, outputCapacity))
+                    : InvalidArguments;
             }
-
-            // RE:Doxのパース結果を検証しながら直接float列へ展開する
-            // JsonSerializerによる二度目の解析と中間オブジェクトの生成を避ける
-            Span<float> values = outputCapacity <= 256
-                ? stackalloc float[outputCapacity]
-                : new float[outputCapacity];
-            int valueIndex = 0;
-            for (int index = 0; index < fieldNames.Length; index++)
-            {
-                if (!root.TryGetProperty(fieldNames[index], out var value) ||
-                    !AppendFiniteNumbers(value, fieldLengths[index], values, ref valueIndex))
-                {
-                    return InvalidValue;
-                }
-            }
-
-            if (valueIndex != outputCapacity)
-            {
-                return InvalidValue;
-            }
-
-            values.CopyTo(new Span<float>(output, outputCapacity));
-            return valueIndex;
         }
-        catch
-        {
-            return UnexpectedFailure;
-        }
-    }
-
-    private static bool AppendFiniteNumbers(
-        REDox.DElement value, int length, Span<float> values, ref int valueIndex)
-    {
-        if (length == 1)
-        {
-            if (value.ValueKind != JsonValueKind.Number ||
-                !value.TryGetSingle(out float number) ||
-                !float.IsFinite(number))
-            {
-                return false;
-            }
-
-            values[valueIndex++] = number;
-            return true;
-        }
-
-        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != length) return false;
-        foreach (var element in value.EnumerateArray())
-        {
-            if (element.ValueKind != JsonValueKind.Number || !element.TryGetSingle(out float number) ||
-                !float.IsFinite(number)) return false;
-
-            values[valueIndex++] = number;
-        }
-        return true;
+        catch { return UnexpectedFailure; }
     }
 
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetFloatArrayFromDocument", CallConvs = new[] { typeof(CallConvCdecl) })]
@@ -402,18 +320,18 @@ public static unsafe class REDoxApi
             return InvalidArguments;
         try
         {
-            string key = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(keyUtf8, keyLength));
+            ReadOnlySpan<byte> key = new(keyUtf8, keyLength);
             lock (DocumentLock)
             {
-                return Documents.TryGetValue(handle, out JsonDocument? document)
-                    ? ReadFloatArray(document, key, output, outputCapacity)
+                return Documents.TryGetValue(handle, out ParsedJsonDocument? document)
+                    ? ReadFloatArray(document.Document, key, output, outputCapacity)
                     : InvalidArguments;
             }
         }
         catch { return UnexpectedFailure; }
     }
 
-    private static int ReadFloatArray(JsonDocument document, string key, float* output, int outputCapacity)
+    private static int ReadFloatArray(JsonDocument document, ReadOnlySpan<byte> key, float* output, int outputCapacity)
     {
         if (!document.RootElement.TryGetProperty(key, out REDox.DElement value)) return InvalidSchema;
         Span<float> values = outputCapacity <= 256 ? stackalloc float[outputCapacity] : new float[outputCapacity];
@@ -443,18 +361,18 @@ public static unsafe class REDoxApi
             return InvalidArguments;
         try
         {
-            string key = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(keyUtf8, keyLength));
+            ReadOnlySpan<byte> key = new(keyUtf8, keyLength);
             lock (DocumentLock)
             {
-                return Documents.TryGetValue(handle, out JsonDocument? document)
-                    ? ReadString(document, key, output, outputCapacity)
+                return Documents.TryGetValue(handle, out ParsedJsonDocument? document)
+                    ? ReadString(document.Document, key, output, outputCapacity)
                     : InvalidArguments;
             }
         }
         catch { return UnexpectedFailure; }
     }
 
-    private static int ReadString(JsonDocument document, string key, byte* output, int outputCapacity)
+    private static int ReadString(JsonDocument document, ReadOnlySpan<byte> key, byte* output, int outputCapacity)
     {
         if (!document.RootElement.TryGetProperty(key, out REDox.DElement value)) return InvalidSchema;
         string? result = value.GetString();
@@ -485,12 +403,11 @@ public static unsafe class REDoxApi
 
         try
         {
-            string json = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
             string key = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(keyUtf8, keyLength));
             JsonDocument document;
             try
             {
-                document = JsonDocument.Parse(json);
+                document = JsonDocument.Parse(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
             }
             catch
             {
@@ -557,16 +474,13 @@ public static unsafe class REDoxApi
 
         try
         {
-            string json = Encoding.UTF8.GetString(
-                new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
-
             string key = Encoding.UTF8.GetString(
                 new ReadOnlySpan<byte>(keyUtf8, keyLength));
 
             JsonDocument document;
             try
             {
-                document = JsonDocument.Parse(json);
+                document = JsonDocument.Parse(new ReadOnlySpan<byte>(jsonUtf8, jsonLength));
             }
             catch
             {
