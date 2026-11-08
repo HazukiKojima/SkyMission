@@ -40,7 +40,16 @@ float FilmGrain(float2 pixel, float time, float luminance)
     const float grainStrength = jitterYGrain.z;
 
     float frame = floor(time * grainFrameRate);
-    float noise = Hash(pixel + frame * 17.0f);
+    // 細粒と粗粒を重ね、解像度が高くてもフィルムの乳剤らしいむらを残す
+    float fineNoise = Hash(floor(pixel) + frame * 17.0f);
+    float2 grainPosition = pixel * 0.55f;
+    float2 grainCell = floor(grainPosition);
+    float2 grainBlend = smoothstep(0.0f, 1.0f, frac(grainPosition));
+    float coarseNoise = lerp(
+        lerp(Hash(grainCell + frame * 23.0f), Hash(grainCell + float2(1, 0) + frame * 23.0f), grainBlend.x),
+        lerp(Hash(grainCell + float2(0, 1) + frame * 23.0f),
+            Hash(grainCell + float2(1, 1) + frame * 23.0f), grainBlend.x), grainBlend.y);
+    float noise = lerp(fineNoise, coarseNoise, 0.4f);
     // Film grain is more visible in the midtones/shadows than in bright highlights.
     float exposureWeight = lerp(1.0f, 0.45f, smoothstep(0.15f, 0.85f, luminance));
     return (noise - 0.5f) * grainStrength * exposureWeight;
@@ -137,8 +146,12 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float2 pixel = input.position.xy;
 
-    float2 jitter = float2(sin(time * horizontalJitterFrequency) * horizontalJitterAmount,
-        cos(time * verticalJitterFrequency) * verticalJitterAmount);
+    // フレーム単位の不規則な揺れを混ぜ、周期的なカメラ移動に見えるのを避ける
+    float filmFrame = floor(time * jitterYGrain.y);
+    float2 gateWeave = float2(Hash(float2(filmFrame, 11.3f)), Hash(float2(filmFrame, 29.7f))) * 2 - 1;
+    float2 jitter = float2(
+        (sin(time * horizontalJitterFrequency) * 0.7f + gateWeave.x * 0.3f) * horizontalJitterAmount,
+        (cos(time * verticalJitterFrequency) * 0.7f + gateWeave.y * 0.3f) * verticalJitterAmount);
 
     float2 uv = saturate(input.texcoord + jitter);
     uint sceneWidth, sceneHeight;
@@ -154,6 +167,10 @@ float4 PS(PS_INPUT input) : SV_TARGET
     color *= colorTint;
     color = color * colorGain + colorOffset;
 
+    // 乳剤の肩特性を近似し、明部の階調を残したまま白を柔らかくする
+    float3 highlightExcess = max(color - highlight.x, 0.0f);
+    color -= highlightExcess * highlightExcess / (highlightExcess + 0.35f) * highlight.z;
+
     // 暗部をわずかに浮かせ、ハイライトを柔らかくする
     color = lerp(blackLift.rgb, color, blackLift.w);
     float highlightAmount = smoothstep(highlight.x, highlight.y, luminance) * highlight.z;
@@ -168,9 +185,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
     color *= FilmFlicker(time);
 
     // フィルム粒子
-    float grainTransmission = cloudMotion.w >= 0.5f && cloudLayer.z > 0 && cloudLayer.w > 0 ?
-        saturate(gClouds.SampleLevel(gSampler, uv, 0).a) : 1;
-    color += FilmGrain(pixel, time, saturate(luminance)) * grainTransmission;
+    // 粒子は現像後の画面全体に載せ、雲の上でも質感を連続させる
+    color += FilmGrain(pixel, time, saturate(luminance));
 
     // フィルム上の埃と傷
     float dustAmount = FilmDust(pixel, time);
