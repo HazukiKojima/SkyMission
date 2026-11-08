@@ -25,7 +25,7 @@ namespace Engine {
 
 	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets) {
 		StartupTiming timing("renderer.device");
-		m_frameUpdater.Configure(assets.environment.ocean);
+		m_frameUpdater.Configure(assets.environment.ocean, assets.environment.clouds);
 		m_retroFilmParameters = assets.environment.retroFilm;
 		m_device = std::make_unique<RenderDevice>();
 		m_device->Initialize(hwnd, width, height);
@@ -104,6 +104,8 @@ namespace Engine {
 			sceneTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		m_context->TransitionResource(
 			sceneDepth, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		m_cloudPass.Record({cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()});
+		m_gpuProfiler.Mark(cmd, GpuTimestamp::CloudsEnd);
 		RecordRetroFilmPass();
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::PostProcessEnd);
 		if (hud) m_hudRenderer.Record(*m_device, cmd, *hud);

@@ -677,4 +677,17 @@
       <Filter>Assets\Sound</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Scene\CloudSettings.cpp"><Filter>Engine\Scene</Filter></ClCompile>
+    <ClInclude Include="Engine\Scene\CloudSettings.h"><Filter>Engine\Scene</Filter></ClInclude>
+    <ClCompile Include="Game\Scene\CloudSettingsLoader.cpp"><Filter>Game\Scene</Filter></ClCompile>
+    <ClInclude Include="Game\Scene\CloudSettingsLoader.h"><Filter>Game\Scene</Filter></ClInclude>
+    <None Include="Engine\Renderer\Shader\VolumetricClouds.hlsli"><Filter>Engine\Renderer\Shader</Filter></None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Engine\Renderer\Shader\CloudPS.hlsl"><Filter>Engine\Renderer\Shader</Filter></FxCompile>
+    <None Include="Engine\Renderer\Shader\CloudCommon.hlsli"><Filter>Engine\Renderer\Shader</Filter></None>
+    <None Include="Engine\Renderer\Shader\CloudComposite.hlsli"><Filter>Engine\Renderer\Shader</Filter></None>
+    <None Include="Engine\Renderer\Shader\CirrusClouds.hlsli"><Filter>Engine\Renderer\Shader</Filter></None>
+  </ItemGroup>
 </Project>

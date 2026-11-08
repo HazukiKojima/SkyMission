@@ -78,6 +78,7 @@ namespace Engine {
 		GpuFrameProfiler m_gpuProfiler;
 		RenderStatistics m_statistics;
 		RetroFilmRenderPass m_retroFilmPass;
+		CloudRenderPass m_cloudPass;
 		HudRenderer m_hudRenderer;
 
 		RetroFilmParameters m_retroFilmParameters{};

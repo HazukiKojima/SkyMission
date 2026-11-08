@@ -40,6 +40,7 @@ void Require(bool condition, const char* description) {
 #include "MissionTests.h"
 #include "BombTests.h"
 #include "ModelLoadingTests.h"
+#include "CloudTests.h"
 
 void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -237,6 +238,26 @@ void TestFollowCameraLook() {
 	const auto before = camera.GetPosition();
 	camera.Update(std::numeric_limits<float>::infinity(), look);
 	Require(distance(before, camera.GetPosition()) == 0, "Invalid delta moved camera");
+	// 同じ姿勢のまま遠方へ移動してもビューの回転成分を変えない。
+	AircraftCameraController distant;
+	distant.Initialize();
+	target.position = {0, 1500, 0};
+	target.heading = target.forward = {0.5f, 0, -0.8660254f};
+	distant.SetFollowTarget(target);
+	distant.Update(10);
+	XMFLOAT4X4 nearbyView;
+	XMStoreFloat4x4(&nearbyView, distant.GetView());
+	for (int step = 0; step < 20; ++step) {
+		target.position = {2000000.0f + step * 13.7f, 1500, -2000000.0f - step * 7.3f};
+		distant.SetFollowTarget(target);
+		distant.Update(1 / 144.0f);
+		XMFLOAT4X4 distantView;
+		XMStoreFloat4x4(&distantView, distant.GetView());
+		for (int row = 0; row < 3; ++row)
+			for (int column = 0; column < 3; ++column)
+				Require(std::abs(distantView.m[row][column] - nearbyView.m[row][column]) < 1e-5f,
+					"Camera rotation jitters during distant translation");
+	}
 	std::cout << "PASS: Z orbit, bomb/camera independence, smooth return, moving follow and frame-rate "
 				 "stability\n";
 }
@@ -808,10 +829,17 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 
 int wmain(int argc, wchar_t** argv) {
 	try {
-		Require(argc == 3, "Expected repository and fixture directories");
+		Require(argc == 3 || (argc == 4 && std::wstring_view(argv[3]) == L"--clouds-review"),
+			"Expected repository and fixture directories, optionally --clouds-review");
 		ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
+		if (argc == 4) {
+			TestCloudSettings(argv[1], fixture);
+			TestCloudRendering(argv[1], fixture, 1920, 1080, true);
+			CoUninitialize();
+			return 0;
+		}
 		TestFlightAndScene();
 		TestCombatAudioLifecycle(argv[1], fixture);
 		TestCombatMath();
@@ -831,8 +859,10 @@ int wmain(int argc, wchar_t** argv) {
 		TestEnvironmentSettings(argv[1], fixture);
 		TestShips(argv[1], fixture);
 		TestRenderOptimizationMath();
+		TestCloudSettings(argv[1], fixture);
 		TestPreparedModelCache(argv[1], fixture);
 		TestGpuTextures(fixture);
+		TestCloudRendering(argv[1], fixture);
 		TestWeapons(argv[1], fixture);
 		TestCombatDamage(argv[1], fixture);
 		TestMissionScene(argv[1], fixture);

@@ -11,7 +11,7 @@ namespace Engine {
 		const std::vector<ModelDrawDecision>& GetDrawDecisions() const {
 			return m_drawDecisions;
 		}
-		void Configure(const OceanSettings& settings);
+		void Configure(const OceanSettings& settings, const CloudSettings& clouds = {});
 		RenderView GetRenderView() const {
 			return m_renderView;
 		}
@@ -39,6 +39,7 @@ namespace Engine {
 			RendererConstantBuffers&, UINT) const;
 
 		OceanSettings m_oceanSettings{};
+		CloudSettings m_cloudSettings{};
 		RenderView m_renderView;
 	};
 } // namespace Engine

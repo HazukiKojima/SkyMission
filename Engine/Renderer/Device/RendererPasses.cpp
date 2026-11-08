@@ -100,6 +100,38 @@ namespace Engine {
 		}
 	}
 
+	void CloudRenderPass::Record(const FrameContext& frame) const {
+		auto* commands = frame.commandList;
+		auto* device = frame.device;
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(device->GetCloudRenderTarget(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		commands->ResourceBarrier(1, &barrier);
+		const D3D12_VIEWPORT viewport{
+			0, 0, float(device->GetCloudWidth()), float(device->GetCloudHeight()), 0, 1};
+		const D3D12_RECT scissor{0, 0, LONG(device->GetCloudWidth()), LONG(device->GetCloudHeight())};
+		commands->RSSetViewports(1, &viewport);
+		commands->RSSetScissorRects(1, &scissor);
+		const auto rtv = device->GetCloudRtvHandle();
+		commands->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+		commands->SetGraphicsRootSignature(frame.pipelines.GetClouds()->GetRootSignature());
+		commands->SetPipelineState(frame.pipelines.GetClouds()->GetPSO());
+		ID3D12DescriptorHeap* heaps[] = {device->GetSrvDescriptorHeap()};
+		commands->SetDescriptorHeaps(_countof(heaps), heaps);
+		commands->SetGraphicsRootDescriptorTable(
+			RootBinding::TextureTable, device->GetSrvGpuHandle(device->GetSceneColorSrvIndex()));
+		commands->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
+			frame.constantBuffers.GetOceanFogResource(frame.frameIndex)->GetGPUVirtualAddress());
+		commands->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		commands->DrawInstanced(3, 1, 0, 0);
+		barrier = CD3DX12_RESOURCE_BARRIER::Transition(device->GetCloudRenderTarget(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		commands->ResourceBarrier(1, &barrier);
+		const D3D12_VIEWPORT full{0, 0, float(device->GetWidth()), float(device->GetHeight()), 0, 1};
+		const D3D12_RECT fullScissor{0, 0, LONG(device->GetWidth()), LONG(device->GetHeight())};
+		commands->RSSetViewports(1, &full);
+		commands->RSSetScissorRects(1, &fullScissor);
+	}
+
 	void RetroFilmRenderPass::Record(const FrameContext& frame) const {
 		auto* commandList = frame.commandList;
 		auto* device = frame.device;

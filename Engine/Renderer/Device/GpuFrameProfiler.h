@@ -8,10 +8,11 @@ namespace Engine {
 		double skyMs = 0;
 		double oceanMs = 0;
 		double modelsMs = 0;
+		double cloudsMs = 0;
 		double postProcessMs = 0;
 		double hudMs = 0;
 		double TotalMs() const {
-			return skyMs + oceanMs + modelsMs + postProcessMs + hudMs;
+			return skyMs + oceanMs + modelsMs + cloudsMs + postProcessMs + hudMs;
 		}
 	};
 	enum class GpuTimestamp : unsigned {
@@ -19,6 +20,7 @@ namespace Engine {
 		SkyEnd,
 		OceanEnd,
 		ModelsEnd,
+		CloudsEnd,
 		PostProcessEnd,
 		HudEnd,
 		Count
@@ -48,10 +50,10 @@ namespace Engine {
 				void* data = nullptr;
 				ThrowIfFailed(m_readback->Map(0, &reads, &data));
 				const auto* ticks = static_cast<const uint64_t*>(data) + Marks * frame;
-				std::array<double, 5> ms{};
-				for (unsigned i = 0; i < 5; ++i)
+				std::array<double, 6> ms{};
+				for (unsigned i = 0; i < 6; ++i)
 					ms[i] = double(ticks[i + 1] - ticks[i]) * 1000.0 / double(m_frequency);
-				m_latest = {true, ms[0], ms[1], ms[2], ms[3], ms[4]};
+				m_latest = {true, ms[0], ms[1], ms[2], ms[3], ms[4], ms[5]};
 				const CD3DX12_RANGE noWrites(0, 0);
 				m_readback->Unmap(0, &noWrites);
 			}

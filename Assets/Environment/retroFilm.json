@@ -18,9 +18,9 @@
   },
   "luminanceWeights": [0.299, 0.587, 0.114],
   "vignette": {
-    "innerRadius": 0.85,
-    "outerRadius": 2.1,
-    "minBrightness": 0.86
+    "innerRadius": 0.55,
+    "outerRadius": 1.9,
+    "minBrightness": 0.76
   },
   "jitter": {
     "amplitude": [0, 0],
@@ -28,14 +28,14 @@
   },
   "grain": {
     "fps": 24,
-    "intensity": 0.065
+    "intensity": 0.045
   },
   "dust": {
     "cellSize": 80,
     "fps": 3,
     "threshold": 0.95,
     "radius": [0.6, 1.4],
-    "intensity": 0.12
+    "intensity": 0.16
   },
   "scratch": {
     "columnWidth": 17,
@@ -44,11 +44,11 @@
     "width": [0.006, 0.018],
     "edgeSoftness": 0.008,
     "verticalFadeMin": 0.35,
-    "intensity": 0.065
+    "intensity": 0.09
   },
   "flicker": {
     "fps": 24,
-    "amplitude": 0.009
+    "amplitude": 0.012
   },
   "overlayColor": [0.24, 0.22, 0.18]
 }

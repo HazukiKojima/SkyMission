@@ -1,4 +1,5 @@
 #include "RendererPipelines.h"
+#include "RenderDevice.h"
 
 namespace Engine {
 	void RendererPipelines::Initialize(ID3D12Device* device) {
@@ -10,11 +11,18 @@ namespace Engine {
 		m_retroFilm->Initialize(device,
 			{.vs = L"RetroFilmVS.cso",
 				.ps = L"RetroFilmPS.cso",
-				.srvCount = 2,
+				.srvCount = 3,
 				.addressMode = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 				.rootLayout = RootSignatureLayout::PostProcess});
 
 		m_sky = std::make_unique<GraphicsPipeline>();
+		m_clouds = std::make_unique<GraphicsPipeline>();
+		m_clouds->Initialize(device,
+			{.vs = L"RetroFilmVS.cso",
+				.ps = L"CloudPS.cso",
+				.srvCount = 2,
+				.addressMode = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+				.renderTargetFormat = RenderDevice::CloudFormat});
 		m_sky->Initialize(device, {.vs = L"SkyVS.cso", .ps = L"SkyPS.cso"});
 
 		m_model = std::make_unique<GraphicsPipeline>();

@@ -21,6 +21,9 @@ cbuffer OceanFogConstants : register(FOG_CONSTANT_REGISTER)
     float oceanEdgeFadeStart;
     float oceanEdgeFadeWidth;
     float2 padding1;
+    float4 cloudLayer;
+    float4 cloudMotion;
+    float4 cloudQuality;
 };
 
 Texture2D gSceneColor : register(t0);
@@ -51,7 +54,7 @@ float3 ReconstructWorldPosition(float2 uv, float depth)
     float4 clip = float4(ndc, depth, 1.0f);
     float4 world = mul(clip, inverseViewProjection);
 
-    return world.xyz / max(world.w, 1e-5f);
+    return cameraPosition + world.xyz / max(world.w, 1e-8f);
 }
 
 float OceanFogDensityAt(float3 worldPosition)
@@ -148,8 +151,9 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
     bool isOceanPixel = sceneSample.a < 0.5f;
     float sceneDepth = gSceneDepth.SampleLevel(gSampler, uv, 0).r;
 
-    float3 farPosition = ReconstructWorldPosition(uv, 1.0f);
-    float3 rayDirection = SafeNormalize(farPosition - cameraPosition);
+    float2 rayNdc = uv * float2(2, -2) + float2(-1, 1);
+    float4 farRelative = mul(float4(rayNdc, 1, 1), inverseViewProjection);
+    float3 rayDirection = SafeNormalize(farRelative.xyz);
 
     float oceanFogDistanceLimit = oceanFogEndDistance;
     float sceneDistance = oceanFogEndDistance;

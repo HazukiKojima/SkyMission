@@ -20,6 +20,8 @@ cbuffer RetroFilmConstants : register(b0)
 
 #define FOG_CONSTANT_REGISTER b1
 #include "OceanFog.hlsli"
+#include "CloudComposite.hlsli"
+#include "CirrusClouds.hlsli"
 
 struct PS_INPUT
 {
@@ -32,14 +34,16 @@ float Hash(float2 value)
     return frac(sin(dot(value, float2(127.1f, 311.7f))) * 43758.5453f);
 }
 
-float FilmGrain(float2 pixel, float time)
+float FilmGrain(float2 pixel, float time, float luminance)
 {
     const float grainFrameRate = jitterYGrain.y;
     const float grainStrength = jitterYGrain.z;
 
     float frame = floor(time * grainFrameRate);
     float noise = Hash(pixel + frame * 17.0f);
-    return (noise - 0.5f) * grainStrength;
+    // Film grain is more visible in the midtones/shadows than in bright highlights.
+    float exposureWeight = lerp(1.0f, 0.45f, smoothstep(0.15f, 0.85f, luminance));
+    return (noise - 0.5f) * grainStrength * exposureWeight;
 }
 
 float FilmDust(float2 pixel, float time)
@@ -91,8 +95,16 @@ float FilmScratch(float2 pixel, float time)
 
         float position = frac(pixel.x / scratchSpacing);
         float width = lerp(minimumScratchWidth, maximumScratchWidth, Hash(float2(column, frame + 7.3f)));
-        float scratchAmount = 1.0f - smoothstep(width, width + scratchSoftness, position);
-        float verticalFade = lerp(minimumVerticalFade, 1.0f, Hash(float2(column, frame + 13.1f)));
+        float center = lerp(0.18f, 0.82f, Hash(float2(column, frame + 31.4f)));
+        // Subpixel scratches need a pixel-sized feather; otherwise the line can miss every pixel.
+        float softness = max(scratchSoftness, 0.6f / max(scratchSpacing, 1.0f));
+        float scratchAmount = 1.0f - smoothstep(width, width + softness, abs(position - center));
+        float verticalCell = pixel.y / 180.0f;
+        float verticalBlend = frac(verticalCell);
+        verticalBlend = verticalBlend * verticalBlend * (3 - 2 * verticalBlend);
+        float wear = lerp(Hash(float2(column + floor(verticalCell), frame + 13.1f)),
+            Hash(float2(column + floor(verticalCell) + 1, frame + 13.1f)), verticalBlend);
+        float verticalFade = lerp(minimumVerticalFade, 1.0f, smoothstep(0.2f, 0.8f, wear));
 
         scratchResult = scratchAmount * verticalFade * scratchOpacity;
     }
@@ -132,6 +144,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
     uint sceneWidth, sceneHeight;
     gSceneColor.GetDimensions(sceneWidth, sceneHeight);
     float3 color = ApplyOceanFog(uv, 1.0f / max((float)sceneHeight, 1.0f)).rgb;
+    color = CompositeClouds(uv, color);
+    color = CompositeCirrus(uv, color);
 
     // 昭和の映画をイメージした色調補正
     float luminance =
@@ -154,7 +168,9 @@ float4 PS(PS_INPUT input) : SV_TARGET
     color *= FilmFlicker(time);
 
     // フィルム粒子
-    color += FilmGrain(pixel, time);
+    float grainTransmission = cloudMotion.w >= 0.5f && cloudLayer.z > 0 && cloudLayer.w > 0 ?
+        saturate(gClouds.SampleLevel(gSampler, uv, 0).a) : 1;
+    color += FilmGrain(pixel, time, saturate(luminance)) * grainTransmission;
 
     // フィルム上の埃と傷
     float dustAmount = FilmDust(pixel, time);

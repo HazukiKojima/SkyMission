@@ -102,10 +102,10 @@ namespace Engine {
 	}
 
 	void RenderDevice::CreateDescriptorHeaps() {
-		// RTVはバックバッファ・シーンカラーの順に各フレーム分を配置する
+		// RTVはバックバッファ・シーンカラー・雲の順に各フレーム分を配置する
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount * 2;
+		rtvHeapDesc.NumDescriptors = FrameCount * 3;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
@@ -156,6 +156,12 @@ namespace Engine {
 			m_verticalSync ? 1 : 0, !m_verticalSync && m_allowTearing ? DXGI_PRESENT_ALLOW_TEARING : 0));
 	}
 
+	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCloudRtvHandle() const {
+		auto handle = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+		handle.ptr += static_cast<SIZE_T>(FrameCount * 2 + GetFrameIndex()) * m_rtvDescriptorSize;
+		return handle;
+	}
+
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCurrentRtvHandle() const {
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
@@ -200,6 +206,7 @@ namespace Engine {
 		for (UINT i = 0; i < FrameCount; ++i) {
 			m_renderTargets[i].Reset();
 			m_sceneRenderTargets[i].Reset();
+			m_cloudRenderTargets[i].Reset();
 		}
 
 		m_sceneDepth.Reset();
@@ -218,6 +225,7 @@ namespace Engine {
 
 	void RenderDevice::CreateSceneResources() {
 		CreateSceneRenderTargets();
+		CreateCloudRenderTargets();
 		CreateSceneDepth();
 		CreateSceneShaderResourceViews();
 	}
@@ -267,6 +275,22 @@ namespace Engine {
 		m_device->CreateDepthStencilView(m_sceneDepth.Get(), &dsv, GetDsvHandle());
 	}
 
+	void RenderDevice::CreateCloudRenderTargets() {
+		const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_DEFAULT);
+		const auto desc = CD3DX12_RESOURCE_DESC::Tex2D(CloudFormat, GetCloudWidth(), GetCloudHeight(), 1, 1,
+			1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+		const float transparent[] = {0, 0, 0, 1}; // RGBは積分色、Aは残存透過率
+		const CD3DX12_CLEAR_VALUE clear(CloudFormat, transparent);
+		for (UINT frame = 0; frame < FrameCount; ++frame) {
+			ThrowIfFailed(m_device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear,
+				IID_PPV_ARGS(&m_cloudRenderTargets[frame])));
+			auto handle = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+			handle.ptr += static_cast<SIZE_T>(FrameCount * 2 + frame) * m_rtvDescriptorSize;
+			m_device->CreateRenderTargetView(m_cloudRenderTargets[frame].Get(), nullptr, handle);
+		}
+	}
+
 	void RenderDevice::CreateSceneShaderResourceViews() {
 		D3D12_SHADER_RESOURCE_VIEW_DESC colorSrv = {};
 		colorSrv.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -287,6 +311,10 @@ namespace Engine {
 			m_device->CreateShaderResourceView(m_sceneRenderTargets[i].Get(), &colorSrv, srv);
 			srv.ptr += m_srvDescriptorSize;
 			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, srv);
+			srv.ptr += m_srvDescriptorSize;
+			auto cloudSrv = colorSrv;
+			cloudSrv.Format = CloudFormat;
+			m_device->CreateShaderResourceView(m_cloudRenderTargets[i].Get(), &cloudSrv, srv);
 		}
 	}
 

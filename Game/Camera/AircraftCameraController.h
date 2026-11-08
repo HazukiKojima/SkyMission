@@ -66,6 +66,7 @@ namespace Game {
 		float m_lookYaw = 0, m_lookPitch = 0;
 		float m_lookReturnRate = 6.0f;
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
+		DirectX::XMFLOAT3 m_followViewDirection = {0.0f, 0.0f, -1.0f};
 		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする
 		float m_followDistance = 240.0f;
 		float m_maxFollowDistance = 280.0f;

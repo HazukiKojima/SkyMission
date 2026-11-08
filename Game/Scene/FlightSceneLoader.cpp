@@ -1,4 +1,5 @@
 #include "FlightSceneLoader.h"
+#include "CloudSettingsLoader.h"
 #include "Game/Aircraft/ValidateFlightParameters.h"
 #include "Engine/Interop/Redox/JsonParametersLoader.h"
 #include "Engine/Resources/JsonAssetReader.h"
@@ -270,7 +271,7 @@ namespace Game {
 
 			return {reader.Resolve(skyJsonPath, "texture"), reader.Resolve(oceanJsonPath, "texture"),
 				reader.Resolve(oceanJsonPath, "normal"), reader.Resolve(oceanJsonPath, "normal2"), ocean, sky,
-				retroFilmParameters};
+				retroFilmParameters, LoadCloudSettings(reader, paths.environment.parent_path() / L"Clouds.json")};
 		}
 	} // namespace
 	DirectX::XMFLOAT4X4 ShipDefinition::BuildTransform() const {

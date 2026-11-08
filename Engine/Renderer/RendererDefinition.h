@@ -1,6 +1,7 @@
 #pragma once
 #include "RetroFilmParameters.h"
 #include "../Resources/Mesh/ModelLoadOptions.h"
+#include "Engine/Scene/CloudSettings.h"
 #include <DirectXMath.h>
 #include <filesystem>
 #include <string>
@@ -34,6 +35,7 @@ namespace Engine {
 		OceanSettings ocean;
 		SkySettings sky;
 		RetroFilmParameters retroFilm;
+		CloudSettings clouds;
 	};
 	struct ModelAssetDefinition {
 		std::string id;

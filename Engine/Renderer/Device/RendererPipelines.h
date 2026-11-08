@@ -18,11 +18,15 @@ namespace Engine {
 		GraphicsPipeline* GetModel() const {
 			return m_model.get();
 		}
+		GraphicsPipeline* GetClouds() const {
+			return m_clouds.get();
+		}
 
 	  private:
 		std::unique_ptr<GraphicsPipeline> m_ocean;
 		std::unique_ptr<GraphicsPipeline> m_sky;
 		std::unique_ptr<GraphicsPipeline> m_retroFilm;
 		std::unique_ptr<GraphicsPipeline> m_model;
+		std::unique_ptr<GraphicsPipeline> m_clouds;
 	};
 } // namespace Engine

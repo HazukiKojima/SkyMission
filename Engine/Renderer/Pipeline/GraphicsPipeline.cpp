@@ -113,7 +113,7 @@ namespace {
 		psoDesc.BlendState = blendDesc;
 
 		psoDesc.NumRenderTargets = 1;
-		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.RTVFormats[0] = options.renderTargetFormat;
 
 		psoDesc.SampleDesc.Count = 1;
 		psoDesc.SampleDesc.Quality = 0;

@@ -15,6 +15,7 @@ namespace Engine {
 		D3D12_CULL_MODE cullMode = D3D12_CULL_MODE_NONE;
 		D3D12_TEXTURE_ADDRESS_MODE addressMode = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		RootSignatureLayout rootLayout = RootSignatureLayout::Textured;
+		DXGI_FORMAT renderTargetFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	};
 
 	class GraphicsPipeline {

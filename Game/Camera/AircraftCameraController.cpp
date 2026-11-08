@@ -138,6 +138,9 @@ namespace Game {
 		const XMVECTOR desiredPosition =
 			target - smoothedDirection * followDistance + worldUp * m_followHeight;
 		const XMVECTOR desiredLookAt = target + smoothedDirection * 12.0f + worldUp * m_followLookHeight;
+		// 大きなワールド座標同士の減算で視線が揺れないよう、相対オフセットから求める。
+		XMStoreFloat3(&m_followViewDirection,
+			smoothedDirection * (followDistance + 12.0f) + worldUp * (m_followLookHeight - m_followHeight));
 		const float blend = 1.0f - std::exp(-m_followSmoothing * deltaSeconds);
 		XMStoreFloat3(&m_position, XMVectorLerp(XMLoadFloat3(&m_position), desiredPosition, blend));
 		XMStoreFloat3(&m_followLookAt, XMVectorLerp(XMLoadFloat3(&m_followLookAt), desiredLookAt, blend));
@@ -146,7 +149,7 @@ namespace Game {
 	void AircraftCameraController::UpdateView() {
 		XMVECTOR pos = XMLoadFloat3(&m_position);
 		if (m_following) {
-			m_camera.LookAt(m_position, m_followLookAt);
+			m_camera.LookTo(m_position, m_followViewDirection);
 			return;
 		}
 		XMVECTOR lookDir =

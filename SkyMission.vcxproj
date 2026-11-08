@@ -124,6 +124,8 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\RetroFilmPS.hlsl">
+      <DisableOptimizations>false</DisableOptimizations>
+      <AdditionalOptions>/O3 %(AdditionalOptions)</AdditionalOptions>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -563,5 +565,23 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Weapons\ProjectilePose.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Scene\CloudSettings.cpp" />
+    <ClInclude Include="Engine\Scene\CloudSettings.h" />
+    <ClCompile Include="Game\Scene\CloudSettingsLoader.cpp" />
+    <ClInclude Include="Game\Scene\CloudSettingsLoader.h" />
+    <None Include="Assets\Environment\Clouds.json" />
+    <None Include="Engine\Renderer\Shader\VolumetricClouds.hlsli" />
+    <None Include="Engine\Renderer\Shader\CloudCommon.hlsli" />
+    <None Include="Engine\Renderer\Shader\CloudComposite.hlsli" />
+    <None Include="Engine\Renderer\Shader\CirrusClouds.hlsli" />
+    <FxCompile Include="Engine\Renderer\Shader\CloudPS.hlsl">
+      <ShaderType>Pixel</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <EntryPointName>PS</EntryPointName>
+      <DisableOptimizations>false</DisableOptimizations>
+      <AdditionalOptions>/O3 %(AdditionalOptions)</AdditionalOptions>
+    </FxCompile>
   </ItemGroup>
 </Project>
