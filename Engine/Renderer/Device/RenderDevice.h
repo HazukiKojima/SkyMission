@@ -22,13 +22,6 @@ namespace Engine {
 		}
 		void Resize(UINT width, UINT height);
 
-		void SetVerticalSync(bool enabled) {
-			m_verticalSync = enabled;
-		}
-		bool IsVerticalSyncEnabled() const {
-			return m_verticalSync;
-		}
-
 		ID3D12Device* GetDevice() const {
 			return m_device.Get();
 		}
@@ -130,7 +123,6 @@ namespace Engine {
 		UINT m_width = 0;
 		UINT m_height = 0;
 		std::wstring m_adapterName = L"Unknown";
-		bool m_verticalSync = true;
 		bool m_allowTearing = false;
 	};
 } // namespace Engine

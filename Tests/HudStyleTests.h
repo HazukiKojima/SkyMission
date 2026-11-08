@@ -83,6 +83,23 @@ void TestHudTypography() {
 					"A built-in HUD label uses an unsupported glyph");
 			}
 		}
+	// 母艦は敵機一覧に含めなくても、画面内に六角形の目標枠を描く
+	snapshot = {};
+	snapshot.missionPhase = Game::MissionPhase::CarrierAttack;
+	snapshot.carrierPresent = true;
+	snapshot.selected = 7;
+	snapshot.objectivePosition = {0, 0, 1000};
+	snapshot.lockState = Game::LockState::Selected;
+	list.Reset(view.width, view.height);
+	Game::CombatHudPresenter{}.Build(snapshot, view, list);
+	size_t carrierFrameVertices = 0;
+	for (const auto& vertex : list.GetVertices()) {
+		const auto selected = Game::HudStyle::Selected;
+		if (vertex.color.x == selected.x && vertex.color.y == selected.y &&
+			vertex.color.z == selected.z && vertex.color.w == selected.w)
+			++carrierFrameVertices;
+	}
+	Require(carrierFrameVertices == 36, "Carrier marker did not render six outline edges");
 	const auto ink = Engine::HudSettings{}.color;
 	Require(ink.x == Game::HudStyle::Ink.x && ink.y == Game::HudStyle::Ink.y &&
 			ink.z == Game::HudStyle::Ink.z && ink.w == Game::HudStyle::Ink.w,

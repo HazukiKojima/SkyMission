@@ -234,7 +234,7 @@ namespace Game {
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
 				const CombatTarget carrier{
 					m_mission.GetCarrierId(), *center, {}, "敵空母", m_mission.GetCarrierHealth()};
-				m_targeting.Update(std::span(&carrier, 1), geometry.muzzle, geometry.forward, next, dt);
+				m_targeting.UpdateObjective(carrier, geometry.muzzle, geometry.forward, dt);
 				return;
 			}
 		}

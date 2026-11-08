@@ -153,7 +153,7 @@ namespace Engine {
 
 	void RenderDevice::Present() {
 		ThrowIfFailed(m_swapChain->Present(
-			m_verticalSync ? 1 : 0, !m_verticalSync && m_allowTearing ? DXGI_PRESENT_ALLOW_TEARING : 0));
+			0, m_allowTearing ? DXGI_PRESENT_ALLOW_TEARING : 0));
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCloudRtvHandle() const {

@@ -10,6 +10,9 @@ namespace Game {
 		// enemiesへの参照は保持せず、継続する対象はObjectIdで識別する
 		void Update(std::span<const CombatTarget> enemies, const DirectX::XMFLOAT3& position,
 			const DirectX::XMFLOAT3& forward, bool cycleRequested, float deltaSeconds);
+		// 任務目標は向きや選択距離に関係なく選択し、捕捉・維持には通常のロック条件を使う
+		void UpdateObjective(const CombatTarget& target, const DirectX::XMFLOAT3& position,
+			const DirectX::XMFLOAT3& forward, float deltaSeconds);
 		Engine::ObjectId GetSelected() const {
 			return m_selected;
 		}

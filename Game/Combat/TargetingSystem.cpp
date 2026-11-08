@@ -31,6 +31,21 @@ namespace Game {
 	float TargetingSystem::GetProgress() const {
 		return std::clamp(m_acquiredSeconds / m_settings.acquireSeconds, 0.0f, 1.0f);
 	}
+	void TargetingSystem::UpdateObjective(const CombatTarget& target, const XMFLOAT3& position,
+		const XMFLOAT3& forward, float deltaSeconds) {
+		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
+		if (target.health <= 0 || target.id == Engine::InvalidObjectId) {
+			Update({}, position, forward, false, deltaSeconds);
+			return;
+		}
+		if (m_selected != target.id) {
+			m_selected = target.id;
+			m_state = LockState::Selected;
+			m_acquiredSeconds = 0;
+			m_lostSeconds = 0;
+		}
+		UpdateLock(&target, position, forward, std::min(deltaSeconds, 0.25f));
+	}
 
 	void TargetingSystem::Update(std::span<const CombatTarget> enemies, const XMFLOAT3& position,
 		const XMFLOAT3& forward, bool cycleRequested, float deltaSeconds) {

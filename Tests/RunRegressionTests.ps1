@@ -1,4 +1,4 @@
-param([string]$BuildDirectory)
+param([string]$BuildDirectory, [switch]$MissionReview)
 $ErrorActionPreference = 'Stop'
 $repository = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (!$BuildDirectory) { $BuildDirectory = Join-Path $env:TEMP ('SkyMissionRegression-' + [guid]::NewGuid().ToString('N')) }
@@ -59,7 +59,9 @@ $previousTestTmp = $env:TMP
 try {
     $env:TEMP = $testCache
     $env:TMP = $testCache
-    & (Join-Path $build 'RegressionTests.exe') $repository (Join-Path $build 'fixtures')
+    $testArguments = @($repository, (Join-Path $build 'fixtures'))
+    if ($MissionReview) { $testArguments += '--mission-review' }
+    & (Join-Path $build 'RegressionTests.exe') @testArguments
     if ($LASTEXITCODE -ne 0) { throw "Regression tests failed: $LASTEXITCODE" }
 } finally {
     $env:TEMP = $previousTestTemp

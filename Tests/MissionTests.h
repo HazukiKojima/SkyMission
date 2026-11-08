@@ -330,6 +330,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
 				scene.GetCombatSnapshot().result == CombatResult::Active,
 			"Patrol clear ended mission");
+		Require(scene.GetCombatSnapshot().selected == carrierId,
+			"Carrier was not automatically selected on entering mission two");
 		const auto carrierPhase = scene;
 		scene.RemoveObject(playerId);
 		scene.Update({}, 0.01f);
@@ -351,42 +353,26 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack,
 			"Cannon fire disabled the flight deck");
 
-		// Two quick presses fire both missiles; missing either never prevents reloading.
-		scene.SetPlayerAircraftPosition({100000, 1500, 0});
+		// 後方・遠距離でも任務目標を保持し、未ロックの発射は弾数を消費しない
+		scene.SetPlayerAircraftPosition({100000, 1500, -10000});
 		CombatInput drop;
 		drop.missilePressCount = 1;
-		scene.Update({}, 0.01f, {}, drop);
-		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 1 &&
-				scene.GetCombatSnapshot().missileCooldownSeconds == 0,
-			"First missile blocked the second shot");
-		Require(scene.GetCombatSnapshot().audio.missileLaunches == 1, "Missile launch audio missing");
-		scene.Update({}, 0.01f, {}, drop);
-		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 0 &&
-				scene.GetCombatSnapshot().missileCooldownSeconds == 4,
-			"Second missile did not start magazine reload");
-		const auto objectsAfterLaunch = scene.GetObjects().size();
-		scene.Update({}, 0.01f, {}, drop);
-		Require(scene.GetObjects().size() == objectsAfterLaunch, "Empty magazine fired a third missile");
-		for (int i = 0; i < 15; ++i)
-			scene.Update({}, 0.25f);
-		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 0 &&
-				scene.GetCombatSnapshot().missileCooldownSeconds > 0,
-			"Missile magazine reloaded before four seconds");
-		scene.Update({}, 0.25f);
-		Require(scene.GetCombatSnapshot().carrierMissileAmmo == 2 &&
-				scene.GetCombatSnapshot().missileCooldownSeconds == 0,
-			"Missile magazine did not reload after four seconds");
-		for (int i = 0; i < 20; ++i)
-			scene.Update({}, 0.25f);
-		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
-				scene.GetCombatSnapshot().missileCooldownSeconds == 0 &&
+		scene.Update({}, 0.25f, {}, drop);
+		Require(scene.GetCombatSnapshot().selected == carrierId &&
+				scene.GetCombatSnapshot().lockState == LockState::Selected &&
 				scene.GetCombatSnapshot().carrierMissileAmmo == 2 &&
-				scene.GetCombatSnapshot().carrierHealth == 300,
-			"Missed missiles did not reload a full magazine without damaging carrier");
-		Require(scene.GetObjects().size() == 2, "Missed missile did not expire");
+				scene.GetCombatSnapshot().audio.missileLaunches == 0,
+			"Distant rear carrier was not selected or unlocked missile consumed ammunition");
 		const auto lockCarrier = [&](FlightScene& combatScene) {
+			combatScene.SetPlayerAircraftPosition({100000, 1500, 0});
+			combatScene.Update({}, 0.25f);
 			combatScene.SetPlayerAircraftPosition({0, 1500, 2000});
-			for (int i = 0; i < 24; ++i)
+			combatScene.Update({}, 0.1f);
+			Require(combatScene.GetCombatSnapshot().lockState == LockState::Acquiring &&
+					combatScene.GetCombatSnapshot().acquireProgress > 0 &&
+					combatScene.GetCombatSnapshot().acquireProgress < 1,
+				"Carrier lock completed without the required acquisition time");
+			for (int i = 0; i < 23; ++i)
 				combatScene.Update({}, 0.1f);
 			Require(combatScene.GetCombatSnapshot().selected == carrierId &&
 					combatScene.GetCombatSnapshot().lockState == LockState::Locked &&
@@ -399,7 +385,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			lockCarrier(lockLoss);
 			lockLoss.SetPlayerAircraftPosition({100000, 1500, 0});
 			lockLoss.Update({}, 0.25f);
-			Require(lockLoss.GetCombatSnapshot().lockState == LockState::None &&
+			Require(lockLoss.GetCombatSnapshot().lockState == LockState::Selected &&
+					lockLoss.GetCombatSnapshot().selected == carrierId &&
 					lockLoss.GetCombatSnapshot().acquireProgress == 0 &&
 					lockLoss.GetCombatSnapshot().carrierMissileAmmo == 2,
 				"Distant carrier retained a stale lock or aiming consumed ammunition");
@@ -415,6 +402,18 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				"Queued double-click did not fire exactly the two loaded missiles");
 			// Guidance retains the launched target even after the aircraft breaks its lock.
 			volley.SetPlayerAircraftPosition({100000, 1500, 0});
+			{
+				auto reloading = volley;
+				for (int frame = 0; frame < 15; ++frame)
+					reloading.Update({}, 0.25f);
+				Require(reloading.GetCombatSnapshot().carrierMissileAmmo == 0 &&
+						reloading.GetCombatSnapshot().missileCooldownSeconds > 0,
+					"Missile magazine reloaded before four seconds");
+				reloading.Update({}, 0.25f);
+				Require(reloading.GetCombatSnapshot().carrierMissileAmmo == 2 &&
+						reloading.GetCombatSnapshot().missileCooldownSeconds == 0,
+					"Missile magazine did not reload after four seconds");
+			}
 			for (int frame = 0; frame < 32 && !volley.GetCombatSnapshot().deckDisabled; ++frame)
 				volley.Update({}, 0.25f);
 			Require(volley.GetCombatSnapshot().deckDisabled &&
@@ -487,6 +486,6 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		context.WaitForGpu();
 	}
 	DestroyWindow(window);
-	std::cout << "PASS: full mission scene, two fast missiles, two-hit carrier, miss/reload, one-time waves "
+	std::cout << "PASS: full mission scene, automatic carrier selection, timed lock, launch gate, two-hit carrier, one-time waves "
 				 "and retry\n";
 }

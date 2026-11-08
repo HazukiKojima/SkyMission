@@ -829,11 +829,22 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 
 int wmain(int argc, wchar_t** argv) {
 	try {
-		Require(argc == 3 || (argc == 4 && std::wstring_view(argv[3]) == L"--clouds-review"),
-			"Expected repository and fixture directories, optionally --clouds-review");
+		Require(argc == 3 || (argc == 4 && (std::wstring_view(argv[3]) == L"--clouds-review" ||
+			std::wstring_view(argv[3]) == L"--mission-review")),
+			"Expected repository and fixture directories, optionally --clouds-review or --mission-review");
 		ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
+		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
+			TestCombatMath();
+			TestWeapons(argv[1], fixture);
+			TestCombatDamage(argv[1], fixture);
+			TestMissionScene(argv[1], fixture);
+			TestHudTypography();
+			TestRadarMap();
+			CoUninitialize();
+			return 0;
+		}
 		if (argc == 4) {
 			TestCloudSettings(argv[1], fixture);
 			TestCloudRendering(argv[1], fixture, 1920, 1080, true);

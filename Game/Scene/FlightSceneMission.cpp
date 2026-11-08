@@ -103,7 +103,8 @@ namespace Game {
 					m_targeting.GetSelected() == m_mission.GetCarrierId()
 				? m_mission.GetCarrierId()
 				: Engine::InvalidObjectId;
-			for (unsigned i = 0; i < count; ++i) {
+			// 未捕捉の発射で弾数を消費させず、ロック完了後だけ誘導弾を発射する
+			for (unsigned i = 0; target != Engine::InvalidObjectId && i < count; ++i) {
 				if (m_carrierMissiles.TryLaunch(m_scene, m_player.GetPosition(), m_player.GetVelocity(),
 						m_player.GetForward(), target)) {
 					++m_combat.audio.missileLaunches;
