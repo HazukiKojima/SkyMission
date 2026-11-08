@@ -18,6 +18,25 @@ void TestRenderOptimizationMath() {
 	Require(OceanGeometry::GridCoordinate(129, size) <
 			(OceanGeometry::GridCoordinate(256, size) - OceanGeometry::GridCoordinate(255, size)) / 20,
 		"Ocean must retain much greater density around the camera");
+	// Measure the actual height field: a prevailing swell should vary much less
+	// across the wind than along it, without requiring every crest to be identical.
+	const XMFLOAT2 wind{0.85749293f, 0.51449576f};
+	double alongEnergy = 0, acrossEnergy = 0;
+	const auto height = [](float x, float z) {
+		return OceanGeometry::CalculateWaveHeight(x, z, 17, 20000, 0.003f);
+	};
+	for (unsigned z = 0; z < 16; ++z)
+		for (unsigned x = 0; x < 16; ++x) {
+			const float px = float(x) * 4321 - 32000, pz = float(z) * 4321 - 32000;
+			const float along = height(px + wind.x * 5, pz + wind.y * 5) -
+				height(px - wind.x * 5, pz - wind.y * 5);
+			const float across = height(px - wind.y * 5, pz + wind.x * 5) -
+				height(px + wind.y * 5, pz - wind.x * 5);
+			alongEnergy += double(along) * along;
+			acrossEnergy += double(across) * across;
+		}
+	Require(alongEnergy > 0 && acrossEnergy < alongEnergy * 0.12,
+		"Ocean swell lost its prevailing wind direction");
 	const Bounds3 bounds{{-1, -1, -1}, {1, 1, 1}};
 	XMFLOAT4X4 world;
 	XMStoreFloat4x4(

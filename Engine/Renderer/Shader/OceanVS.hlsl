@@ -84,20 +84,27 @@ PS_INPUT VS(VS_INPUT input)
     float steepness = max(oceanWaveSteepness, 0.0f);
 
     const int NUM_WAVES = 6;
+    // Match the 257-point exponential grid without adding vertices. Short waves
+    // must fade before the sparse outer cells undersample their displacement.
+    float gridBase = oceanSize * 0.5f / (exp(5.5f) - 1.0f);
+    float gridSpacing = (max(abs(input.position.x), abs(input.position.z)) + gridBase) *
+        (exp(5.5f / 128.0f) - 1.0f);
 
     // 複数の波を重ねる
 
     for (int i = 0; i < NUM_WAVES; ++i)
     {
         float phaseOffset = (float)i * 21.53f;
-        float randomAngle = sin((float)i * 7.3f) * 1.1f;
+        float randomAngle = sin((float)i * 7.3f) * 0.22f;
 
         float s_rot = sin(randomAngle);
         float c_rot = cos(randomAngle);
 
         float2 waveDir = mul(float2x2(c_rot, -s_rot, s_rot, c_rot), baseWindDir);
 
-        pos += CalculateGerstnerWave(waveDir, steepness, wavelength, wavePos, tangent, binormal, phaseOffset);
+        float resolvedWave = 1.0f - smoothstep(0.20f, 0.45f, gridSpacing / wavelength);
+        pos += CalculateGerstnerWave(waveDir, steepness * resolvedWave, wavelength,
+            wavePos, tangent, binormal, phaseOffset);
 
         wavelength *= 0.82f;
         steepness *= 0.72f;
