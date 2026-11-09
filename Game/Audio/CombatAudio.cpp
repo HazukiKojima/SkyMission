@@ -18,6 +18,7 @@ namespace Game {
 		constexpr DWORD kAudioStream = static_cast<DWORD>(MF_SOURCE_READER_FIRST_AUDIO_STREAM);
 		constexpr DWORD kAllStreams = static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS);
 		constexpr float kFlightVolume = 0.18f, kGunVolume = 0.42f;
+		constexpr float kBattleBgmVolume = 0.35f;
 		constexpr float kLaunchVolume = 0.65f, kGunHitVolume = 0.65f, kMissileHitVolume = 0.75f;
 		constexpr float kAircraftVolume = 0.65f, kShipVolume = 0.75f;
 		constexpr float kHitVolume = 0.32f, kWarningVolume = 0.45f;
@@ -48,7 +49,7 @@ namespace Game {
 		Shutdown();
 	}
 
-	bool CombatAudio::LoadClip(const std::filesystem::path& path, Clip& clip) {
+	bool CombatAudio::LoadClip(const std::filesystem::path& path, Clip& clip, UINT channels) {
 		using Microsoft::WRL::ComPtr;
 		ComPtr<IMFSourceReader> reader;
 		if (FAILED(MFCreateSourceReaderFromURL(path.c_str(), nullptr, &reader))) return false;
@@ -56,11 +57,11 @@ namespace Game {
 		if (FAILED(MFCreateMediaType(&requested))) return false;
 		if (FAILED(requested->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio)) ||
 			FAILED(requested->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM)) ||
-			FAILED(requested->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, 1)) ||
+			FAILED(requested->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, channels)) ||
 			FAILED(requested->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, kSampleRate)) ||
 			FAILED(requested->SetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, 16)) ||
-			FAILED(requested->SetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT, 2)) ||
-			FAILED(requested->SetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, kSampleRate * 2)) ||
+			FAILED(requested->SetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT, channels * 2)) ||
+			FAILED(requested->SetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, kSampleRate * channels * 2)) ||
 			FAILED(reader->SetStreamSelection(kAllStreams, FALSE)) ||
 			FAILED(reader->SetStreamSelection(kAudioStream, TRUE)) ||
 			FAILED(reader->SetCurrentMediaType(kAudioStream, nullptr, requested.Get()))) {
@@ -73,8 +74,9 @@ namespace Game {
 		if (FAILED(MFCreateWaveFormatExFromMFMediaType(actual.Get(), &wave, &waveBytes))) return false;
 		const auto format = *wave;
 		CoTaskMemFree(wave);
-		if (format.wFormatTag != WAVE_FORMAT_PCM || format.nChannels != 1 ||
-			format.nSamplesPerSec != kSampleRate || format.wBitsPerSample != 16 || format.nBlockAlign != 2) {
+		if (format.wFormatTag != WAVE_FORMAT_PCM || format.nChannels != channels ||
+			format.nSamplesPerSec != kSampleRate || format.wBitsPerSample != 16 ||
+			format.nBlockAlign != channels * 2) {
 			return false;
 		}
 		Clip decoded;
@@ -93,7 +95,7 @@ namespace Game {
 				DWORD length = 0;
 				if (FAILED(buffer->Lock(&data, nullptr, &length))) return false;
 				// 破損ファイルでも起動時のメモリ使用量を制限する
-				if (decoded.samples.size() + length > 64 * 1024 * 1024) {
+				if (decoded.samples.size() + length > 64 * 1024 * 1024 * channels) {
 					buffer->Unlock();
 					return false;
 				}
@@ -122,10 +124,11 @@ namespace Game {
 		m_mediaInitialized = SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET));
 		const wchar_t* names[] = {L"プレイヤー飛行音(50秒).mp3", L"プレイヤー機関銃発射音(5秒間).mp3",
 			L"プレイヤーミサイル発射音.mp3", L"プレイヤー機関銃被弾.mp3", L"プレイヤーミサイル被弾.mp3",
-			L"敵航空機爆発.mp3", L"敵戦艦爆発.mp3"};
+			L"敵航空機爆発.mp3", L"敵戦艦爆発.mp3", L"BattleBGM.mp3"};
 		for (std::size_t i = 0; i < m_clips.size(); ++i) {
 			const auto path = soundDirectory / names[i];
-			if (!m_mediaInitialized || !LoadClip(path, m_clips[i])) {
+			const UINT channels = i == static_cast<std::size_t>(ClipKind::BattleBgm) ? 2 : 1;
+			if (!m_mediaInitialized || !LoadClip(path, m_clips[i], channels)) {
 				Engine::Log(L"CombatAudio: could not load {}\n", path.wstring());
 			}
 		}
@@ -144,8 +147,10 @@ namespace Game {
 				return;
 			}
 		}
-		for (auto& voice : m_loops) {
-			if (FAILED(m_engine->CreateSourceVoice(&voice, &format))) {
+		for (std::size_t i = 0; i < m_loops.size(); ++i) {
+			const auto& bgm = m_clips[static_cast<std::size_t>(ClipKind::BattleBgm)];
+			const auto& loopFormat = i == 2 && !bgm.samples.empty() ? bgm.format : format;
+			if (FAILED(m_engine->CreateSourceVoice(&m_loops[i], &loopFormat))) {
 				Shutdown();
 				return;
 			}
@@ -230,6 +235,7 @@ namespace Game {
 		}
 		SetLoop(0, ClipKind::Flight, state.flying, kFlightVolume);
 		SetLoop(1, ClipKind::Gun, state.flying && state.gunFiring, kGunVolume);
+		SetLoop(2, ClipKind::BattleBgm, true, kBattleBgmVolume);
 		UpdateWarning(state.flying, lockWarning, missileWarning, deltaSeconds);
 		PlayEvents(state, hitCount);
 	}
