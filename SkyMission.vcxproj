@@ -377,6 +377,8 @@
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxApi.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\NumericParameterLayout.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\ParsedJsonDocument.cs" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxWrapper.csproj" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)global.json" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\Program.cs" />
@@ -587,5 +589,21 @@
       <DisableOptimizations>false</DisableOptimizations>
       <AdditionalOptions>/O3 %(AdditionalOptions)</AdditionalOptions>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Cinematics\OpeningCinematicSettings.cpp" />
+    <ClCompile Include="Game\Cinematics\OpeningCinematicController.cpp" />
+    <ClCompile Include="Game\Cinematics\OpeningCinematicScene.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneOpening.cpp" />
+    <ClCompile Include="Game\UI\OpeningCinematicPresenter.cpp" />
+    <ClInclude Include="Game\Cinematics\OpeningCinematicSettings.h" />
+    <ClInclude Include="Game\Cinematics\OpeningCinematicTypes.h" />
+    <ClInclude Include="Game\Cinematics\OpeningCinematicController.h" />
+    <ClInclude Include="Game\Cinematics\OpeningCinematicScene.h" />
+    <ClInclude Include="Game\UI\OpeningCinematicPresenter.h" />
+    <ClInclude Include="Tests\OpeningCinematicTests.h" />
+    <ClInclude Include="Game\Combat\EnemyEngagementProfile.h" />
+    <ClInclude Include="Tests\OpeningCinematicVisualTests.h" />
+    <None Include="Assets\Cinematics\opening.json" />
   </ItemGroup>
 </Project>

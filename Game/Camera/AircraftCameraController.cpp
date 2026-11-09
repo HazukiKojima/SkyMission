@@ -88,6 +88,14 @@ namespace Game {
 		UpdateFollowOrientation(deltaSeconds);
 		UpdateFollowPosition(deltaSeconds);
 	}
+	void AircraftCameraController::SnapToFollowTarget() {
+		if (!m_following) return;
+		m_lookYaw = 0;
+		m_lookPitch = 0;
+		UpdateFollowOrientation(0, true);
+		UpdateFollowPosition(0, true);
+		UpdateView();
+	}
 	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
 		if (input.IsKeyDown('Z')) {
 			m_lookYaw = std::remainder(
@@ -101,7 +109,7 @@ namespace Game {
 			m_lookPitch *= decay;
 		}
 	}
-	void AircraftCameraController::UpdateFollowOrientation(float deltaSeconds) {
+	void AircraftCameraController::UpdateFollowOrientation(float deltaSeconds, bool snap) {
 		XMVECTOR followDirection = XMVector3Normalize(XMLoadFloat3(&m_followHeading));
 		if (!m_followPitchInputActive) {
 			const XMVECTOR forward = XMLoadFloat3(&m_followForward);
@@ -113,7 +121,7 @@ namespace Game {
 		}
 
 		const float targetYaw = std::atan2(XMVectorGetX(followDirection), -XMVectorGetZ(followDirection));
-		const float yawBlend = 1.0f - std::exp(-m_followDirectionSmoothing * deltaSeconds);
+		const float yawBlend = snap ? 1.0f : 1.0f - std::exp(-m_followDirectionSmoothing * deltaSeconds);
 		m_followCameraYaw = std::remainder(
 			m_followCameraYaw + std::remainder(targetYaw - m_followCameraYaw, XM_2PI) * yawBlend, XM_2PI);
 		const XMVECTOR forward = XMLoadFloat3(&m_followForward);
@@ -121,10 +129,10 @@ namespace Game {
 			XMVectorGetX(forward) * XMVectorGetX(forward) + XMVectorGetZ(forward) * XMVectorGetZ(forward));
 		const float targetPitch =
 			std::clamp(std::atan2(XMVectorGetY(forward), horizontalForwardLength) * 0.4f, -0.35f, 0.35f);
-		const float pitchBlend = 1.0f - std::exp(-m_followDirectionSmoothing * deltaSeconds);
+		const float pitchBlend = yawBlend;
 		m_followCameraPitch += (targetPitch - m_followCameraPitch) * pitchBlend;
 	}
-	void AircraftCameraController::UpdateFollowPosition(float deltaSeconds) {
+	void AircraftCameraController::UpdateFollowPosition(float deltaSeconds, bool snap) {
 		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
 		const float orbitYaw = m_followCameraYaw + m_lookYaw;
 		const float orbitPitch = std::clamp(m_followCameraPitch + m_lookPitch, -1.15f, 1.15f);
@@ -141,7 +149,7 @@ namespace Game {
 		// 大きなワールド座標同士の減算で視線が揺れないよう、相対オフセットから求める。
 		XMStoreFloat3(&m_followViewDirection,
 			smoothedDirection * (followDistance + 12.0f) + worldUp * (m_followLookHeight - m_followHeight));
-		const float blend = 1.0f - std::exp(-m_followSmoothing * deltaSeconds);
+		const float blend = snap ? 1.0f : 1.0f - std::exp(-m_followSmoothing * deltaSeconds);
 		XMStoreFloat3(&m_position, XMVectorLerp(XMLoadFloat3(&m_position), desiredPosition, blend));
 		XMStoreFloat3(&m_followLookAt, XMVectorLerp(XMLoadFloat3(&m_followLookAt), desiredLookAt, blend));
 	}

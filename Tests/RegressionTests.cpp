@@ -41,6 +41,8 @@ void Require(bool condition, const char* description) {
 #include "BombTests.h"
 #include "ModelLoadingTests.h"
 #include "CloudTests.h"
+#include "OpeningCinematicTests.h"
+#include "OpeningCinematicVisualTests.h"
 
 void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -63,7 +65,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					CombatAudio audio;
 					audio.Update({.flying = true, .gunFiring = true}, 1);
 					audio.Initialize(repository / L"Assets/Sound");
-					Require(audio.GetLoadedSoundCount() == 7, "Not all seven MP3 assets decoded");
+					Require(audio.GetLoadedSoundCount() == 8, "Not all sound assets including BattleBGM decoded");
 					audio.Update({.flying = true, .gunFiring = true}, 0);
 					audio.Update({.flying = true,
 									 .missileLaunches = 2,
@@ -79,7 +81,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.Update({.flying = true}, 0, false, true, 0.25f);
 					audio.Update({.flying = true}, 0, false, false, 0.1f);
 					audio.Initialize(repository / L"Assets/Sound");
-					Require(audio.GetLoadedSoundCount() == 7, "Not all seven MP3 assets decoded");
+					Require(audio.GetLoadedSoundCount() == 8, "Not all sound assets including BattleBGM decoded");
 					audio.Update({.flying = true, .restarted = true}, 0);
 					audio.Initialize(fixture / L"missing-sound-directory");
 					Require(audio.GetLoadedSoundCount() == 0, "Missing clips retained old PCM");
@@ -560,7 +562,8 @@ void TestGpuTextures(const fs::path& fixture) {
 	ThrowIfFailed(DirectX::SaveToHDRFile(*hdrImage.GetImage(0, 0, 0), hdrPath.c_str()));
 	for (int load = 0; load < 2; ++load) {
 		Texture sky;
-		Require(sky.LoadFromFile(device.Get(), commands.Get(), hdrPath.wstring()), "HDR load/cache reload failed");
+		Require(sky.LoadFromFile(device.Get(), commands.Get(), hdrPath.wstring()),
+			"HDR load/cache reload failed");
 		const auto desc = sky.GetResource()->GetDesc();
 		Require(desc.Width == 16 && desc.Height == 8 && desc.MipLevels == 5 &&
 				desc.Format == DXGI_FORMAT_R32G32B32A32_FLOAT,
@@ -829,11 +832,45 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 
 int wmain(int argc, wchar_t** argv) {
 	try {
-		Require(argc == 3 || (argc == 4 && std::wstring_view(argv[3]) == L"--clouds-review"),
-			"Expected repository and fixture directories, optionally --clouds-review");
+		Require(argc == 3 ||
+				(argc == 4 &&
+					(std::wstring_view(argv[3]) == L"--clouds-review" ||
+						std::wstring_view(argv[3]) == L"--mission-review" ||
+						std::wstring_view(argv[3]) == L"--opening-review" ||
+						std::wstring_view(argv[3]) == L"--json-review")),
+			"Expected repository and fixture directories, optionally --clouds-review, --mission-review, "
+			"--opening-review or --json-review");
 		ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
+		if (argc == 4 && std::wstring_view(argv[3]) == L"--json-review") {
+			TestPathsAndJson(argv[1], fixture);
+			TestAIParameters(argv[1], fixture);
+			TestEnvironmentSettings(argv[1], fixture);
+			TestShips(argv[1], fixture);
+			TestOpeningCinematic(argv[1], fixture);
+			CoUninitialize();
+			return 0;
+		}
+		if (argc == 4 && std::wstring_view(argv[3]) == L"--opening-review") {
+			TestOpeningCinematic(argv[1], fixture);
+			TestOpeningCinematicRendering(argv[1], fixture);
+			CoUninitialize();
+			return 0;
+		}
+		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
+			TestOpeningCinematic(argv[1], fixture);
+			TestCombatMath();
+			TestEnemyCombatAI();
+			TestEnemyEngagementProfile();
+			TestWeapons(argv[1], fixture);
+			TestCombatDamage(argv[1], fixture);
+			TestMissionScene(argv[1], fixture);
+			TestHudTypography();
+			TestRadarMap();
+			CoUninitialize();
+			return 0;
+		}
 		if (argc == 4) {
 			TestCloudSettings(argv[1], fixture);
 			TestCloudRendering(argv[1], fixture, 1920, 1080, true);
@@ -841,6 +878,7 @@ int wmain(int argc, wchar_t** argv) {
 			return 0;
 		}
 		TestFlightAndScene();
+		TestOpeningCinematic(argv[1], fixture);
 		TestCombatAudioLifecycle(argv[1], fixture);
 		TestCombatMath();
 		TestEnemyGunBehavior();
@@ -849,6 +887,7 @@ int wmain(int argc, wchar_t** argv) {
 		TestMissionRules();
 		TestBombSystem();
 		TestEnemyCombatAI();
+		TestEnemyEngagementProfile();
 		TestCombatEffectLifetime();
 		TestGunFireEffects();
 		TestGunSegmentClipping();

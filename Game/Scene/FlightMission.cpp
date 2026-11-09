@@ -9,7 +9,7 @@ namespace Game {
 		constexpr float kCombatAreaDistanceMeters = 8500;
 		constexpr float kCarrierCombatAreaDistanceMeters = 6500;
 		constexpr float kMinimumCombatAltitudeMeters = 1000;
-		constexpr float kPatrolApproachDistanceMeters = 5500;
+		constexpr float kPatrolApproachDistanceMeters = 11000;
 		constexpr float kFormationClearanceMeters = 350;
 		constexpr float kMaximumOpeningDelaySeconds = 1.5f;
 		constexpr float kAntiAircraftMaximumLeadSeconds = 2.0f;

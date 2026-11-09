@@ -91,6 +91,8 @@ namespace Game {
 				return m_renderer->GetModel(id);
 			},
 			m_window->GetWidth(), m_window->GetHeight(), m_renderer->GetOceanSize()));
+		m_scene->EnableOpening(assets.opening, m_renderer->GetModel(EnemyModelId),
+			assets.enemyAircraft.visualScale, m_renderer->GetOceanSize());
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +
@@ -153,7 +155,6 @@ namespace Game {
 		if (m_fpsTimer >= 0.25f) {
 			const float fps = static_cast<float>(m_fpsFrameCount) / m_fpsTimer;
 			std::wstring title = m_windowTitle + L" | FPS: " + std::to_wstring(static_cast<int>(fps + 0.5f));
-			title += m_renderer->IsVerticalSyncEnabled() ? L" | VSync ON [F10]" : L" | VSync OFF [F10]";
 			const auto& gpu = m_renderer->GetGpuTimings();
 			if (gpu.valid)
 				title +=
@@ -169,8 +170,6 @@ namespace Game {
 		if (m_scene) {
 			const InputSnapshot input = m_window->ConsumeInput();
 			m_combatAudio.SetSuspended(!input.active);
-			if (input.WasKeyPressed(VK_F10))
-				m_renderer->SetVerticalSync(!m_renderer->IsVerticalSyncEnabled());
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();

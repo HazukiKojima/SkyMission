@@ -6,6 +6,7 @@
 #include "Game/Combat/GunAimSolver.h"
 #include "Game/Combat/CombatSnapshotBuilder.h"
 #include "Game/Combat/ProjectileCollision.h"
+#include "Game/Combat/EnemyEngagementProfile.h"
 namespace Game {
 	namespace {
 		constexpr float kPropellerAngularSpeedPerSpeed = 0.06f;
@@ -104,10 +105,14 @@ namespace Game {
 		m_combat.hitCount = 0;
 		if (!std::isfinite(dt) || dt <= 0) return;
 		dt = std::min(dt, 0.25f);
-		UpdateCombatTimers(dt);
 		if (!m_initialState) {
 			SaveInitialState();
 		}
+		if (m_opening.GetPresentation().active) {
+			UpdateOpening(dt, combatInput.skipOpening);
+			return;
+		}
+		UpdateCombatTimers(dt);
 		if (m_combat.result != CombatResult::Active) {
 			if (combatInput.retry) {
 				Restart(dt);
@@ -234,7 +239,7 @@ namespace Game {
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
 				const CombatTarget carrier{
 					m_mission.GetCarrierId(), *center, {}, "敵空母", m_mission.GetCarrierHealth()};
-				m_targeting.Update(std::span(&carrier, 1), geometry.muzzle, geometry.forward, next, dt);
+				m_targeting.UpdateObjective(carrier, geometry.muzzle, geometry.forward, dt);
 				return;
 			}
 		}
@@ -261,9 +266,12 @@ namespace Game {
 			}
 			enemy.weaponCooldownSeconds = std::max(0.0f, enemy.weaponCooldownSeconds - dt);
 			const bool allowed = true;
-			const bool gunWindow = enemy.gunPattern.Update(dt, enemy.slot);
+			const auto engagement =
+				GetEnemyEngagementProfile(m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId);
+			const auto aiParameters = engagement.Apply(enemy.aiParameters);
+			const bool gunWindow = enemy.gunPattern.Update(dt * engagement.burstTempoScale, enemy.slot);
 			const auto decision = enemy.controller.ReadCombatInput(enemy.flightModel, target, direction, dt,
-				enemy.aiParameters, enemy.slot, allowed, enemy.weaponCooldownSeconds <= 0 && gunWindow,
+				aiParameters, enemy.slot, allowed, enemy.weaponCooldownSeconds <= 0 && gunWindow,
 				m_mission.GetDefenseCenter(m_scene), true);
 			const auto input = decision.flight;
 			enemy.fire = decision.fire;
@@ -302,6 +310,7 @@ namespace Game {
 		m_width = width;
 		m_height = height;
 		m_cameraController.OnResize(width, height);
+		m_openingScene.OnResize(width, height);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
 

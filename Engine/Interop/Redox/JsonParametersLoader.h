@@ -4,6 +4,7 @@
 #include <cstring>
 #include <type_traits>
 #include <vector>
+#include <array>
 
 namespace Engine {
 	class JsonParametersLoader {
@@ -28,7 +29,7 @@ namespace Engine {
 			auto getParameters =
 				reinterpret_cast<GetParameters>(RedoxModule::GetFunction(documentEntryPoint.c_str()));
 
-			std::vector<float> values(sizeof(T) / sizeof(float));
+			std::array<float, sizeof(T) / sizeof(float)> values{};
 			const int result =
 				getParameters(document.GetHandle(), values.data(), static_cast<int>(values.size()));
 			if (result != static_cast<int>(values.size())) {

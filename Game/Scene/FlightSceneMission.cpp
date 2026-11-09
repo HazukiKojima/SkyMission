@@ -1,6 +1,7 @@
 #include "FlightScene.h"
 #include "Game/Combat/GunAimSolver.h"
 #include "Game/Combat/ProjectileCollision.h"
+#include "Game/Combat/EnemyEngagementProfile.h"
 #include <algorithm>
 #include <cmath>
 namespace Game {
@@ -103,7 +104,8 @@ namespace Game {
 					m_targeting.GetSelected() == m_mission.GetCarrierId()
 				? m_mission.GetCarrierId()
 				: Engine::InvalidObjectId;
-			for (unsigned i = 0; i < count; ++i) {
+			// 未捕捉の発射で弾数を消費させず、ロック完了後だけ誘導弾を発射する
+			for (unsigned i = 0; target != Engine::InvalidObjectId && i < count; ++i) {
 				if (m_carrierMissiles.TryLaunch(m_scene, m_player.GetPosition(), m_player.GetVelocity(),
 						m_player.GetForward(), target)) {
 					++m_combat.audio.missileLaunches;
@@ -158,7 +160,9 @@ namespace Game {
 				const float interval = m_mission.GetPhase() == MissionPhase::Commander
 					? m_commanderGunInterval
 					: m_enemyGunSettings.fireInterval;
-				enemy.weaponCooldownSeconds = interval;
+				const auto engagement = GetEnemyEngagementProfile(
+					m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId);
+				enemy.weaponCooldownSeconds = interval * engagement.shotIntervalScale;
 				enemy.gunPattern.NotifyShot();
 				m_combat.enemyFireWarningSeconds = kEnemyFireWarningDurationSeconds;
 				const auto enemyPosition = enemy.flightModel.GetPosition();

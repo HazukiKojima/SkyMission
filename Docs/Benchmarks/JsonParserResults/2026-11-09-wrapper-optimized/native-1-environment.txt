@@ -1,0 +1,9 @@
+Compiler=_MSC_FULL_VER:195136260
+Architecture=x64
+Optimization=/O2 /DNDEBUG
+Processor=AMD Ryzen 5 5600X 6-Core Processor             
+nlohmann=3.12.0
+Samples=7
+TargetSeconds=0.1
+Includes=DOM construction/disposal, owned UTF8 input, native bridge where used
+Excludes=disk IO, DLL loading, cold start, DTO serialization, retained/peak memory measurement

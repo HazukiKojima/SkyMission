@@ -47,7 +47,30 @@ namespace Engine {
 
 	void Window::DeactivateInput() {
 		m_input.SetActive(false);
+		m_fullscreenEnterHeld = false;
 		EndCameraLook();
+	}
+
+	void Window::ToggleFullscreen() {
+		EndCameraLook();
+		if (!m_fullscreen) {
+			MONITORINFO monitor{sizeof(MONITORINFO)};
+			if (!GetMonitorInfoW(MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONEAREST), &monitor) ||
+				!GetWindowPlacement(m_hwnd, &m_windowedPlacement)) return;
+			m_windowedStyle = GetWindowLongPtrW(m_hwnd, GWL_STYLE);
+			m_fullscreen = true;
+			SetWindowLongPtrW(m_hwnd, GWL_STYLE, m_windowedStyle & ~WS_OVERLAPPEDWINDOW);
+			SetWindowPos(m_hwnd, nullptr, monitor.rcMonitor.left, monitor.rcMonitor.top,
+				monitor.rcMonitor.right - monitor.rcMonitor.left,
+				monitor.rcMonitor.bottom - monitor.rcMonitor.top,
+				SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		} else {
+			m_fullscreen = false;
+			SetWindowLongPtrW(m_hwnd, GWL_STYLE, m_windowedStyle);
+			SetWindowPlacement(m_hwnd, &m_windowedPlacement);
+			SetWindowPos(m_hwnd, nullptr, 0, 0, 0, 0,
+				SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		}
 	}
 
 	void Window::BeginCameraLook() {
@@ -99,6 +122,20 @@ namespace Engine {
 		const auto& raw = *reinterpret_cast<const RAWINPUT*>(storage.data());
 		if (raw.header.dwType == RIM_TYPEKEYBOARD &&
 			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWKEYBOARD)) {
+			// 全画面切り替えのEnterをゲーム側のスキップ操作に渡さない。
+			if (raw.data.keyboard.VKey == VK_RETURN) {
+				const bool released = (raw.data.keyboard.Flags & RI_KEY_BREAK) != 0;
+				if (m_fullscreenEnterHeld) {
+					if (released) m_fullscreenEnterHeld = false;
+					return;
+				}
+				if (!released && !m_input.IsKeyDown(VK_RETURN) &&
+					(m_input.IsKeyDown(VK_LSHIFT) || m_input.IsKeyDown(VK_RSHIFT))) {
+					m_fullscreenEnterHeld = true;
+					ToggleFullscreen();
+					return;
+				}
+			}
 			m_input.ProcessKeyboard(raw.header.hDevice, raw.data.keyboard);
 			if (m_input.IsKeyDown('Z'))
 				BeginCameraLook();

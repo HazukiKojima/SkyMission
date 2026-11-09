@@ -25,9 +25,6 @@ namespace Engine {
 		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
 		void InitializeConstantBuffers(const Scene& scene);
 		void ReserveModelCapacity(size_t objectCount);
-		void SetVerticalSync(bool enabled) {
-			m_device->SetVerticalSync(enabled);
-		}
 
 		// フレーム更新・描画
 		RenderView UpdateFrameConstants(const Scene& scene, float elapsedTime);
@@ -35,9 +32,6 @@ namespace Engine {
 		void Resize(UINT width, UINT height);
 
 		// 状態・アセットの取得
-		bool IsVerticalSyncEnabled() const {
-			return m_device->IsVerticalSyncEnabled();
-		}
 		const GpuFrameTimings& GetGpuTimings() const {
 			return m_gpuProfiler.Latest();
 		}

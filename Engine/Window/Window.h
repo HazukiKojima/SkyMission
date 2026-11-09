@@ -37,12 +37,17 @@ namespace Engine {
 		void UnregisterRawInput();
 		void BeginCameraLook();
 		void EndCameraLook();
+		void ToggleFullscreen();
 
 		RawInputState m_input;
 		HWND m_hwnd = nullptr;
 		bool m_cameraMouseCaptured = false;
 		bool m_loading = false;
 		bool m_closeRequested = false;
+		bool m_fullscreen = false;
+		bool m_fullscreenEnterHeld = false;
+		WINDOWPLACEMENT m_windowedPlacement{sizeof(WINDOWPLACEMENT)};
+		LONG_PTR m_windowedStyle = 0;
 		UINT m_width = 0;
 		UINT m_height = 0;
 		std::function<void(UINT, UINT)> m_onResize;

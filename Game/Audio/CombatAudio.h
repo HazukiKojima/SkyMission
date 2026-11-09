@@ -26,7 +26,7 @@ namespace Game {
 		std::size_t GetLoadedSoundCount() const;
 
 	  private:
-		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, Count };
+		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, BattleBgm, Count };
 		enum class SoundKind { Hit, LockWarning, MissileWarning };
 		struct Clip {
 			std::vector<BYTE> samples;
@@ -35,7 +35,7 @@ namespace Game {
 
 		static constexpr std::size_t kVoiceCount = 12;
 
-		static bool LoadClip(const std::filesystem::path& path, Clip& clip);
+		static bool LoadClip(const std::filesystem::path& path, Clip& clip, UINT channels = 1);
 		static std::vector<int16_t> Synthesize(SoundKind kind);
 		void Play(const std::vector<int16_t>& samples, float volume, bool warning = false);
 		void PlayClip(ClipKind kind, float volume);
@@ -55,8 +55,8 @@ namespace Game {
 		// 単発音・警告音・ループ音のボイス
 		std::array<IXAudio2SourceVoice*, kVoiceCount> m_voices{};
 		IXAudio2SourceVoice* m_warningVoice = nullptr;
-		std::array<IXAudio2SourceVoice*, 2> m_loops{};
-		std::array<bool, 2> m_loopPlaying{};
+		std::array<IXAudio2SourceVoice*, 3> m_loops{};
+		std::array<bool, 3> m_loopPlaying{};
 
 		// 終了までボイスが参照するため、再生中にバッファをリサイズしない
 		std::array<Clip, static_cast<std::size_t>(ClipKind::Count)> m_clips;
