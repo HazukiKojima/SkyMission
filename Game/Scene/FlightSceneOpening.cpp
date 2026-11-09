@@ -21,9 +21,12 @@ namespace Game {
 		m_opening.Start(m_openingSettings);
 		m_openingScene.Update(m_opening.GetPose());
 		m_combat.opening = m_opening.GetPresentation();
-		m_combat.audio.flying = true;
+		SetOpeningBriefingLine(m_briefingEnabled ? 0 : -1);
+		m_combat.audio.flying = m_briefingLine < 0;
 	}
 	void FlightScene::UpdateOpening(float deltaSeconds, bool skipRequested) {
+		if (m_briefingLine >= 0 && !skipRequested) { m_combat.audio.flying = false; return; }
+		SetOpeningBriefingLine(-1);
 		const float previousSeconds = m_opening.GetPresentation().elapsedSeconds;
 		m_opening.Update(deltaSeconds, skipRequested);
 		m_openingScene.Update(m_opening.GetPose());
@@ -42,7 +45,8 @@ namespace Game {
 			UpdateCamera({}, flightSeconds, {});
 		}
 		m_combat.opening = m_opening.GetPresentation();
-		m_combat.audio.flying = true;
+		SetOpeningBriefingLine(-1);
+		m_combat.audio.flying = m_briefingLine < 0;
 		// 武器・ダメージ・任務の更新や操作入力は、終了・スキップのフレームにも実行しない
 	}
 } // namespace Game

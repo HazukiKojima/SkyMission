@@ -7,6 +7,22 @@ namespace Game {
 		const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		if (!presentation.active || view.width == 0 || view.height == 0) return;
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
+		if (presentation.briefingLine >= 0) {
+			static constexpr std::string_view lines[][2] = {
+				{"敵母艦と護衛機を確認。", "基地を襲った部隊の発進元だ。"},
+				{"基地は現在も攻撃を受けており、", "増援は出せない。"},
+				{"君、一機で護衛機を排除し、", "母艦を撃沈せよ。"}};
+			const auto& text = lines[std::min(presentation.briefingLine, 2)];
+			list.FilledRect({0, 0}, {float(view.width), float(view.height)}, {0, 0, 0, 1});
+			const float widest = std::max(Engine::HudDrawList::MeasureTextWidth(text[0], 1),
+				Engine::HudDrawList::MeasureTextWidth(text[1], 1));
+			const float size = std::min(48 * scale, (view.width - 120 * scale) / std::max(1.0f, widest));
+			const float spacing = size * 1.6f;
+			for (int row = 0; row < 2; ++row)
+				list.Text({(view.width - Engine::HudDrawList::MeasureTextWidth(text[row], size)) * 0.5f,
+					(view.height - size - spacing) * 0.5f + row * spacing}, text[row], size, HudStyle::Ink);
+			return;
+		}
 		const float barHeight = view.height * 0.1f;
 		list.FilledRect({0, 0}, {float(view.width), barHeight}, {0, 0, 0, 1});
 		list.FilledRect({0, view.height - barHeight}, {float(view.width), barHeight}, {0, 0, 0, 1});

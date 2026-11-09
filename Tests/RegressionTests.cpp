@@ -65,7 +65,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					CombatAudio audio;
 					audio.Update({.flying = true, .gunFiring = true}, 1);
 					audio.Initialize(repository / L"Assets/Sound");
-					Require(audio.GetLoadedSoundCount() == 8, "Not all sound assets including BattleBGM decoded");
+					Require(audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
 					audio.Update({.flying = true, .gunFiring = true}, 0);
 					audio.Update({.flying = true,
 									 .missileLaunches = 2,
@@ -81,7 +81,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.Update({.flying = true}, 0, false, true, 0.25f);
 					audio.Update({.flying = true}, 0, false, false, 0.1f);
 					audio.Initialize(repository / L"Assets/Sound");
-					Require(audio.GetLoadedSoundCount() == 8, "Not all sound assets including BattleBGM decoded");
+					Require(audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
 					audio.Update({.flying = true, .restarted = true}, 0);
 					audio.Initialize(fixture / L"missing-sound-directory");
 					Require(audio.GetLoadedSoundCount() == 0, "Missing clips retained old PCM");
@@ -854,6 +854,7 @@ int wmain(int argc, wchar_t** argv) {
 		}
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--opening-review") {
 			TestOpeningCinematic(argv[1], fixture);
+			TestCombatAudioLifecycle(argv[1], fixture);
 			TestOpeningCinematicRendering(argv[1], fixture);
 			CoUninitialize();
 			return 0;

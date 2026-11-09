@@ -11,6 +11,7 @@ namespace Game {
 		float fadeOpacity = 0;
 		std::string title;
 		std::string subtitle;
+		int briefingLine = -1; // 0..2: black-screen briefing, -1: cinematic
 	};
 	struct OpeningCinematicPose {
 		DirectX::XMFLOAT3 cameraOffsetMeters;

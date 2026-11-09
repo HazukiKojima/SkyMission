@@ -28,6 +28,11 @@ namespace Game {
 		// 本番開始時に有効化する。個別構成のテストでは呼ばずに直接戦闘できる
 		void EnableOpening(const OpeningCinematicSettings& settings, std::shared_ptr<Engine::Model> model,
 			float visualScale, float farZ);
+		void EnableOpeningBriefing() { m_briefingEnabled = true; SetOpeningBriefingLine(0); }
+		void SetOpeningBriefingLine(int line) {
+			m_briefingLine = line;
+			m_combat.opening.briefingLine = line;
+		}
 		void ConfigureCombat(const CombatSettings& settings);
 		void ConfigureMission(const MissionSettings& settings, std::shared_ptr<Engine::Model> enemyModel,
 			float enemyScale, const AircraftFlightParameters& flight, const AircraftAIParameters& ai);
@@ -159,6 +164,8 @@ namespace Game {
 		void StartOpening();
 		void UpdateOpening(float deltaSeconds, bool skipRequested);
 
+		bool m_briefingEnabled = false;
+		int m_briefingLine = -1;
 		bool m_openingEnabled = false;
 		OpeningCinematicSettings m_openingSettings;
 		OpeningCinematicController m_opening;

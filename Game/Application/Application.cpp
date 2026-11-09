@@ -93,6 +93,7 @@ namespace Game {
 			m_window->GetWidth(), m_window->GetHeight(), m_renderer->GetOceanSize()));
 		m_scene->EnableOpening(assets.opening, m_renderer->GetModel(EnemyModelId),
 			assets.enemyAircraft.visualScale, m_renderer->GetOceanSize());
+		m_scene->EnableOpeningBriefing();
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +
@@ -173,6 +174,8 @@ namespace Game {
 			const auto combat = CombatController{}.ReadInput(input);
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
+			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();
+			m_scene->SetOpeningBriefingLine(m_combatAudio.UpdateOpening(combatState.opening, deltaSeconds));
 			m_combatAudio.Update(combatState.audio, combatState.hitCount, false, false, deltaSeconds);
 			const auto view = m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる

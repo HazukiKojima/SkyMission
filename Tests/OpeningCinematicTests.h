@@ -69,5 +69,22 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 					"Opening label uses an unsupported glyph");
 		}
 	}
+	for (int line = 0; line < 3; ++line) {
+		auto presentation = controller.GetPresentation();
+		presentation.briefingLine = line;
+		Engine::RenderView view;
+		view.width = 800; view.height = 600;
+		Engine::HudDrawList list;
+		list.Reset(view.width, view.height);
+		OpeningCinematicPresenter{}.Build(presentation, view, list);
+		Require(list.GetVertices().size() > 6, "Briefing lost its background or subtitles");
+		for (const auto& vertex : list.GetVertices())
+			Require(std::abs(vertex.position.x) <= 1.001f && std::abs(vertex.position.y) <= 1.001f,
+				"Briefing subtitle escaped the viewport");
+	}
+	std::string_view briefing = "敵母艦と護衛機を確認。基地を襲った部隊の発進元だ。基地は現在も攻撃を受けており、増援は出せない。君、一機で護衛機を排除し、母艦を撃沈せよ。";
+	while (!briefing.empty())
+		Require(Engine::HudFont::Glyph(Engine::HudFont::Next(briefing)) != unsigned('?' - 32),
+			"Briefing uses an unsupported glyph");
 	std::cout << "PASS: opening defaults, partial/invalid JSON, timing, fades, skip, viewport and glyphs\n";
 }
