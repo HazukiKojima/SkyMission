@@ -1,10 +1,10 @@
-#include "OpeningCinematicPresenter.h"
+#include "CinematicPresenter.h"
 #include "HudStyle.h"
 #include <algorithm>
 
 namespace Game {
-	void OpeningCinematicPresenter::Build(const OpeningCinematicPresentation& presentation,
-		const Engine::RenderView& view, Engine::HudDrawList& list) const {
+	void CinematicPresenter::Build(const CinematicPresentation& presentation, const Engine::RenderView& view,
+		Engine::HudDrawList& list) const {
 		if (!presentation.active || view.width == 0 || view.height == 0) return;
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		if (presentation.briefingLine >= 0) {
@@ -16,7 +16,8 @@ namespace Game {
 			const float spacing = size * 1.6f;
 			for (int row = 0; row < 2; ++row)
 				list.Text({(view.width - Engine::HudDrawList::MeasureTextWidth(text[row], size)) * 0.5f,
-					(view.height - size - spacing) * 0.5f + row * spacing}, text[row], size, HudStyle::Ink);
+							  (view.height - size - spacing) * 0.5f + row * spacing},
+					text[row], size, HudStyle::Ink);
 			return;
 		}
 		const float barHeight = view.height * 0.1f;

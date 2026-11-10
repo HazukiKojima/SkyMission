@@ -1,7 +1,7 @@
 #include "CombatHudPresenter.h"
 #include "RadarMapPresenter.h"
 #include "HudStyle.h"
-#include "OpeningCinematicPresenter.h"
+#include "CinematicPresenter.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -12,8 +12,8 @@ namespace Game {
 	void CombatHudPresenter::Build(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		if (view.width == 0 || view.height == 0) return;
-		if (snapshot.opening.active) {
-			OpeningCinematicPresenter{}.Build(snapshot.opening, view, list);
+		if (snapshot.cinematic.active) {
+			CinematicPresenter{}.Build(snapshot.cinematic, view, list);
 			return;
 		}
 		RadarMapPresenter{}.Build(snapshot, view, list);

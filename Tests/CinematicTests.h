@@ -1,16 +1,16 @@
 #pragma once
-#include "Game/Cinematics/OpeningCinematicController.h"
+#include "Game/Cinematics/CinematicController.h"
 #include "Engine/Resources/JsonAssetReader.h"
-#include "Game/UI/OpeningCinematicPresenter.h"
+#include "Game/UI/CinematicPresenter.h"
 
-void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
+void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	using namespace Game;
 	Engine::JsonAssetReader reader;
-	const auto missing = LoadOpeningCinematicSettings(reader, fixture / L"no-opening.json");
+	const auto missing = LoadCinematicSettings(reader, fixture / L"no-opening.json");
 	Require(missing.durationSeconds == 5, "Missing opening configuration lost defaults");
 	const auto partial = fixture / L"opening-partial.json";
 	std::ofstream(partial) << "{\"flightSpeedMetersPerSecond\":210}";
-	Require(LoadOpeningCinematicSettings(reader, partial).flightSpeedMetersPerSecond == 210,
+	Require(LoadCinematicSettings(reader, partial).flightSpeedMetersPerSecond == 210,
 		"Partial opening configuration did not preserve defaults");
 	Require(missing.briefing.size() == 3 && missing.formationOffsets.size() == 4 &&
 			missing.originOffsetMeters.z == -5000 && missing.audio.bgmVolume == 0.12f,
@@ -21,33 +21,33 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 		{"lines":["Third","Fourth"],"audio":"","fallbackSeconds":0.25}],
 		"formationOffsets":[[0,0,0],[2,1,-3]],"originOffsetMeters":[10,20,-30],
 		"audio":{"bgm":"../音声/曲.wav","bgmVolume":0.2,"briefingVolume":0.6,"flightVolumeScale":0.3}})";
-	const auto data = LoadOpeningCinematicSettings(reader, configured);
+	const auto data = LoadCinematicSettings(reader, configured);
 	Require(data.briefing.size() == 2 && data.briefing[0].lines[1] == "Second" &&
 			data.briefing[0].audio == configured.parent_path() / L"../音声/会話.wav" &&
 			data.briefing[1].audio.empty() && data.formationOffsets[1].z == -3 &&
 			data.originOffsetMeters.x == 10 && data.audio.bgmVolume == 0.2f &&
 			data.audio.bgm == configured.parent_path() / L"../音声/曲.wav",
 		"Opening content or relative Japanese audio paths were not read");
-	OpeningCinematicController briefingController;
+	CinematicController briefingController;
 	briefingController.Start(data);
 	briefingController.EnableBriefing();
 	Require(briefingController.GetPresentation().briefingLines == data.briefing[0].lines,
 		"Briefing presentation did not use its configured subtitles");
-	briefingController.UpdateBriefing(OpeningVoiceStatus::Unavailable, 0.1f);
+	briefingController.UpdateBriefing(CinematicVoiceStatus::Unavailable, 0.1f);
 	briefingController.Update(0.25f, false);
 	Require(
 		briefingController.GetPresentation().elapsedSeconds == 0, "Cinematic clock advanced during briefing");
 	for (int i = 0; i < 5; ++i)
-		briefingController.UpdateBriefing(OpeningVoiceStatus::Playing, 0.25f);
-	briefingController.UpdateBriefing(OpeningVoiceStatus::Unavailable, 0);
+		briefingController.UpdateBriefing(CinematicVoiceStatus::Playing, 0.25f);
+	briefingController.UpdateBriefing(CinematicVoiceStatus::Unavailable, 0);
 	Require(
 		briefingController.GetPresentation().briefingLine == 0, "Playback or suspension advanced briefing");
-	briefingController.UpdateBriefing(OpeningVoiceStatus::Finished, 0.1f);
+	briefingController.UpdateBriefing(CinematicVoiceStatus::Finished, 0.1f);
 	Require(briefingController.GetPresentation().briefingLine == 1 &&
 			briefingController.GetPresentation().briefingLines == data.briefing[1].lines,
 		"Audio completion did not advance to matching subtitles");
-	briefingController.UpdateBriefing(OpeningVoiceStatus::Unavailable, 0.1f);
-	briefingController.UpdateBriefing(OpeningVoiceStatus::Unavailable, 0.25f);
+	briefingController.UpdateBriefing(CinematicVoiceStatus::Unavailable, 0.1f);
+	briefingController.UpdateBriefing(CinematicVoiceStatus::Unavailable, 0.25f);
 	Require(briefingController.GetPresentation().briefingLine == -1,
 		"Silent briefing did not use fallback duration");
 	briefingController.Start(data);
@@ -61,7 +61,7 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 	Require(
 		briefingController.GetPresentation().briefingLine == 0, "Restart did not restore the first briefing");
 	std::ofstream(configured) << R"({"briefing":[]})";
-	briefingController.Start(LoadOpeningCinematicSettings(reader, configured));
+	briefingController.Start(LoadCinematicSettings(reader, configured));
 	briefingController.EnableBriefing();
 	Require(briefingController.GetPresentation().briefingLine == -1,
 		"Empty briefing did not bypass conversation");
@@ -78,7 +78,7 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 		std::ofstream(invalid) << json;
 		bool rejected = false;
 		try {
-			LoadOpeningCinematicSettings(reader, invalid);
+			LoadCinematicSettings(reader, invalid);
 		} catch (const std::exception& error) {
 			rejected = std::string(error.what()).find("opening-invalid.json") != std::string::npos;
 		}
@@ -105,15 +105,14 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 		std::ofstream(invalid) << json;
 		bool rejected = false;
 		try {
-			LoadOpeningCinematicSettings(reader, invalid);
+			LoadCinematicSettings(reader, invalid);
 		} catch (const std::exception& error) {
 			rejected = std::string(error.what()).find("opening-invalid.json") != std::string::npos;
 		}
 		Require(rejected, "Opening collection/text limits were not validated with source context");
 	}
-	const auto settings =
-		LoadOpeningCinematicSettings(reader, repository / L"Assets/Cinematics/opening.json");
-	OpeningCinematicController controller;
+	const auto settings = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/opening.json");
+	CinematicController controller;
 	controller.Start(settings);
 	controller.Update(3.6f, false);
 	Require(controller.GetPresentation().formationShot && controller.GetPresentation().fadeOpacity == 0,
@@ -143,7 +142,7 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 		view.height = size.y;
 		Engine::HudDrawList list;
 		list.Reset(size.x, size.y);
-		OpeningCinematicPresenter{}.Build(controller.GetPresentation(), view, list);
+		CinematicPresenter{}.Build(controller.GetPresentation(), view, list);
 		Require(!list.GetVertices().empty(), "Opening overlay was empty");
 		for (const auto& vertex : list.GetVertices())
 			Require(std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y) &&
@@ -161,18 +160,55 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 		presentation.briefingLine = line;
 		presentation.briefingLines = settings.briefing[line].lines;
 		Engine::RenderView view;
-		view.width = 800; view.height = 600;
+		view.width = 800;
+		view.height = 600;
 		Engine::HudDrawList list;
 		list.Reset(view.width, view.height);
-		OpeningCinematicPresenter{}.Build(presentation, view, list);
+		CinematicPresenter{}.Build(presentation, view, list);
 		Require(list.GetVertices().size() > 6, "Briefing lost its background or subtitles");
 		for (const auto& vertex : list.GetVertices())
 			Require(std::abs(vertex.position.x) <= 1.001f && std::abs(vertex.position.y) <= 1.001f,
 				"Briefing subtitle escaped the viewport");
 	}
-	std::string_view briefing = "敵母艦と護衛機を確認。基地を襲った部隊の発進元だ。基地は現在も攻撃を受けており、増援は出せない。君、一機で護衛機を排除し、母艦を撃沈せよ。";
+	std::string_view briefing = "敵母艦と護衛機を確認。基地を襲った部隊の発進元だ。基地は現在も攻撃を受けてお"
+								"り、増援は出せない。君、一機で護衛機を排除し、母艦を撃沈せよ。";
 	while (!briefing.empty())
 		Require(Engine::HudFont::Glyph(Engine::HudFont::Next(briefing)) != unsigned('?' - 32),
 			"Briefing uses an unsupported glyph");
-	std::cout << "PASS: opening defaults, partial/invalid JSON, timing, fades, skip, viewport and glyphs\n";
+	const auto middle = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/midMission.json");
+	Require(middle.shots.size() == 2 && middle.briefing.empty() && middle.TotalDuration() == 4,
+		"Multi-shot cinematic definition was not loaded");
+	CinematicController timeline;
+	timeline.Start(middle, "midMission");
+	timeline.Update(2.1f, false);
+	Require(timeline.GetPresentation().active && timeline.GetPresentation().shotIndex == 1 &&
+			timeline.GetPresentation().cinematicId == "midMission" &&
+			timeline.GetPresentation().formationShot &&
+			std::abs(timeline.GetPose().travelMeters - 18) < 0.01f,
+		"Shot crossing did not preserve local elapsed time");
+	timeline.Update(2, false);
+	Require(!timeline.GetPresentation().active &&
+			timeline.TakeCompletion() == CinematicCompletion::Completed && !timeline.TakeCompletion(),
+		"Cinematic did not emit exactly one completion");
+	timeline.Start(middle, "other");
+	timeline.Update(0, true);
+	Require(timeline.TakeCompletion() == CinematicCompletion::Skipped && !timeline.TakeCompletion(),
+		"Skip completion was missing or repeated");
+	timeline.Start(middle);
+	timeline.Update(10, false);
+	Require(!timeline.GetPresentation().active, "Large frame did not finish the complete shot sequence");
+	for (const auto* json : {R"({"shots":[]})", R"({"shots":[{"durationSeconds":0}]})",
+			 R"({"shots":[{"model":""}]})", R"({"shots":[{"formationOffsets":[]}]})",
+			 R"({"shots":[{"cameraStartOffsetMeters":[0,100,-50],"cameraEndOffsetMeters":[0,80,-50]}]})"}) {
+		std::ofstream(invalid) << json;
+		bool rejected = false;
+		try {
+			LoadCinematicSettings(reader, invalid);
+		} catch (const std::exception& error) {
+			rejected = std::string(error.what()).find("opening-invalid.json") != std::string::npos;
+		}
+		Require(rejected, "Invalid shot definition was accepted or lost its path");
+	}
+	std::cout
+		<< "PASS: cinematic defaults, JSON, subtitles, timelines, shot crossings and completion events\n";
 }

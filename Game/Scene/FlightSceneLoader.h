@@ -5,7 +5,8 @@
 #include "Game/Weapons/BombDefinition.h"
 #include "Game/Combat/CombatTypes.h"
 #include "Engine/Renderer/Hud/HudDrawList.h"
-#include "Game/Cinematics/OpeningCinematicSettings.h"
+#include "Game/Cinematics/CinematicSettings.h"
+#include <map>
 namespace Engine {
 	class JsonAssetReader;
 }
@@ -45,7 +46,8 @@ namespace Game {
 		Engine::HudSettings hud;
 		std::vector<ShipDefinition> ships;
 		MissionSettings mission;
-		OpeningCinematicSettings opening;
+		CinematicSettings opening;
+		std::map<std::string, CinematicSettings> cinematics;
 		Engine::RendererDefinition BuildRendererDefinition() const {
 			Engine::RendererDefinition result{environment,
 				{{PlayerModelId, playerAircraft.model, playerAircraft.modelImport},

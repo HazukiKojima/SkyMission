@@ -120,6 +120,23 @@ namespace Game {
 				throw std::runtime_error(path.string() + ": " + error.what());
 			}
 		}
+		std::map<std::string, CinematicSettings> LoadCinematics(
+			const JsonAssetReader& reader, const std::filesystem::path& directory) {
+			const auto manifest = directory / L"cinematics.json";
+			if (!std::filesystem::exists(manifest))
+				return {{"opening", LoadCinematicSettings(reader, directory / L"opening.json")}};
+			std::map<std::string, CinematicSettings> result;
+			for (const auto* id : {"opening", "midMission", "ending", "defeat"}) {
+				if (reader.TryResolveString(manifest, id)) {
+					const auto path = reader.Resolve(manifest, id);
+					if (!std::filesystem::is_regular_file(path))
+						throw std::runtime_error(
+							manifest.string() + ": missing cinematic '" + id + "': " + path.string());
+					result.emplace(id, LoadCinematicSettings(reader, path));
+				}
+			}
+			return result;
+		}
 
 		void ValidateAIParameters(const AircraftAIParameters& parameters) {
 			for (const float value : {parameters.cruiseSpeed, parameters.attackSpeed, parameters.escapeSpeed,
@@ -387,7 +404,9 @@ namespace Game {
 			.ships = paths.ships.empty() ? std::vector<ShipDefinition>{}
 										 : LoadShipDefinitions(reader, paths.ships),
 			.mission = mission,
-			.opening = LoadOpeningCinematicSettings(
-				reader, paths.environment.parent_path().parent_path() / L"Cinematics/opening.json")};
+			.opening = LoadCinematicSettings(
+				reader, paths.environment.parent_path().parent_path() / L"Cinematics/opening.json"),
+			.cinematics =
+				LoadCinematics(reader, paths.environment.parent_path().parent_path() / L"Cinematics")};
 	}
 } // namespace Game

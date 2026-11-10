@@ -175,7 +175,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			noise.nextTarget = true;
 			for (int frame = 0; frame < 14; ++frame)
 				natural.Update({.pitch = 1, .throttle = 1}, 0.25f, {}, noise);
-			Require(natural.GetCombatSnapshot().opening.active &&
+			Require(natural.GetCombatSnapshot().cinematic.active &&
 					natural.GetCombatSnapshot().playerPosition.z == initial.playerPosition.z &&
 					natural.GetCombatSnapshot().enemies.front().center.z ==
 						initial.enemies.front().center.z &&
@@ -190,7 +190,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				natural.Update({.pitch = 1, .throttle = 1}, 0.25f, {}, noise);
 				neutral.Update({}, 0.25f);
 			}
-			Require(!natural.GetCombatSnapshot().opening.active &&
+			Require(!natural.GetCombatSnapshot().cinematic.active &&
 					natural.GetCombatSnapshot().playerPosition.z < initial.playerPosition.z &&
 					natural.GetCombatSnapshot().playerPosition.z ==
 						neutral.GetCombatSnapshot().playerPosition.z &&
@@ -207,17 +207,89 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			skipped.OnResize(2560, 1080);
 			noise.skipOpening = true;
 			skipped.Update({}, 0.1f, {}, noise);
-			Require(!skipped.GetCombatSnapshot().opening.active && skipped.GetProjectileCount() == 0 &&
+			{
+				auto registered = initialized;
+				registered.ConfigureCinematics({{"opening", definition.opening}}, [&](const std::string&) {
+					return FlightScene::CinematicModel{box, 20};
+				}, 100000);
+				Require(registered.PlayCinematic("opening") && registered.GetCombatSnapshot().cinematic.briefingLine == 0,
+					"Registered opening did not enable its briefing");
+				registered.Update({}, 0.1f, {}, {.skipOpening = true});
+				XMFLOAT4X4 actual, expected;
+				XMStoreFloat4x4(&actual, registered.GetRenderScene().GetCamera().GetView());
+				XMStoreFloat4x4(&expected, skipped.GetRenderScene().GetCamera().GetView());
+				for (size_t row = 0; row < 4; ++row)
+					for (size_t column = 0; column < 4; ++column)
+						Require(std::abs(actual.m[row][column] - expected.m[row][column]) < 0.001f,
+							"Shared opening API did not prepare the battle camera before skip");
+			}
+			Require(!skipped.GetCombatSnapshot().cinematic.active && skipped.GetProjectileCount() == 0 &&
 					skipped.GetCombatSnapshot().elapsedSeconds == initial.elapsedSeconds &&
 					skipped.GetCombatSnapshot().playerPosition.z == initial.playerPosition.z,
 				"Skipped opening consumed inputs or changed the battle start camera");
 			skipped.RemoveObject(initialPlayerId);
 			skipped.Update({}, 0.01f);
 			skipped.Update({}, 0.01f, {}, {.retry = true});
-			Require(skipped.GetCombatSnapshot().opening.active &&
-					skipped.GetCombatSnapshot().opening.elapsedSeconds == 0 &&
+			Require(skipped.GetCombatSnapshot().cinematic.active &&
+					skipped.GetCombatSnapshot().cinematic.elapsedSeconds == 0 &&
 					skipped.GetCombatSnapshot().playerHealth == initial.playerHealth,
 				"Retry did not restart the opening from the initial battle state");
+		}
+		{
+			auto reusable = initialized;
+			auto clips = definition.cinematics;
+			clips.erase("opening");
+			reusable.ConfigureCinematics(
+				clips,
+				[&](const std::string& id) {
+					return FlightScene::CinematicModel{resolveModel(id), 1};
+				},
+				100000);
+			Require(!reusable.PlayCinematic("unknown"), "Unknown cinematic ID started playback");
+			const auto removePatrol = [&] {
+				const auto enemies = reusable.GetCombatSnapshot().enemies;
+				for (const auto& enemy : enemies)
+					reusable.RemoveObject(enemy.id);
+				reusable.Update({}, 0.01f);
+			};
+			removePatrol();
+			Require(reusable.GetCombatSnapshot().cinematic.active &&
+					reusable.GetCombatSnapshot().cinematic.cinematicId == "midMission",
+				"Carrier-attack transition did not start its cinematic");
+			const auto paused = reusable.GetCombatSnapshot();
+			for (int frame = 0; frame < 3; ++frame)
+				reusable.Update({.pitch = 1, .throttle = 1}, 0.25f, {},
+					{.weapon = {.fire = true}, .missilePressCount = 2});
+			Require(reusable.GetCombatSnapshot().elapsedSeconds == paused.elapsedSeconds &&
+					reusable.GetCombatSnapshot().playerPosition.z == paused.playerPosition.z &&
+					reusable.GetCombatSnapshot().playerHealth == paused.playerHealth &&
+					reusable.GetProjectileCount() == 0 && reusable.GetCarrierMissileCount() == 0 &&
+					!reusable.PlayCinematic("ending"),
+				"Cinematic changed battle state or allowed overlapping playback");
+			reusable.Update({}, 0.01f, {}, {.skipOpening = true});
+			Require(reusable.TakeCinematicCompletion() == CinematicCompletion::Skipped,
+				"Mission host lost the skip completion");
+			reusable.Update({}, 0.01f);
+			Require(!reusable.GetCombatSnapshot().cinematic.active &&
+					reusable.GetCombatSnapshot().elapsedSeconds > paused.elapsedSeconds,
+				"Battle did not resume or repeated its intermediate cinematic");
+			reusable.RemoveObject(initialPlayerId);
+			reusable.Update({}, 0.01f);
+			Require(reusable.GetCombatSnapshot().cinematic.cinematicId == "defeat" &&
+					reusable.GetCombatSnapshot().cinematic.active,
+				"Defeat did not select its ending");
+			for (int frame = 0; frame < 16; ++frame)
+				reusable.Update({}, 0.25f);
+			Require(reusable.TakeCinematicCompletion() == CinematicCompletion::Completed &&
+					!reusable.GetCombatSnapshot().cinematic.active,
+				"Natural ending did not finish");
+			reusable.Update({}, 0.01f);
+			Require(!reusable.GetCombatSnapshot().cinematic.active, "Ending repeated after completion");
+			reusable.Update({}, 0.01f, {}, {.retry = true});
+			removePatrol();
+			Require(reusable.GetCombatSnapshot().cinematic.active &&
+					reusable.GetCombatSnapshot().cinematic.cinematicId == "midMission",
+				"Retry did not reset cinematic trigger state");
 		}
 		initialized.RemoveObject(initialPlayerId);
 		initialized.Update({}, 0.01f);
@@ -513,6 +585,23 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		Require(!scene.GetCombatSnapshot().audio.shipExplosions, "Deck audio persisted across frames");
 		checkDefeatRetry(scene);
 		removeEnemies();
+		{
+			auto victoryMovie = scene;
+			victoryMovie.ConfigureCinematics(
+				definition.cinematics,
+				[&](const std::string& id) {
+					return FlightScene::CinematicModel{resolveModel(id), 1};
+				},
+				100000);
+			const auto enemies = victoryMovie.GetCombatSnapshot().enemies;
+			for (const auto& enemy : enemies)
+				victoryMovie.RemoveObject(enemy.id);
+			victoryMovie.Update({}, 0.01f);
+			Require(victoryMovie.GetCombatSnapshot().result == CombatResult::Victory &&
+					victoryMovie.GetCombatSnapshot().cinematic.active &&
+					victoryMovie.GetCombatSnapshot().cinematic.cinematicId == "ending",
+				"Victory did not select its ending cinematic");
+		}
 		Require(scene.GetCombatSnapshot().enemies.size() == 1 &&
 				scene.GetCombatSnapshot().enemies[0].name == "敵編隊長機" &&
 				scene.GetCombatSnapshot().enemies[0].health == combat.enemyHealth * 1.5f,

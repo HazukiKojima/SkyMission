@@ -4,7 +4,7 @@
 #include "Engine/Renderer/Hud/HudRenderer.h"
 
 // 本番のモデルと描画パスで、導入の構図と暗転前後をPNGに記録する
-void TestOpeningCinematicRendering(const fs::path& repository, const fs::path& fixture) {
+void TestCinematicRendering(const fs::path& repository, const fs::path& fixture) {
 	const auto root = repository / L"Assets";
 	const auto definition = FlightSceneLoader{}.Load({.environment = root / L"Environment/environment.json",
 		.playerAircraft = root / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
@@ -91,7 +91,7 @@ void TestOpeningCinematicRendering(const fs::path& repository, const fs::path& f
 			context.SynchronizeFrameIndex(device);
 			flight.OnResize(width, height);
 			const auto& scene = flight.GetRenderScene();
-			updater.Update(scene, flight.GetCombatSnapshot().opening.elapsedSeconds,
+			updater.Update(scene, flight.GetCombatSnapshot().cinematic.elapsedSeconds,
 				definition.environment.retroFilm, buffers, device.GetDevice(), &context);
 			context.BeginFrame();
 			context.TransitionResource(device.GetSceneRenderTarget(),
@@ -137,7 +137,7 @@ void TestOpeningCinematicRendering(const fs::path& repository, const fs::path& f
 			DirectX::ScratchImage pixels;
 			ThrowIfFailed(DirectX::CaptureTexture(device.GetCommandQueue(), device.GetCurrentRenderTarget(),
 				false, pixels, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PRESENT));
-			if (flight.GetCombatSnapshot().opening.fadeOpacity >= 0.999f) {
+			if (flight.GetCombatSnapshot().cinematic.fadeOpacity >= 0.999f) {
 				const auto* image = pixels.GetImage(0, 0, 0);
 				const auto* center = image->pixels + height / 2 * image->rowPitch + width / 2 * 4;
 				Require(
@@ -160,6 +160,25 @@ void TestOpeningCinematicRendering(const fs::path& repository, const fs::path& f
 		capture(L"opening-player.png", 1280, 720);
 		flight.Update({}, 0.25f);
 		capture(L"opening-gameplay.png", 1280, 720);
+		flight.ConfigureCinematics(
+			definition.cinematics,
+			[&](const std::string& id) {
+				return FlightScene::CinematicModel{assets.GetModel(id),
+					id == PlayerModelId ? definition.playerAircraft.visualScale
+										: definition.enemyAircraft.visualScale};
+			},
+			definition.environment.ocean.size);
+		Require(flight.PlayCinematic("midMission"), "Intermediate cinematic did not start");
+		capture(L"midMission-00.png", 1280, 720);
+		for (int i = 0; i < 8; ++i)
+			flight.Update({}, 0.25f);
+		capture(L"midMission-02.png", 800, 600);
+		flight.Update({}, 0.01f, {}, {.skipOpening = true});
+		Require(flight.PlayCinematic("ending"), "Ending cinematic did not start");
+		capture(L"ending-00.png", 1280, 720);
+		flight.Update({}, 0.01f, {}, {.skipOpening = true});
+		Require(flight.PlayCinematic("defeat"), "Defeat cinematic did not start");
+		capture(L"defeat-00.png", 800, 600);
 	}
 	DestroyWindow(window);
 	std::cout << "PASS: opening real-model captures, resize, black transition and player handoff\n";

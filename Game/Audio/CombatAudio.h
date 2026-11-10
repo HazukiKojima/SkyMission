@@ -6,8 +6,9 @@
 #include <cstdint>
 #include <filesystem>
 #include <vector>
+#include <map>
 #include "Game/Combat/CombatTypes.h"
-#include "Game/Cinematics/OpeningCinematicSettings.h"
+#include "Game/Cinematics/CinematicSettings.h"
 
 namespace Game {
 	class CombatAudio {
@@ -19,10 +20,12 @@ namespace Game {
 
 		// 初期化・再生状態の制御
 		void Initialize(const std::filesystem::path& soundDirectory);
-		void Initialize(const std::filesystem::path& soundDirectory, const OpeningCinematicSettings& opening);
+		void Initialize(const std::filesystem::path& soundDirectory, const CinematicSettings& opening);
+		void Initialize(const std::filesystem::path& soundDirectory,
+			const std::map<std::string, CinematicSettings>& cinematics);
 		void Update(const CombatAudioState& state, unsigned hitCount, bool lockWarning = false,
 			bool missileWarning = false, float deltaSeconds = 0);
-		OpeningVoiceStatus UpdateOpening(const OpeningCinematicPresentation& opening);
+		CinematicVoiceStatus UpdateCinematic(const CinematicPresentation& opening);
 		void SetSuspended(bool suspended);
 		void ResetPlayback();
 
@@ -34,6 +37,11 @@ namespace Game {
 		struct Clip {
 			std::vector<BYTE> samples;
 			WAVEFORMATEX format{};
+		};
+		struct CinematicAudioBank {
+			CinematicAudioSettings settings;
+			Clip bgm;
+			std::vector<Clip> briefing;
 		};
 
 		static constexpr std::size_t kVoiceCount = 12;
@@ -60,11 +68,12 @@ namespace Game {
 		std::array<IXAudio2SourceVoice*, kVoiceCount> m_voices{};
 		IXAudio2SourceVoice* m_briefingVoice = nullptr;
 		int m_briefingLine = -1;
-		OpeningVoiceStatus m_briefingStatus = OpeningVoiceStatus::Unavailable;
-		OpeningAudioSettings m_openingAudio;
-		Clip m_openingBgm;
-		std::vector<Clip> m_briefingClips;
-		bool m_openingActive = false;
+		CinematicVoiceStatus m_briefingStatus = CinematicVoiceStatus::Unavailable;
+		std::map<std::string, CinematicAudioBank> m_cinematicBanks;
+		CinematicAudioBank* m_activeCinematicAudio = nullptr;
+		std::string m_activeCinematicId;
+		uint64_t m_activePlaybackSerial = 0;
+		bool m_cinematicActive = false;
 		IXAudio2SourceVoice* m_warningVoice = nullptr;
 		std::array<IXAudio2SourceVoice*, 4> m_loops{};
 		std::array<bool, 4> m_loopPlaying{};
