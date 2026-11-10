@@ -31,7 +31,8 @@ namespace Game {
 				context.Settings().gun.smokeStartRadius, context.Settings().gun.smokeEndRadius, progress);
 			const EffectRandom random(smoke.position);
 			context.DrawCloud(position, radius, random.Sample(0) * XM_2PI, 11,
-				{0.62f, 0.61f, 0.58f, context.Settings().gun.smokeOpacity * (1 - progress) * (1 - progress)});
+				EffectTint(context.Settings().gun.smokeColor,
+					context.Settings().gun.smokeOpacity * (1 - progress) * (1 - progress)));
 		}
 	}
 
@@ -45,8 +46,8 @@ namespace Game {
 			const auto& tracer = snapshot.gunTracers[index];
 			if (const auto segment = context.ProjectClippedSegment(tracer.head, tracer.tail))
 				context.DrawStreak(*segment, context.Settings().gun.tracerOuterWidth * scale,
-					{1, 0.32f, 0.035f, 0.75f}, context.Settings().gun.tracerInnerWidth * scale,
-					{1, 0.95f, 0.65f, 0.95f});
+					context.Settings().gun.tracerOuterColor, context.Settings().gun.tracerInnerWidth * scale,
+					context.Settings().gun.tracerInnerColor);
 		}
 
 		const size_t flashCount = std::min(snapshot.gunFlashes.size(), GunEffectSettings::maxFlashCount);
@@ -61,16 +62,18 @@ namespace Game {
 			const auto muzzle = XMLoadFloat3(&flash.position);
 			const auto forward = XMVector3Normalize(XMLoadFloat3(&flash.direction));
 			const float radius = context.Settings().gun.flashRadius * variation;
-			context.DrawGlow(muzzle, radius, {1, 0.35f, 0.035f, fade * 0.8f});
-			context.DrawGlow(muzzle, radius * 0.45f, {1, 0.98f, 0.7f, fade});
+			context.DrawGlow(muzzle, radius, EffectTint(context.Settings().gun.flashOuterColor, fade));
+			context.DrawGlow(
+				muzzle, radius * 0.45f, EffectTint(context.Settings().gun.flashInnerColor, fade));
 			const auto flameTip = muzzle + forward * (context.Settings().gun.flameLength * variation);
 			context.DrawCloud(muzzle + forward * (context.Settings().gun.flameLength * 0.4f), radius * 0.65f,
-				phase, 31, {1, 0.55f, 0.08f, fade * 0.75f});
+				phase, 31, EffectTint(context.Settings().gun.flameColor, fade));
 			XMFLOAT3 tip;
 			XMStoreFloat3(&tip, flameTip);
 			if (const auto segment = context.ProjectClippedSegment(tip, flash.position))
-				context.DrawStreak(
-					*segment, 5 * scale, {1, 0.4f, 0.04f, fade * 0.65f}, 2 * scale, {1, 0.95f, 0.65f, fade});
+				context.DrawStreak(*segment, 5 * scale,
+					EffectTint(context.Settings().gun.flameOuterColor, fade), 2 * scale,
+					EffectTint(context.Settings().gun.flameInnerColor, fade));
 		}
 	}
 } // namespace Game

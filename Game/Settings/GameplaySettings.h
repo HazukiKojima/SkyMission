@@ -1,6 +1,37 @@
 #pragma once
 #include "SettingsReader.h"
+#include <algorithm>
 namespace Game {
+	struct CombatFeedbackSettings {
+		float playerHitSeconds = 0.7f;
+		float hitSeconds = 0.15f;
+		float destroyedSeconds = 0.8f;
+		float enemyFireWarningSeconds = 1.0f;
+		float allDownSeconds = 3.0f;
+
+		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
+			SettingsReader r(reader, path);
+			r.Number("/feedback/playerHitSeconds", playerHitSeconds, 0, 10000);
+			r.Number("/feedback/hitSeconds", hitSeconds, 0, 10000);
+			r.Number("/feedback/destroyedSeconds", destroyedSeconds, 0, 10000);
+			r.Number("/feedback/enemyFireWarningSeconds", enemyFireWarningSeconds, 0, 10000);
+			r.Number("/feedback/allDownSeconds", allDownSeconds, 0, 10000);
+		}
+	};
+	struct AircraftAnimationSettings {
+		float propellerAngularSpeedPerSpeed = 0.06f;
+
+		float AdvancePropeller(float angle, float speed, float dt) const {
+			return std::fmod(
+				angle + speed * propellerAngularSpeedPerSpeed * std::min(dt, 0.25f), DirectX::XM_2PI);
+		}
+
+		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
+			SettingsReader r(reader, path);
+			r.Number("propellerAngularSpeedPerSpeed", propellerAngularSpeedPerSpeed, 0, 10000);
+		}
+	};
+
 	struct CameraSettings {
 		float fovDegrees = 60.0f;
 		float moveSpeed = 100.0f;
@@ -79,6 +110,61 @@ namespace Game {
 		}
 	};
 	struct EnemyAITuning {
+		float safeDistanceScale = 1.42f;
+		float safeDistanceSlotStep = 0.06f;
+		float reentryAheadDot = 0.85f;
+		float reentryReadyTimeScale = 0.5f;
+		float collisionClosestMeters = 1000.0f;
+		float collisionClosestDistanceScale = 0.34f;
+		float collisionRangeMeters = 3500.0f;
+		float collisionRangeScale = 1.2f;
+		float collisionForwardWeight = 0.35f;
+		float collisionClimbWeight = 0.35f;
+		float collisionRecheckSeconds = 0.35f;
+		float continuousTurnThreshold = 0.3f;
+		float opportunisticFireDistance = 2200.0f;
+		float recoverClimb = 0.7f;
+		float turnDirectionThresholdRadians = 0.05f;
+		float defenseTurnRadius = 10000.0f;
+		float passMinimumVariationSeconds = 0.9f;
+		float passMaximumBaseSeconds = 7.0f;
+		float passMaximumSlotSeconds = 0.38f;
+		float passMaximumVariationSeconds = 0.6f;
+		float passLegVariationMeters = 900.0f;
+		float passReferenceDistanceMeters = 4500.0f;
+		float initialReentrySeconds = 1.5f;
+		float reentryMinimumSeconds = 1.2f;
+		float reentryVariationSeconds = 1.8f;
+		float reentryLaneScale = 0.8f;
+		float reentryLaneVariation = 0.4f;
+		float reentryForwardStepMeters = 600.0f;
+		float reentryForwardOffsetMeters = -500.0f;
+		float reentryClimbMeters = 2000.0f;
+		float turnBurstScale = 0.8f;
+		float turnBurstVariation = 0.4f;
+		float exitAngleOffsetRadians = 0.12f;
+		float exitAngleVariationRadians = 0.35f;
+		float closePassDistanceMeters = 1800.0f;
+		float closePassDistanceScale = 0.65f;
+		float closePassLateralThresholdMeters = 100.0f;
+		float closePassAngleDegrees = 55.0f;
+		float closePassAngleSlotDegrees = 5.0f;
+		float closePassAngleVariationDegrees = 5.0f;
+		float climbVariation = 0.08f;
+		float lowAltitudeClearanceMeters = 350.0f;
+		float escapeClimbLimit = 0.18f;
+		float bankYawThresholdRadians = 0.15f;
+		float rudderYawLimitRadians = 0.6f;
+		float rudderGain = 2.0f;
+		float desiredPitchLimitRadians = 0.6f;
+		float targetAltitudeClearanceMeters = 300.0f;
+		float descentPitchLimitRadians = 0.25f;
+		float spacingHighGSeconds = 1.8f;
+		float highGYawThresholdRadians = 0.7f;
+		float patrolPitchLimitRadians = 0.45f;
+		float patrolHighGThreshold = 0.3f;
+		float patrolHighGMinimumTurn = 0.85f;
+
 		std::array<float, 6> stylePassDelay{0.0f, 0.5f, 1.1f, 0.2f, 0.8f, 1.4f};
 		std::array<float, 6> styleTurnScale{1.0f, 0.92f, 0.98f, 0.88f, 0.94f, 0.9f};
 		std::array<float, 6> styleClimb{0.0f, 0.1f, -0.04f, 0.16f, -0.09f, 0.06f};
@@ -103,6 +189,61 @@ namespace Game {
 			-0.7853981634f, 1.5707963268f, 0.7853981634f, -3.1415926536f, -1.5707963268f};
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
 			SettingsReader r(reader, path);
+			r.Number("safeDistanceScale", safeDistanceScale, 0, 100000);
+			r.Number("safeDistanceSlotStep", safeDistanceSlotStep, 0, 100000);
+			r.Number("reentryAheadDot", reentryAheadDot, 0, 1);
+			r.Number("reentryReadyTimeScale", reentryReadyTimeScale, 0, 100000);
+			r.Number("collisionClosestMeters", collisionClosestMeters, 0, 100000);
+			r.Number("collisionClosestDistanceScale", collisionClosestDistanceScale, 0, 100000);
+			r.Number("collisionRangeMeters", collisionRangeMeters, 0, 100000);
+			r.Number("collisionRangeScale", collisionRangeScale, 0, 100000);
+			r.Number("collisionForwardWeight", collisionForwardWeight, 0, 100000);
+			r.Number("collisionClimbWeight", collisionClimbWeight, 0, 100000);
+			r.Number("collisionRecheckSeconds", collisionRecheckSeconds, 0.000001f, 100000);
+			r.Number("continuousTurnThreshold", continuousTurnThreshold, 0, 1);
+			r.Number("opportunisticFireDistance", opportunisticFireDistance, 0, 100000);
+			r.Number("recoverClimb", recoverClimb, 0, 100000);
+			r.Number("turnDirectionThresholdRadians", turnDirectionThresholdRadians, 0, 100000);
+			r.Number("defenseTurnRadius", defenseTurnRadius, 0, 100000);
+			r.Number("passMinimumVariationSeconds", passMinimumVariationSeconds, 0, 100000);
+			r.Number("passMaximumBaseSeconds", passMaximumBaseSeconds, 0, 100000);
+			r.Number("passMaximumSlotSeconds", passMaximumSlotSeconds, 0, 100000);
+			r.Number("passMaximumVariationSeconds", passMaximumVariationSeconds, 0, 100000);
+			r.Number("passLegVariationMeters", passLegVariationMeters, 0, 100000);
+			r.Number("passReferenceDistanceMeters", passReferenceDistanceMeters, 0.000001f, 100000);
+			r.Number("initialReentrySeconds", initialReentrySeconds, 0.000001f, 100000);
+			r.Number("reentryMinimumSeconds", reentryMinimumSeconds, 0.000001f, 100000);
+			r.Number("reentryVariationSeconds", reentryVariationSeconds, 0, 100000);
+			r.Number("reentryLaneScale", reentryLaneScale, 0, 100000);
+			r.Number("reentryLaneVariation", reentryLaneVariation, 0, 100000);
+			r.Number("reentryForwardStepMeters", reentryForwardStepMeters, 0, 100000);
+			r.Number("reentryForwardOffsetMeters", reentryForwardOffsetMeters, -100000, 100000);
+			r.Number("reentryClimbMeters", reentryClimbMeters, 0, 100000);
+			r.Number("turnBurstScale", turnBurstScale, 0, 100000);
+			r.Number("turnBurstVariation", turnBurstVariation, 0, 100000);
+			r.Number("exitAngleOffsetRadians", exitAngleOffsetRadians, 0, 100000);
+			r.Number("exitAngleVariationRadians", exitAngleVariationRadians, 0, 100000);
+			r.Number("closePassDistanceMeters", closePassDistanceMeters, 0, 100000);
+			r.Number("closePassDistanceScale", closePassDistanceScale, 0, 100000);
+			r.Number("closePassLateralThresholdMeters", closePassLateralThresholdMeters, 0, 100000);
+			r.Number("closePassAngleDegrees", closePassAngleDegrees, 0, 100000);
+			r.Number("closePassAngleSlotDegrees", closePassAngleSlotDegrees, 0, 100000);
+			r.Number("closePassAngleVariationDegrees", closePassAngleVariationDegrees, 0, 100000);
+			r.Number("climbVariation", climbVariation, 0, 100000);
+			r.Number("lowAltitudeClearanceMeters", lowAltitudeClearanceMeters, 0, 100000);
+			r.Number("escapeClimbLimit", escapeClimbLimit, 0, 1.5f);
+			r.Number("bankYawThresholdRadians", bankYawThresholdRadians, 0, 100000);
+			r.Number("rudderYawLimitRadians", rudderYawLimitRadians, 0, 100000);
+			r.Number("rudderGain", rudderGain, 0, 100000);
+			r.Number("desiredPitchLimitRadians", desiredPitchLimitRadians, 0, 1.5f);
+			r.Number("targetAltitudeClearanceMeters", targetAltitudeClearanceMeters, 0, 100000);
+			r.Number("descentPitchLimitRadians", descentPitchLimitRadians, 0, 1.5f);
+			r.Number("spacingHighGSeconds", spacingHighGSeconds, 0, 100000);
+			r.Number("highGYawThresholdRadians", highGYawThresholdRadians, 0, 100000);
+			r.Number("patrolPitchLimitRadians", patrolPitchLimitRadians, 0, 1.5f);
+			r.Number("patrolHighGThreshold", patrolHighGThreshold, 0, 1);
+			r.Number("patrolHighGMinimumTurn", patrolHighGMinimumTurn, 0, 1);
+
 			r.Number("minimumPassSeconds", minimumPassSeconds, 0.000001f, 1000000);
 			r.Number("maximumPassSeconds", maximumPassSeconds, 0.000001f, 1000000);
 			r.Number("defenseOuterRadius", defenseOuterRadius, 0.000001f, 1000000);
@@ -217,7 +358,126 @@ namespace Game {
 			r.Text("battleBgmFile", battleBgmFile);
 		}
 	};
+	struct HudLayoutSettings {
+		float controlsFontSize = 36.0f;
+		float controlsLineHeight = 48.0f;
+		float controlsRightMargin = 48.0f;
+		float controlsBottomMargin = 48.0f;
+		float radarSize = 320.0f;
+		float radarLeftMargin = 48.0f;
+		float radarBottomMargin = 48.0f;
+		float radarRadius = 126.0f;
+		float radarStatusGap = 24.0f;
+		float carrierBarX = 48.0f;
+		float carrierBarY = 66.0f;
+		float carrierBarWidth = 760.0f;
+		float carrierBarHeight = 24.0f;
+		float carrierLabelY = 26.0f;
+		float carrierLabelFontSize = 30.0f;
+		float flightPanelTop = 420.0f;
+		float flightPanelWidth = 240.0f;
+		float flightPanelHeight = 64.0f;
+		float flightPanelTipWidth = 16.0f;
+		float speedPanelX = 100.0f;
+		float altitudePanelX = 1580.0f;
+		float flightLabelGap = 8.0f;
+		float flightValuePadding = 12.0f;
+		float healthStatusY = 108.0f;
+		float fireWarningY = 330.0f;
+		float missionX = 540.0f;
+		float missionY = 116.0f;
+		float missionLineHeight = 44.0f;
+		float missileStatusY = 188.0f;
+		float lockStatusY = 236.0f;
+		float carrierMarkerRadius = 44.0f;
+		float combatAreaMarkerRadius = 26.0f;
+		float impactMarkerRadius = 14.0f;
+		float directionArrowScale = 1.0f;
+		float offscreenIndicatorScale = 1.0f;
+		float gunSightScale = 1.0f;
+		float selectedEnemyRadius = 32.0f;
+		float enemyRadius = 22.0f;
+		float markerTextGap = 8.0f;
+		float markerLabelGap = 4.0f;
+		float screenTextMargin = 16.0f;
+
+		std::array<float, 2> resultPosition{740.0f, 380.0f};
+		std::array<float, 2> retryPosition{740.0f, 440.0f};
+		std::array<float, 2> playerHitPosition{820.0f, 800.0f};
+		std::array<float, 2> targetStatusPosition{80.0f, 80.0f};
+		std::array<float, 2> destroyedPosition{800.0f, 720.0f};
+		std::array<float, 2> hitPosition{920.0f, 640.0f};
+		std::array<float, 2> allDownPosition{760.0f, 180.0f};
+		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
+			SettingsReader r(reader, path);
+			r.Array("/layout/resultPosition", resultPosition, 0, 10000);
+			r.Array("/layout/retryPosition", retryPosition, 0, 10000);
+			r.Array("/layout/playerHitPosition", playerHitPosition, 0, 10000);
+			r.Array("/layout/targetStatusPosition", targetStatusPosition, 0, 10000);
+			r.Array("/layout/destroyedPosition", destroyedPosition, 0, 10000);
+			r.Array("/layout/hitPosition", hitPosition, 0, 10000);
+			r.Array("/layout/allDownPosition", allDownPosition, 0, 10000);
+
+			r.Number("/layout/controlsFontSize", controlsFontSize, 0, 10000);
+			r.Number("/layout/controlsLineHeight", controlsLineHeight, 0, 10000);
+			r.Number("/layout/controlsRightMargin", controlsRightMargin, 0, 10000);
+			r.Number("/layout/controlsBottomMargin", controlsBottomMargin, 0, 10000);
+			r.Number("/layout/radarSize", radarSize, 0, 10000);
+			r.Number("/layout/radarLeftMargin", radarLeftMargin, 0, 10000);
+			r.Number("/layout/radarBottomMargin", radarBottomMargin, 0, 10000);
+			r.Number("/layout/radarRadius", radarRadius, 0, 10000);
+			r.Number("/layout/radarStatusGap", radarStatusGap, 0, 10000);
+			r.Number("/layout/carrierBarX", carrierBarX, 0, 10000);
+			r.Number("/layout/carrierBarY", carrierBarY, 0, 10000);
+			r.Number("/layout/carrierBarWidth", carrierBarWidth, 0, 10000);
+			r.Number("/layout/carrierBarHeight", carrierBarHeight, 0, 10000);
+			r.Number("/layout/carrierLabelY", carrierLabelY, 0, 10000);
+			r.Number("/layout/carrierLabelFontSize", carrierLabelFontSize, 0, 10000);
+			r.Number("/layout/flightPanelTop", flightPanelTop, 0, 10000);
+			r.Number("/layout/flightPanelWidth", flightPanelWidth, 0, 10000);
+			r.Number("/layout/flightPanelHeight", flightPanelHeight, 0, 10000);
+			r.Number("/layout/flightPanelTipWidth", flightPanelTipWidth, 0, 10000);
+			r.Number("/layout/speedPanelX", speedPanelX, 0, 10000);
+			r.Number("/layout/altitudePanelX", altitudePanelX, 0, 10000);
+			r.Number("/layout/flightLabelGap", flightLabelGap, 0, 10000);
+			r.Number("/layout/flightValuePadding", flightValuePadding, 0, 10000);
+			r.Number("/layout/healthStatusY", healthStatusY, 0, 10000);
+			r.Number("/layout/fireWarningY", fireWarningY, 0, 10000);
+			r.Number("/layout/missionX", missionX, 0, 10000);
+			r.Number("/layout/missionY", missionY, 0, 10000);
+			r.Number("/layout/missionLineHeight", missionLineHeight, 0, 10000);
+			r.Number("/layout/missileStatusY", missileStatusY, 0, 10000);
+			r.Number("/layout/lockStatusY", lockStatusY, 0, 10000);
+			r.Number("/layout/carrierMarkerRadius", carrierMarkerRadius, 0, 10000);
+			r.Number("/layout/combatAreaMarkerRadius", combatAreaMarkerRadius, 0, 10000);
+			r.Number("/layout/impactMarkerRadius", impactMarkerRadius, 0, 10000);
+			r.Number("/layout/directionArrowScale", directionArrowScale, 0, 10000);
+			r.Number("/layout/offscreenIndicatorScale", offscreenIndicatorScale, 0, 10000);
+			r.Number("/layout/gunSightScale", gunSightScale, 0, 10000);
+			r.Number("/layout/selectedEnemyRadius", selectedEnemyRadius, 0, 10000);
+			r.Number("/layout/enemyRadius", enemyRadius, 0, 10000);
+			r.Number("/layout/markerTextGap", markerTextGap, 0, 10000);
+			r.Number("/layout/markerLabelGap", markerLabelGap, 0, 10000);
+			r.Number("/layout/screenTextMargin", screenTextMargin, 0, 10000);
+
+			r.Require(radarSize >= 100 && radarSize <= 1080, "layout", "inconsistent HUD layout");
+			r.Require(radarRadius > 0 && radarRadius <= 160, "layout", "inconsistent HUD layout");
+			r.Require(controlsFontSize > 0 && controlsLineHeight >= controlsFontSize, "layout",
+				"inconsistent HUD layout");
+			r.Require(carrierBarWidth > 0 && carrierBarHeight > 0, "layout", "inconsistent HUD layout");
+			r.Require(flightPanelWidth > flightPanelTipWidth && flightPanelHeight > 0, "layout",
+				"inconsistent HUD layout");
+			r.Require(missionLineHeight > 0, "layout", "inconsistent HUD layout");
+			r.Require(
+				directionArrowScale > 0 && directionArrowScale <= 4, "layout", "inconsistent HUD layout");
+			r.Require(offscreenIndicatorScale > 0 && offscreenIndicatorScale <= 4, "layout",
+				"inconsistent HUD layout");
+			r.Require(gunSightScale > 0 && gunSightScale <= 4, "layout", "inconsistent HUD layout");
+		}
+	};
+
 	struct UiTuning {
+		HudLayoutSettings layout;
 		float radarRangeMeters = 10000.0f;
 		DirectX::XMFLOAT4 ink{0.9098039215686274f, 0.8509803921568627f, 0.7098039215686275f, 0.95f};
 		DirectX::XMFLOAT4 selected{0.95f, 0.65f, 0.24f, 1.0f};
@@ -225,6 +485,7 @@ namespace Game {
 		DirectX::XMFLOAT4 caution{0.85f, 0.64f, 0.32f, 1.0f};
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
 			SettingsReader r(reader, path);
+			layout.Load(reader, path);
 			r.Number("radarRangeMeters", radarRangeMeters, 0.000001f, 1000000);
 			r.Color("ink", ink);
 			r.Color("selected", selected);

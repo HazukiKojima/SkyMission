@@ -57,6 +57,7 @@ namespace Game {
 	  public:
 		void ConfigureTuning(const EnemyAITuning& settings) {
 			m_tuning = settings;
+			if (m_combatTime == 0) m_reentrySeconds = settings.initialReentrySeconds;
 		}
 		// 射撃後は照準の保持時間だけをリセットし、攻撃航路は継続する
 		void NotifyWeaponFired() {

@@ -3,5 +3,6 @@
   "visualScale": 20,
   "flightParameters": "flightParameters.json",
   "aiParameters": "aiParameters.json",
-  "modelImport": "modelImport.json"
+  "modelImport": "modelImport.json",
+  "propellerAngularSpeedPerSpeed": 0.06
 }

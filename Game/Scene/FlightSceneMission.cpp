@@ -45,7 +45,7 @@ namespace Game {
 				break;
 			case MissionPhase::Complete:
 				m_combat.result = CombatResult::Victory;
-				m_combat.allDownSeconds = 3;
+				m_combat.allDownSeconds = m_combatSettings.feedback.allDownSeconds;
 				break;
 			case MissionPhase::Failed:
 				m_combat.result = CombatResult::Defeat;
@@ -130,7 +130,6 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateEnemyGuns() {
-		constexpr float kEnemyFireWarningDurationSeconds = 1.0f;
 		for (auto& enemy : m_enemies) {
 			if (!enemy.fire || enemy.weaponCooldownSeconds > 0) continue;
 			const CombatTarget player{m_playerId, m_player.GetPosition(), m_player.GetVelocity()};
@@ -163,12 +162,12 @@ namespace Game {
 					m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId, m_enemyAITuning);
 				enemy.weaponCooldownSeconds = interval * engagement.shotIntervalScale;
 				enemy.gunPattern.NotifyShot();
-				m_combat.enemyFireWarningSeconds = kEnemyFireWarningDurationSeconds;
+				m_combat.enemyFireWarningSeconds = m_combatSettings.feedback.enemyFireWarningSeconds;
 				const auto enemyPosition = enemy.flightModel.GetPosition();
 				const auto playerForward = m_player.GetForward();
 				const auto toEnemy = XMLoadFloat3(&enemyPosition) - XMLoadFloat3(&player.center);
 				if (XMVectorGetX(XMVector3Dot(toEnemy, XMLoadFloat3(&playerForward))) < 0) {
-					m_combat.enemyRearFireWarningSeconds = kEnemyFireWarningDurationSeconds;
+					m_combat.enemyRearFireWarningSeconds = m_combatSettings.feedback.enemyFireWarningSeconds;
 				}
 			}
 		}

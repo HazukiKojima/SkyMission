@@ -9,12 +9,14 @@
 | ファイル（Assets配下） | 設定内容 |
 | --- | --- |
 | `Combat/mission.json` | 自機開始位置、戦闘区域・接近距離、編隊間隔・前後差・高度差、初動の遅延、対空砲の弾速・威力・予測時間・照準のばらつき・発射位置、甲板の厚さ、任務メッセージ表示時間 |
+| `Combat/targeting.json` | 既存の捕捉・耐久設定と、`feedback`内の被弾・命中・撃墜・敵射撃警告・全目標撃破の表示秒数 |
+| `Aircraft/*/機体名.json` | `propellerAngularSpeedPerSpeed`：通常飛行中の速度に対するプロペラ回転倍率。自機・敵機それぞれ指定できる |
 | `Combat/enemyWeapon.json` | 敵機銃の威力、弾の寿命、初回の待ち時間、連射・休止時間とばらつき、予測射撃の割合、照準誤差、散布角 |
-| `Aircraft/F4U4Corsair/aiParameters.json` | 既存AI設定に加え、離脱時間、防衛半径、連続旋回時間、後方判定、非ロック機の攻撃性倍率、経路・再進入位置・旋回方向、機体別行動パターン |
+| `Aircraft/F4U4Corsair/aiParameters.json` | 既存AI設定に加え、離脱時間、防衛半径、連続旋回時間、後方判定、非ロック機の攻撃性倍率、経路・再進入位置・旋回方向、機体別行動パターン、再進入時間・経路のばらつき、離脱角度、低高度回避余裕、衝突回避と操縦のしきい値 |
 | `Sound/audio.json` | 飛行音・機銃・ミサイル・被弾・爆発・戦闘BGMのファイル名と音量、警告音の音量と繰り返し間隔 |
-| `Effects/combatEffects.json` | `gun`・`impact`・`explosion`・`carrier`・`rocket`・`deck`ごとの寿命、半径、太さ、不透明度、移動・上昇速度、発生間隔、破片や煙のサンプル数 |
+| `Effects/combatEffects.json` | `gun`・`impact`・`explosion`・`carrier`・`rocket`・`deck`ごとの寿命、半径、太さ、不透明度、移動・上昇速度、発生間隔、破片や煙のサンプル数、煙・曳光弾・閃光・炎・破片・排気のRGBA色と色の補間端点 |
 | `Camera/aircraftCamera.json` | 通常カメラのFOV、移動速度、マウス感度、追従距離・高さ・補間、見回し復帰、ピッチ制限、高速時の距離変化、注視点の先行距離 |
-| `UI/combatHud.json` | 既存HUD設定に加え、レーダー範囲、レーダー・演出の基本色、選択・警告・注意のRGBA色 |
+| `UI/combatHud.json` | 既存HUD設定に加え、レーダー範囲、レーダー・演出の基本色、選択・警告・注意のRGBA色、`layout`内のパネル位置・寸法・余白・操作説明文字サイズ・通知位置・マーカー倍率 |
 | `UI/labels.json` | 操作説明、任務文、警告文、敵の表示名。`labels`内の元の日本語をキーとして、表示する文字列を指定 |
 | `Cinematics/*.json` | `textScale`、`briefingFontSize`、`titleFontSize`、`subtitleFontSize`、`hintFontSize`、`lineSpacing`、`barHeightFraction`、`titleBottomOffset`、`subtitleBottomOffset`、`skipHint` |
 | `Ammunition/Rocket/ammunition.json` | ミサイルの誘導旋回速度、左右・下方向の発射オフセット、寿命、煙の発生間隔、搭載数 |
@@ -22,6 +24,47 @@
 ミサイル特性は、弾薬定義の`model`と同じディレクトリにある`ammunition.json`から読む。
 既存の`Ammunition/Bomb/ammunition.json`はRocketモデルを参照するため、Rocket側を編集する。
 弾速・威力・再装填時間は引き続き`Combat/mission.json`で設定する。
+
+## 追加の調整例
+
+HUDの座標・寸法は`UI/combatHud.json`の`layout`内にある。省略した項目は既定値を使う。
+
+```json
+{
+  "radarRangeMeters": 2500,
+  "layout": {
+    "radarSize": 400,
+    "radarLeftMargin": 80,
+    "radarBottomMargin": 60,
+    "controlsFontSize": 40,
+    "controlsLineHeight": 52,
+    "hitPosition": [920, 640]
+  }
+}
+```
+
+上の範囲では、レーダーの外周を`2.5 km`、中間円を`1.25 km`と表示する。
+1000未満はメートル表示。パネルの内部図形は基準寸法320から全体を拡縮し、
+`radarRadius`は320基準の半径として扱う。隣接ステータス欄もパネル幅と`radarStatusGap`に追従する。
+操作説明は画面右下の余白、通知や任務文は1920×1080基準の座標で配置する。
+矢印・照準は`directionArrowScale`・`offscreenIndicatorScale`・`gunSightScale`で全体を拡縮する。
+操作説明の行間は文字サイズ以上、レーダー寸法は100〜1080、記号倍率は0より大きく4以下にする。
+
+通知秒数は`Combat/targeting.json`の`feedback`内で指定し、0にするとその通知を非表示にする。
+`playerHitSeconds`・`hitSeconds`・`destroyedSeconds`・`enemyFireWarningSeconds`・`allDownSeconds`を指定できる。
+
+`Effects/combatEffects.json`の色は4成分のRGBA（各0〜1）。
+`gun.tracerOuterColor`・`gun.flashOuterColor`・`impact.smokeColor`などで色と基本不透明度を調整する。
+時間によるフェードは設定したalphaに掛ける。爆発の炎・煙・命中破片は
+`fireColdColor`/`fireHotColor`、`smokeDarkColor`/`smokeLightColor`、
+`fragmentColdColor`/`fragmentHotColor`の間で色を補間する。
+煙の不透明度は既存の`smokeOpacity`や追加の`smokeMaxOpacity`も掛け合わせる。
+
+プロペラは`Aircraft/N1K2JShidenKai/N1K2JShidenKai.json`と
+`Aircraft/F4U4Corsair/F4U4Corsair.json`の`propellerAngularSpeedPerSpeed`で調整する。
+既定値は`0.06`、`0.12`で従来の2倍、`0`で停止する。
+回転角の増分は「速度 × 倍率 × 経過秒」で計算する。演出中の回転速度は引き続き
+`Cinematics/*.json`の`propellerRadiansPerSecond`で独立して設定する。
 
 ## 単位と制約
 
@@ -47,8 +90,9 @@ AIの追加設定は既存のREDox連携構造体の外に保持し、ネイテ�
 ## 検証
 
 `Tests/GameplaySettingsTests.h`で省略時の初期値、不正値の拒否、配列、表示文字列、演出文字の受け渡し、
-エフェクト寿命、レーダー範囲、ミサイル容量・発射位置、射撃時間、インスタンス間の独立性を検証する。
-`Tests/MissionTests.h`では本番のシーン生成経路で自機開始位置とミサイル搭載数の反映を確認する。
+エフェクト寿命、レーダー範囲、ミサイル容量・発射位置、射撃時間、インスタンス間の独立性に加え、入れ子配列・RGBA、設定したHUDの頂点座標、実際の曳光弾の描画色、距離表示、追加AI設定とプロペラ倍率を検証する。
+`Tests/MissionTests.h`では本番のシーン生成経路で自機開始位置・ミサイル搭載数の反映、プロペラ停止とリトライ時の維持を確認する。
+`Tests/CombatTests.h`では命中・撃墜通知の秒数が実際の命中イベントから反映されることを確認する。
 
 ```powershell
 ./Tests/RunRegressionTests.ps1 -BuildDirectory out/json-tuning-regression `

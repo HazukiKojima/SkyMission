@@ -55,6 +55,7 @@ namespace Game {
 				.modelImport = LoadModelOptions(reader, path)};
 			if (!std::isfinite(aircraft.visualScale) || aircraft.visualScale <= 0)
 				throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
+			aircraft.animation.Load(reader, path);
 			ValidateFlightParameters(aircraft.flightParameters);
 			return aircraft;
 		}

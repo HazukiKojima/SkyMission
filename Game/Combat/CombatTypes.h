@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Settings/GameplaySettings.h"
 #include "Engine/Scene/Scene.h"
 #include <array>
 #include <optional>
@@ -19,6 +20,7 @@ namespace Game {
 		float assistAngleDegrees = 3;
 	};
 	struct CombatSettings {
+		CombatFeedbackSettings feedback;
 		TargetingSettings targeting;
 		float enemyHealth = 120;
 		float playerHealth = 100;
@@ -84,6 +86,7 @@ namespace Game {
 		float carrierHealth = 0;
 		float carrierMaxHealth = 0;
 		unsigned carrierMissileAmmo = 2;
+		unsigned carrierMissileCapacity = 2;
 		MissionPhase missionPhase = MissionPhase::Patrol;
 		bool deckDisabled = false;
 		float missileCooldownSeconds = 0;

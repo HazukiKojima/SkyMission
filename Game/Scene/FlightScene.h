@@ -212,6 +212,7 @@ namespace Game {
 		AircraftCameraController m_cameraController;
 		AircraftFlightModel m_player;
 		Engine::ObjectId m_playerId = Engine::InvalidObjectId;
+		AircraftAnimationSettings m_playerAnimation, m_enemyAnimation;
 		float m_playerVisualScale = 1;
 		float m_playerPropellerAngle = 0;
 		std::vector<EnemyAircraft> m_enemies;

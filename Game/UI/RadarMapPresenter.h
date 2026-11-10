@@ -21,11 +21,12 @@ namespace Game {
 	class RadarMapPresenter {
 	  public:
 		static constexpr float RangeMeters = 10000;
+		static std::string FormatRange(float meters);
 		static RadarLayout Layout(const Engine::RenderView& view, const UiTuning& tuning = {});
 		// 北は-Z、画面右は-X。高度とカメラ姿勢には依存しない
 		static RadarPoint Project(
 			DirectX::XMFLOAT3 world, DirectX::XMFLOAT3 player, const RadarLayout& layout);
 		void Build(const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list,
-			const UiTuning& tuning = {}, const UiTextSettings& text = UiTextSettings::Defaults()) const;
+			const UiTuning& tuning = {}) const;
 	};
 } // namespace Game

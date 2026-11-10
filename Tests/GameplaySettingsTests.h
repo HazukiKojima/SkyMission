@@ -131,5 +131,110 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 	mission.LoadTuning(reader, file);
 	Require(mission.playerStartPosition.y == 2500 && mission.antiAircraftDamage == 15,
 		"Mission tuning not loaded");
+
+	rejects(R"({"layout":{"controlsFontSize":0}})", [&] {
+		UiTuning{}.Load(reader, file);
+	});
+	rejects(R"({"layout":{"radarSize":0}})", [&] {
+		UiTuning{}.Load(reader, file);
+	});
+	rejects(R"({"layout":{"hitPosition":[1]}})", [&] {
+		UiTuning{}.Load(reader, file);
+	});
+	rejects(R"({"feedback":{"playerHitSeconds":-1}})", [&] {
+		CombatFeedbackSettings{}.Load(reader, file);
+	});
+	rejects(R"({"gun":{"tracerOuterColor":[0,0,0,2]}})", [&] {
+		EffectSettings{}.Load(reader, file);
+	});
+	rejects(R"({"gun":{"tracerOuterColor":[0,0,0]}})", [&] {
+		EffectSettings{}.Load(reader, file);
+	});
+	rejects(R"({"reentryMinimumSeconds":0})", [&] {
+		EnemyAITuning{}.Load(reader, file);
+	});
+	rejects(R"({"propellerAngularSpeedPerSpeed":-0.1})", [&] {
+		AircraftAnimationSettings{}.Load(reader, file);
+	});
+	Require(RadarMapPresenter::FormatRange(10000) == "10 km" &&
+			RadarMapPresenter::FormatRange(2500) == "2.5 km" &&
+			RadarMapPresenter::FormatRange(1250) == "1.25 km" &&
+			RadarMapPresenter::FormatRange(400) == "400 m",
+		"Radar range labels disagree with configured meters");
+	write(
+		R"({"layout":{"radarSize":400,"radarLeftMargin":80,"radarBottomMargin":60,"radarStatusGap":50,"hitPosition":[120,140],"carrierBarX":140,"carrierBarY":120,"carrierBarWidth":200}})");
+	UiTuning customLayout;
+	customLayout.Load(reader, file);
+	const auto customRadar = RadarMapPresenter::Layout(view, customLayout);
+	Require(customRadar.origin.x == 80 && customRadar.origin.y == 620 && customRadar.statusOrigin.x == 530 &&
+			customLayout.layout.hitPosition[0] == 120 && customLayout.layout.hitPosition[1] == 140,
+		"Nested HUD layout was ignored");
+	CombatSnapshot hudState;
+	hudState.carrierPresent = true;
+	hudState.carrierHealth = hudState.carrierMaxHealth = 300;
+	HudDrawList hudVertices;
+	hudVertices.Reset(view.width, view.height);
+	CombatHudPresenter hudPresenter;
+	hudPresenter.ConfigureTuning(customLayout);
+	hudPresenter.Build(hudState, view, hudVertices);
+	float barLeft = 1, barRight = -1;
+	for (const auto& vertex : hudVertices.GetVertices()) {
+		if (vertex.color.x == 0.025f && vertex.color.w == 0.8f) {
+			barLeft = std::min(barLeft, vertex.position.x);
+			barRight = std::max(barRight, vertex.position.x);
+		}
+	}
+	Require(std::abs(barLeft - (2 * 140.0f / view.width - 1)) < 0.0001f &&
+			std::abs(barRight - (2 * 340.0f / view.width - 1)) < 0.0001f,
+		"Configured carrier panel geometry ignored");
+	write(
+		R"({"gun":{"tracerOuterColor":[0.1,0.2,0.3,0.4]},"explosion":{"fireColdColor":[0,0,1,0.5],"fireHotColor":[1,0,0,1]}})");
+	EffectSettings customColors;
+	customColors.Load(reader, file);
+	RenderView colorView;
+	colorView.width = 1920;
+	colorView.height = 1080;
+	DirectX::XMStoreFloat4x4(&colorView.view, DirectX::XMMatrixIdentity());
+	DirectX::XMStoreFloat4x4(&colorView.projection, DirectX::XMMatrixIdentity());
+	CombatEffectSnapshot coloredEffects;
+	coloredEffects.gunTracers.push_back({{0.1f, 0, 0.5f}, {-0.1f, 0, 0.5f}});
+	HudDrawList effectVertices;
+	effectVertices.Reset(1920, 1080);
+	CombatEffectPresenter effectPresenter;
+	effectPresenter.Configure(customColors);
+	effectPresenter.Build(coloredEffects, colorView, effectVertices);
+	Require(std::any_of(effectVertices.GetVertices().begin(), effectVertices.GetVertices().end(),
+				[](const auto& vertex) {
+					return vertex.color.x == 0.1f && vertex.color.y == 0.2f && vertex.color.z == 0.3f &&
+						vertex.color.w == 0.4f;
+				}),
+		"Configured tracer color did not reach rendered vertices");
+	const auto blended = EffectTint(
+		BlendEffectColor(customColors.explosion.fireColdColor, customColors.explosion.fireHotColor, 0.5f),
+		0.5f);
+	Require(blended.x == 0.5f && blended.z == 0.5f && blended.w == 0.375f,
+		"Color interpolation/fade lost configured RGBA");
+	write(R"({"propellerAngularSpeedPerSpeed":0.12})");
+	AircraftAnimationSettings animation;
+	animation.Load(reader, file);
+	Require(std::abs(animation.AdvancePropeller(0, 100, 0.1f) - 1.2f) < 0.0001f &&
+			std::abs(AircraftAnimationSettings{}.AdvancePropeller(0, 100, 0.1f) - 0.6f) < 0.0001f,
+		"Propeller multiplier ignored or leaked between aircraft");
+	write(
+		R"({"feedback":{"playerHitSeconds":2,"hitSeconds":1.1,"destroyedSeconds":2.2,"allDownSeconds":5,"enemyFireWarningSeconds":3}})");
+	CombatFeedbackSettings feedback;
+	feedback.Load(reader, file);
+	Require(feedback.playerHitSeconds == 2 && feedback.hitSeconds == 1.1f &&
+			feedback.destroyedSeconds == 2.2f && feedback.allDownSeconds == 5 &&
+			feedback.enemyFireWarningSeconds == 3,
+		"Notification durations ignored");
+	write(
+		R"({"reentryMinimumSeconds":3,"exitAngleOffsetRadians":0.5,"passLegVariationMeters":1500,"lowAltitudeClearanceMeters":600})");
+	EnemyAITuning extraAI;
+	extraAI.Load(reader, file);
+	Require(extraAI.reentryMinimumSeconds == 3 && extraAI.exitAngleOffsetRadians == 0.5f &&
+			extraAI.passLegVariationMeters == 1500 && extraAI.lowAltitudeClearanceMeters == 600,
+		"Additional AI tuning ignored");
+
 	std::cout << "PASS: gameplay JSON defaults, validation, instance isolation and runtime tuning\n";
 }

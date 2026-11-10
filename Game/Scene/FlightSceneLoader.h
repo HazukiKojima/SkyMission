@@ -25,6 +25,7 @@ namespace Game {
 		std::filesystem::path bomb;
 	};
 	struct AircraftDefinition {
+		AircraftAnimationSettings animation;
 		std::filesystem::path model;
 		float visualScale = 1;
 		AircraftFlightParameters flightParameters;

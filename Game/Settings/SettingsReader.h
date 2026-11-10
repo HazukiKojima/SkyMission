@@ -50,7 +50,8 @@ namespace Game {
 			if (!length) return;
 			Require(*length == N, key, "unexpected array length");
 			for (size_t i = 0; i < N; ++i)
-				Number("/" + key + "/" + std::to_string(i), value[i], minimum, maximum);
+				Number((key.starts_with("/") ? key : "/" + key) + "/" + std::to_string(i), value[i], minimum,
+					maximum);
 		}
 		void Vector(const std::string& key, DirectX::XMFLOAT3& value) const {
 			std::array<float, 3> v{value.x, value.y, value.z};

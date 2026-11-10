@@ -19,6 +19,9 @@ namespace Game {
 		bool TryLaunch(Engine::Scene& scene, const DirectX::XMFLOAT3& position,
 			const DirectX::XMFLOAT3& velocity, const DirectX::XMFLOAT3& forward, Engine::ObjectId target);
 		void Update(Engine::Scene& scene, float deltaSeconds, const std::optional<CollisionTarget>& hull);
+		unsigned GetCapacity() const {
+			return m_settings.ammoCount;
+		}
 		unsigned GetAmmo() const {
 			return m_ammo;
 		}

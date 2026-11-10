@@ -26,13 +26,14 @@ namespace Game {
 						std::sin(phase) * spread * 0.6f +
 							ageSeconds * radiusScale * (0.35f + (i % 4) * 0.12f),
 						std::sin(phase * 2) * spread * 0.5f, 0);
-				const float alpha = std::min(ageSeconds * 5, 0.85f) *
+				const float alpha = std::min(ageSeconds * 5, context.Settings().explosion.smokeMaxOpacity) *
 					std::clamp((context.Settings().explosion.lifetimeSeconds - ageSeconds) /
 							context.Settings().explosion.smokeFadeSeconds,
 						0.0f, 1.0f);
-				const float shade = 0.09f + (i % 5) * 0.025f;
+				const auto shade = BlendEffectColor(context.Settings().explosion.smokeDarkColor,
+					context.Settings().explosion.smokeLightColor, float(i % 5) / 4);
 				drawCloud(location, radiusScale * (0.38f + ageSeconds * 0.27f) * variation,
-					{shade, shade * 0.95f, shade * 0.88f, alpha}, i + 1);
+					EffectTint(shade, alpha), i + 1);
 			}
 		}
 
@@ -60,8 +61,11 @@ namespace Game {
 						std::sin(phase * 2) * spread * 0.4f, 0);
 				const float radius =
 					radiusScale * (0.28f + std::sqrt(particleAgeSeconds) * 0.5f) * (0.8f + (i % 3) * 0.22f);
-				drawCloud(
-					location, radius, {1, 0.27f + heat * 0.35f, 0.025f + heat * 0.09f, heat * 0.95f}, i + 27);
+				drawCloud(location, radius,
+					EffectTint(BlendEffectColor(context.Settings().explosion.fireColdColor,
+								   context.Settings().explosion.fireHotColor, heat),
+						heat),
+					i + 27);
 			}
 		}
 
@@ -72,8 +76,8 @@ namespace Game {
 			// 白熱はごく短くし、均一な衝撃波の輪は描かない
 			if (ageSeconds < context.Settings().explosion.flashSeconds) {
 				const float flash = 1 - ageSeconds / context.Settings().explosion.flashSeconds;
-				context.DrawGlow(
-					origin, radiusScale * (0.65f + ageSeconds * 2), {1, 0.85f, 0.55f, flash * 0.8f});
+				context.DrawGlow(origin, radiusScale * (0.65f + ageSeconds * 2),
+					EffectTint(context.Settings().explosion.flashColor, flash));
 			}
 		}
 
@@ -115,12 +119,13 @@ namespace Game {
 					for (int puff = 1; puff <= 3; ++puff) {
 						const float particleAgeSeconds = std::max(0.0f, ageSeconds - puff * 0.07f);
 						drawCloud(positionAt(particleAgeSeconds), radiusScale * (0.035f + puff * 0.014f),
-							{0.12f, 0.11f, 0.1f, fade * 0.5f}, i + puff + 3);
+							EffectTint(context.Settings().explosion.fragmentSmokeColor, fade), i + puff + 3);
 					}
 				}
 				context.DrawStreak(*segment, std::max(1.0f, fragmentScale * 3),
-					{1, 0.25f, 0.015f, fade * 0.65f}, std::max(0.7f, fragmentScale * 1.2f),
-					{1, 0.85f, 0.4f, fade});
+					EffectTint(context.Settings().explosion.fragmentOuterColor, fade),
+					std::max(0.7f, fragmentScale * 1.2f),
+					EffectTint(context.Settings().explosion.fragmentInnerColor, fade));
 			}
 		}
 

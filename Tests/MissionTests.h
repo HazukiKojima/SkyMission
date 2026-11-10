@@ -164,11 +164,31 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			tuned.mission.playerStartPosition = {120, 2500, -200};
 			tuned.camera.fovDegrees = 75;
 			tuned.bomb.missile.ammoCount = 3;
+			tuned.playerAircraft.animation.propellerAngularSpeedPerSpeed = 0;
+			tuned.enemyAircraft.animation.propellerAngularSpeedPerSpeed = 0;
 			auto custom = FlightScene::CreateMission(tuned, resolveModel, 1024, 768, 100000);
 			Require(custom.GetCombatSnapshot().playerAltitudeMeters == 2500,
 				"Configured player spawn was ignored by mission factory");
 			Require(custom.GetCombatSnapshot().carrierMissileAmmo == 3,
 				"Configured missile ammo was ignored by mission factory");
+			Require(custom.GetCombatSnapshot().carrierMissileCapacity == 3,
+				"Configured missile HUD capacity ignored");
+			custom.Update({}, 0.1f);
+			Require(std::all_of(custom.GetObjects().begin(), custom.GetObjects().end(),
+						[](const auto& object) {
+							return object.nodeRotationRadians == 0;
+						}),
+				"Stationary propeller setting was ignored by the mission factory");
+			custom.RemoveObject(custom.GetObjects().front().id);
+			custom.Update({}, 0.01f);
+			custom.Update({}, 0.01f, {}, {.retry = true});
+			custom.Update({}, 0.1f);
+			Require(custom.GetCombatSnapshot().carrierMissileCapacity == 3 &&
+					std::all_of(custom.GetObjects().begin(), custom.GetObjects().end(),
+						[](const auto& object) {
+							return object.nodeRotationRadians == 0;
+						}),
+				"Retry lost configured animation or missile HUD capacity");
 		}
 		auto initialized = FlightScene::CreateMission(missionDefinition, resolveModel, 1024, 768, 100000);
 		Require(initialized.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount &&

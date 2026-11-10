@@ -15,9 +15,9 @@ namespace Game {
 			context.DrawCloud(location,
 				context.Settings().deck.startRadius + smoke.age * context.Settings().deck.growthPerSecond,
 				random.Sample(0) * XM_2PI, 17,
-				{0.18f, 0.17f, 0.16f,
+				EffectTint(context.Settings().deck.smokeColor,
 					std::clamp(1 - smoke.age / context.Settings().carrier.smokeLifetimeSeconds, 0.0f, 1.0f) *
-						context.Settings().carrier.smokeOpacity});
+						context.Settings().carrier.smokeOpacity));
 		}
 	}
 } // namespace Game

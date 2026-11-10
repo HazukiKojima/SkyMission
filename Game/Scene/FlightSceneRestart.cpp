@@ -14,6 +14,7 @@ namespace Game {
 		AircraftCameraController cameraController;
 		AircraftFlightModel player;
 		Engine::ObjectId playerId;
+		AircraftAnimationSettings playerAnimation, enemyAnimation;
 		float playerVisualScale;
 		float playerPropellerAngle;
 		std::vector<EnemyAircraft> enemies;
@@ -39,6 +40,8 @@ namespace Game {
 			.cameraController = m_cameraController,
 			.player = m_player,
 			.playerId = m_playerId,
+			.playerAnimation = m_playerAnimation,
+			.enemyAnimation = m_enemyAnimation,
 			.playerVisualScale = m_playerVisualScale,
 			.playerPropellerAngle = m_playerPropellerAngle,
 			.enemies = m_enemies,
@@ -65,6 +68,8 @@ namespace Game {
 		m_cameraController = initial.cameraController;
 		m_player = initial.player;
 		m_playerId = initial.playerId;
+		m_playerAnimation = initial.playerAnimation;
+		m_enemyAnimation = initial.enemyAnimation;
 		m_playerVisualScale = initial.playerVisualScale;
 		m_playerPropellerAngle = initial.playerPropellerAngle;
 		m_enemies = initial.enemies;

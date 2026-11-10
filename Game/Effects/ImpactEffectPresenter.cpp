@@ -27,12 +27,12 @@ namespace Game {
 					bitangent * (random.Sample(i + 12) - 0.5f) * ageSeconds * 9;
 				const auto location = origin + inherited * (0.45f * ageSeconds) +
 					normal * (1 + ageSeconds * 5) + offset + XMVectorSet(0, ageSeconds * 2, 0, 0);
-				const float alpha = std::min(ageSeconds * 24, 0.7f) *
+				const float alpha = std::min(ageSeconds * 24, context.Settings().impact.smokeMaxOpacity) *
 					std::clamp((context.Settings().impact.lifetimeSeconds - ageSeconds) /
 							context.Settings().impact.smokeFadeSeconds,
 						0.0f, 1.0f);
 				drawSmoke(location, 2.0f + ageSeconds * (9 + random.Sample(i + 22) * 7),
-					{0.36f, 0.34f, 0.3f, alpha}, i + 7);
+					EffectTint(context.Settings().impact.smokeColor, alpha), i + 7);
 			}
 		}
 
@@ -43,9 +43,11 @@ namespace Game {
 			if (ageSeconds < context.Settings().impact.flashSeconds) {
 				const float flash = 1 - ageSeconds / context.Settings().impact.flashSeconds;
 				context.DrawGlow(origin + inherited * ageSeconds, context.Settings().impact.flashOuterRadius,
-					{1, 0.55f, 0.15f, flash * 0.45f}, EffectClipMode::CenterVisible);
+					EffectTint(context.Settings().impact.flashOuterColor, flash),
+					EffectClipMode::CenterVisible);
 				context.DrawGlow(origin + inherited * ageSeconds, context.Settings().impact.flashInnerRadius,
-					{1, 0.95f, 0.75f, flash}, EffectClipMode::CenterVisible);
+					EffectTint(context.Settings().impact.flashInnerColor, flash),
+					EffectClipMode::CenterVisible);
 			}
 		}
 
@@ -88,8 +90,11 @@ namespace Game {
 				if (!segment) continue;
 				const float heat = 1 - ageSeconds / lifetimeSeconds;
 				const float width = std::max(1.1f, scale * (1.8f + random.Sample(i + 132) * 2.2f));
-				context.DrawStreak(*segment, width * 2, {1, 0.38f, 0.06f, heat * 0.3f}, width,
-					{1, 0.4f + heat * 0.55f, 0.12f + heat * 0.55f, std::sqrt(heat)});
+				context.DrawStreak(*segment, width * 2,
+					EffectTint(context.Settings().impact.fragmentOuterColor, heat), width,
+					EffectTint(BlendEffectColor(context.Settings().impact.fragmentColdColor,
+								   context.Settings().impact.fragmentHotColor, heat),
+						std::sqrt(heat)));
 			}
 		}
 

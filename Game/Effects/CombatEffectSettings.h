@@ -1,8 +1,19 @@
 #pragma once
 #include <cstddef>
+#include <cmath>
 #include "Game/Settings/SettingsReader.h"
 
 namespace Game {
+	inline DirectX::XMFLOAT4 EffectTint(DirectX::XMFLOAT4 color, float alpha) {
+		color.w *= alpha;
+		return color;
+	}
+	inline DirectX::XMFLOAT4 BlendEffectColor(
+		const DirectX::XMFLOAT4& cold, const DirectX::XMFLOAT4& hot, float factor) {
+		return {std::lerp(cold.x, hot.x, factor), std::lerp(cold.y, hot.y, factor),
+			std::lerp(cold.z, hot.z, factor), std::lerp(cold.w, hot.w, factor)};
+	}
+
 	struct GunEffectSettings {
 		static constexpr float flashLifetimeSeconds = 0.065f;
 		static constexpr float flashRadius = 2.5f;
@@ -96,6 +107,15 @@ namespace Game {
 
 	struct EffectSettings {
 		struct GunEffectTuning : GunEffectSettings {
+			DirectX::XMFLOAT4 smokeColor{0.62f, 0.61f, 0.58f, 1.0f};
+			DirectX::XMFLOAT4 tracerOuterColor{1.0f, 0.32f, 0.035f, 0.75f};
+			DirectX::XMFLOAT4 tracerInnerColor{1.0f, 0.95f, 0.65f, 0.95f};
+			DirectX::XMFLOAT4 flashOuterColor{1.0f, 0.35f, 0.035f, 0.8f};
+			DirectX::XMFLOAT4 flashInnerColor{1.0f, 0.98f, 0.7f, 1.0f};
+			DirectX::XMFLOAT4 flameColor{1.0f, 0.55f, 0.08f, 0.75f};
+			DirectX::XMFLOAT4 flameOuterColor{1.0f, 0.4f, 0.04f, 0.65f};
+			DirectX::XMFLOAT4 flameInnerColor{1.0f, 0.95f, 0.65f, 1.0f};
+
 			float flashLifetimeSeconds = GunEffectSettings::flashLifetimeSeconds;
 			float flashRadius = GunEffectSettings::flashRadius;
 			float flameLength = GunEffectSettings::flameLength;
@@ -112,6 +132,15 @@ namespace Game {
 			float smokeRiseSpeed = GunEffectSettings::smokeRiseSpeed;
 		} gun;
 		struct ImpactEffectTuning : ImpactEffectSettings {
+			float smokeMaxOpacity = 0.7f;
+
+			DirectX::XMFLOAT4 smokeColor{0.36f, 0.34f, 0.3f, 1.0f};
+			DirectX::XMFLOAT4 flashOuterColor{1.0f, 0.55f, 0.15f, 0.45f};
+			DirectX::XMFLOAT4 flashInnerColor{1.0f, 0.95f, 0.75f, 1.0f};
+			DirectX::XMFLOAT4 fragmentOuterColor{1.0f, 0.38f, 0.06f, 0.3f};
+			DirectX::XMFLOAT4 fragmentColdColor{1.0f, 0.4f, 0.12f, 1.0f};
+			DirectX::XMFLOAT4 fragmentHotColor{1.0f, 0.95f, 0.67f, 1.0f};
+
 			unsigned smokeCount = 8;
 			int fragmentCount = 28;
 			float lifetimeSeconds = ImpactEffectSettings::lifetimeSeconds;
@@ -128,6 +157,17 @@ namespace Game {
 			float fragmentVelocityInheritance = ImpactEffectSettings::fragmentVelocityInheritance;
 		} impact;
 		struct ExplosionEffectTuning : ExplosionEffectSettings {
+			float smokeMaxOpacity = 0.85f;
+
+			DirectX::XMFLOAT4 smokeDarkColor{0.09f, 0.0855f, 0.0792f, 1.0f};
+			DirectX::XMFLOAT4 smokeLightColor{0.19f, 0.1805f, 0.1672f, 1.0f};
+			DirectX::XMFLOAT4 fireColdColor{1.0f, 0.27f, 0.025f, 0.95f};
+			DirectX::XMFLOAT4 fireHotColor{1.0f, 0.62f, 0.115f, 0.95f};
+			DirectX::XMFLOAT4 flashColor{1.0f, 0.85f, 0.55f, 0.8f};
+			DirectX::XMFLOAT4 fragmentSmokeColor{0.12f, 0.11f, 0.1f, 0.5f};
+			DirectX::XMFLOAT4 fragmentOuterColor{1.0f, 0.25f, 0.015f, 0.65f};
+			DirectX::XMFLOAT4 fragmentInnerColor{1.0f, 0.85f, 0.4f, 1.0f};
+
 			int smokeCount = 22;
 			int fireCount = 17;
 			int fragmentCount = 24;
@@ -142,6 +182,8 @@ namespace Game {
 			float fragmentVelocityInheritance = ExplosionEffectSettings::fragmentVelocityInheritance;
 		} explosion;
 		struct CarrierEffectTuning : CarrierEffectSettings {
+			DirectX::XMFLOAT4 smokeColor{0.18f, 0.17f, 0.16f, 1.0f};
+
 			float smokeDriftSpeed = 12.0f;
 			float smokeOpacity = 0.6f;
 			float explosionRadius = CarrierEffectSettings::explosionRadius;
@@ -152,6 +194,11 @@ namespace Game {
 			float smokeGrowthPerSecond = CarrierEffectSettings::smokeGrowthPerSecond;
 		} carrier;
 		struct RocketEffectTuning : RocketEffectSettings {
+			DirectX::XMFLOAT4 smokeColor{0.65f, 0.65f, 0.62f, 1.0f};
+			DirectX::XMFLOAT4 exhaustCoreColor{1.0f, 0.75f, 0.25f, 0.85f};
+			DirectX::XMFLOAT4 exhaustGlowColor{1.0f, 0.25f, 0.02f, 0.5f};
+			DirectX::XMFLOAT4 exhaustFlameColor{1.0f, 0.45f, 0.06f, 0.8f};
+
 			float smokeGrowthPerSecond = 7.0f;
 			float smokeStartRadius = 1.4f;
 			float smokeRiseSpeed = 3.0f;
@@ -159,10 +206,50 @@ namespace Game {
 			float smokeLifetimeSeconds = RocketEffectSettings::smokeLifetimeSeconds;
 		} rocket;
 		struct DeckSmokeTuning {
+			DirectX::XMFLOAT4 smokeColor{0.18f, 0.17f, 0.16f, 1.0f};
+
 			float startRadius = 25, growthPerSecond = 32, driftSpeed = 12, riseSpeed = 65;
 		} deck;
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
 			SettingsReader r(reader, path);
+			r.Number("/explosion/smokeMaxOpacity", explosion.smokeMaxOpacity, 0, 1);
+
+			r.Number("/impact/smokeMaxOpacity", impact.smokeMaxOpacity, 0, 1);
+
+			r.Color("/deck/smokeColor", deck.smokeColor);
+
+			r.Color("/rocket/smokeColor", rocket.smokeColor);
+			r.Color("/rocket/exhaustCoreColor", rocket.exhaustCoreColor);
+			r.Color("/rocket/exhaustGlowColor", rocket.exhaustGlowColor);
+			r.Color("/rocket/exhaustFlameColor", rocket.exhaustFlameColor);
+
+			r.Color("/carrier/smokeColor", carrier.smokeColor);
+
+			r.Color("/explosion/smokeDarkColor", explosion.smokeDarkColor);
+			r.Color("/explosion/smokeLightColor", explosion.smokeLightColor);
+			r.Color("/explosion/fireColdColor", explosion.fireColdColor);
+			r.Color("/explosion/fireHotColor", explosion.fireHotColor);
+			r.Color("/explosion/flashColor", explosion.flashColor);
+			r.Color("/explosion/fragmentSmokeColor", explosion.fragmentSmokeColor);
+			r.Color("/explosion/fragmentOuterColor", explosion.fragmentOuterColor);
+			r.Color("/explosion/fragmentInnerColor", explosion.fragmentInnerColor);
+
+			r.Color("/impact/smokeColor", impact.smokeColor);
+			r.Color("/impact/flashOuterColor", impact.flashOuterColor);
+			r.Color("/impact/flashInnerColor", impact.flashInnerColor);
+			r.Color("/impact/fragmentOuterColor", impact.fragmentOuterColor);
+			r.Color("/impact/fragmentColdColor", impact.fragmentColdColor);
+			r.Color("/impact/fragmentHotColor", impact.fragmentHotColor);
+
+			r.Color("/gun/smokeColor", gun.smokeColor);
+			r.Color("/gun/tracerOuterColor", gun.tracerOuterColor);
+			r.Color("/gun/tracerInnerColor", gun.tracerInnerColor);
+			r.Color("/gun/flashOuterColor", gun.flashOuterColor);
+			r.Color("/gun/flashInnerColor", gun.flashInnerColor);
+			r.Color("/gun/flameColor", gun.flameColor);
+			r.Color("/gun/flameOuterColor", gun.flameOuterColor);
+			r.Color("/gun/flameInnerColor", gun.flameInnerColor);
+
 			r.Number("/deck/riseSpeed", deck.riseSpeed, 0, 1000000);
 			r.Number("/deck/driftSpeed", deck.driftSpeed, 0, 1000000);
 			r.Number("/deck/growthPerSecond", deck.growthPerSecond, 0, 1000000);
