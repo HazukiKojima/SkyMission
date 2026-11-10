@@ -43,6 +43,7 @@ void Require(bool condition, const char* description) {
 #include "CloudTests.h"
 #include "CinematicTests.h"
 #include "CinematicVisualTests.h"
+#include "GameplaySettingsTests.h"
 
 void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -65,7 +66,8 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					CombatAudio audio;
 					audio.Update({.flying = true, .gunFiring = true}, 1);
 					audio.Initialize(repository / L"Assets/Sound");
-					Require(audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
+					Require(
+						audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
 					audio.Update({.flying = true, .gunFiring = true}, 0);
 					audio.Update({.flying = true,
 									 .missileLaunches = 2,
@@ -81,7 +83,8 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.Update({.flying = true}, 0, false, true, 0.25f);
 					audio.Update({.flying = true}, 0, false, false, 0.1f);
 					audio.Initialize(repository / L"Assets/Sound");
-					Require(audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
+					Require(
+						audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
 					audio.Update({.flying = true, .restarted = true}, 0);
 					auto configured = LoadCinematicSettings(
 						JsonAssetReader{}, repository / L"Assets/Cinematics/opening.json");
@@ -884,6 +887,7 @@ int wmain(int argc, wchar_t** argv) {
 		ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
+		TestGameplaySettings(argv[1], fixture);
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--json-review") {
 			TestPathsAndJson(argv[1], fixture);
 			TestAIParameters(argv[1], fixture);

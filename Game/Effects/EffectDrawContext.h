@@ -24,7 +24,11 @@ namespace Game {
 	// 煙、閃光、破片のワールド座標を共有の投影条件で描画する
 	class EffectDrawContext {
 	  public:
-		EffectDrawContext(const Engine::RenderView& view, Engine::HudDrawList& list);
+		const EffectSettings& Settings() const {
+			return m_settings;
+		}
+		EffectDrawContext(
+			const Engine::RenderView& view, Engine::HudDrawList& list, const EffectSettings& settings = {});
 		// HUDなどの予約分を残したまま、指定頂点数を追加できるか判定する
 		bool HasVertexBudget(size_t requiredVertices) const;
 		void SetAdditionalReservedVertices(size_t vertices);
@@ -48,6 +52,7 @@ namespace Game {
 		std::optional<ProjectedBillboard> ProjectBillboard(
 			DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode) const;
 		// 借用参照のため、viewとlistはこのコンテキストより長く生存させる
+		EffectSettings m_settings;
 		const Engine::RenderView& m_view;
 		Engine::HudDrawList& m_list;
 		HudProjector m_projector;

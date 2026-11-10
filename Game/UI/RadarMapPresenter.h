@@ -1,4 +1,6 @@
 #pragma once
+#include "Game/Settings/GameplaySettings.h"
+#include "Game/Settings/UiTextSettings.h"
 #include "Engine/Renderer/Hud/HudDrawList.h"
 #include "Game/Combat/CombatTypes.h"
 
@@ -7,6 +9,7 @@ namespace Game {
 	struct RadarLayout {
 		DirectX::XMFLOAT2 origin{}, center{}, statusOrigin{};
 		float scale = 0, size = 0, radius = 0;
+		float rangeMeters = 10000;
 	};
 	struct RadarPoint {
 		// 範囲外の対象は円周上に置き、directionには中心からの単位方向を保持する
@@ -18,11 +21,12 @@ namespace Game {
 	class RadarMapPresenter {
 	  public:
 		static constexpr float RangeMeters = 10000;
-		static RadarLayout Layout(const Engine::RenderView& view);
+		static std::string FormatRange(float meters);
+		static RadarLayout Layout(const Engine::RenderView& view, const UiTuning& tuning = {});
 		// 北は-Z、画面右は-X。高度とカメラ姿勢には依存しない
 		static RadarPoint Project(
 			DirectX::XMFLOAT3 world, DirectX::XMFLOAT3 player, const RadarLayout& layout);
-		void Build(
-			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+		void Build(const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list,
+			const UiTuning& tuning = {}) const;
 	};
 } // namespace Game

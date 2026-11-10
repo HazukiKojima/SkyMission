@@ -761,6 +761,8 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			scene.Initialize(1, 1, 10000);
 			auto combat = definition.combat;
 			combat.bulletDamage = 100;
+			combat.feedback.hitSeconds = 1.1f;
+			combat.feedback.destroyedSeconds = 2.2f;
 			scene.ConfigureCombat(combat);
 			scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
 			const auto playerId = scene.AddPlayerObject(player);
@@ -769,7 +771,8 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				definition.enemyAIParameters, 100, "PATROL");
 			scene.Update({}, 0.25f, {}, {{true}});
 			const auto& state = scene.GetCombatSnapshot();
-			Require(state.enemies.empty() && state.hitCount == 1 && state.destroyedSeconds > 0,
+			Require(state.enemies.empty() && state.hitCount == 1 && state.hitSeconds == 1.1f &&
+					state.destroyedSeconds == 2.2f,
 				"Lethal cannon volley did not produce one kill");
 			Require(state.result == CombatResult::Active && state.missionPhase == MissionPhase::CarrierAttack,
 				"Patrol all-down incorrectly produced victory");

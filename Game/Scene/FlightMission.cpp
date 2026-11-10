@@ -5,27 +5,6 @@
 #include <cmath>
 namespace Game {
 	using namespace DirectX;
-	namespace {
-		constexpr float kCombatAreaDistanceMeters = 8500;
-		constexpr float kCarrierCombatAreaDistanceMeters = 6500;
-		constexpr float kMinimumCombatAltitudeMeters = 1000;
-		constexpr float kPatrolApproachDistanceMeters = 11000;
-		constexpr float kFormationClearanceMeters = 350;
-		constexpr float kMaximumOpeningDelaySeconds = 1.5f;
-		constexpr float kAntiAircraftMaximumLeadSeconds = 2.0f;
-		constexpr float kAntiAircraftDispersionMeters = 100;
-		constexpr float kAntiAircraftAimOffsetMeters = 50;
-		constexpr float kAntiAircraftDispersionRateRadiansPerSecond = 1.3f;
-		constexpr float kFormationSpacingMeters = 1500;
-		constexpr float kDeckHalfThicknessFraction = 0.015f;
-		constexpr float kDeckSmokeIntervalSeconds = 0.12f;
-		constexpr float kAntiAircraftMuzzleSpeedMetersPerSecond = 1800;
-		constexpr float kAntiAircraftDamage = 8;
-		constexpr float kAntiAircraftMuzzleHeightMeters = 220;
-		constexpr float kEscortOpeningDelaySeconds = 2;
-		constexpr float kEscortOpeningStaggerSeconds = 0.4f;
-		constexpr float kMissionMessageDurationSeconds = 6;
-	} // namespace
 
 	void FlightMission::Configure(const MissionSettings& settings, std::shared_ptr<Engine::Model> enemyModel,
 		float enemyScale, const AircraftFlightParameters& flight, const AircraftAIParameters& ai) {
@@ -44,7 +23,7 @@ namespace Game {
 		m_missionMessageSeconds = std::max(0.0f, m_missionMessageSeconds - dt);
 		const bool changed = m_mission.Advance(remaining, alive);
 		if (changed) {
-			m_missionMessageSeconds = kMissionMessageDurationSeconds;
+			m_missionMessageSeconds = m_missionSettings.missionMessageDurationSeconds;
 		}
 		return changed;
 	}
@@ -57,8 +36,8 @@ namespace Game {
 			m_carrierId = id;
 			m_defenseCenter = GetCarrierCenter(scene);
 		} else {
-			const float openingDelay = kEscortOpeningDelaySeconds +
-				static_cast<float>(m_escorts.size() + 1) * kEscortOpeningStaggerSeconds;
+			const float openingDelay = m_missionSettings.escortOpeningDelaySeconds +
+				static_cast<float>(m_escorts.size() + 1) * m_missionSettings.escortOpeningStaggerSeconds;
 			m_escorts.push_back({.objectId = id, .cooldownSeconds = openingDelay});
 		}
 	}
@@ -73,7 +52,8 @@ namespace Game {
 			(bounds.maximum.z - bounds.minimum.z) * m_missionSettings.deckLengthFraction * 0.5f;
 		const float height =
 			bounds.minimum.y + (bounds.maximum.y - bounds.minimum.y) * m_missionSettings.deckHeightFraction;
-		const float thickness = (bounds.maximum.y - bounds.minimum.y) * kDeckHalfThicknessFraction;
+		const float thickness =
+			(bounds.maximum.y - bounds.minimum.y) * m_missionSettings.deckHalfThicknessFraction;
 		bounds.minimum = {center.x - halfX, height - thickness, center.z - halfZ};
 		bounds.maximum = {center.x + halfX, height + thickness, center.z + halfZ};
 		return CollisionTarget{m_carrierId, bounds,
@@ -95,12 +75,14 @@ namespace Game {
 			XMStoreFloat3(&away, XMVector3Normalize(XMLoadFloat3(&away)));
 		}
 		GetDefenseCenter(scene);
-		m_airCombatPosition = {player.x + away.x * kCombatAreaDistanceMeters,
-			std::max(kMinimumCombatAltitudeMeters, player.y), player.z + away.z * kCombatAreaDistanceMeters};
+		m_airCombatPosition = {player.x + away.x * m_missionSettings.combatAreaDistanceMeters,
+			std::max(m_missionSettings.minimumCombatAltitudeMeters, player.y),
+			player.z + away.z * m_missionSettings.combatAreaDistanceMeters};
 		if (m_defenseCenter) {
-			m_airCombatPosition = {m_defenseCenter->x + away.x * kCarrierCombatAreaDistanceMeters,
-				std::max(kMinimumCombatAltitudeMeters, player.y),
-				m_defenseCenter->z + away.z * kCarrierCombatAreaDistanceMeters};
+			m_airCombatPosition = {
+				m_defenseCenter->x + away.x * m_missionSettings.carrierCombatAreaDistanceMeters,
+				std::max(m_missionSettings.minimumCombatAltitudeMeters, player.y),
+				m_defenseCenter->z + away.z * m_missionSettings.carrierCombatAreaDistanceMeters};
 		}
 		XMFLOAT3 approach{forward.x, 0, forward.z};
 		if (std::hypot(approach.x, approach.z) < 0.001f) {
@@ -116,8 +98,9 @@ namespace Game {
 				.flight = m_missionEnemyFlight,
 				.ai = ai,
 				.health = enemyHealth * (commander ? m_missionSettings.commanderHealthMultiplier : 1),
-				.name =
-					commander ? "敵編隊長機" : (opening ? "哨戒機 " : "敵戦闘機 ") + std::to_string(i + 1),
+				.name = commander
+					? m_text.Text("敵編隊長機")
+					: (opening ? m_text.Text("哨戒機 ") : m_text.Text("敵戦闘機 ")) + std::to_string(i + 1),
 				.facePlayer = opening,
 				.heading = opening ? std::nullopt : std::optional<XMFLOAT3>{away}});
 		}
@@ -125,30 +108,31 @@ namespace Game {
 	}
 	XMFLOAT3 FlightMission::CalculateWavePosition(const XMFLOAT3& player, size_t count, size_t index,
 		bool opening, const XMFLOAT3& approach, const XMFLOAT3& away) const {
-		static constexpr float depthOffsetsMeters[] = {-600, 1000, -1300, 500, -200, 1500};
-		static constexpr float altitudeOffsetsMeters[] = {150, 650, -250, 1000, 350, -100};
-		const float lateralOffsetMeters =
-			(static_cast<float>(index) - static_cast<float>(count - 1) * 0.5f) * kFormationSpacingMeters;
-		const size_t formationSlot = index % std::size(depthOffsetsMeters);
-		const float altitudeMeters = std::max(m_missionEnemyAI.lowAltitude + kFormationClearanceMeters,
-			(opening ? player.y : m_airCombatPosition.y) + altitudeOffsetsMeters[formationSlot]);
-		const float approachDistanceMeters =
-			kPatrolApproachDistanceMeters + depthOffsetsMeters[formationSlot];
+		const float lateralOffsetMeters = (static_cast<float>(index) - static_cast<float>(count - 1) * 0.5f) *
+			m_missionSettings.formationSpacingMeters;
+		const size_t formationSlot = index % std::size(m_missionSettings.depthOffsetsMeters);
+		const float altitudeMeters =
+			std::max(m_missionEnemyAI.lowAltitude + m_missionSettings.formationClearanceMeters,
+				(opening ? player.y : m_airCombatPosition.y) +
+					m_missionSettings.altitudeOffsetsMeters[formationSlot]);
+		const float approachDistanceMeters = m_missionSettings.patrolApproachDistanceMeters +
+			m_missionSettings.depthOffsetsMeters[formationSlot];
 		// 前後・左右・高度をずらし、単一の平面に並ばないようにする
 		return opening
 			? XMFLOAT3{player.x + approach.x * approachDistanceMeters - approach.z * lateralOffsetMeters,
 				  altitudeMeters,
 				  player.z + approach.z * approachDistanceMeters + approach.x * lateralOffsetMeters}
 			: XMFLOAT3{m_airCombatPosition.x + away.z * lateralOffsetMeters -
-					  away.x * depthOffsetsMeters[formationSlot] * 0.5f,
+					  away.x * m_missionSettings.depthOffsetsMeters[formationSlot] * 0.5f,
 				  altitudeMeters,
 				  m_airCombatPosition.z - away.x * lateralOffsetMeters -
-					  away.z * depthOffsetsMeters[formationSlot] * 0.5f};
+					  away.z * m_missionSettings.depthOffsetsMeters[formationSlot] * 0.5f};
 	}
 	AircraftAIParameters FlightMission::BuildWaveAI(size_t formationSlot) const {
 		auto ai = m_missionEnemyAI;
 		// 射撃条件はJSONを使い、初動の待ち時間だけ機体ごとにずらす
-		ai.openingGraceSeconds += EnemyVariation(formationSlot, 0, 79) * kMaximumOpeningDelaySeconds;
+		ai.openingGraceSeconds +=
+			EnemyVariation(formationSlot, 0, 79) * m_missionSettings.maximumOpeningDelaySeconds;
 		return ai;
 	}
 	std::optional<XMFLOAT3> FlightMission::GetCarrierCenter(Engine::Scene& scene) const {
@@ -167,7 +151,7 @@ namespace Game {
 				if (const auto center = GetCarrierCenter(scene)) {
 					effects.SpawnDeckSmoke(*center);
 				}
-				m_deckSmokeSeconds = CarrierEffectSettings::smokeIntervalSeconds;
+				m_deckSmokeSeconds = effects.GetSettings().carrier.smokeIntervalSeconds;
 			}
 		}
 	}
@@ -178,27 +162,30 @@ namespace Game {
 			const auto* ship = scene.FindObject(m_escorts[i].objectId);
 			if (!ship || m_escorts[i].cooldownSeconds > 0) continue;
 			XMFLOAT3 origin{ship->worldTransform._41,
-				ship->worldTransform._42 + kAntiAircraftMuzzleHeightMeters, ship->worldTransform._43};
+				ship->worldTransform._42 + m_missionSettings.antiAircraftMuzzleHeightMeters,
+				ship->worldTransform._43};
 			const auto playerPosition = player.GetPosition();
 			const auto delta = XMLoadFloat3(&playerPosition) - XMLoadFloat3(&origin);
 			const float distanceMeters = XMVectorGetX(XMVector3Length(delta));
 			if (distanceMeters > m_missionSettings.aaRange) continue;
 			// 予測時間を制限し照準を揺らすことで、見える曳光弾を回避する余地を残す
-			const float travelSeconds = distanceMeters / kAntiAircraftMuzzleSpeedMetersPerSecond;
+			const float travelSeconds =
+				distanceMeters / m_missionSettings.antiAircraftMuzzleSpeedMetersPerSecond;
 			const auto playerVelocity = player.GetVelocity();
-			const auto predictedDisplacement =
-				XMLoadFloat3(&playerVelocity) * std::min(travelSeconds, kAntiAircraftMaximumLeadSeconds);
+			const auto predictedDisplacement = XMLoadFloat3(&playerVelocity) *
+				std::min(travelSeconds, m_missionSettings.antiAircraftMaximumLeadSeconds);
 			const float dispersionPhaseRadians =
-				battleSeconds * kAntiAircraftDispersionRateRadiansPerSecond + float(i);
+				battleSeconds * m_missionSettings.antiAircraftDispersionRateRadiansPerSecond + float(i);
 			const auto dispersionOffset =
-				XMVectorSet(std::sin(dispersionPhaseRadians) * kAntiAircraftDispersionMeters,
-					kAntiAircraftAimOffsetMeters, 0, 0);
+				XMVectorSet(std::sin(dispersionPhaseRadians) * m_missionSettings.antiAircraftDispersionMeters,
+					m_missionSettings.antiAircraftAimOffsetMeters, 0, 0);
 			const auto point = XMLoadFloat3(&playerPosition) + predictedDisplacement + dispersionOffset;
 			XMFLOAT3 velocity;
 			XMStoreFloat3(&velocity,
-				XMVector3Normalize(point - XMLoadFloat3(&origin)) * kAntiAircraftMuzzleSpeedMetersPerSecond);
-			if (projectiles.FireSingle(
-					scene, origin, velocity, AttackSource::AntiAircraft, kAntiAircraftDamage)) {
+				XMVector3Normalize(point - XMLoadFloat3(&origin)) *
+					m_missionSettings.antiAircraftMuzzleSpeedMetersPerSecond);
+			if (projectiles.FireSingle(scene, origin, velocity, AttackSource::AntiAircraft,
+					m_missionSettings.antiAircraftDamage)) {
 				m_escorts[i].cooldownSeconds = m_missionSettings.aaInterval;
 			}
 		}

@@ -1,3 +1,4 @@
+#include "Game/Settings/GameplaySettings.h"
 #pragma once
 #include <Windows.h>
 #include <xaudio2.h>
@@ -32,6 +33,7 @@ namespace Game {
 		std::size_t GetLoadedSoundCount() const;
 
 	  private:
+		AudioSettings m_settings;
 		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, BattleBgm, Count };
 		enum class SoundKind { Hit, LockWarning, MissileWarning };
 		struct Clip {

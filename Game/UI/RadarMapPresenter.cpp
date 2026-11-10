@@ -2,18 +2,39 @@
 #include "HudStyle.h"
 #include <algorithm>
 #include <cmath>
+#include <sstream>
+#include <iomanip>
+#include <locale>
 
 namespace Game {
 	using namespace DirectX;
-	RadarLayout RadarMapPresenter::Layout(const Engine::RenderView& view) {
+	std::string RadarMapPresenter::FormatRange(float meters) {
+		std::ostringstream label;
+		label.imbue(std::locale::classic());
+		if (meters < 1000) {
+			label << std::fixed << std::setprecision(0) << meters << " m";
+			return label.str();
+		}
+		label << std::fixed << std::setprecision(3) << meters / 1000;
+		auto value = label.str();
+		while (value.back() == '0')
+			value.pop_back();
+		if (value.back() == '.') value.pop_back();
+		return value + " km";
+	}
+
+	RadarLayout RadarMapPresenter::Layout(const Engine::RenderView& view, const UiTuning& tuning) {
 		RadarLayout layout;
+		layout.rangeMeters = tuning.radarRangeMeters;
 		if (view.width == 0 || view.height == 0) return layout;
 		layout.scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
-		layout.size = 320 * layout.scale;
-		layout.origin = {48 * layout.scale, view.height - (48 + 320) * layout.scale};
+		layout.size = tuning.layout.radarSize * layout.scale;
+		layout.origin = {tuning.layout.radarLeftMargin * layout.scale,
+			view.height - tuning.layout.radarBottomMargin * layout.scale - layout.size};
 		layout.center = {layout.origin.x + layout.size * 0.5f, layout.origin.y + layout.size * 0.5f};
-		layout.radius = 126 * layout.scale;
-		layout.statusOrigin = {layout.origin.x + layout.size + 24 * layout.scale, layout.origin.y};
+		layout.radius = tuning.layout.radarRadius * (layout.size / 320);
+		layout.statusOrigin = {
+			layout.origin.x + layout.size + tuning.layout.radarStatusGap * layout.scale, layout.origin.y};
 		return layout;
 	}
 	RadarPoint RadarMapPresenter::Project(XMFLOAT3 world, XMFLOAT3 player, const RadarLayout& layout) {
@@ -23,22 +44,22 @@ namespace Game {
 		const float distance = std::hypot(dx, dz);
 		if (layout.scale <= 0 || !std::isfinite(distance)) return point;
 		point.valid = true;
-		point.outside = distance > RangeMeters;
+		point.outside = distance > layout.rangeMeters;
 		point.direction = distance > 0.001f ? XMFLOAT2{dx / distance, dz / distance} : XMFLOAT2{0, -1};
-		const float radius = std::min(distance / RangeMeters, 1.0f) * layout.radius;
+		const float radius = std::min(distance / layout.rangeMeters, 1.0f) * layout.radius;
 		point.pixel = {
 			layout.center.x + point.direction.x * radius, layout.center.y + point.direction.y * radius};
 		return point;
 	}
-	void RadarMapPresenter::Build(
-		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
-		const auto layout = Layout(view);
+	void RadarMapPresenter::Build(const CombatSnapshot& snapshot, const Engine::RenderView& view,
+		Engine::HudDrawList& list, const UiTuning& tuning) const {
+		const auto layout = Layout(view, tuning);
 		if (layout.scale <= 0) return;
-		const float scale = layout.scale, lineWidth = std::max(1.0f, 1.4f * scale);
-		const auto border = HudStyle::Ink;
+		const float scale = layout.size / 320, lineWidth = std::max(1.0f, 1.4f * scale);
+		const auto border = tuning.ink;
 		const auto grid = HudStyle::Faded(border, 0.23f);
 		const auto labelColor = border;
-		const auto enemyColor = border, selectedColor = HudStyle::Selected;
+		const auto enemyColor = border, selectedColor = tuning.selected;
 		const auto panelPoint = [&](float x, float y) {
 			return XMFLOAT2{layout.origin.x + x * scale, layout.origin.y + y * scale};
 		};
@@ -62,8 +83,9 @@ namespace Game {
 		list.Text(
 			{layout.center.x - northFont / 3, layout.origin.y + 14 * scale}, "N", northFont, labelColor);
 		list.Text({layout.origin.x + 22 * scale, layout.origin.y + layout.size - 14 * scale - rangeFont},
-			"10 km", rangeFont, labelColor);
-		list.Text(panelPoint(166, 218), "5 km", std::max(9.0f, 16 * scale), labelColor);
+			FormatRange(layout.rangeMeters), rangeFont, labelColor);
+		list.Text(panelPoint(166, 218), FormatRange(layout.rangeMeters * 0.5f), std::max(9.0f, 16 * scale),
+			labelColor);
 		const auto aircraft = [&](XMFLOAT2 center, XMFLOAT3 heading, float size, XMFLOAT4 color) {
 			const float length = std::hypot(heading.x, heading.z);
 			const XMFLOAT2 dir = std::isfinite(length) && length > 0.001f

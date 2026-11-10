@@ -20,6 +20,7 @@ namespace Game {
 		const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
 		try {
 			CombatSettings settings;
+			settings.feedback.Load(reader, path);
 			auto& t = settings.targeting;
 			t.selectionDistance = ReadPositiveFloat(reader, path, "selectionDistance");
 			t.acquireDistance = ReadPositiveFloat(reader, path, "acquireDistance");

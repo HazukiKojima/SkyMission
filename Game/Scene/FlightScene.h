@@ -1,3 +1,4 @@
+#include "Game/Settings/GameplaySettings.h"
 #pragma once
 #include <functional>
 #include <map>
@@ -115,6 +116,9 @@ namespace Game {
 		}
 
 	  private:
+		UiTextSettings m_text;
+		EnemyGunTuning m_enemyGunTuning;
+		EnemyAITuning m_enemyAITuning;
 		struct RestartState;
 
 		struct CombatGeometry {
@@ -208,6 +212,7 @@ namespace Game {
 		AircraftCameraController m_cameraController;
 		AircraftFlightModel m_player;
 		Engine::ObjectId m_playerId = Engine::InvalidObjectId;
+		AircraftAnimationSettings m_playerAnimation, m_enemyAnimation;
 		float m_playerVisualScale = 1;
 		float m_playerPropellerAngle = 0;
 		std::vector<EnemyAircraft> m_enemies;

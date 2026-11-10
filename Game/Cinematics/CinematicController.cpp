@@ -67,6 +67,7 @@ namespace Game {
 		m_presentation.fadeOpacity = 0;
 	}
 	void CinematicController::RefreshPresentation() {
+		m_presentation.text = m_settings.text;
 		const float seconds = m_presentation.elapsedSeconds;
 		if (!m_settings.shots.empty()) {
 			float end = m_settings.shots.front().durationSeconds;

@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Settings/SettingsReader.h"
 #include <cstddef>
 #include <algorithm>
 #include <initializer_list>
@@ -24,6 +25,54 @@ namespace Game {
 		float deckHeightFraction = 0.445f;
 		float deckWidthFraction = 0.75f;
 		float deckLengthFraction = 0.9f;
+		float combatAreaDistanceMeters = 8500.0f;
+		float carrierCombatAreaDistanceMeters = 6500.0f;
+		float minimumCombatAltitudeMeters = 1000.0f;
+		float patrolApproachDistanceMeters = 11000.0f;
+		float formationClearanceMeters = 350.0f;
+		float maximumOpeningDelaySeconds = 1.5f;
+		float antiAircraftMaximumLeadSeconds = 2.0f;
+		float antiAircraftDispersionMeters = 100.0f;
+		float antiAircraftAimOffsetMeters = 50.0f;
+		float antiAircraftDispersionRateRadiansPerSecond = 1.3f;
+		float formationSpacingMeters = 1500.0f;
+		float deckHalfThicknessFraction = 0.015f;
+		float antiAircraftMuzzleSpeedMetersPerSecond = 1800.0f;
+		float antiAircraftDamage = 8.0f;
+		float antiAircraftMuzzleHeightMeters = 220.0f;
+		float escortOpeningDelaySeconds = 2.0f;
+		float escortOpeningStaggerSeconds = 0.4f;
+		float missionMessageDurationSeconds = 6.0f;
+		DirectX::XMFLOAT3 playerStartPosition{0, 1500, 0};
+		std::array<float, 6> depthOffsetsMeters{-600, 1000, -1300, 500, -200, 1500};
+		std::array<float, 6> altitudeOffsetsMeters{150, 650, -250, 1000, 350, -100};
+		void LoadTuning(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
+			SettingsReader r(reader, path);
+			r.Number("combatAreaDistanceMeters", combatAreaDistanceMeters, 0.000001f);
+			r.Number("carrierCombatAreaDistanceMeters", carrierCombatAreaDistanceMeters, 0.000001f);
+			r.Number("minimumCombatAltitudeMeters", minimumCombatAltitudeMeters, 0.000001f);
+			r.Number("patrolApproachDistanceMeters", patrolApproachDistanceMeters, 0.000001f);
+			r.Number("formationClearanceMeters", formationClearanceMeters, 0.000001f);
+			r.Number("maximumOpeningDelaySeconds", maximumOpeningDelaySeconds, 0);
+			r.Number("antiAircraftMaximumLeadSeconds", antiAircraftMaximumLeadSeconds, 0.000001f);
+			r.Number("antiAircraftDispersionMeters", antiAircraftDispersionMeters, 0);
+			r.Number("antiAircraftAimOffsetMeters", antiAircraftAimOffsetMeters, 0);
+			r.Number("antiAircraftDispersionRateRadiansPerSecond", antiAircraftDispersionRateRadiansPerSecond,
+				0.000001f);
+			r.Number("formationSpacingMeters", formationSpacingMeters, 0.000001f);
+			r.Number("deckHalfThicknessFraction", deckHalfThicknessFraction, 0.000001f);
+			r.Number(
+				"antiAircraftMuzzleSpeedMetersPerSecond", antiAircraftMuzzleSpeedMetersPerSecond, 0.000001f);
+			r.Number("antiAircraftDamage", antiAircraftDamage, 0.000001f);
+			r.Number("antiAircraftMuzzleHeightMeters", antiAircraftMuzzleHeightMeters, 0.000001f);
+			r.Number("escortOpeningDelaySeconds", escortOpeningDelaySeconds, 0);
+			r.Number("escortOpeningStaggerSeconds", escortOpeningStaggerSeconds, 0);
+			r.Number("missionMessageDurationSeconds", missionMessageDurationSeconds, 0.000001f);
+			r.Vector("playerStartPosition", playerStartPosition);
+			r.Array("depthOffsetsMeters", depthOffsetsMeters);
+			r.Array("altitudeOffsetsMeters", altitudeOffsetsMeters);
+			r.Require(deckHalfThicknessFraction <= 1, "deckHalfThicknessFraction", "must be at most 1");
+		}
 		void Validate() const {
 			if (patrolCount < 1 || patrolCount > 8 || finalFighterCount < 1 || finalFighterCount > 8 ||
 				maxHostileProjectiles < 4 || maxHostileProjectiles > 512)

@@ -85,6 +85,9 @@ namespace Game {
 
 	void Application::InitializeFlightScene(const FlightSceneDefinition& assets) {
 		m_hudPresenter.Configure(assets.hud);
+		m_hudPresenter.ConfigureTuning(assets.ui);
+		m_hudPresenter.ConfigureText(assets.text);
+		m_effectPresenter.Configure(assets.effects);
 		m_scene = std::make_unique<FlightScene>(FlightScene::CreateMission(
 			assets,
 			[this](const std::string& id) {
@@ -106,7 +109,8 @@ namespace Game {
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +
 			assets.mission.finalFighterCount + 1 +
-			CarrierMissileSystem::RequiredModelCapacity(assets.mission.bombReloadSeconds));
+			CarrierMissileSystem::RequiredModelCapacity(
+				assets.mission.bombReloadSeconds, assets.bomb.missile));
 	}
 
 	void Application::ConfigureResizeHandling() {

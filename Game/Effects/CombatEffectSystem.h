@@ -9,6 +9,12 @@ namespace Game {
 	// 戦闘イベントから演出を生成し、寿命と個数上限を管理する。ダメージ判定は行わない
 	class CombatEffectSystem {
 	  public:
+		void Configure(const EffectSettings& settings) {
+			m_settings = settings;
+		}
+		const EffectSettings& GetSettings() const {
+			return m_settings;
+		}
 		// 経過秒数を進め、寿命を終えた演出を除去する
 		void Update(float deltaSeconds);
 		void SpawnGunShot(const GunShotEvent& shot);
@@ -31,6 +37,7 @@ namespace Game {
 
 	  private:
 		void AddExplosion(ExplosionEffect explosion);
+		EffectSettings m_settings;
 		CombatEffectSnapshot m_snapshot;
 	};
 } // namespace Game

@@ -9,14 +9,6 @@
 #include "Game/Combat/EnemyEngagementProfile.h"
 namespace Game {
 	namespace {
-		constexpr float kPropellerAngularSpeedPerSpeed = 0.06f;
-		constexpr float kMaximumAnimationFrameSeconds = 0.25f;
-		float AdvancePropeller(float angle, float speed, float dt) {
-			// 飛行モデルと同じ時間上限を使う（角度はラジアン、時間は秒）
-			return std::fmod(
-				angle + speed * kPropellerAngularSpeedPerSpeed * std::min(dt, kMaximumAnimationFrameSeconds),
-				DirectX::XM_2PI);
-		}
 
 		void ApplyAircraftPose(
 			Engine::SceneObject& object, const AircraftFlightModel& aircraft, float scale, float angle) {
@@ -52,7 +44,19 @@ namespace Game {
 		environment.ambientIntensity = assets.environment.sky.ambientIntensity;
 		environment.ambientColor = assets.environment.sky.ambientColor;
 		scene.SetEnvironment(environment);
-		scene.SetPlayerAircraftPosition({0, 1500, 0});
+		scene.m_text = assets.text;
+		scene.m_playerAnimation = assets.playerAircraft.animation;
+		scene.m_enemyAnimation = assets.enemyAircraft.animation;
+		scene.m_mission.ConfigureText(assets.text);
+		scene.m_enemyGunTuning = assets.enemyGunTuning;
+		scene.m_enemyAITuning = assets.enemyAITuning;
+		scene.m_effects.Configure(assets.effects);
+		scene.m_projectiles.ConfigureEffects(assets.effects);
+		scene.m_hostileProjectiles.ConfigureEffects(assets.effects);
+		scene.m_cameraController.Configure(assets.camera);
+		scene.m_cameraController.Initialize(
+			DirectX::XMConvertToRadians(assets.camera.fovDegrees), float(width) / height, 1.0f, farZ);
+		scene.SetPlayerAircraftPosition(assets.mission.playerStartPosition);
 		scene.SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		scene.SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
 		scene.AddPlayerObject(requireModel(PlayerModelId));
@@ -232,14 +236,15 @@ namespace Game {
 	void FlightScene::UpdatePlayer(const AircraftInput& input, float dt) {
 		if (!m_scene.FindObject(m_playerId)) return;
 		m_player.Update(input, dt);
-		m_playerPropellerAngle = AdvancePropeller(m_playerPropellerAngle, m_player.GetSpeed(), dt);
+		m_playerPropellerAngle =
+			m_playerAnimation.AdvancePropeller(m_playerPropellerAngle, m_player.GetSpeed(), dt);
 	}
 
 	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, bool next, float dt) {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
-				const CombatTarget carrier{
-					m_mission.GetCarrierId(), *center, {}, "敵空母", m_mission.GetCarrierHealth()};
+				const CombatTarget carrier{m_mission.GetCarrierId(), *center, {}, m_text.Text("敵空母"),
+					m_mission.GetCarrierHealth()};
 				m_targeting.UpdateObjective(carrier, geometry.muzzle, geometry.forward, dt);
 				return;
 			}
@@ -267,10 +272,12 @@ namespace Game {
 			}
 			enemy.weaponCooldownSeconds = std::max(0.0f, enemy.weaponCooldownSeconds - dt);
 			const bool allowed = true;
-			const auto engagement =
-				GetEnemyEngagementProfile(m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId);
+			const auto engagement = GetEnemyEngagementProfile(
+				m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId, m_enemyAITuning);
 			const auto aiParameters = engagement.Apply(enemy.aiParameters);
-			const bool gunWindow = enemy.gunPattern.Update(dt * engagement.burstTempoScale, enemy.slot);
+			const bool gunWindow =
+				enemy.gunPattern.Update(dt * engagement.burstTempoScale, enemy.slot, m_enemyGunTuning);
+			enemy.controller.ConfigureTuning(m_enemyAITuning);
 			const auto decision = enemy.controller.ReadCombatInput(enemy.flightModel, target, direction, dt,
 				aiParameters, enemy.slot, allowed, enemy.weaponCooldownSeconds <= 0 && gunWindow,
 				m_mission.GetDefenseCenter(m_scene), true);
@@ -278,7 +285,8 @@ namespace Game {
 			enemy.fire = decision.fire;
 			enemy.previousPosition = enemy.flightModel.GetPosition();
 			enemy.flightModel.Update(input, dt);
-			enemy.propellerAngle = AdvancePropeller(enemy.propellerAngle, enemy.flightModel.GetSpeed(), dt);
+			enemy.propellerAngle =
+				m_enemyAnimation.AdvancePropeller(enemy.propellerAngle, enemy.flightModel.GetSpeed(), dt);
 		}
 	}
 
@@ -340,7 +348,7 @@ namespace Game {
 		enemy.previousPosition = position;
 		enemy.health = health;
 		++m_enemySequence;
-		enemy.name = name.empty() ? "敵機 " + std::to_string(m_enemySequence) : std::move(name);
+		enemy.name = name.empty() ? m_text.Text("敵機 ") + std::to_string(m_enemySequence) : std::move(name);
 		const auto id = enemy.objectId;
 		m_enemies.push_back(std::move(enemy));
 		return id;
@@ -412,6 +420,7 @@ namespace Game {
 		m_combat.carrierHealth = m_mission.GetCarrierHealth();
 		m_combat.carrierMaxHealth = m_mission.GetCarrierMaxHealth();
 		m_combat.carrierMissileAmmo = m_carrierMissiles.GetAmmo();
+		m_combat.carrierMissileCapacity = m_carrierMissiles.GetCapacity();
 		m_combat.missionPhase = m_mission.GetPhase();
 		m_combat.deckDisabled = m_mission.IsDeckDisabled();
 		m_combat.missileCooldownSeconds = m_carrierMissiles.GetCooldownSeconds();
@@ -477,7 +486,7 @@ namespace Game {
 				} else {
 					++m_combat.audio.missileHits;
 				}
-				m_combat.playerHitSeconds = 0.7f;
+				m_combat.playerHitSeconds = m_combatSettings.feedback.playerHitSeconds;
 				m_combat.playerHitDirection = {-hit.direction.x, -hit.direction.y, -hit.direction.z};
 				m_effects.SpawnExplosion(hit.position, m_player.GetVelocity());
 				if (m_combat.playerHealth <= 0) {
@@ -500,7 +509,7 @@ namespace Game {
 			} else if (enemy->health > 0) {
 				m_effects.SpawnExplosion(hit.position, enemy->flightModel.GetVelocity());
 			}
-			m_combat.hitSeconds = 0.15f;
+			m_combat.hitSeconds = m_combatSettings.feedback.hitSeconds;
 			if (enemy->health <= 0) {
 				++m_combat.audio.aircraftExplosions;
 				if (const auto* aircraft = m_scene.FindObject(enemy->objectId)) {
@@ -510,7 +519,7 @@ namespace Game {
 						enemy->flightModel.GetPosition(), enemy->flightModel.GetVelocity());
 				}
 				destroyed.push_back(enemy->objectId);
-				m_combat.destroyedSeconds = 0.8f;
+				m_combat.destroyedSeconds = m_combatSettings.feedback.destroyedSeconds;
 			}
 		}
 		// 命中の走査中は敵を削除せず、後続の命中でも耐久値を参照できるようにする

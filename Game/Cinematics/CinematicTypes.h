@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Settings/GameplaySettings.h"
 #include <DirectXMath.h>
 #include <string>
 #include <array>
@@ -20,6 +21,7 @@ namespace Game {
 		std::string cinematicId = "opening";
 		size_t shotIndex = 0;
 		uint64_t playbackSerial = 0;
+		CinematicTextSettings text;
 	};
 	struct CinematicPose {
 		DirectX::XMFLOAT3 cameraOffsetMeters;

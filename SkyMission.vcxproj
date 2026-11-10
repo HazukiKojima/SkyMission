@@ -610,4 +610,15 @@
     <None Include="Assets\Cinematics\ending.json" />
     <None Include="Assets\Cinematics\defeat.json" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\GameplaySettingsTests.h" />
+    <ClInclude Include="Game\Settings\SettingsReader.h" />
+    <ClInclude Include="Game\Settings\GameplaySettings.h" />
+    <ClInclude Include="Game\Settings\UiTextSettings.h" />
+    <None Include="Assets\Camera\aircraftCamera.json" />
+    <None Include="Assets\Effects\combatEffects.json" />
+    <None Include="Assets\Combat\enemyWeapon.json" />
+    <None Include="Assets\Sound\audio.json" />
+    <None Include="Assets\UI\labels.json" />
+  </ItemGroup>
 </Project>

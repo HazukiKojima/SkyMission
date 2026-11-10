@@ -1,6 +1,106 @@
 {
-    "color": [0.90980392, 0.85098039, 0.70980392],
-    "alpha": 0.95,
-    "lineWidth": 2.0,
-    "fontSize": 40
+  "color": [
+    0.90980392,
+    0.85098039,
+    0.70980392
+  ],
+  "alpha": 0.95,
+  "lineWidth": 2.0,
+  "fontSize": 40,
+  "radarRangeMeters": 10000,
+  "ink": [
+    0.9098039215686274,
+    0.8509803921568627,
+    0.7098039215686275,
+    0.95
+  ],
+  "selected": [
+    0.95,
+    0.65,
+    0.24,
+    1
+  ],
+  "alert": [
+    0.83,
+    0.34,
+    0.23,
+    1
+  ],
+  "caution": [
+    0.85,
+    0.64,
+    0.32,
+    1
+  ],
+  "layout": {
+    "controlsFontSize": 36,
+    "controlsLineHeight": 48,
+    "controlsRightMargin": 48,
+    "controlsBottomMargin": 48,
+    "radarSize": 320,
+    "radarLeftMargin": 48,
+    "radarBottomMargin": 48,
+    "radarRadius": 126,
+    "radarStatusGap": 24,
+    "carrierBarX": 48,
+    "carrierBarY": 66,
+    "carrierBarWidth": 760,
+    "carrierBarHeight": 24,
+    "carrierLabelY": 26,
+    "carrierLabelFontSize": 30,
+    "flightPanelTop": 420,
+    "flightPanelWidth": 240,
+    "flightPanelHeight": 64,
+    "flightPanelTipWidth": 16,
+    "speedPanelX": 100,
+    "altitudePanelX": 1580,
+    "flightLabelGap": 8,
+    "flightValuePadding": 12,
+    "healthStatusY": 108,
+    "fireWarningY": 330,
+    "missionX": 540,
+    "missionY": 116,
+    "missionLineHeight": 44,
+    "missileStatusY": 188,
+    "lockStatusY": 236,
+    "carrierMarkerRadius": 44,
+    "combatAreaMarkerRadius": 26,
+    "impactMarkerRadius": 14,
+    "directionArrowScale": 1,
+    "offscreenIndicatorScale": 1,
+    "gunSightScale": 1,
+    "selectedEnemyRadius": 32,
+    "enemyRadius": 22,
+    "markerTextGap": 8,
+    "markerLabelGap": 4,
+    "screenTextMargin": 16,
+    "resultPosition": [
+      740,
+      380
+    ],
+    "retryPosition": [
+      740,
+      440
+    ],
+    "playerHitPosition": [
+      820,
+      800
+    ],
+    "targetStatusPosition": [
+      80,
+      80
+    ],
+    "destroyedPosition": [
+      800,
+      720
+    ],
+    "hitPosition": [
+      920,
+      640
+    ],
+    "allDownPosition": [
+      760,
+      180
+    ]
+  }
 }

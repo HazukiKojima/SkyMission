@@ -1,3 +1,4 @@
+#include "Game/Settings/GameplaySettings.h"
 #pragma once
 
 #include "AircraftFlightModel.h"
@@ -54,6 +55,10 @@ namespace Game {
 	// 敵機ごとに保持する操縦判断。状態遷移と照準保持時間を持つため機体間で共有しない
 	class AircraftAIController {
 	  public:
+		void ConfigureTuning(const EnemyAITuning& settings) {
+			m_tuning = settings;
+			if (m_combatTime == 0) m_reentrySeconds = settings.initialReentrySeconds;
+		}
 		// 射撃後は照準の保持時間だけをリセットし、攻撃航路は継続する
 		void NotifyWeaponFired() {
 			m_aimTime = 0;
@@ -73,6 +78,7 @@ namespace Game {
 		}
 
 	  private:
+		EnemyAITuning m_tuning;
 		void EnterMode(AircraftCombatMode mode);
 		void ChooseTurn(float yaw, DirectX::FXMVECTOR direction, size_t slot);
 		void BeginDisengagement(const AircraftFlightModel& aircraft, const AircraftAITarget& target,

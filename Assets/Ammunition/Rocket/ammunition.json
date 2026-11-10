@@ -1,5 +1,11 @@
 {
-    "model": "Rocket.fbx",
-    "modelImport": "modelImport.json",
-    "modelForward": "+X"
+  "model": "Rocket.fbx",
+  "modelImport": "modelImport.json",
+  "modelForward": "+X",
+  "turnRateDegreesPerSecond": 90,
+  "releaseSideOffsetMeters": 14,
+  "releaseOffsetMeters": 12,
+  "lifetimeSeconds": 8,
+  "smokeIntervalSeconds": 0.06,
+  "ammoCount": 2
 }

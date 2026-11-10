@@ -1,7 +1,8 @@
 {
-    "model": "N1K2JShidenKai.fbx",
-    "visualScale": 20,
-    "flightParameters": "flightParameters.json",
-    "modelImport": "modelImport.json",
-    "weapon": "weapon.json"
+  "model": "N1K2JShidenKai.fbx",
+  "visualScale": 20,
+  "flightParameters": "flightParameters.json",
+  "modelImport": "modelImport.json",
+  "weapon": "weapon.json",
+  "propellerAngularSpeedPerSpeed": 0.06
 }

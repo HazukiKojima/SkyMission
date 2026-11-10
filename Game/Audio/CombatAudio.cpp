@@ -17,16 +17,9 @@ namespace Game {
 		constexpr DWORD kSampleRate = 48000;
 		constexpr DWORD kAudioStream = static_cast<DWORD>(MF_SOURCE_READER_FIRST_AUDIO_STREAM);
 		constexpr DWORD kAllStreams = static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS);
-		constexpr float kFlightVolume = 0.18f, kGunVolume = 0.42f;
-		constexpr float kBattleBgmVolume = 0.35f;
-		constexpr float kLaunchVolume = 0.65f, kGunHitVolume = 0.65f, kMissileHitVolume = 0.75f;
-		constexpr float kAircraftVolume = 0.65f, kShipVolume = 0.75f;
-		constexpr float kHitVolume = 0.32f, kWarningVolume = 0.45f;
 		constexpr int kNoWarning = 0;
 		constexpr int kLockWarning = 1;
 		constexpr int kMissileWarning = 2;
-		constexpr float kMissileWarningIntervalSeconds = 0.22f;
-		constexpr float kLockWarningIntervalSeconds = 0.65f;
 		WAVEFORMATEX PcmFormat() {
 			WAVEFORMATEX format{};
 			format.wFormatTag = WAVE_FORMAT_PCM;
@@ -137,11 +130,15 @@ namespace Game {
 		m_comInitialized = SUCCEEDED(comResult);
 		if (FAILED(comResult) && comResult != RPC_E_CHANGED_MODE) return;
 		m_mediaInitialized = SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET));
-		const wchar_t* names[] = {L"プレイヤー飛行音(50秒).mp3", L"プレイヤー機関銃発射音(5秒間).mp3",
-			L"プレイヤーミサイル発射音.mp3", L"プレイヤー機関銃被弾.mp3", L"プレイヤーミサイル被弾.mp3",
-			L"敵航空機爆発.mp3", L"敵戦艦爆発.mp3", L"BattleBGM.mp3"};
+		m_settings = {};
+		m_settings.Load(Engine::JsonAssetReader{}, soundDirectory / L"audio.json");
+		const std::string names[] = {m_settings.flightFile, m_settings.gunFile, m_settings.launchFile,
+			m_settings.gunHitFile, m_settings.missileHitFile, m_settings.aircraftFile, m_settings.shipFile,
+			m_settings.battleBgmFile};
 		for (std::size_t i = 0; i < m_clips.size(); ++i) {
-			const auto path = soundDirectory / names[i];
+			const auto path = soundDirectory /
+				std::filesystem::path(
+					std::u8string(reinterpret_cast<const char8_t*>(names[i].data()), names[i].size()));
 			const UINT channels = i == static_cast<std::size_t>(ClipKind::BattleBgm) ? 2 : 1;
 			if (!m_mediaInitialized || !LoadClip(path, m_clips[i], channels)) {
 				Engine::Log(L"CombatAudio: could not load {}\n", path.wstring());
@@ -187,7 +184,10 @@ namespace Game {
 				return;
 			}
 		}
-		if (FAILED(m_engine->CreateSourceVoice(&m_briefingVoice, &format))) { Shutdown(); return; }
+		if (FAILED(m_engine->CreateSourceVoice(&m_briefingVoice, &format))) {
+			Shutdown();
+			return;
+		}
 		if (FAILED(m_engine->CreateSourceVoice(&m_warningVoice, &format))) {
 			Shutdown();
 		}
@@ -281,12 +281,12 @@ namespace Game {
 			ResetPlayback();
 		}
 		SetLoop(0, ClipKind::Flight, state.flying,
-			kFlightVolume *
+			m_settings.flightVolume *
 				(m_cinematicActive && m_activeCinematicAudio
 						? m_activeCinematicAudio->settings.flightVolumeScale
 						: 1.0f));
-		SetLoop(1, ClipKind::Gun, state.flying && state.gunFiring, kGunVolume);
-		SetLoop(2, ClipKind::BattleBgm, !m_cinematicActive, kBattleBgmVolume);
+		SetLoop(1, ClipKind::Gun, state.flying && state.gunFiring, m_settings.gunVolume);
+		SetLoop(2, ClipKind::BattleBgm, !m_cinematicActive, m_settings.battleBgmVolume);
 		if (m_activeCinematicAudio)
 			SetLoopClip(3, m_activeCinematicAudio->bgm, m_cinematicActive,
 				m_activeCinematicAudio->settings.bgmVolume);
@@ -359,30 +359,30 @@ namespace Game {
 			m_warningCountdownSeconds -= std::min(deltaSeconds, 0.25f);
 		}
 		if (warning != kNoWarning && m_warningCountdownSeconds <= 0) {
-			Play(missileWarning ? m_missileWarning : m_lockWarning, kWarningVolume, true);
-			m_warningCountdownSeconds =
-				missileWarning ? kMissileWarningIntervalSeconds : kLockWarningIntervalSeconds;
+			Play(missileWarning ? m_missileWarning : m_lockWarning, m_settings.warningVolume, true);
+			m_warningCountdownSeconds = missileWarning ? m_settings.missileWarningIntervalSeconds
+													   : m_settings.lockWarningIntervalSeconds;
 		}
 	}
 	void CombatAudio::PlayEvents(const CombatAudioState& state, unsigned hitCount) {
 		// 同じフレームの同種イベントをまとめ、急な音量増加を防ぐ
 		if (state.missileLaunches) {
-			PlayClip(ClipKind::Launch, kLaunchVolume);
+			PlayClip(ClipKind::Launch, m_settings.launchVolume);
 		}
 		if (state.gunHits) {
-			PlayClip(ClipKind::GunHit, kGunHitVolume);
+			PlayClip(ClipKind::GunHit, m_settings.gunHitVolume);
 		}
 		if (state.missileHits) {
-			PlayClip(ClipKind::MissileHit, kMissileHitVolume);
+			PlayClip(ClipKind::MissileHit, m_settings.missileHitVolume);
 		}
 		if (state.aircraftExplosions) {
-			PlayClip(ClipKind::Aircraft, kAircraftVolume);
+			PlayClip(ClipKind::Aircraft, m_settings.aircraftVolume);
 		}
 		if (state.shipExplosions) {
-			PlayClip(ClipKind::Ship, kShipVolume);
+			PlayClip(ClipKind::Ship, m_settings.shipVolume);
 		}
 		if (hitCount) {
-			Play(m_hit, kHitVolume);
+			Play(m_hit, m_settings.hitVolume);
 		}
 	}
 
