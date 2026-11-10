@@ -1,0 +1,117 @@
+# 共通ムービー再生とミッション連携
+
+開始・ミッション途中・終了で `CinematicSettings / CinematicController / CinematicScene / CinematicPresenter`
+を共有する。再生処理はミッションのフェーズや勝敗を知らず、指定された演出を再生し、
+`Completed` または `Skipped` を一度だけ通知する。
+
+## 演出の登録と呼び出し
+
+`Assets/Cinematics/cinematics.json` の各参照は、このファイルからの相対パス。
+`opening` は開始、`midMission` は哨戒機撃墜後の空母攻撃移行、`ending` は勝利、`defeat` は敗北に対応する。
+開始条件と復帰先はFlightSceneが管理する。項目を省略すれば該当の演出は再生しない。
+マニフェスト自体がない場合は既存のopening.jsonだけを読み込む。
+
+`ConfigureCinematics` は演出IDと定義のマップ、およびロード済みモデルを返すリゾルバーを受け取る。
+モデルの参照は設定時に検証する。`PlayCinematic(id)` は未登録ID・再生中の要求にfalseを返す。
+完了理由は `TakeCinematicCompletion()` で取得でき、取得後は消費される。
+再生中のJSON・モデル・音声ファイル読み込みは行わない。カット切替時はロード済みモデルで演出用Sceneを構成する。
+
+途中・終了の演出中は機体・武器・ダメージ・任務・戦闘エフェクトの状態を停止する。
+終了またはEnterによるスキップ後、途中演出は戦闘へ、終了演出は既存の結果表示へ戻る。
+各ミッション演出は一度だけ再生し、Rによる再挑戦ではフラグと再生状態を初期化する。
+フォーカス喪失時は映像・会話を停止し、音声エンジンも一時停止する。
+
+## 複数カットの定義
+
+`shots` は1〜64カットの配列。各カットはルートの映像設定を継承し、指定項目だけ上書きする。
+カットは配列順に再生し、`durationSeconds` はカットごとの時間になる。
+モデル・配置・飛行方向・カメラ・タイトルをカットごとに変更できる。
+
+```json
+{
+  "briefing": [],
+  "audio": {"bgm": "", "flightVolumeScale": 0.4},
+  "model": "enemy",
+  "formationOffsets": [[0, 0, 0]],
+  "shots": [
+    {"durationSeconds": 2, "cameraStartOffsetMeters": [180, 100, 360]},
+    {"durationSeconds": 2, "model": "player", "title": "MISSION COMPLETE"}
+  ]
+}
+```
+
+`model` は既に登録されたモデルID（player、enemy、ship1など）。新規モデルのファイル登録は既存のアセット定義側で行う。
+`modelScale` は登録モデルの表示倍率への追加倍率（既定1）。`headingDegrees` はY軸の向きで既定180度、
+移動方向はローカル-Zをこの角度で回転した方向。速度・プロペラ回転は0で静止できる。
+`originOffsetMeters` は再生開始時の自機位置からのオフセットで、カット間でも同じ基準位置を使う。
+カメラ位置・配置係数はモデル寸法に追従する。カメラの補間経路が注視点の真上を通る設定は拒否する。
+会話とBGMはカット列全体で共有し、会話を完了してからカット列へ進む。
+同じ会話番号でも演出ID・再生回が変われば音声を再開する。全演出の音声は初期化時に読み込む。
+
+## 既存の開始演出との互換性
+
+`shots` を省略すると、従来の編隊紹介→暗転→通常追従視点の形式で再生する。
+明示的なカット列ではカット境界で直接切り替える。従来形式のフェード関連項目は使用しない。
+
+ゲーム開始と再挑戦では、会話後に約5秒の導入を再生する。Enterでスキップできる。
+0〜3.6秒はCorsair 4機を斜め前から撮影し、3.6秒から暗転、3.8秒で戦闘シーンへ切り替える。
+4秒から通常追従視点へフェードインし、5秒から操作を受け付ける。
+
+## 調整
+
+`Assets/Cinematics/opening.json`を編集して再起動する。ファイルや各項目がなければ既定値を使う。
+型不一致・不正な数値・壊れたJSONは無視せず、ファイル名と項目を含むエラーにする。
+
+| 項目 | 用途 |
+| --- | --- |
+| durationSeconds | 導入全体の秒数 |
+| fadeOutStartSeconds / cutSeconds | 暗転開始と描画シーン切替の時刻 |
+| fadeInStartSeconds / fadeInSeconds | 明転開始時刻と所要時間 |
+| formationSpacingMeters / formationDepthMeters | 僚機の左右間隔と先頭機からの後方距離 |
+| flightSpeedMetersPerSecond | 演出用の直進速度 |
+| propellerRadiansPerSecond | 演出用のプロペラ回転速度 |
+| cameraStartOffsetMeters / cameraEndOffsetMeters | 先頭機中心から見たカメラの開始・終了位置 |
+| lookAtOffsetMeters / verticalFovDegrees | 注視点のオフセットと縦視野角 |
+| title / subtitle | 紹介文。既存HUDフォントに収録した文字と英数字を使用 |
+| briefing | 会話項目の配列。空配列なら会話を省略し、映像から開始する |
+| briefing[].lines | 字幕2行。各行1〜192 UTF-8バイト |
+| briefing[].audio / fallbackSeconds | 音声パスと、音声を再生できない場合の表示秒数 |
+| audio.bgm / bgmVolume | 空襲BGMのパスと音量（既定0.12） |
+| audio.briefingVolume / flightVolumeScale | 会話音量（既定0.4）と演出中の飛行音倍率（既定0.4） |
+| formationOffsets | 1〜32機の配置係数。X・YにformationSpacingMeters、ZにformationDepthMetersを掛ける |
+| originOffsetMeters | 自機の初期位置から演出原点までのワールド座標オフセット（既定[0,0,-5000]） |
+
+音声パスはこのJSONファイルの所在からの相対パス。空文字列で音声を省略できる。
+会話は最大64項目で、追加・並べ替えは字幕と音声を同じ項目内で行う。
+例えば `{"lines":["字幕の1行目","字幕の2行目"],"audio":"../Sound/Opening/会話.wav","fallbackSeconds":5}` と指定する。
+音量・倍率は0〜1、配置係数・原点は有限値、fallbackSecondsは正の有限値とする。
+新項目を省略すると従来の3会話・4機の菱形編隊・音声・音量を使う。
+会話中は映像の時計を止め、音声完了後に次の項目へ進む。音声が欠落・破損している場合や、
+出力デバイスが使えず再生を開始できない場合はfallbackSecondsで進行する。フォーカス喪失中は進行しない。
+音声は初期化時に読み込み、再生中はファイルを読み直さない。変更反映には再起動が必要。
+
+敵機はワールド+Z方向へ飛ぶ。カメラ位置・編隊間隔・注視点は最大寸法200mの機体を基準にし、
+モデルの最大寸法とvisualScaleに合わせて一括で拡縮する。機体の中心はローカル境界から求める。
+時刻は `0 < fadeOutStartSeconds < cutSeconds <= fadeInStartSeconds`、
+`fadeInStartSeconds + fadeInSeconds <= durationSeconds` を満たす必要がある。
+
+## 責務とライフサイクル
+
+- Settingsとローダーは既定値・JSON読み込み・検証を担当する。
+- Controllerは会話の進行・無音時の待ち時間を管理し、経過時間からカット、フェード、並走カメラ、直進距離を求める。入力機器や描画には依存しない。
+- CombatAudioは設定された音声の読み込み・再生・停止と再生状態の通知を担当する。会話数や次の項目の選択は担当しない。
+- CinematicSceneは共有の敵機モデルを使う可変長編隊と専用カメラを所有する。戦闘オブジェクトは変更しない。
+- FlightSceneは導入と戦闘を切り替える。Applicationだけが本番で導入を有効化し、個別テストは直接戦闘を開始できる。
+- CinematicPresenterは値コピーの表示データを受け取り、黒帯・紹介文・フェード・スキップ案内を描く。
+
+開始時に通常追従カメラを確定させ、敵編隊のカット中は戦闘シーンを停止する。
+自機カットへ切り替えた後は無入力の機体移動とカメラ追従を更新し、操作開始まで映像を止めない。
+武器・ダメージ・任務の更新と操作入力は終了フレームまで無効にする。スキップでは追加の飛行を行わない。
+再挑戦は既存の初期状態を復元した後で導入時間を0に戻す。最小化中は既存のメインループで更新を停止する。
+演出シーンと戦闘シーンの両方へリサイズを通知する。飛行音には既存のループ音を使用する。
+
+## 検証
+
+`Tests/RunRegressionTests.ps1 -MissionReview`で設定・状態遷移と既存の武器・任務・HUDを検証する。
+`Tests/RunRegressionTests.ps1 -OpeningReview`で実モデルの描画キャプチャも生成する。
+出力先のfixturesに、開始・3秒・横長・800x600・暗転・自機視点・操作開始のPNGを保存する。

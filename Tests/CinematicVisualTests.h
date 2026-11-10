@@ -4,7 +4,7 @@
 #include "Engine/Renderer/Hud/HudRenderer.h"
 
 // 本番のモデルと描画パスで、導入の構図と暗転前後をPNGに記録する
-void TestOpeningCinematicRendering(const fs::path& repository, const fs::path& fixture) {
+void TestCinematicRendering(const fs::path& repository, const fs::path& fixture) {
 	const auto root = repository / L"Assets";
 	const auto definition = FlightSceneLoader{}.Load({.environment = root / L"Environment/environment.json",
 		.playerAircraft = root / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
@@ -61,12 +61,37 @@ void TestOpeningCinematicRendering(const fs::path& repository, const fs::path& f
 			definition.enemyAircraft.visualScale, definition.environment.ocean.size);
 		Require(flight.GetRenderScene().GetObjects().size() == 4,
 			"Opening cinematic did not display the four-aircraft formation");
+		{
+			auto custom = definition.opening;
+			custom.formationOffsets = {{0, 0, 0}, {2, 1, -3}};
+			custom.originOffsetMeters = {10, 20, -30};
+			auto changed = flight;
+			changed.EnableOpening(custom, assets.GetModel(EnemyModelId), definition.enemyAircraft.visualScale,
+				definition.environment.ocean.size);
+			const auto& objects = changed.GetRenderScene().GetObjects();
+			Require(objects.size() == 2, "Configured formation count was ignored");
+			const auto& oldWorld = flight.GetRenderScene().GetObjects().front().worldTransform;
+			Require(std::abs(objects.front().worldTransform._41 - oldWorld._41 - 10) < 0.01f &&
+					std::abs(objects.front().worldTransform._42 - oldWorld._42 - 20) < 0.01f &&
+					std::abs(objects.front().worldTransform._43 - oldWorld._43 - 4970) < 0.01f,
+				"Configured opening origin was ignored");
+			const auto& bounds = *assets.GetModel(EnemyModelId)->GetLocalBounds();
+			const float scale = std::max(0.01f,
+				std::max({bounds.maximum.x - bounds.minimum.x, bounds.maximum.y - bounds.minimum.y,
+					bounds.maximum.z - bounds.minimum.z}) *
+					definition.enemyAircraft.visualScale / 200);
+			Require(std::abs(objects[1].worldTransform._41 - objects[0].worldTransform._41 -
+						2 * custom.formationSpacingMeters * scale) < 0.01f &&
+					std::abs(objects[1].worldTransform._43 - objects[0].worldTransform._43 +
+						3 * custom.formationDepthMeters * scale) < 0.01f,
+				"Configured formation offsets lost their model-relative scaling");
+		}
 		const auto capture = [&](const wchar_t* file, UINT width, UINT height) {
 			device.Resize(width, height);
 			context.SynchronizeFrameIndex(device);
 			flight.OnResize(width, height);
 			const auto& scene = flight.GetRenderScene();
-			updater.Update(scene, flight.GetCombatSnapshot().opening.elapsedSeconds,
+			updater.Update(scene, flight.GetCombatSnapshot().cinematic.elapsedSeconds,
 				definition.environment.retroFilm, buffers, device.GetDevice(), &context);
 			context.BeginFrame();
 			context.TransitionResource(device.GetSceneRenderTarget(),
@@ -112,7 +137,7 @@ void TestOpeningCinematicRendering(const fs::path& repository, const fs::path& f
 			DirectX::ScratchImage pixels;
 			ThrowIfFailed(DirectX::CaptureTexture(device.GetCommandQueue(), device.GetCurrentRenderTarget(),
 				false, pixels, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PRESENT));
-			if (flight.GetCombatSnapshot().opening.fadeOpacity >= 0.999f) {
+			if (flight.GetCombatSnapshot().cinematic.fadeOpacity >= 0.999f) {
 				const auto* image = pixels.GetImage(0, 0, 0);
 				const auto* center = image->pixels + height / 2 * image->rowPitch + width / 2 * 4;
 				Require(
@@ -135,6 +160,25 @@ void TestOpeningCinematicRendering(const fs::path& repository, const fs::path& f
 		capture(L"opening-player.png", 1280, 720);
 		flight.Update({}, 0.25f);
 		capture(L"opening-gameplay.png", 1280, 720);
+		flight.ConfigureCinematics(
+			definition.cinematics,
+			[&](const std::string& id) {
+				return FlightScene::CinematicModel{assets.GetModel(id),
+					id == PlayerModelId ? definition.playerAircraft.visualScale
+										: definition.enemyAircraft.visualScale};
+			},
+			definition.environment.ocean.size);
+		Require(flight.PlayCinematic("midMission"), "Intermediate cinematic did not start");
+		capture(L"midMission-00.png", 1280, 720);
+		for (int i = 0; i < 8; ++i)
+			flight.Update({}, 0.25f);
+		capture(L"midMission-02.png", 800, 600);
+		flight.Update({}, 0.01f, {}, {.skipOpening = true});
+		Require(flight.PlayCinematic("ending"), "Ending cinematic did not start");
+		capture(L"ending-00.png", 1280, 720);
+		flight.Update({}, 0.01f, {}, {.skipOpening = true});
+		Require(flight.PlayCinematic("defeat"), "Defeat cinematic did not start");
+		capture(L"defeat-00.png", 800, 600);
 	}
 	DestroyWindow(window);
 	std::cout << "PASS: opening real-model captures, resize, black transition and player handoff\n";

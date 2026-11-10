@@ -6,7 +6,9 @@
 #include <cstdint>
 #include <filesystem>
 #include <vector>
+#include <map>
 #include "Game/Combat/CombatTypes.h"
+#include "Game/Cinematics/CinematicSettings.h"
 
 namespace Game {
 	class CombatAudio {
@@ -18,20 +20,28 @@ namespace Game {
 
 		// 初期化・再生状態の制御
 		void Initialize(const std::filesystem::path& soundDirectory);
+		void Initialize(const std::filesystem::path& soundDirectory, const CinematicSettings& opening);
+		void Initialize(const std::filesystem::path& soundDirectory,
+			const std::map<std::string, CinematicSettings>& cinematics);
 		void Update(const CombatAudioState& state, unsigned hitCount, bool lockWarning = false,
 			bool missileWarning = false, float deltaSeconds = 0);
-		int UpdateOpening(const OpeningCinematicPresentation& opening, float deltaSeconds);
+		CinematicVoiceStatus UpdateCinematic(const CinematicPresentation& opening);
 		void SetSuspended(bool suspended);
 		void ResetPlayback();
 
 		std::size_t GetLoadedSoundCount() const;
 
 	  private:
-		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, BattleBgm, AirRaid, Briefing1, Briefing2, Briefing3, Count };
+		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, BattleBgm, Count };
 		enum class SoundKind { Hit, LockWarning, MissileWarning };
 		struct Clip {
 			std::vector<BYTE> samples;
 			WAVEFORMATEX format{};
+		};
+		struct CinematicAudioBank {
+			CinematicAudioSettings settings;
+			Clip bgm;
+			std::vector<Clip> briefing;
 		};
 
 		static constexpr std::size_t kVoiceCount = 12;
@@ -41,6 +51,7 @@ namespace Game {
 		void Play(const std::vector<int16_t>& samples, float volume, bool warning = false);
 		void PlayClip(ClipKind kind, float volume);
 		void SetLoop(std::size_t index, ClipKind kind, bool playing, float volume);
+		void SetLoopClip(std::size_t index, const Clip& clip, bool playing, float volume);
 		void UpdateWarning(bool flying, bool lockWarning, bool missileWarning, float deltaSeconds);
 		void PlayEvents(const CombatAudioState& state, unsigned hitCount);
 		void Shutdown();
@@ -57,8 +68,12 @@ namespace Game {
 		std::array<IXAudio2SourceVoice*, kVoiceCount> m_voices{};
 		IXAudio2SourceVoice* m_briefingVoice = nullptr;
 		int m_briefingLine = -1;
-		float m_briefingFallbackSeconds = 0;
-		bool m_openingActive = false;
+		CinematicVoiceStatus m_briefingStatus = CinematicVoiceStatus::Unavailable;
+		std::map<std::string, CinematicAudioBank> m_cinematicBanks;
+		CinematicAudioBank* m_activeCinematicAudio = nullptr;
+		std::string m_activeCinematicId;
+		uint64_t m_activePlaybackSerial = 0;
+		bool m_cinematicActive = false;
 		IXAudio2SourceVoice* m_warningVoice = nullptr;
 		std::array<IXAudio2SourceVoice*, 4> m_loops{};
 		std::array<bool, 4> m_loopPlaying{};

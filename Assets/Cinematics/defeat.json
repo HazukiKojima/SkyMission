@@ -1,0 +1,16 @@
+{
+  "briefing": [],
+  "audio": {"bgm": "", "flightVolumeScale": 0},
+  "model": "enemy",
+  "formationOffsets": [[0, 0, 0], [-1, 0, -1], [1, 0, -1]],
+  "originOffsetMeters": [0, 0, -3000],
+  "title": "任務失敗",
+  "subtitle": "MISSION FAILED",
+  "shots": [
+    {
+      "durationSeconds": 4,
+      "cameraStartOffsetMeters": [180, 100, 360],
+      "cameraEndOffsetMeters": [100, 75, 320]
+    }
+  ]
+}

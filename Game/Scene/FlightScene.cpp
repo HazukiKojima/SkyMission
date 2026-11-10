@@ -108,8 +108,8 @@ namespace Game {
 		if (!m_initialState) {
 			SaveInitialState();
 		}
-		if (m_opening.GetPresentation().active) {
-			UpdateOpening(dt, combatInput.skipOpening);
+		if (m_cinematic.GetPresentation().active) {
+			UpdateCinematic(dt, combatInput.skipOpening);
 			return;
 		}
 		UpdateCombatTimers(dt);
@@ -142,6 +142,7 @@ namespace Game {
 		m_combat.audio.flying = m_combat.result == CombatResult::Active && m_scene.FindObject(m_playerId);
 		m_combat.audio.gunFiring &= m_combat.audio.flying;
 		UpdateCamera(input, dt, cameraInput);
+		CheckMissionCinematics();
 	}
 
 	void FlightScene::UpdateCombatTimers(float dt) {
@@ -310,7 +311,7 @@ namespace Game {
 		m_width = width;
 		m_height = height;
 		m_cameraController.OnResize(width, height);
-		m_openingScene.OnResize(width, height);
+		m_cinematicScene.OnResize(width, height);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
 

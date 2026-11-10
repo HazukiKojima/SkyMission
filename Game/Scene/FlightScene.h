@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <map>
 #include "FlightMission.h"
 #include "Engine/Scene/Scene.h"
 #include "Game/Aircraft/AircraftAIController.h"
@@ -12,7 +13,7 @@
 #include "Game/Weapons/CarrierMissileSystem.h"
 #include "Game/Combat/EnemyGunBehavior.h"
 #include "Game/Weapons/BombDefinition.h"
-#include "Game/Cinematics/OpeningCinematicScene.h"
+#include "Game/Cinematics/CinematicScene.h"
 
 namespace Game {
 	struct FlightSceneDefinition;
@@ -26,12 +27,20 @@ namespace Game {
 			UINT height, float farZ);
 		void Initialize(float aspect, float nearZ, float farZ);
 		// 本番開始時に有効化する。個別構成のテストでは呼ばずに直接戦闘できる
-		void EnableOpening(const OpeningCinematicSettings& settings, std::shared_ptr<Engine::Model> model,
+		void EnableOpening(const CinematicSettings& settings, std::shared_ptr<Engine::Model> model,
 			float visualScale, float farZ);
-		void EnableOpeningBriefing() { m_briefingEnabled = true; SetOpeningBriefingLine(0); }
-		void SetOpeningBriefingLine(int line) {
-			m_briefingLine = line;
-			m_combat.opening.briefingLine = line;
+		void EnableOpeningBriefing();
+		void UpdateCinematicBriefing(CinematicVoiceStatus voice, float deltaSeconds);
+		struct CinematicModel {
+			std::shared_ptr<Engine::Model> model;
+			float scale = 1;
+		};
+		using CinematicModelResolver = std::function<CinematicModel(const std::string&)>;
+		void ConfigureCinematics(const std::map<std::string, CinematicSettings>& definitions,
+			CinematicModelResolver resolve, float farZ);
+		bool PlayCinematic(const std::string& id);
+		std::optional<CinematicCompletion> TakeCinematicCompletion() {
+			return m_cinematic.TakeCompletion();
 		}
 		void ConfigureCombat(const CombatSettings& settings);
 		void ConfigureMission(const MissionSettings& settings, std::shared_ptr<Engine::Model> enemyModel,
@@ -88,8 +97,8 @@ namespace Game {
 			return m_effects.GetSnapshot();
 		}
 		const Engine::Scene& GetRenderScene() const {
-			return m_opening.GetPresentation().active && m_opening.GetPresentation().formationShot
-				? m_openingScene.GetScene()
+			return m_cinematic.GetPresentation().active && m_cinematic.GetPresentation().formationShot
+				? m_cinematicScene.GetScene()
 				: m_scene;
 		}
 		const std::vector<Engine::SceneObject>& GetObjects() const {
@@ -162,14 +171,23 @@ namespace Game {
 		void SaveInitialState();
 		void Restart(float dt);
 		void StartOpening();
-		void UpdateOpening(float deltaSeconds, bool skipRequested);
+		void UpdateCinematic(float deltaSeconds, bool skipRequested);
+		void BeginCinematic(const CinematicSettings& settings, const std::string& id, bool briefing);
+		void InitializeCinematicShot();
+		void CheckMissionCinematics();
 
 		bool m_briefingEnabled = false;
-		int m_briefingLine = -1;
 		bool m_openingEnabled = false;
-		OpeningCinematicSettings m_openingSettings;
-		OpeningCinematicController m_opening;
-		OpeningCinematicScene m_openingScene;
+		CinematicSettings m_openingSettings;
+		CinematicController m_cinematic;
+		CinematicScene m_cinematicScene;
+		std::map<std::string, CinematicSettings> m_cinematics;
+		CinematicModelResolver m_resolveCinematicModel;
+		CinematicSettings m_activeCinematicSettings;
+		DirectX::XMFLOAT3 m_cinematicOrigin{};
+		float m_cinematicFarZ = 100000;
+		bool m_midMissionPlayed = false;
+		bool m_endingPlayed = false;
 
 		// 任務と敵側の武器
 		FlightMission m_mission;

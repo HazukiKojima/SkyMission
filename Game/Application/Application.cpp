@@ -75,7 +75,7 @@ namespace Game {
 
 		InitializeFlightScene(assets);
 		timing.Mark("application.audio");
-		m_combatAudio.Initialize(assetsDir / L"Sound");
+		m_combatAudio.Initialize(assetsDir / L"Sound", assets.cinematics);
 		ConfigureResizeHandling();
 
 		m_lastTime = std::chrono::steady_clock::now();
@@ -91,9 +91,17 @@ namespace Game {
 				return m_renderer->GetModel(id);
 			},
 			m_window->GetWidth(), m_window->GetHeight(), m_renderer->GetOceanSize()));
-		m_scene->EnableOpening(assets.opening, m_renderer->GetModel(EnemyModelId),
-			assets.enemyAircraft.visualScale, m_renderer->GetOceanSize());
-		m_scene->EnableOpeningBriefing();
+		m_scene->ConfigureCinematics(
+			assets.cinematics,
+			[this, enemyScale = assets.enemyAircraft.visualScale,
+				playerScale = assets.playerAircraft.visualScale](const std::string& id) {
+				const float scale = id == EnemyModelId ? enemyScale
+					: id == PlayerModelId			   ? playerScale
+													   : 1.0f;
+				return FlightScene::CinematicModel{m_renderer->GetModel(id), scale};
+			},
+			m_renderer->GetOceanSize());
+		m_scene->PlayCinematic("opening");
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +
@@ -172,15 +180,19 @@ namespace Game {
 			const InputSnapshot input = m_window->ConsumeInput();
 			m_combatAudio.SetSuspended(!input.active);
 			const auto combat = CombatController{}.ReadInput(input);
-			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
+			const float simulationSeconds =
+				m_scene->GetCombatSnapshot().cinematic.active && !input.active ? 0 : deltaSeconds;
+			m_scene->Update(m_aircraftController.ReadInput(input), simulationSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();
-			m_scene->SetOpeningBriefingLine(m_combatAudio.UpdateOpening(combatState.opening, deltaSeconds));
+			const auto voice = m_combatAudio.UpdateCinematic(combatState.cinematic);
+			m_scene->UpdateCinematicBriefing(voice, input.active ? deltaSeconds : 0);
 			m_combatAudio.Update(combatState.audio, combatState.hitCount, false, false, deltaSeconds);
 			const auto view = m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
 			m_hud.Reset(view.width, view.height);
-			m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);
+			if (!m_scene->GetCombatSnapshot().cinematic.active)
+				m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);
 			m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud);
 		}
 	}

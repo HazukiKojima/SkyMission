@@ -41,8 +41,8 @@ void Require(bool condition, const char* description) {
 #include "BombTests.h"
 #include "ModelLoadingTests.h"
 #include "CloudTests.h"
-#include "OpeningCinematicTests.h"
-#include "OpeningCinematicVisualTests.h"
+#include "CinematicTests.h"
+#include "CinematicVisualTests.h"
 
 void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -83,8 +83,49 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.Initialize(repository / L"Assets/Sound");
 					Require(audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
 					audio.Update({.flying = true, .restarted = true}, 0);
+					auto configured = LoadCinematicSettings(
+						JsonAssetReader{}, repository / L"Assets/Cinematics/opening.json");
+					configured.briefing.resize(1);
+					audio.Initialize(repository / L"Assets/Sound", configured);
+					Require(audio.GetLoadedSoundCount() == 10,
+						"Configured opening clips were not loaded independently");
+					CinematicPresentation presentation;
+					presentation.active = true;
+					presentation.briefingLine = 0;
+					audio.UpdateCinematic(presentation);
+					audio.ResetPlayback();
+					presentation.active = false;
+					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
+						"Skipped opening retained a briefing voice");
+					const auto brokenAudio = fixture / L"broken-briefing.wav";
+					std::ofstream(brokenAudio) << "invalid wave data";
+					configured.briefing[0].audio = brokenAudio;
+					audio.Initialize(repository / L"Assets/Sound", configured);
+					presentation.active = true;
+					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
+						"Broken audio did not report fallback status");
+					configured.briefing[0].audio = fixture / L"missing-briefing.wav";
+					audio.Initialize(repository / L"Assets/Sound", configured);
+					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
+						"Missing audio did not report fallback status");
 					audio.Initialize(fixture / L"missing-sound-directory");
 					Require(audio.GetLoadedSoundCount() == 0, "Missing clips retained old PCM");
+					auto valid = LoadCinematicSettings(
+						JsonAssetReader{}, repository / L"Assets/Cinematics/opening.json");
+					valid.briefing.resize(1);
+					auto silent = valid;
+					silent.audio.bgm.clear();
+					silent.briefing[0].audio = fixture / L"missing-voice.wav";
+					audio.Initialize(repository / L"Assets/Sound",
+						std::map<std::string, CinematicSettings>{{"opening", valid}, {"middle", silent}});
+					Require(
+						audio.GetLoadedSoundCount() == 10, "Cinematic banks did not preload their own audio");
+					presentation.cinematicId = "opening";
+					audio.UpdateCinematic(presentation);
+					presentation.cinematicId = "middle";
+					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
+						"Switching cinematic IDs reused a previous briefing clip");
+					audio.ResetPlayback();
 					audio.Update({.flying = true, .gunFiring = true, .missileLaunches = 1}, 0);
 				}
 				apartmentResult = CoGetApartmentType(&apartment, &qualifier);
@@ -848,19 +889,19 @@ int wmain(int argc, wchar_t** argv) {
 			TestAIParameters(argv[1], fixture);
 			TestEnvironmentSettings(argv[1], fixture);
 			TestShips(argv[1], fixture);
-			TestOpeningCinematic(argv[1], fixture);
+			TestCinematic(argv[1], fixture);
 			CoUninitialize();
 			return 0;
 		}
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--opening-review") {
-			TestOpeningCinematic(argv[1], fixture);
+			TestCinematic(argv[1], fixture);
 			TestCombatAudioLifecycle(argv[1], fixture);
-			TestOpeningCinematicRendering(argv[1], fixture);
+			TestCinematicRendering(argv[1], fixture);
 			CoUninitialize();
 			return 0;
 		}
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
-			TestOpeningCinematic(argv[1], fixture);
+			TestCinematic(argv[1], fixture);
 			TestCombatMath();
 			TestEnemyCombatAI();
 			TestEnemyEngagementProfile();
@@ -879,7 +920,7 @@ int wmain(int argc, wchar_t** argv) {
 			return 0;
 		}
 		TestFlightAndScene();
-		TestOpeningCinematic(argv[1], fixture);
+		TestCinematic(argv[1], fixture);
 		TestCombatAudioLifecycle(argv[1], fixture);
 		TestCombatMath();
 		TestEnemyGunBehavior();
