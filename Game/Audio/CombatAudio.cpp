@@ -148,6 +148,8 @@ namespace Game {
 			if (!path.empty() && (!m_mediaInitialized || !LoadClip(path, clip, channels)))
 				Engine::Log(L"CombatAudio: could not load {}\n", path.wstring());
 		};
+		for (size_t i = 0; i < EnemyRadioClips.size(); ++i)
+			loadCinematicClip(soundDirectory / EnemyRadioClips[i].file, m_enemyRadioClips[i], 1);
 		for (const auto& [id, settings] : cinematics) {
 			auto& bank = m_cinematicBanks[id];
 			bank.settings = settings.audio;
@@ -187,6 +189,10 @@ namespace Game {
 				return;
 			}
 		}
+		if (FAILED(m_engine->CreateSourceVoice(&m_enemyRadioVoice, &format))) {
+			Shutdown();
+			return;
+		}
 		if (FAILED(m_engine->CreateSourceVoice(&m_briefingVoice, &format))) {
 			Shutdown();
 			return;
@@ -204,6 +210,7 @@ namespace Game {
 		for (const auto& [id, bank] : m_cinematicBanks)
 			count += static_cast<size_t>(std::count_if(bank.briefing.begin(), bank.briefing.end(), loaded)) +
 				(loaded(bank.bgm) ? 1 : 0);
+		count += static_cast<size_t>(std::count_if(m_enemyRadioClips.begin(), m_enemyRadioClips.end(), loaded));
 		return count;
 	}
 
@@ -226,6 +233,8 @@ namespace Game {
 			StopVoice(voice);
 		}
 		StopVoice(m_warningVoice);
+		StopVoice(m_enemyRadioVoice);
+		m_enemyRadioSerial = 0;
 		StopVoice(m_briefingVoice);
 		m_briefingLine = -1;
 		m_briefingStatus = CinematicVoiceStatus::Unavailable;
@@ -348,6 +357,25 @@ namespace Game {
 			m_briefingStatus = CinematicVoiceStatus::Finished;
 		return m_briefingStatus;
 	}
+	void CombatAudio::UpdateEnemyRadio(const EnemyRadioPresentation& radio) {
+		if (radio.clip < 0 || static_cast<size_t>(radio.clip) >= m_enemyRadioClips.size()) {
+			StopVoice(m_enemyRadioVoice);
+			m_enemyRadioSerial = 0;
+			return;
+		}
+		if (radio.serial == m_enemyRadioSerial) return;
+		StopVoice(m_enemyRadioVoice);
+		m_enemyRadioSerial = radio.serial;
+		const auto& clip = m_enemyRadioClips[radio.clip];
+		if (!m_enemyRadioVoice || clip.samples.empty()) return;
+		XAUDIO2_BUFFER buffer{};
+		buffer.AudioBytes = static_cast<UINT32>(clip.samples.size());
+		buffer.pAudioData = clip.samples.data();
+		buffer.Flags = XAUDIO2_END_OF_STREAM;
+		m_enemyRadioVoice->SetVolume(0.5f);
+		if (FAILED(m_enemyRadioVoice->SubmitSourceBuffer(&buffer)) || FAILED(m_enemyRadioVoice->Start()))
+			StopVoice(m_enemyRadioVoice);
+	}
 	void CombatAudio::UpdateWarning(bool flying, bool lockWarning, bool missileWarning, float deltaSeconds) {
 		int warning = kNoWarning;
 		if (flying) {
@@ -461,6 +489,10 @@ namespace Game {
 			m_warningVoice->DestroyVoice();
 		}
 		m_warningVoice = nullptr;
+		if (m_enemyRadioVoice) m_enemyRadioVoice->DestroyVoice();
+		m_enemyRadioVoice = nullptr;
+		m_enemyRadioSerial = 0;
+		for (auto& clip : m_enemyRadioClips) clip = {};
 		if (m_briefingVoice) m_briefingVoice->DestroyVoice();
 		m_briefingVoice = nullptr;
 		m_briefingLine = -1;

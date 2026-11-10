@@ -776,6 +776,8 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				"Lethal cannon volley did not produce one kill");
 			Require(state.result == CombatResult::Active && state.missionPhase == MissionPhase::CarrierAttack,
 				"Patrol all-down incorrectly produced victory");
+			Require(state.enemyRadio.clip >= 0 && state.enemyRadio.caption.side == "enemy",
+				"Lethal hit did not trigger enemy radio");
 			Require(scene.GetEffectSnapshot().explosions.size() == 1,
 				"Multiple simultaneous bullets created duplicate death effects");
 			scene.RemoveObject(playerId);

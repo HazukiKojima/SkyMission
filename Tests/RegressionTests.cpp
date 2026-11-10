@@ -44,6 +44,7 @@ void Require(bool condition, const char* description) {
 #include "CinematicTests.h"
 #include "CinematicVisualTests.h"
 #include "GameplaySettingsTests.h"
+#include "EnemyRadioTests.h"
 
 void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixture) {
 	// COMの所有権を分離して、未初期化と初期化済みの両方から再初期化する
@@ -67,7 +68,15 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.Update({.flying = true, .gunFiring = true}, 1);
 					audio.Initialize(repository / L"Assets/Sound");
 					Require(
-						audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
+						audio.GetLoadedSoundCount() == 23, "Not all combat and opening sound assets decoded");
+					for (size_t i = 0; i < EnemyRadioClips.size(); ++i) {
+						EnemyRadioPresentation line{static_cast<int>(i), i + 1, {"敵機", EnemyRadioClips[i].text, "enemy"}};
+						audio.UpdateEnemyRadio(line);
+						audio.UpdateEnemyRadio(line);
+						audio.SetSuspended(true);
+						audio.SetSuspended(false);
+						audio.UpdateEnemyRadio({});
+					}
 					audio.Update({.flying = true, .gunFiring = true}, 0);
 					audio.Update({.flying = true,
 									 .missileLaunches = 2,
@@ -84,13 +93,13 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.Update({.flying = true}, 0, false, false, 0.1f);
 					audio.Initialize(repository / L"Assets/Sound");
 					Require(
-						audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
+						audio.GetLoadedSoundCount() == 23, "Not all combat and opening sound assets decoded");
 					audio.Update({.flying = true, .restarted = true}, 0);
 					auto configured = LoadCinematicSettings(
 						JsonAssetReader{}, repository / L"Assets/Cinematics/opening.json");
 					configured.briefing.resize(1);
 					audio.Initialize(repository / L"Assets/Sound", configured);
-					Require(audio.GetLoadedSoundCount() == 11,
+					Require(audio.GetLoadedSoundCount() == 22,
 						"Configured opening clips were not loaded independently");
 					CinematicPresentation presentation;
 					presentation.active = true;
@@ -103,7 +112,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					// Connect a real existing clip to the radio channel without adding a new voice asset.
 					configured.radio[0].audio = configured.briefing[0].audio;
 					audio.Initialize(repository / L"Assets/Sound", configured);
-					Require(audio.GetLoadedSoundCount() == 11, "Radio voice clip was not decoded");
+					Require(audio.GetLoadedSoundCount() == 22, "Radio voice clip was not decoded");
 					presentation.active = false;
 					presentation.briefingLine = -1;
 					presentation.radioLine = 0;
@@ -139,7 +148,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.Initialize(repository / L"Assets/Sound",
 						std::map<std::string, CinematicSettings>{{"opening", valid}, {"middle", silent}});
 					Require(
-						audio.GetLoadedSoundCount() == 11, "Cinematic banks did not preload their own audio");
+						audio.GetLoadedSoundCount() == 22, "Cinematic banks did not preload their own audio");
 					presentation.cinematicId = "opening";
 					audio.UpdateCinematic(presentation);
 					presentation.cinematicId = "middle";
@@ -911,11 +920,13 @@ int wmain(int argc, wchar_t** argv) {
 			TestEnvironmentSettings(argv[1], fixture);
 			TestShips(argv[1], fixture);
 			TestCinematic(argv[1], fixture);
+			TestEnemyRadio();
 			CoUninitialize();
 			return 0;
 		}
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--opening-review") {
 			TestCinematic(argv[1], fixture);
+			TestEnemyRadio();
 			TestCombatAudioLifecycle(argv[1], fixture);
 			TestCinematicRendering(argv[1], fixture);
 			CoUninitialize();
@@ -923,6 +934,7 @@ int wmain(int argc, wchar_t** argv) {
 		}
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
 			TestCinematic(argv[1], fixture);
+			TestEnemyRadio();
 			TestCombatMath();
 			TestEnemyCombatAI();
 			TestEnemyEngagementProfile();

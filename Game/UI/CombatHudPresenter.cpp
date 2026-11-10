@@ -15,6 +15,9 @@ namespace Game {
 		if (view.width == 0 || view.height == 0) return;
 		if (snapshot.cinematic.active) {
 			CinematicPresenter{m_tuning.ink}.Build(snapshot.cinematic, view, list);
+			if (snapshot.enemyRadio.clip >= 0 && snapshot.cinematic.radioLine < 0 && snapshot.cinematic.briefingLine < 0)
+				RadioCaptionPresenter{}.Build(snapshot.enemyRadio.caption, view, list,
+					view.height * snapshot.cinematic.text.barHeightFraction);
 			return;
 		}
 		RadarMapPresenter{}.Build(snapshot, view, list, m_tuning);
@@ -26,6 +29,8 @@ namespace Game {
 		DrawControls(snapshot, view, list);
 		if (snapshot.cinematic.radioLine >= 0)
 			RadioCaptionPresenter{}.Build(snapshot.cinematic.radio, view, list);
+		else if (snapshot.enemyRadio.clip >= 0)
+			RadioCaptionPresenter{}.Build(snapshot.enemyRadio.caption, view, list);
 	}
 
 	void CombatHudPresenter::DrawControls(

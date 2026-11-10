@@ -114,6 +114,7 @@ namespace Game {
 		}
 		if (m_cinematic.GetPresentation().active) {
 			UpdateCinematic(dt, combatInput.skipOpening);
+			UpdateEnemyRadio(dt);
 			return;
 		}
 		m_cinematic.Update(dt, false);
@@ -123,6 +124,7 @@ namespace Game {
 			if (combatInput.retry) {
 				Restart(dt);
 			} else {
+				UpdateEnemyRadio(dt);
 				m_effects.Update(dt);
 				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
 			}
@@ -149,6 +151,7 @@ namespace Game {
 		m_combat.audio.gunFiring &= m_combat.audio.flying;
 		UpdateCamera(input, dt, cameraInput);
 		CheckMissionCinematics();
+		UpdateEnemyRadio(dt);
 	}
 
 	void FlightScene::UpdateCombatTimers(float dt) {
@@ -530,12 +533,25 @@ namespace Game {
 		for (const auto id : destroyed) {
 			RemoveObject(id);
 		}
+		std::vector<Engine::ObjectId> survivors;
+		for (const auto& enemy : m_enemies)
+			if (enemy.health > 0 && m_scene.FindObject(enemy.objectId)) survivors.push_back(enemy.objectId);
+		for (const auto id : destroyed) m_enemyRadio.NotifyDestroyed(id, survivors);
 		if (m_combat.playerHealth <= 0) {
 			RemoveObject(m_playerId);
 			m_combat.result = CombatResult::Defeat;
 		}
 	}
 
+	void FlightScene::UpdateEnemyRadio(float dt) {
+		std::vector<Engine::ObjectId> survivors;
+		for (const auto& enemy : m_enemies)
+			if (enemy.health > 0 && m_scene.FindObject(enemy.objectId)) survivors.push_back(enemy.objectId);
+		const auto& movie = m_combat.cinematic;
+		m_enemyRadio.Update(dt, survivors, m_combat.result == CombatResult::Defeat ||
+			movie.briefingLine >= 0 || movie.radioLine >= 0);
+		m_combat.enemyRadio = m_enemyRadio.GetPresentation();
+	}
 	void FlightScene::RemoveObject(Engine::ObjectId id) {
 		m_scene.RemoveObject(id);
 		std::erase_if(m_enemies, [id](const EnemyAircraft& e) {
