@@ -1,0 +1,71 @@
+{
+  "gun": {
+    "flashLifetimeSeconds": 0.065,
+    "flashRadius": 2.5,
+    "flameLength": 8.0,
+    "tracerSeconds": 0.018,
+    "tracerMaxLength": 120.0,
+    "tracerOuterWidth": 4.0,
+    "tracerInnerWidth": 1.5,
+    "smokeLifetimeSeconds": 0.35,
+    "smokeStartRadius": 0.8,
+    "smokeEndRadius": 2.8,
+    "smokeOpacity": 0.16,
+    "smokeVelocityInheritance": 0.25,
+    "smokeDrag": 2.0,
+    "smokeRiseSpeed": 3.0
+  },
+  "impact": {
+    "lifetimeSeconds": 0.45,
+    "flashSeconds": 0.1,
+    "flashOuterRadius": 8.0,
+    "flashInnerRadius": 4.8,
+    "smokeFadeSeconds": 0.22,
+    "fragmentMinLifetime": 0.16,
+    "fragmentLifetimeRange": 0.28,
+    "fragmentMinSpeed": 24.0,
+    "fragmentSpeedRange": 60.0,
+    "fragmentDrag": 3.0,
+    "fragmentGravity": 9.8,
+    "fragmentVelocityInheritance": 0.7,
+    "smokeCount": 8,
+    "fragmentCount": 28
+  },
+  "explosion": {
+    "lifetimeSeconds": 3.5,
+    "flashSeconds": 0.09,
+    "smokeFadeSeconds": 1.3,
+    "minRadius": 18.0,
+    "maxRadius": 65.0,
+    "boundsRadiusScale": 0.65,
+    "fragmentGravity": 18.0,
+    "fragmentTrailSeconds": 0.018,
+    "fragmentVelocityInheritance": 0.2,
+    "smokeCount": 22,
+    "fireCount": 17,
+    "fragmentCount": 24
+  },
+  "carrier": {
+    "explosionRadius": 220.0,
+    "smokeLifetimeSeconds": 10.0,
+    "smokeIntervalSeconds": 0.15,
+    "smokeRiseSpeed": 65.0,
+    "smokeStartRadius": 70.0,
+    "smokeGrowthPerSecond": 22.0,
+    "smokeOpacity": 0.6,
+    "smokeDriftSpeed": 12
+  },
+  "rocket": {
+    "smokeLifetimeSeconds": 0.8,
+    "smokeOpacity": 0.32,
+    "smokeRiseSpeed": 3,
+    "smokeStartRadius": 1.4,
+    "smokeGrowthPerSecond": 7
+  },
+  "deck": {
+    "startRadius": 25,
+    "growthPerSecond": 32,
+    "driftSpeed": 12,
+    "riseSpeed": 65
+  }
+}

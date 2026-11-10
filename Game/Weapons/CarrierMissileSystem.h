@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Settings/GameplaySettings.h"
 #include "BombFlight.h"
 #include "Game/Combat/CombatTypes.h"
 
@@ -6,6 +7,9 @@ namespace Game {
 	// 母艦への誘導ミサイルを管理する。2発を使い切った後に再装填する
 	class CarrierMissileSystem {
 	  public:
+		void ConfigureSettings(const MissileSettings& settings) {
+			m_settings = settings;
+		}
 		void Configure(
 			float reloadSeconds, std::shared_ptr<Engine::Model> model, const DirectX::XMFLOAT3& modelForward);
 		void ConfigureFlight(float speed, float damage);
@@ -24,7 +28,7 @@ namespace Game {
 		size_t GetCount() const {
 			return m_missiles.size();
 		}
-		static size_t RequiredModelCapacity(float reloadSeconds);
+		static size_t RequiredModelCapacity(float reloadSeconds, const MissileSettings& settings = {});
 		// 通知は取り出すと消費される
 		std::vector<HitEvent> TakeHits();
 		std::vector<DirectX::XMFLOAT3> TakeMissImpacts();
@@ -42,6 +46,7 @@ namespace Game {
 			float remainingSeconds = CarrierMissileFlight::lifetimeSeconds;
 			float smokeSeconds = 0;
 		};
+		MissileSettings m_settings;
 		float m_missileSpeed = 6000;
 		float m_missileDamage = 150;
 		unsigned m_ammo = 2;

@@ -22,16 +22,16 @@ namespace Game {
 		}
 	};
 
-	inline EnemyEngagementProfile GetEnemyEngagementProfile(
-		LockState playerLock, Engine::ObjectId selected, Engine::ObjectId enemy) {
+	inline EnemyEngagementProfile GetEnemyEngagementProfile(LockState playerLock, Engine::ObjectId selected,
+		Engine::ObjectId enemy, const EnemyAITuning& tuning = {}) {
 		if (playerLock == LockState::Locked && selected == enemy && enemy != Engine::InvalidObjectId)
 			return {};
 		// 非ロック機は再攻撃を早めて射撃機会を増やす。回避距離・旋回上限・命中精度は維持する
-		return {.cruiseSpeedScale = 1.1f,
-			.passDistanceScale = 0.8f,
-			.aimHoldScale = 0.65f,
-			.attackRangeScale = 1.1f,
-			.burstTempoScale = 1.35f,
-			.shotIntervalScale = 0.75f};
+		return {.cruiseSpeedScale = tuning.unlockedCruiseSpeedScale,
+			.passDistanceScale = tuning.unlockedPassDistanceScale,
+			.aimHoldScale = tuning.unlockedAimHoldScale,
+			.attackRangeScale = tuning.unlockedAttackRangeScale,
+			.burstTempoScale = tuning.unlockedBurstTempoScale,
+			.shotIntervalScale = tuning.unlockedShotIntervalScale};
 	}
 } // namespace Game

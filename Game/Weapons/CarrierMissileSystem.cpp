@@ -8,9 +8,6 @@ namespace Game {
 	namespace {
 		constexpr float kMaximumReloadSeconds = 120;
 		constexpr float kMaximumSimulationStepSeconds = 1.0f / 240;
-		constexpr float kMissileSmokeIntervalSeconds = 0.06f;
-		constexpr float kMissileTurnRateRadiansPerSecond = XM_PIDIV2;
-		constexpr float kMissileReleaseSideOffsetMeters = 14.0f;
 	} // namespace
 
 	void CarrierMissileSystem::Configure(
@@ -23,7 +20,7 @@ namespace Game {
 		if (!std::isfinite(length) || length < 0.001f)
 			throw std::invalid_argument("Missile modelForward must be finite and nonzero");
 		if (!m_missiles.empty()) throw std::logic_error("Cannot configure active missiles");
-		m_ammo = 2;
+		m_ammo = m_settings.ammoCount;
 		m_model = std::move(model);
 		XMStoreFloat3(&m_modelForward, XMVector3Normalize(forward));
 		m_reloadSeconds = reloadSeconds;
@@ -39,18 +36,19 @@ namespace Game {
 		m_missileSpeed = speed;
 		m_missileDamage = damage;
 	}
-	size_t CarrierMissileSystem::RequiredModelCapacity(float reloadSeconds) {
+	size_t CarrierMissileSystem::RequiredModelCapacity(float reloadSeconds, const MissileSettings& settings) {
 		if (!std::isfinite(reloadSeconds) || reloadSeconds < 1 || reloadSeconds > kMaximumReloadSeconds)
 			throw std::invalid_argument("Missile reload interval must be in [1,120]");
-		return 2 *
-			(static_cast<size_t>(std::ceil(CarrierMissileFlight::lifetimeSeconds / reloadSeconds)) + 1);
+		return settings.ammoCount *
+			(static_cast<size_t>(std::ceil(settings.lifetimeSeconds / reloadSeconds)) + 1);
 	}
 	CarrierMissileFlight CarrierMissileSystem::BuildLaunchFlight(
 		const XMFLOAT3& position, const XMFLOAT3& velocity, const XMFLOAT3& forward) const {
 		auto release = position;
-		const float side = m_ammo == 1 ? kMissileReleaseSideOffsetMeters : -kMissileReleaseSideOffsetMeters;
+		const float side =
+			m_ammo % 2 == 1 ? m_settings.releaseSideOffsetMeters : -m_settings.releaseSideOffsetMeters;
 		release.x -= forward.z * side;
-		release.y -= CarrierMissileFlight::releaseOffsetMeters;
+		release.y -= m_settings.releaseOffsetMeters;
 		release.z += forward.x * side;
 		XMFLOAT3 launch;
 		XMStoreFloat3(&launch, XMLoadFloat3(&velocity) + XMLoadFloat3(&forward) * m_missileSpeed);
@@ -63,7 +61,7 @@ namespace Game {
 		const auto flight = BuildLaunchFlight(position, velocity, forward);
 		m_missiles.push_back({scene.AddObject(m_model,
 								  BuildProjectileTransform(flight.position, flight.velocity, m_modelForward)),
-			target, flight});
+			target, flight, m_settings.lifetimeSeconds});
 		--m_ammo;
 		if (m_ammo == 0) m_cooldownSeconds = m_reloadSeconds;
 		return true;
@@ -74,7 +72,7 @@ namespace Game {
 		dt = std::min(dt, 0.25f);
 		if (m_cooldownSeconds > 0) {
 			m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
-			if (m_cooldownSeconds <= 0) m_ammo = 2;
+			if (m_cooldownSeconds <= 0) m_ammo = m_settings.ammoCount;
 		}
 		// 低FPSでも一度に大きく旋回・移動せず、短い区間ごとに命中を判定する
 		const int stepCount = static_cast<int>(std::ceil(dt / kMaximumSimulationStepSeconds));
@@ -90,7 +88,8 @@ namespace Game {
 						const auto center = hull->bounds.Center();
 						XMStoreFloat3(&target,
 							XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&hull->world)));
-						missile.flight.GuideTo(target, kMissileTurnRateRadiansPerSecond * durationSeconds);
+						missile.flight.GuideTo(target,
+							XMConvertToRadians(m_settings.turnRateDegreesPerSecond) * durationSeconds);
 					} else {
 						missile.target = Engine::InvalidObjectId;
 					}
@@ -124,7 +123,7 @@ namespace Game {
 				missile.smokeSeconds -= validSeconds;
 				if (missile.smokeSeconds <= 0) {
 					m_trail.push_back(missile.flight.position);
-					missile.smokeSeconds += kMissileSmokeIntervalSeconds;
+					missile.smokeSeconds += m_settings.smokeIntervalSeconds;
 				}
 				if (missile.flight.position.y <= 0.001f || missile.remainingSeconds <= 0) {
 					m_missImpacts.push_back(missile.flight.position);

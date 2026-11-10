@@ -1,4 +1,7 @@
 #pragma once
+#include "Game/Settings/UiTextSettings.h"
+#include "Game/Settings/GameplaySettings.h"
+#include "Game/Effects/CombatEffectSettings.h"
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Engine/Renderer/RendererDefinition.h"
 #include "Game/Weapons/WeaponDefinition.h"
@@ -37,6 +40,12 @@ namespace Game {
 	std::vector<ShipDefinition> LoadShipDefinitions(
 		const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	struct FlightSceneDefinition {
+		CameraSettings camera;
+		EnemyGunTuning enemyGunTuning;
+		EnemyAITuning enemyAITuning;
+		EffectSettings effects;
+		UiTuning ui;
+		UiTextSettings text;
 		Engine::RenderEnvironmentDefinition environment;
 		AircraftDefinition playerAircraft, enemyAircraft;
 		AircraftAIParameters enemyAIParameters;

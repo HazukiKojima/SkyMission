@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Settings/GameplaySettings.h"
 #include <DirectXMath.h>
 #include <filesystem>
 #include <string>
@@ -48,6 +49,7 @@ namespace Game {
 			{{"君、一機で護衛機を排除し、", "母艦を撃沈せよ。"},
 				L"../Sound/Opening/君、一機で護衛機を排除し、母艦を撃沈せよ.wav", 5}};
 		CinematicAudioSettings audio;
+		CinematicTextSettings text;
 		float fadeOutStartSeconds = 3.6f;
 		float cutSeconds = 3.8f;
 		float fadeInStartSeconds = 4;

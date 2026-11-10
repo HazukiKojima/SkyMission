@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Settings/GameplaySettings.h"
 #include "Engine/Camera/Camera.h"
 #include <DirectXMath.h>
 #include "Engine/Input/RawInputState.h"
@@ -17,6 +18,9 @@ namespace Game {
 	class AircraftCameraController {
 	  public:
 		static constexpr float DefaultFovY = DirectX::XM_PI / 3.0f; // 縦視野角60度
+		void Configure(const CameraSettings& settings) {
+			m_settings = settings;
+		}
 		AircraftCameraController() = default;
 		~AircraftCameraController() = default;
 
@@ -51,11 +55,8 @@ namespace Game {
 		void UpdateFollowPosition(float deltaSeconds, bool snap = false);
 
 		DirectX::XMFLOAT3 m_position = {0.0f, 10.0f, -10.0f};
-		float m_yaw = 0.0f;			// ラジアン
-		float m_pitch = -0.4f;		// ラジアン
-		float m_moveSpeed = 100.0f; // ワールド単位/秒
-		float m_mouseSensitivity =
-			0.0025f; // マウス入力1カウント当たりのラジアン（絶対位置入力ではピクセル差分）
+		float m_yaw = 0.0f;	   // ラジアン
+		float m_pitch = -0.4f; // ラジアン
 		bool m_following = false;
 		DirectX::XMFLOAT3 m_followTarget = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followHeading = {0.0f, 0.0f, -1.0f};
@@ -66,17 +67,11 @@ namespace Game {
 		float m_followCameraYaw = 0.0f;
 		float m_followCameraPitch = 0.0f;
 		float m_lookYaw = 0, m_lookPitch = 0;
-		float m_lookReturnRate = 6.0f;
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followViewDirection = {0.0f, 0.0f, -1.0f};
 		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする
-		float m_followDistance = 240.0f;
-		float m_maxFollowDistance = 280.0f;
-		float m_followHeight = 65.0f;
-		float m_followLookHeight = 40.0f; // 機体より上を注視し、機体を画面中央より下へ配置する
-		float m_followSmoothing = 1000.0f;
-		float m_followDirectionSmoothing = 2.0f;
 
+		CameraSettings m_settings;
 		Engine::Camera m_camera;
 	};
 } // namespace Game

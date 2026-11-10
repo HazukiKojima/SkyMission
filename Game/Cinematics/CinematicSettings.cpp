@@ -100,6 +100,7 @@ namespace Game {
 			for (auto& entry : result.briefing)
 				entry.audio = path.parent_path() / entry.audio;
 			if (!std::filesystem::exists(path)) return result;
+			result.text.Load(reader, path);
 			const auto number = [&](const char* key, float& target) {
 				if (auto values = reader.TryResolveFloatArray(path, key)) {
 					if (values->size() != 1)

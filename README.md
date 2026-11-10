@@ -268,3 +268,5 @@ AI設定の`reactionSeconds`、`maneuverSeconds`、`threatDistance`、`aimErrorD
 HUDは母艦HP、飛行状態、照準、敵表示、任務表示の順に描きます。
 AIは行動判断と操縦入力の計算を、モデル読み込みは形状集計とメッシュ構築を分けています。
 機関砲の発射要求は`GunVolley`のメンバー名で位置・姿勢・速度・時刻を明示します。
+
+ゲーム全体の調整項目と設定ファイルは [GameplaySettings](Docs/Design/GameplaySettings.md) を参照してください。

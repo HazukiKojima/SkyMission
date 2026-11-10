@@ -18,19 +18,20 @@ namespace Game {
 		for (size_t index = 0; index < count; ++index) {
 			if (!context.HasVertexBudget(6)) break;
 			const auto& smoke = snapshot.gunSmoke[index];
-			if (smoke.age < 0 || smoke.age >= GunEffectSettings::smokeLifetimeSeconds) continue;
-			const float progress = smoke.age / GunEffectSettings::smokeLifetimeSeconds;
+			if (smoke.age < 0 || smoke.age >= context.Settings().gun.smokeLifetimeSeconds) continue;
+			const float progress = smoke.age / context.Settings().gun.smokeLifetimeSeconds;
 			// 減衰速度の積分値を使い、FPSに依存しない煙の位置を求める
-			const float driftSeconds =
-				(1 - std::exp(-GunEffectSettings::smokeDrag * smoke.age)) / GunEffectSettings::smokeDrag;
+			const float driftSeconds = (1 - std::exp(-context.Settings().gun.smokeDrag * smoke.age)) /
+				context.Settings().gun.smokeDrag;
 			const auto position = XMLoadFloat3(&smoke.position) +
-				XMLoadFloat3(&smoke.velocity) * (GunEffectSettings::smokeVelocityInheritance * driftSeconds) +
-				XMVectorSet(0, GunEffectSettings::smokeRiseSpeed * smoke.age, 0, 0);
-			const float radius =
-				std::lerp(GunEffectSettings::smokeStartRadius, GunEffectSettings::smokeEndRadius, progress);
+				XMLoadFloat3(&smoke.velocity) *
+					(context.Settings().gun.smokeVelocityInheritance * driftSeconds) +
+				XMVectorSet(0, context.Settings().gun.smokeRiseSpeed * smoke.age, 0, 0);
+			const float radius = std::lerp(
+				context.Settings().gun.smokeStartRadius, context.Settings().gun.smokeEndRadius, progress);
 			const EffectRandom random(smoke.position);
 			context.DrawCloud(position, radius, random.Sample(0) * XM_2PI, 11,
-				{0.62f, 0.61f, 0.58f, GunEffectSettings::smokeOpacity * (1 - progress) * (1 - progress)});
+				{0.62f, 0.61f, 0.58f, context.Settings().gun.smokeOpacity * (1 - progress) * (1 - progress)});
 		}
 	}
 
@@ -43,8 +44,8 @@ namespace Game {
 			if (!context.HasVertexBudget(GunEffectSettings::tracerVertexBudget)) break;
 			const auto& tracer = snapshot.gunTracers[index];
 			if (const auto segment = context.ProjectClippedSegment(tracer.head, tracer.tail))
-				context.DrawStreak(*segment, GunEffectSettings::tracerOuterWidth * scale,
-					{1, 0.32f, 0.035f, 0.75f}, GunEffectSettings::tracerInnerWidth * scale,
+				context.DrawStreak(*segment, context.Settings().gun.tracerOuterWidth * scale,
+					{1, 0.32f, 0.035f, 0.75f}, context.Settings().gun.tracerInnerWidth * scale,
 					{1, 0.95f, 0.65f, 0.95f});
 		}
 
@@ -52,18 +53,18 @@ namespace Game {
 		for (size_t index = 0; index < flashCount; ++index) {
 			if (!context.HasVertexBudget(GunEffectSettings::flashVertexBudget)) break;
 			const auto& flash = snapshot.gunFlashes[index];
-			if (flash.age < 0 || flash.age >= GunEffectSettings::flashLifetimeSeconds) continue;
-			const float fade = 1 - flash.age / GunEffectSettings::flashLifetimeSeconds;
+			if (flash.age < 0 || flash.age >= context.Settings().gun.flashLifetimeSeconds) continue;
+			const float fade = 1 - flash.age / context.Settings().gun.flashLifetimeSeconds;
 			// 発射ごとの形を固定し、機体の移動による乱数のちらつきを防ぐ
 			const float phase = float(flash.sequence % 1024) * 1.73f + float(flash.muzzleIndex) * 2.41f;
 			const float variation = 0.9f + 0.1f * std::sin(phase);
 			const auto muzzle = XMLoadFloat3(&flash.position);
 			const auto forward = XMVector3Normalize(XMLoadFloat3(&flash.direction));
-			const float radius = GunEffectSettings::flashRadius * variation;
+			const float radius = context.Settings().gun.flashRadius * variation;
 			context.DrawGlow(muzzle, radius, {1, 0.35f, 0.035f, fade * 0.8f});
 			context.DrawGlow(muzzle, radius * 0.45f, {1, 0.98f, 0.7f, fade});
-			const auto flameTip = muzzle + forward * (GunEffectSettings::flameLength * variation);
-			context.DrawCloud(muzzle + forward * (GunEffectSettings::flameLength * 0.4f), radius * 0.65f,
+			const auto flameTip = muzzle + forward * (context.Settings().gun.flameLength * variation);
+			context.DrawCloud(muzzle + forward * (context.Settings().gun.flameLength * 0.4f), radius * 0.65f,
 				phase, 31, {1, 0.55f, 0.08f, fade * 0.75f});
 			XMFLOAT3 tip;
 			XMStoreFloat3(&tip, flameTip);

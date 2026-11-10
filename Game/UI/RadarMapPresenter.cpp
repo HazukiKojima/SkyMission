@@ -5,8 +5,9 @@
 
 namespace Game {
 	using namespace DirectX;
-	RadarLayout RadarMapPresenter::Layout(const Engine::RenderView& view) {
+	RadarLayout RadarMapPresenter::Layout(const Engine::RenderView& view, const UiTuning& tuning) {
 		RadarLayout layout;
+		layout.rangeMeters = tuning.radarRangeMeters;
 		if (view.width == 0 || view.height == 0) return layout;
 		layout.scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		layout.size = 320 * layout.scale;
@@ -23,22 +24,22 @@ namespace Game {
 		const float distance = std::hypot(dx, dz);
 		if (layout.scale <= 0 || !std::isfinite(distance)) return point;
 		point.valid = true;
-		point.outside = distance > RangeMeters;
+		point.outside = distance > layout.rangeMeters;
 		point.direction = distance > 0.001f ? XMFLOAT2{dx / distance, dz / distance} : XMFLOAT2{0, -1};
-		const float radius = std::min(distance / RangeMeters, 1.0f) * layout.radius;
+		const float radius = std::min(distance / layout.rangeMeters, 1.0f) * layout.radius;
 		point.pixel = {
 			layout.center.x + point.direction.x * radius, layout.center.y + point.direction.y * radius};
 		return point;
 	}
-	void RadarMapPresenter::Build(
-		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
-		const auto layout = Layout(view);
+	void RadarMapPresenter::Build(const CombatSnapshot& snapshot, const Engine::RenderView& view,
+		Engine::HudDrawList& list, const UiTuning& tuning, const UiTextSettings& text) const {
+		const auto layout = Layout(view, tuning);
 		if (layout.scale <= 0) return;
 		const float scale = layout.scale, lineWidth = std::max(1.0f, 1.4f * scale);
-		const auto border = HudStyle::Ink;
+		const auto border = tuning.ink;
 		const auto grid = HudStyle::Faded(border, 0.23f);
 		const auto labelColor = border;
-		const auto enemyColor = border, selectedColor = HudStyle::Selected;
+		const auto enemyColor = border, selectedColor = tuning.selected;
 		const auto panelPoint = [&](float x, float y) {
 			return XMFLOAT2{layout.origin.x + x * scale, layout.origin.y + y * scale};
 		};

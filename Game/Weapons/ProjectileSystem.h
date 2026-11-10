@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Effects/CombatEffectSettings.h"
 #include "Engine/Scene/Scene.h"
 #include "WeaponDefinition.h"
 #include "Game/Combat/CombatTypes.h"
@@ -21,6 +22,9 @@ namespace Game {
 	// 弾の寿命・等速移動・連続衝突判定を管理し、命中と描画用イベントを蓄積する
 	class ProjectileSystem {
 	  public:
+		void ConfigureEffects(const EffectSettings& settings) {
+			m_effectSettings = settings;
+		}
 		void Configure(const GunSettings& settings, std::shared_ptr<Engine::Model> model,
 			const DirectX::XMFLOAT3& modelForward);
 		// dtは秒。命中・寿命切れ・海面到達した弾をSceneからも取り除く
@@ -58,6 +62,7 @@ namespace Game {
 		void AddTracer(const Projectile& projectile, const DirectX::XMFLOAT3& head);
 		bool MoveAndCollide(Projectile& projectile, float duration, float frameOffset, float frameSeconds,
 			std::span<const CollisionTarget> targets);
+		EffectSettings m_effectSettings;
 		GunSettings m_settings;
 		std::shared_ptr<Engine::Model> m_model;
 		DirectX::XMFLOAT4X4 m_modelRotation;

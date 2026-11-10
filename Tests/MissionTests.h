@@ -158,6 +158,18 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		const auto resolveModel = [&](const std::string& id) {
 			return id == PlayerModelId || id == AmmunitionModelId ? player : box;
 		};
+
+		{
+			auto tuned = missionDefinition;
+			tuned.mission.playerStartPosition = {120, 2500, -200};
+			tuned.camera.fovDegrees = 75;
+			tuned.bomb.missile.ammoCount = 3;
+			auto custom = FlightScene::CreateMission(tuned, resolveModel, 1024, 768, 100000);
+			Require(custom.GetCombatSnapshot().playerAltitudeMeters == 2500,
+				"Configured player spawn was ignored by mission factory");
+			Require(custom.GetCombatSnapshot().carrierMissileAmmo == 3,
+				"Configured missile ammo was ignored by mission factory");
+		}
 		auto initialized = FlightScene::CreateMission(missionDefinition, resolveModel, 1024, 768, 100000);
 		Require(initialized.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount &&
 				initialized.GetCombatSnapshot().playerAltitudeMeters == 1500,
@@ -209,10 +221,14 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			skipped.Update({}, 0.1f, {}, noise);
 			{
 				auto registered = initialized;
-				registered.ConfigureCinematics({{"opening", definition.opening}}, [&](const std::string&) {
-					return FlightScene::CinematicModel{box, 20};
-				}, 100000);
-				Require(registered.PlayCinematic("opening") && registered.GetCombatSnapshot().cinematic.briefingLine == 0,
+				registered.ConfigureCinematics(
+					{{"opening", definition.opening}},
+					[&](const std::string&) {
+						return FlightScene::CinematicModel{box, 20};
+					},
+					100000);
+				Require(registered.PlayCinematic("opening") &&
+						registered.GetCombatSnapshot().cinematic.briefingLine == 0,
 					"Registered opening did not enable its briefing");
 				registered.Update({}, 0.1f, {}, {.skipOpening = true});
 				XMFLOAT4X4 actual, expected;

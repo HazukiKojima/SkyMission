@@ -1,4 +1,6 @@
 #pragma once
+#include "Game/Settings/GameplaySettings.h"
+#include "Game/Settings/UiTextSettings.h"
 #include "Engine/Renderer/Hud/HudDrawList.h"
 #include "Game/Combat/CombatTypes.h"
 #include "HudProjection.h"
@@ -7,6 +9,12 @@ namespace Game {
 	// 戦闘状態をHUDへ変換する。対象選択や命中判定などのゲーム状態は変更しない
 	class CombatHudPresenter {
 	  public:
+		void ConfigureTuning(const UiTuning& settings) {
+			m_tuning = settings;
+		}
+		void ConfigureText(const UiTextSettings& text) {
+			m_text = text;
+		}
 		// 線幅・文字サイズは1920x1080基準。Buildで実際の解像度に合わせて縮尺を適用する
 		void Configure(const Engine::HudSettings& settings) {
 			m_settings = settings;
@@ -34,6 +42,8 @@ namespace Game {
 		void DrawOffscreenIndicator(const HudProjection& projection, DirectX::XMFLOAT4 tint,
 			const Engine::RenderView& view, Engine::HudDrawList& list) const;
 
+		UiTuning m_tuning;
+		UiTextSettings m_text;
 		Engine::HudSettings m_settings;
 		// 描画上の補間状態のみ保持する。対象変更・リトライ時は新しい方向から開始する
 		mutable Engine::ObjectId m_arrowTarget = Engine::InvalidObjectId;

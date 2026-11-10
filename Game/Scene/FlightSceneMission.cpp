@@ -6,9 +6,6 @@
 #include <cmath>
 namespace Game {
 	using namespace DirectX;
-	namespace {
-		constexpr float kAircraftGunDamage = 2;
-	}
 	void FlightScene::ConfigureMission(const MissionSettings& settings,
 		std::shared_ptr<Engine::Model> enemyModel, float enemyScale, const AircraftFlightParameters& flight,
 		const AircraftAIParameters& ai) {
@@ -64,7 +61,7 @@ namespace Game {
 		settings.Validate();
 		auto gun = definition.gun;
 		gun.maxProjectiles = settings.maxHostileProjectiles;
-		gun.lifetime = EnemyGunLifetimeSeconds;
+		gun.lifetime = m_enemyGunTuning.lifetimeSeconds;
 		gun.muzzleSpeed = settings.enemyGunSpeed;
 		gun.fireInterval = settings.enemyGunInterval;
 		m_hostileProjectiles.Configure(gun, std::move(ammunition), definition.modelForward);
@@ -74,6 +71,7 @@ namespace Game {
 
 	void FlightScene::ConfigureCarrierMissileWeapon(
 		const BombDefinition& definition, float reloadSeconds, std::shared_ptr<Engine::Model> model) {
+		m_carrierMissiles.ConfigureSettings(definition.missile);
 		m_carrierMissiles.Configure(reloadSeconds, std::move(model), definition.modelForward);
 		m_carrierMissiles.ConfigureFlight(
 			m_mission.GetSettings().carrierMissileSpeed, m_mission.GetSettings().bombDamage);
@@ -138,15 +136,16 @@ namespace Game {
 			const CombatTarget player{m_playerId, m_player.GetPosition(), m_player.GetVelocity()};
 			const auto enemyVelocity = enemy.flightModel.GetVelocity();
 			const auto direction = EnemyGunDirection(enemy.flightModel.GetPosition(), enemyVelocity, player,
-				m_enemyGunSettings.muzzleSpeed, enemy.slot, enemy.gunPattern.GetShotIndex());
+				m_enemyGunSettings.muzzleSpeed, enemy.slot, enemy.gunPattern.GetShotIndex(),
+				m_enemyGunTuning);
 			if (!IsWithinAngle(
 					enemy.flightModel.GetForward(), direction, enemy.aiParameters.aimAngleDegrees)) {
 				continue;
 			}
 			// 2発分の空きがないときは発射せず、片方だけの斉射を避ける。
 			if (m_hostileProjectiles.GetCount() + 2 > m_enemyGunSettings.maxProjectiles) continue;
-			const auto directions =
-				SpreadEnemyGunDirections(direction, enemy.slot, enemy.gunPattern.GetShotIndex());
+			const auto directions = SpreadEnemyGunDirections(
+				direction, enemy.slot, enemy.gunPattern.GetShotIndex(), m_enemyGunTuning);
 			bool fired = false;
 			for (const auto& shotDirection : directions) {
 				XMFLOAT3 velocity;
@@ -154,14 +153,14 @@ namespace Game {
 					XMLoadFloat3(&enemyVelocity) +
 						XMLoadFloat3(&shotDirection) * m_enemyGunSettings.muzzleSpeed);
 				fired |= m_hostileProjectiles.FireSingle(m_scene, enemy.flightModel.GetPosition(), velocity,
-					AttackSource::EnemyAircraft, kAircraftGunDamage);
+					AttackSource::EnemyAircraft, m_enemyGunTuning.damage);
 			}
 			if (fired) {
 				const float interval = m_mission.GetPhase() == MissionPhase::Commander
 					? m_commanderGunInterval
 					: m_enemyGunSettings.fireInterval;
 				const auto engagement = GetEnemyEngagementProfile(
-					m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId);
+					m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId, m_enemyAITuning);
 				enemy.weaponCooldownSeconds = interval * engagement.shotIntervalScale;
 				enemy.gunPattern.NotifyShot();
 				m_combat.enemyFireWarningSeconds = kEnemyFireWarningDurationSeconds;

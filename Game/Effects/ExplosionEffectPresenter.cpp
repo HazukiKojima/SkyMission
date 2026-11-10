@@ -16,7 +16,7 @@ namespace Game {
 				context.DrawCloud(location, radius, rotation, seed, color);
 			};
 			// 大きさと上昇速度の異なる煙塊を重ねて乱流を表現する
-			for (int i = 0; i < ExplosionEffectSettings::smokeCount; ++i) {
+			for (int i = 0; i < context.Settings().explosion.smokeCount; ++i) {
 				const float phase = i * EffectDrawSettings::goldenAngleRadians;
 				const float variation = 0.55f + (i % 7) * 0.11f;
 				const float spread =
@@ -27,8 +27,8 @@ namespace Game {
 							ageSeconds * radiusScale * (0.35f + (i % 4) * 0.12f),
 						std::sin(phase * 2) * spread * 0.5f, 0);
 				const float alpha = std::min(ageSeconds * 5, 0.85f) *
-					std::clamp((ExplosionEffectSettings::lifetimeSeconds - ageSeconds) /
-							ExplosionEffectSettings::smokeFadeSeconds,
+					std::clamp((context.Settings().explosion.lifetimeSeconds - ageSeconds) /
+							context.Settings().explosion.smokeFadeSeconds,
 						0.0f, 1.0f);
 				const float shade = 0.09f + (i % 5) * 0.025f;
 				drawCloud(location, radiusScale * (0.38f + ageSeconds * 0.27f) * variation,
@@ -46,7 +46,7 @@ namespace Game {
 				context.DrawCloud(location, radius, rotation, seed, color);
 			};
 			// 火炎の塊ごとに着火時刻と燃焼時間を変え、輪郭を崩す
-			for (int i = 0; i < ExplosionEffectSettings::fireCount; ++i) {
+			for (int i = 0; i < context.Settings().explosion.fireCount; ++i) {
 				const float delay = i == 0 ? 0 : (i % 5) * 0.025f;
 				const float particleAgeSeconds = ageSeconds - delay;
 				const float lifetimeSeconds = 0.48f + (i % 5) * 0.095f;
@@ -70,8 +70,8 @@ namespace Game {
 			const float radiusScale = effect.radius;
 			const auto origin = XMLoadFloat3(&effect.position);
 			// 白熱はごく短くし、均一な衝撃波の輪は描かない
-			if (ageSeconds < ExplosionEffectSettings::flashSeconds) {
-				const float flash = 1 - ageSeconds / ExplosionEffectSettings::flashSeconds;
+			if (ageSeconds < context.Settings().explosion.flashSeconds) {
+				const float flash = 1 - ageSeconds / context.Settings().explosion.flashSeconds;
 				context.DrawGlow(
 					origin, radiusScale * (0.65f + ageSeconds * 2), {1, 0.85f, 0.55f, flash * 0.8f});
 			}
@@ -87,7 +87,7 @@ namespace Game {
 				context.DrawCloud(location, radius, rotation, seed, color);
 			};
 			// 重力で落下する破片と燃える軌跡
-			for (int i = 0; i < ExplosionEffectSettings::fragmentCount; ++i) {
+			for (int i = 0; i < context.Settings().explosion.fragmentCount; ++i) {
 				const float lifetimeSeconds = 1.1f + (i % 7) * 0.22f;
 				if (ageSeconds >= lifetimeSeconds) continue;
 				const float phase = i * EffectDrawSettings::goldenAngleRadians;
@@ -98,15 +98,17 @@ namespace Game {
 					std::cos(phase) * radial * speed, y * speed, std::sin(phase) * radial * speed, 0);
 				const auto positionAt = [&](float particleAgeSeconds) {
 					const auto inheritedDisplacement = XMLoadFloat3(&effect.velocity) *
-						(particleAgeSeconds * ExplosionEffectSettings::fragmentVelocityInheritance);
+						(particleAgeSeconds * context.Settings().explosion.fragmentVelocityInheritance);
 					const auto fragmentDisplacement = velocity * particleAgeSeconds;
 					const auto gravityDisplacement = XMVectorSet(0,
-						-ExplosionEffectSettings::fragmentGravity * particleAgeSeconds * particleAgeSeconds,
+						-context.Settings().explosion.fragmentGravity * particleAgeSeconds *
+							particleAgeSeconds,
 						0, 0);
 					return origin + inheritedDisplacement + fragmentDisplacement + gravityDisplacement;
 				};
 				const auto segment = context.ProjectSegment(positionAt(ageSeconds),
-					positionAt(std::max(0.0f, ageSeconds - ExplosionEffectSettings::fragmentTrailSeconds)));
+					positionAt(
+						std::max(0.0f, ageSeconds - context.Settings().explosion.fragmentTrailSeconds)));
 				if (!segment) continue;
 				const float fade = 1 - ageSeconds / lifetimeSeconds;
 				if (i % 3 == 0) {

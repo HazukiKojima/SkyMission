@@ -12,8 +12,9 @@ namespace Game {
 		return value - std::floor(value);
 	}
 
-	EffectDrawContext::EffectDrawContext(const Engine::RenderView& view, Engine::HudDrawList& list)
-		: m_view(view), m_list(list), m_projector(view) {
+	EffectDrawContext::EffectDrawContext(
+		const Engine::RenderView& view, Engine::HudDrawList& list, const EffectSettings& settings)
+		: m_settings(settings), m_view(view), m_list(list), m_projector(view) {
 		const auto cameraWorld = DirectX::XMMatrixInverse(nullptr, DirectX::XMLoadFloat4x4(&view.view));
 		DirectX::XMStoreFloat3(&m_cameraRight, cameraWorld.r[0]);
 	}

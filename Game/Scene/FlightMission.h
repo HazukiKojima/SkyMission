@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/Settings/UiTextSettings.h"
 #include "Game/Combat/MissionState.h"
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Game/Weapons/ProjectileSystem.h"
@@ -7,6 +8,9 @@ namespace Game {
 	// ミッション規則、増援配置、艦隊の状態と攻撃を所有する
 	class FlightMission {
 	  public:
+		void ConfigureText(const UiTextSettings& text) {
+			m_text = text;
+		}
 		enum class SquadronKind { Patrol, Fighters, Commander };
 		struct AircraftSpawn {
 			std::shared_ptr<Engine::Model> model;
@@ -74,6 +78,7 @@ namespace Game {
 		}
 
 	  private:
+		UiTextSettings m_text;
 		struct EscortState {
 			Engine::ObjectId objectId;
 			float cooldownSeconds = 0;

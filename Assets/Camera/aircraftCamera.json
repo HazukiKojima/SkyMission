@@ -1,0 +1,18 @@
+{
+  "fovDegrees": 60,
+  "moveSpeed": 100,
+  "mouseSensitivity": 0.0025,
+  "lookReturnRate": 6,
+  "followDistance": 240,
+  "maxFollowDistance": 280,
+  "followHeight": 65,
+  "followLookHeight": 40,
+  "followSmoothing": 1000,
+  "followDirectionSmoothing": 2,
+  "lookPitchLimit": 1.1,
+  "orbitPitchLimit": 1.15,
+  "pitchFollowScale": 0.4,
+  "pitchFollowLimit": 0.35,
+  "speedDistanceStart": 60,
+  "lookAheadMeters": 12
+}

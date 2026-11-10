@@ -1,3 +1,4 @@
+#include "Game/Settings/GameplaySettings.h"
 #pragma once
 #include <functional>
 #include <map>
@@ -115,6 +116,9 @@ namespace Game {
 		}
 
 	  private:
+		UiTextSettings m_text;
+		EnemyGunTuning m_enemyGunTuning;
+		EnemyAITuning m_enemyAITuning;
 		struct RestartState;
 
 		struct CombatGeometry {

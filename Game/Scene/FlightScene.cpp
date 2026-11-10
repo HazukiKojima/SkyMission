@@ -52,7 +52,17 @@ namespace Game {
 		environment.ambientIntensity = assets.environment.sky.ambientIntensity;
 		environment.ambientColor = assets.environment.sky.ambientColor;
 		scene.SetEnvironment(environment);
-		scene.SetPlayerAircraftPosition({0, 1500, 0});
+		scene.m_text = assets.text;
+		scene.m_mission.ConfigureText(assets.text);
+		scene.m_enemyGunTuning = assets.enemyGunTuning;
+		scene.m_enemyAITuning = assets.enemyAITuning;
+		scene.m_effects.Configure(assets.effects);
+		scene.m_projectiles.ConfigureEffects(assets.effects);
+		scene.m_hostileProjectiles.ConfigureEffects(assets.effects);
+		scene.m_cameraController.Configure(assets.camera);
+		scene.m_cameraController.Initialize(
+			DirectX::XMConvertToRadians(assets.camera.fovDegrees), float(width) / height, 1.0f, farZ);
+		scene.SetPlayerAircraftPosition(assets.mission.playerStartPosition);
 		scene.SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		scene.SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
 		scene.AddPlayerObject(requireModel(PlayerModelId));
@@ -238,8 +248,8 @@ namespace Game {
 	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, bool next, float dt) {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
-				const CombatTarget carrier{
-					m_mission.GetCarrierId(), *center, {}, "敵空母", m_mission.GetCarrierHealth()};
+				const CombatTarget carrier{m_mission.GetCarrierId(), *center, {}, m_text.Text("敵空母"),
+					m_mission.GetCarrierHealth()};
 				m_targeting.UpdateObjective(carrier, geometry.muzzle, geometry.forward, dt);
 				return;
 			}
@@ -267,10 +277,12 @@ namespace Game {
 			}
 			enemy.weaponCooldownSeconds = std::max(0.0f, enemy.weaponCooldownSeconds - dt);
 			const bool allowed = true;
-			const auto engagement =
-				GetEnemyEngagementProfile(m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId);
+			const auto engagement = GetEnemyEngagementProfile(
+				m_targeting.GetState(), m_targeting.GetSelected(), enemy.objectId, m_enemyAITuning);
 			const auto aiParameters = engagement.Apply(enemy.aiParameters);
-			const bool gunWindow = enemy.gunPattern.Update(dt * engagement.burstTempoScale, enemy.slot);
+			const bool gunWindow =
+				enemy.gunPattern.Update(dt * engagement.burstTempoScale, enemy.slot, m_enemyGunTuning);
+			enemy.controller.ConfigureTuning(m_enemyAITuning);
 			const auto decision = enemy.controller.ReadCombatInput(enemy.flightModel, target, direction, dt,
 				aiParameters, enemy.slot, allowed, enemy.weaponCooldownSeconds <= 0 && gunWindow,
 				m_mission.GetDefenseCenter(m_scene), true);
@@ -340,7 +352,7 @@ namespace Game {
 		enemy.previousPosition = position;
 		enemy.health = health;
 		++m_enemySequence;
-		enemy.name = name.empty() ? "敵機 " + std::to_string(m_enemySequence) : std::move(name);
+		enemy.name = name.empty() ? m_text.Text("敵機 ") + std::to_string(m_enemySequence) : std::move(name);
 		const auto id = enemy.objectId;
 		m_enemies.push_back(std::move(enemy));
 		return id;

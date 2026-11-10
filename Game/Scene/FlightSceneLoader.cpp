@@ -111,6 +111,8 @@ namespace Game {
 		BombDefinition LoadBomb(const JsonAssetReader& reader, const std::filesystem::path& path) {
 			try {
 				BombDefinition definition;
+				definition.missile.Load(
+					reader, reader.Resolve(path, "model").parent_path() / L"ammunition.json");
 				definition.ammunition = {
 					BombModelId, reader.Resolve(path, "model"), LoadModelOptions(reader, path)};
 				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
@@ -369,6 +371,7 @@ namespace Game {
 				mission.patrolCount = count("patrolCount", 8);
 				mission.finalFighterCount = count("finalFighterCount", 8);
 				mission.maxHostileProjectiles = count("maxHostileProjectiles", 512);
+				mission.LoadTuning(reader, paths.mission);
 				mission.bombReloadSeconds = reader.ResolveFloat(paths.mission, "bombReloadSeconds");
 				mission.carrierMissileSpeed = reader.ResolveFloat(paths.mission, "carrierMissileSpeed");
 				mission.carrierHealth = reader.ResolveFloat(paths.mission, "carrierHealth");
@@ -388,7 +391,26 @@ namespace Game {
 				throw std::runtime_error(paths.mission.string() + ": " + error.what());
 			}
 		}
-		return {.environment = LoadEnvironment(paths, reader, parameters),
+		const auto assetsRoot = paths.environment.parent_path().parent_path();
+		CameraSettings camera;
+		camera.Load(reader, assetsRoot / L"Camera/aircraftCamera.json");
+		EnemyGunTuning enemyGun;
+		enemyGun.Load(reader, assetsRoot / L"Combat/enemyWeapon.json");
+		EnemyAITuning enemyAI;
+		enemyAI.Load(reader, reader.Resolve(paths.enemyAircraft, "aiParameters"));
+		EffectSettings effects;
+		effects.Load(reader, assetsRoot / L"Effects/combatEffects.json");
+		UiTuning ui;
+		ui.Load(reader, assetsRoot / L"UI/combatHud.json");
+		UiTextSettings text;
+		text.Load(reader, assetsRoot / L"UI/labels.json");
+		return {.camera = camera,
+			.enemyGunTuning = enemyGun,
+			.enemyAITuning = enemyAI,
+			.effects = effects,
+			.ui = ui,
+			.text = text,
+			.environment = LoadEnvironment(paths, reader, parameters),
 			.playerAircraft = LoadAircraftDefinition(reader, parameters, paths.playerAircraft),
 			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
 			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
