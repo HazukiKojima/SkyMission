@@ -8,6 +8,12 @@
 namespace Game {
 	enum class CinematicVoiceStatus { Unavailable, Playing, Finished };
 	enum class CinematicCompletion { Completed, Skipped };
+	// Shared caption data for allied/enemy radio messages.
+	struct RadioCaption {
+		std::string speaker;
+		std::string text;
+		std::string side = "friendly";
+	};
 	// HUDへ渡す値だけを保持し、描画側に再生制御やシーンの所有権を渡さない
 	struct CinematicPresentation {
 		bool active = false;
@@ -22,6 +28,8 @@ namespace Game {
 		size_t shotIndex = 0;
 		uint64_t playbackSerial = 0;
 		CinematicTextSettings text;
+		int radioLine = -1;
+		RadioCaption radio;
 	};
 	struct CinematicPose {
 		DirectX::XMFLOAT3 cameraOffsetMeters;

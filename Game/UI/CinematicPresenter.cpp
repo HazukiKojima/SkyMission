@@ -1,5 +1,6 @@
 #include "CinematicPresenter.h"
 #include "HudStyle.h"
+#include "RadioCaptionPresenter.h"
 #include <algorithm>
 
 namespace Game {
@@ -43,6 +44,8 @@ namespace Game {
 		if (presentation.fadeOpacity > 0)
 			list.FilledRect(
 				{0, 0}, {float(view.width), float(view.height)}, {0, 0, 0, presentation.fadeOpacity});
+		if (presentation.radioLine >= 0)
+			RadioCaptionPresenter{}.Build(presentation.radio, view, list, barHeight);
 		const auto& hint = textSettings.skipHint;
 		const float fontSize = std::min({textSettings.hintFontSize * textScale, barHeight * 0.8f,
 			(view.width - 96 * scale) / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(hint, 1))});

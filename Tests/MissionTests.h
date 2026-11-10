@@ -292,6 +292,39 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			Require(reusable.GetCombatSnapshot().cinematic.active &&
 					reusable.GetCombatSnapshot().cinematic.cinematicId == "midMission",
 				"Carrier-attack transition did not start its cinematic");
+
+			{
+				auto natural = reusable;
+				auto skippedView = reusable;
+				skippedView.Update({}, 0.01f, {}, {.skipOpening = true});
+				const auto followCamera = skippedView.GetRenderScene().GetCamera().GetPosition();
+				const auto start = natural.GetRenderScene().GetCamera().GetPosition();
+				for (int frame = 0; frame < 6; ++frame) natural.Update({}, 0.25f);
+				const auto middle = natural.GetRenderScene().GetCamera().GetPosition();
+				Require(middle.x > start.x && middle.y == start.y && middle.z == start.z,
+					"Carrier camera did not move sideways at constant height and depth");
+				natural.OnResize(800, 600);
+				Require(natural.GetRenderScene().GetCamera().GetPosition().x == middle.x,
+					"Resize replaced the carrier camera");
+				for (int frame = 0; frame < 6; ++frame) natural.Update({}, 0.25f);
+				Require(!natural.GetCombatSnapshot().cinematic.active &&
+					natural.TakeCinematicCompletion() == CinematicCompletion::Completed,
+					"Carrier shot did not complete at three seconds");
+				const auto restoredCamera = natural.GetRenderScene().GetCamera().GetPosition();
+				Require(restoredCamera.x == followCamera.x && restoredCamera.y == followCamera.y &&
+					restoredCamera.z == followCamera.z, "Carrier completion did not restore follow camera");
+				natural.Update({}, 0.01f);
+				Require(natural.GetCombatSnapshot().elapsedSeconds > reusable.GetCombatSnapshot().elapsedSeconds,
+					"Battle did not resume after carrier shot");
+				auto missing = initialized;
+				missing.ConfigureCinematics(clips, [&](const std::string& id) {
+					return FlightScene::CinematicModel{resolveModel(id), 1};
+				}, 100000);
+				for (const auto& object : initialized.GetObjects()) {
+					if (object.model == resolveModel(missionDefinition.ships.front().asset.id)) missing.RemoveObject(object.id);
+				}
+				Require(!missing.PlayCinematic("midMission"), "Missing carrier started a cinematic");
+			}
 			const auto paused = reusable.GetCombatSnapshot();
 			for (int frame = 0; frame < 3; ++frame)
 				reusable.Update({.pitch = 1, .throttle = 1}, 0.25f, {},

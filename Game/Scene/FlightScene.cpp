@@ -116,6 +116,8 @@ namespace Game {
 			UpdateCinematic(dt, combatInput.skipOpening);
 			return;
 		}
+		m_cinematic.Update(dt, false);
+		m_combat.cinematic = m_cinematic.GetPresentation();
 		UpdateCombatTimers(dt);
 		if (m_combat.result != CombatResult::Active) {
 			if (combatInput.retry) {
@@ -321,6 +323,8 @@ namespace Game {
 		m_cameraController.OnResize(width, height);
 		m_cinematicScene.OnResize(width, height);
 		m_scene.SetCamera(m_cameraController.GetCamera());
+		if (m_cinematic.GetPresentation().active && m_cinematic.GetCurrentShot().target == "carrier")
+			UpdateCarrierCinematicCamera();
 	}
 
 	Engine::ObjectId FlightScene::AddPlayerObject(std::shared_ptr<Engine::Model> model) {

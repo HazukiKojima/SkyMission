@@ -16,12 +16,16 @@ namespace Game {
 		m_presentation.cinematicId = id;
 		m_presentation.playbackSerial = ++m_playbackSerial;
 		m_completion.reset();
+		m_radioSeconds = 0;
+		m_radioRunning = false;
 		RefreshPresentation();
 		m_briefingSeconds = 0;
 		m_briefingStarted = false;
 	}
 	void CinematicController::SetBriefingLine(int line) {
 		m_presentation.briefingLine = line;
+		m_presentation.radioLine = -1;
+		m_presentation.radio = {};
 		m_presentation.briefingLines =
 			line >= 0 ? m_settings.briefing.at(line).lines : std::array<std::string, 2>{};
 		m_briefingSeconds = 0;
@@ -46,7 +50,17 @@ namespace Game {
 			SetBriefingLine(index + 1 < m_settings.briefing.size() ? static_cast<int>(index + 1) : -1);
 	}
 	void CinematicController::Update(float deltaSeconds, bool skipRequested) {
-		if (!m_presentation.active || !std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
+		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
+		if (!m_presentation.active) {
+			if (m_radioRunning) {
+				m_radioSeconds += deltaSeconds;
+				RefreshRadio();
+				if (m_settings.radio.empty() || m_radioSeconds >=
+					m_settings.radio.back().startSeconds + m_settings.radio.back().durationSeconds)
+					m_radioRunning = false;
+			}
+			return;
+		}
 		if (skipRequested) {
 			Finish(CinematicCompletion::Skipped);
 			return;
@@ -54,6 +68,7 @@ namespace Game {
 		if (m_presentation.briefingLine >= 0) return;
 		m_presentation.elapsedSeconds =
 			std::min(m_settings.TotalDuration(), m_presentation.elapsedSeconds + deltaSeconds);
+		m_radioSeconds = m_presentation.elapsedSeconds;
 		if (m_presentation.elapsedSeconds >= m_settings.TotalDuration())
 			Finish(CinematicCompletion::Completed);
 		else
@@ -65,10 +80,16 @@ namespace Game {
 		m_presentation.active = false;
 		m_presentation.formationShot = false;
 		m_presentation.fadeOpacity = 0;
+		// A skipped movie also hands control to the player before the post-movie call.
+		m_radioSeconds = m_settings.TotalDuration();
+		m_radioRunning = !m_settings.radio.empty() &&
+			m_settings.radio.back().startSeconds + m_settings.radio.back().durationSeconds > m_radioSeconds;
+		if (m_radioRunning) RefreshRadio();
 	}
 	void CinematicController::RefreshPresentation() {
 		m_presentation.text = m_settings.text;
 		const float seconds = m_presentation.elapsedSeconds;
+		RefreshRadio();
 		if (!m_settings.shots.empty()) {
 			float end = m_settings.shots.front().durationSeconds;
 			m_presentation.shotIndex = 0;
@@ -86,6 +107,20 @@ namespace Game {
 			? SmoothProgress(seconds, m_settings.fadeOutStartSeconds,
 				  m_settings.cutSeconds - m_settings.fadeOutStartSeconds)
 			: 1 - SmoothProgress(seconds, m_settings.fadeInStartSeconds, m_settings.fadeInSeconds);
+	}
+	void CinematicController::RefreshRadio() {
+		m_presentation.radioLine = -1;
+		m_presentation.radio = {};
+		if (m_presentation.briefingLine < 0) {
+			for (size_t i = 0; i < m_settings.radio.size(); ++i) {
+				const auto& entry = m_settings.radio[i];
+				if (m_radioSeconds >= entry.startSeconds && m_radioSeconds < entry.startSeconds + entry.durationSeconds) {
+					m_presentation.radioLine = static_cast<int>(i);
+					m_presentation.radio = entry.caption;
+					break;
+				}
+			}
+		}
 	}
 	CinematicPose CinematicController::GetPose() const {
 		const auto& shot = GetCurrentShot();

@@ -1,5 +1,6 @@
 #pragma once
 #include "Game/Settings/GameplaySettings.h"
+#include "CinematicTypes.h"
 #include <DirectXMath.h>
 #include <filesystem>
 #include <string>
@@ -10,6 +11,12 @@ namespace Engine {
 	class JsonAssetReader;
 }
 namespace Game {
+	struct CinematicRadioEntry {
+		RadioCaption caption;
+		std::filesystem::path audio;
+		float startSeconds = 0;
+		float durationSeconds = 3.6f;
+	};
 	struct CinematicBriefingEntry {
 		std::array<std::string, 2> lines;
 		std::filesystem::path audio;
@@ -22,6 +29,8 @@ namespace Game {
 		float flightVolumeScale = 0.4f;
 	};
 	struct CinematicShotSettings {
+		// "model" renders a separate formation; "carrier" films the mission ship.
+		std::string target = "model";
 		std::string model = "enemy";
 		float modelScale = 1;
 		float headingDegrees = 180;
@@ -48,6 +57,7 @@ namespace Game {
 				L"../Sound/Opening/基地は現在も攻撃を受けており、増援は出せない.wav", 5},
 			{{"君、一機で護衛機を排除し、", "母艦を撃沈せよ。"},
 				L"../Sound/Opening/君、一機で護衛機を排除し、母艦を撃沈せよ.wav", 5}};
+		std::vector<CinematicRadioEntry> radio;
 		CinematicAudioSettings audio;
 		CinematicTextSettings text;
 		float fadeOutStartSeconds = 3.6f;

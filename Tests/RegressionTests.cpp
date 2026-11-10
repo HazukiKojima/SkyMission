@@ -90,7 +90,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 						JsonAssetReader{}, repository / L"Assets/Cinematics/opening.json");
 					configured.briefing.resize(1);
 					audio.Initialize(repository / L"Assets/Sound", configured);
-					Require(audio.GetLoadedSoundCount() == 10,
+					Require(audio.GetLoadedSoundCount() == 11,
 						"Configured opening clips were not loaded independently");
 					CinematicPresentation presentation;
 					presentation.active = true;
@@ -100,6 +100,22 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					presentation.active = false;
 					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
 						"Skipped opening retained a briefing voice");
+					// Connect a real existing clip to the radio channel without adding a new voice asset.
+					configured.radio[0].audio = configured.briefing[0].audio;
+					audio.Initialize(repository / L"Assets/Sound", configured);
+					Require(audio.GetLoadedSoundCount() == 11, "Radio voice clip was not decoded");
+					presentation.active = false;
+					presentation.briefingLine = -1;
+					presentation.radioLine = 0;
+					const auto radioVoice = audio.UpdateCinematic(presentation);
+					Require(radioVoice == CinematicVoiceStatus::Playing || radioVoice == CinematicVoiceStatus::Unavailable,
+						"Radio voice could not start or report unavailable output");
+					audio.UpdateCinematic(presentation);
+					presentation.radioLine = -1;
+					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
+						"Expired radio retained its voice");
+					configured.radio[0].audio.clear();
+					presentation.briefingLine = 0;
 					const auto brokenAudio = fixture / L"broken-briefing.wav";
 					std::ofstream(brokenAudio) << "invalid wave data";
 					configured.briefing[0].audio = brokenAudio;
@@ -117,12 +133,13 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 						JsonAssetReader{}, repository / L"Assets/Cinematics/opening.json");
 					valid.briefing.resize(1);
 					auto silent = valid;
+					silent.radio.clear();
 					silent.audio.bgm.clear();
 					silent.briefing[0].audio = fixture / L"missing-voice.wav";
 					audio.Initialize(repository / L"Assets/Sound",
 						std::map<std::string, CinematicSettings>{{"opening", valid}, {"middle", silent}});
 					Require(
-						audio.GetLoadedSoundCount() == 10, "Cinematic banks did not preload their own audio");
+						audio.GetLoadedSoundCount() == 11, "Cinematic banks did not preload their own audio");
 					presentation.cinematicId = "opening";
 					audio.UpdateCinematic(presentation);
 					presentation.cinematicId = "middle";

@@ -20,13 +20,15 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		{"lines":["First","Second"],"audio":"../音声/会話.wav","fallbackSeconds":0.5},
 		{"lines":["Third","Fourth"],"audio":"","fallbackSeconds":0.25}],
 		"formationOffsets":[[0,0,0],[2,1,-3]],"originOffsetMeters":[10,20,-30],
+		"radio":[{"speaker":"Commander","text":"Incoming!","side":"friendly","audio":"../音声/無線.wav","startSeconds":0.5,"durationSeconds":2}],
 		"audio":{"bgm":"../音声/曲.wav","bgmVolume":0.2,"briefingVolume":0.6,"flightVolumeScale":0.3}})";
 	const auto data = LoadCinematicSettings(reader, configured);
 	Require(data.briefing.size() == 2 && data.briefing[0].lines[1] == "Second" &&
 			data.briefing[0].audio == configured.parent_path() / L"../音声/会話.wav" &&
 			data.briefing[1].audio.empty() && data.formationOffsets[1].z == -3 &&
 			data.originOffsetMeters.x == 10 && data.audio.bgmVolume == 0.2f &&
-			data.audio.bgm == configured.parent_path() / L"../音声/曲.wav",
+			data.audio.bgm == configured.parent_path() / L"../音声/曲.wav" &&
+			data.radio.size() == 1 && data.radio[0].audio == configured.parent_path() / L"../音声/無線.wav",
 		"Opening content or relative Japanese audio paths were not read");
 	CinematicController briefingController;
 	briefingController.Start(data);
@@ -112,6 +114,37 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		Require(rejected, "Opening collection/text limits were not validated with source context");
 	}
 	const auto settings = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/opening.json");
+	Require(settings.radio.size() == 1 && settings.radio[0].caption.speaker == "指揮官" &&
+		settings.radio[0].caption.text == "敵機4機、接近！直ちに迎撃せよ！" && fs::exists(settings.radio[0].audio),
+		"Opening radio caption or voice configuration was lost");
+	for (const auto& text : {settings.radio[0].caption.speaker, settings.radio[0].caption.text, std::string("≪≫")}) {
+		std::string_view remaining = text;
+		while (!remaining.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
+			"Radio caption uses an unsupported glyph");
+	}
+	CinematicController radioController;
+	radioController.Start(settings);
+	Require(radioController.GetPresentation().radioLine == -1, "Radio began during the movie");
+	radioController.Update(4.9f, false);
+	Require(radioController.GetPresentation().active && radioController.GetPresentation().radioLine == -1,
+		"Radio began before the movie ended");
+	radioController.Update(0.1f, false);
+	Require(!radioController.GetPresentation().active && radioController.GetPresentation().radioLine == 0,
+		"Radio did not start when control returned");
+	Require(radioController.TakeCompletion() == CinematicCompletion::Completed, "Movie did not emit completion");
+	radioController.Update(3.5f, false);
+	Require(radioController.GetPresentation().radioLine == 0, "Post-movie radio ended early");
+	radioController.Update(0.2f, false);
+	Require(radioController.GetPresentation().radioLine == -1, "Post-movie radio did not expire");
+	radioController.Start(settings);
+	radioController.EnableBriefing();
+	Require(radioController.GetPresentation().radioLine == -1, "Radio overlapped the briefing");
+	radioController.Start(settings);
+	radioController.Update(0, true);
+	Require(!radioController.GetPresentation().active && radioController.GetPresentation().radioLine == 0,
+		"Skipping the movie did not start the post-movie call");
+	radioController.Start(settings);
+	Require(radioController.GetPresentation().radioLine == -1, "Replay retained post-movie radio");
 	CinematicController controller;
 	controller.Start(settings);
 	controller.Update(3.6f, false);
@@ -175,11 +208,36 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	while (!briefing.empty())
 		Require(Engine::HudFont::Glyph(Engine::HudFont::Next(briefing)) != unsigned('?' - 32),
 			"Briefing uses an unsupported glyph");
+	{
+		auto presentation = controller.GetPresentation();
+		presentation.radioLine = 0;
+		presentation.radio = settings.radio[0].caption;
+		Engine::RenderView view;
+		view.width = 800; view.height = 600;
+		Engine::HudDrawList friendly, enemy;
+		friendly.Reset(800, 600); enemy.Reset(800, 600);
+		CinematicPresenter{}.Build(presentation, view, friendly);
+		presentation.radio.side = "enemy";
+		CinematicPresenter{}.Build(presentation, view, enemy);
+		Require(friendly.GetVertices().size() == enemy.GetVertices().size(), "Radio side changed layout");
+		bool differentColor = false;
+		for (size_t i = 0; i < enemy.GetVertices().size(); ++i) {
+			const auto& vertex = enemy.GetVertices()[i];
+			Require(std::abs(vertex.position.x) <= 1.001f && std::abs(vertex.position.y) <= 1.001f,
+				"Radio subtitle escaped a narrow viewport");
+			differentColor |= vertex.color.x != friendly.GetVertices()[i].color.x;
+		}
+		Require(differentColor, "Enemy radio did not use its own color");
+	}
 	const auto middle = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/midMission.json");
-	Require(middle.shots.size() == 2 && middle.briefing.empty() && middle.TotalDuration() == 4,
-		"Multi-shot cinematic definition was not loaded");
+	Require(middle.shots.size() == 1 && middle.briefing.empty() && middle.TotalDuration() == 3 &&
+		middle.shots[0].target == "carrier",
+		"Three-second carrier cinematic definition was not loaded");
 	CinematicController timeline;
-	timeline.Start(middle, "midMission");
+	auto multi = middle;
+	multi.shots = {CinematicShotSettings{}, CinematicShotSettings{}};
+	for (auto& shot : multi.shots) shot.durationSeconds = 2;
+	timeline.Start(multi, "midMission");
 	timeline.Update(2.1f, false);
 	Require(timeline.GetPresentation().active && timeline.GetPresentation().shotIndex == 1 &&
 			timeline.GetPresentation().cinematicId == "midMission" &&
@@ -197,7 +255,10 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	timeline.Start(middle);
 	timeline.Update(10, false);
 	Require(!timeline.GetPresentation().active, "Large frame did not finish the complete shot sequence");
-	for (const auto* json : {R"({"shots":[]})", R"({"shots":[{"durationSeconds":0}]})",
+	for (const auto* json : {R"({"radio":[{"speaker":"C","text":"Incoming","side":"invalid"}]})",
+		 R"({"radio":[{"speaker":"C","text":"Incoming","durationSeconds":-1}]})",
+		 R"({"radio":[{"speaker":"C","text":"Incoming","startSeconds":4,"durationSeconds":2}]})",
+		 R"({"shots":[]})", R"({"shots":[{"target":"unknown"}]})", R"({"shots":[{"durationSeconds":0}]})",
 			 R"({"shots":[{"model":""}]})", R"({"shots":[{"formationOffsets":[]}]})",
 			 R"({"shots":[{"cameraStartOffsetMeters":[0,100,-50],"cameraEndOffsetMeters":[0,80,-50]}]})"}) {
 		std::ofstream(invalid) << json;

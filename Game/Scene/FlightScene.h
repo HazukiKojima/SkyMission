@@ -99,6 +99,7 @@ namespace Game {
 		}
 		const Engine::Scene& GetRenderScene() const {
 			return m_cinematic.GetPresentation().active && m_cinematic.GetPresentation().formationShot
+				&& m_cinematic.GetCurrentShot().target == "model"
 				? m_cinematicScene.GetScene()
 				: m_scene;
 		}
@@ -178,6 +179,7 @@ namespace Game {
 		void UpdateCinematic(float deltaSeconds, bool skipRequested);
 		void BeginCinematic(const CinematicSettings& settings, const std::string& id, bool briefing);
 		void InitializeCinematicShot();
+		void UpdateCarrierCinematicCamera();
 		void CheckMissionCinematics();
 
 		bool m_briefingEnabled = false;

@@ -152,9 +152,12 @@ namespace Game {
 			auto& bank = m_cinematicBanks[id];
 			bank.settings = settings.audio;
 			loadCinematicClip(settings.audio.bgm, bank.bgm, 2);
-			bank.briefing.resize(settings.briefing.size());
+			bank.briefingCount = settings.briefing.size();
+			bank.briefing.resize(settings.briefing.size() + settings.radio.size());
 			for (size_t i = 0; i < settings.briefing.size(); ++i)
 				loadCinematicClip(settings.briefing[i].audio, bank.briefing[i], 1);
+			for (size_t i = 0; i < settings.radio.size(); ++i)
+				loadCinematicClip(settings.radio[i].audio, bank.briefing[bank.briefingCount + i], 1);
 		}
 		if (FAILED(XAudio2Create(m_engine.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR)) ||
 			FAILED(m_engine->CreateMasteringVoice(&m_master))) {
@@ -306,18 +309,22 @@ namespace Game {
 			m_activeCinematicAudio = bank == m_cinematicBanks.end() ? nullptr : &bank->second;
 		}
 		m_cinematicActive = opening.active;
-		if (opening.briefingLine < 0 || !opening.active) {
+		// Radio clips share the speech voice, but do not stop the cinematic clock.
+		const int voiceLine = opening.briefingLine >= 0 ? opening.briefingLine
+			: opening.radioLine >= 0 && m_activeCinematicAudio
+				? static_cast<int>(m_activeCinematicAudio->briefingCount) + opening.radioLine : -1;
+		if (voiceLine < 0 || (!opening.active && opening.radioLine < 0)) {
 			StopVoice(m_briefingVoice);
 			m_briefingLine = -1;
 			m_briefingStatus = CinematicVoiceStatus::Unavailable;
 			return m_briefingStatus;
 		}
 		if (!m_activeCinematicAudio ||
-			static_cast<size_t>(opening.briefingLine) >= m_activeCinematicAudio->briefing.size())
+			static_cast<size_t>(voiceLine) >= m_activeCinematicAudio->briefing.size())
 			return CinematicVoiceStatus::Unavailable;
-		if (opening.briefingLine != m_briefingLine) {
+		if (voiceLine != m_briefingLine) {
 			StopVoice(m_briefingVoice);
-			m_briefingLine = opening.briefingLine;
+			m_briefingLine = voiceLine;
 			m_briefingStatus = CinematicVoiceStatus::Unavailable;
 			const auto& clip = m_activeCinematicAudio->briefing[m_briefingLine];
 			if (m_briefingVoice && !clip.samples.empty()) {

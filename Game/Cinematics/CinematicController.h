@@ -24,6 +24,9 @@ namespace Game {
 		std::optional<CinematicCompletion> m_completion;
 		uint64_t m_playbackSerial = 0;
 		void RefreshPresentation();
+		void RefreshRadio();
+		float m_radioSeconds = 0;
+		bool m_radioRunning = false;
 		void SetBriefingLine(int line);
 		float m_briefingSeconds = 0;
 		bool m_briefingStarted = false;
