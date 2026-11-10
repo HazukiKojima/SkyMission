@@ -601,6 +601,7 @@
     <ClInclude Include="Game\Cinematics\CinematicController.h" />
     <ClInclude Include="Game\Cinematics\CinematicScene.h" />
     <ClInclude Include="Game\UI\CinematicPresenter.h" />
+    <ClInclude Include="Game\UI\RadioCaptionPresenter.h" />
     <ClInclude Include="Tests\CinematicTests.h" />
     <ClInclude Include="Game\Combat\EnemyEngagementProfile.h" />
     <ClInclude Include="Tests\CinematicVisualTests.h" />

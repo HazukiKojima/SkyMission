@@ -1,25 +1,16 @@
 {
   "briefing": [],
   "audio": {"bgm": "", "flightVolumeScale": 0},
-  "model": "enemy",
-  "formationOffsets": [[0, 0, 0], [-1, 0, -1], [1, 0, -1]],
-  "originOffsetMeters": [0, 0, -3000],
-  "flightSpeedMetersPerSecond": 180,
-  "propellerRadiansPerSecond": 35,
   "title": "敵空母",
   "subtitle": "CARRIER ATTACK",
   "shots": [
     {
-      "durationSeconds": 2,
-      "cameraStartOffsetMeters": [160, 80, 300],
-      "cameraEndOffsetMeters": [120, 60, 260],
-      "lookAtOffsetMeters": [0, 0, 0]
-    },
-    {
-      "durationSeconds": 2,
-      "cameraStartOffsetMeters": [-140, 60, 260],
-      "cameraEndOffsetMeters": [-100, 50, 220],
-      "lookAtOffsetMeters": [0, 0, 0]
+      "target": "carrier",
+      "durationSeconds": 3,
+      "cameraStartOffsetMeters": [-0.75, 0.45, 1.6],
+      "cameraEndOffsetMeters": [-0.55, 0.45, 1.6],
+      "lookAtOffsetMeters": [0, 0, 0],
+      "verticalFovDegrees": 55
     }
   ]
 }

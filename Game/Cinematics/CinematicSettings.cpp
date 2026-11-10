@@ -6,6 +6,8 @@
 
 namespace Game {
 	void CinematicShotSettings::Validate() const {
+		if (target != "model" && target != "carrier")
+			throw std::invalid_argument("target must be model or carrier");
 		const auto positive = [](float value, const char* key) {
 			if (!std::isfinite(value) || value <= 0)
 				throw std::invalid_argument(std::string(key) + " must be positive and finite");
@@ -75,6 +77,20 @@ namespace Game {
 					fadeInStartSeconds + fadeInSeconds <= durationSeconds)))
 			throw std::invalid_argument("fadeOutStartSeconds < cutSeconds <= fadeInStartSeconds; "
 										"fadeInStartSeconds + fadeInSeconds <= durationSeconds required");
+		if (radio.size() > 64) throw std::invalid_argument("radio must contain at most 64 entries");
+		float previousEnd = 0;
+		for (const auto& entry : radio) {
+			if (entry.caption.speaker.empty() || entry.caption.speaker.size() > 192 ||
+				entry.caption.text.empty() || entry.caption.text.size() > 384 ||
+				(entry.caption.side != "friendly" && entry.caption.side != "enemy"))
+				throw std::invalid_argument("radio requires speaker, text and friendly/enemy side");
+			const float end = entry.startSeconds + entry.durationSeconds;
+			if (!std::isfinite(entry.startSeconds) || !std::isfinite(entry.durationSeconds) ||
+				!std::isfinite(end) || entry.startSeconds < previousEnd || entry.durationSeconds <= 0 ||
+				(entry.startSeconds < TotalDuration() && end > TotalDuration()))
+				throw std::invalid_argument("radio intervals must be ordered, non-overlapping and must not straddle the cinematic end");
+			previousEnd = end;
+		}
 		if (briefing.size() > 64) throw std::invalid_argument("briefing must contain at most 64 entries");
 		for (size_t i = 0; i < briefing.size(); ++i) {
 			const auto prefix = "briefing/" + std::to_string(i);
@@ -157,6 +173,21 @@ namespace Game {
 					result.briefing.push_back(std::move(entry));
 				}
 			}
+			if (auto count = reader.TryResolveArrayLength(path, "radio")) {
+				if (*count > 64) throw std::invalid_argument("radio must contain at most 64 entries");
+				for (size_t i = 0; i < *count; ++i) {
+					const auto key = "/radio/" + std::to_string(i) + "/";
+					CinematicRadioEntry entry;
+					entry.caption.speaker = reader.ResolveString(path, key + "speaker");
+					entry.caption.text = reader.ResolveString(path, key + "text");
+					if (auto side = reader.TryResolveString(path, key + "side")) entry.caption.side = *side;
+					if (auto audio = reader.TryResolveString(path, key + "audio"); audio && !audio->empty())
+						entry.audio = reader.Resolve(path, key + "audio");
+					number((key + "startSeconds").c_str(), entry.startSeconds);
+					number((key + "durationSeconds").c_str(), entry.durationSeconds);
+					result.radio.push_back(std::move(entry));
+				}
+			}
 			// 先頭から辿るため、audioがオブジェクト以外なら型エラーになる。
 			if (auto bgm = reader.TryResolveString(path, "/audio/bgm"))
 				result.audio.bgm =
@@ -166,6 +197,7 @@ namespace Game {
 			number("/audio/flightVolumeScale", result.audio.flightVolumeScale);
 			if (auto value = reader.TryResolveString(path, "title")) result.title = *value;
 			if (auto value = reader.TryResolveString(path, "subtitle")) result.subtitle = *value;
+			if (auto value = reader.TryResolveString(path, "target")) result.target = *value;
 			if (auto value = reader.TryResolveString(path, "model")) result.model = *value;
 			number("modelScale", result.modelScale);
 			number("headingDegrees", result.headingDegrees);
@@ -184,6 +216,7 @@ namespace Game {
 					const auto str = [&](const char* name, std::string& value) {
 						if (auto text = reader.TryResolveString(path, prefix + name)) value = *text;
 					};
+					str("target", shot.target);
 					str("model", shot.model);
 					str("title", shot.title);
 					str("subtitle", shot.subtitle);

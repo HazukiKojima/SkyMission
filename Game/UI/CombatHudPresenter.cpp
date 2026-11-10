@@ -2,6 +2,7 @@
 #include "RadarMapPresenter.h"
 #include "HudStyle.h"
 #include "CinematicPresenter.h"
+#include "RadioCaptionPresenter.h"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -23,6 +24,8 @@ namespace Game {
 		DrawEnemyMarkers(snapshot, view, list);
 		DrawMissionStatus(snapshot, view, list);
 		DrawControls(snapshot, view, list);
+		if (snapshot.cinematic.radioLine >= 0)
+			RadioCaptionPresenter{}.Build(snapshot.cinematic.radio, view, list);
 	}
 
 	void CombatHudPresenter::DrawControls(

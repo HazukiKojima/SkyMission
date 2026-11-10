@@ -1,6 +1,7 @@
 #include "FlightScene.h"
 #include <algorithm>
 #include <cmath>
+#include <cfloat>
 
 namespace Game {
 	void FlightScene::ConfigureCinematics(const std::map<std::string, CinematicSettings>& definitions,
@@ -12,6 +13,7 @@ namespace Game {
 			if (id.empty()) throw std::invalid_argument("Cinematic ID must not be empty");
 			settings.Validate();
 			const auto validateModel = [&](const CinematicShotSettings& shot) {
+				if (shot.target == "carrier") return;
 				const auto asset = resolve(shot.model);
 				if (!asset.model || !asset.model->GetLocalBounds() || !std::isfinite(asset.scale) ||
 					asset.scale <= 0)
@@ -46,6 +48,10 @@ namespace Game {
 		if (m_cinematic.GetPresentation().active) return false;
 		const auto found = m_cinematics.find(id);
 		if (found == m_cinematics.end()) return false;
+		const auto needsCarrier = [](const CinematicShotSettings& shot) { return shot.target == "carrier"; };
+		if ((needsCarrier(found->second) || std::any_of(found->second.shots.begin(),
+			found->second.shots.end(), needsCarrier)) &&
+			!m_mission.GetCarrierCenter(m_scene)) return false;
 		if (id == "opening") {
 			m_briefingEnabled = true;
 			StartOpening();
@@ -56,6 +62,10 @@ namespace Game {
 	}
 	void FlightScene::InitializeCinematicShot() {
 		const auto& shot = m_cinematic.GetCurrentShot();
+		if (shot.target == "carrier") {
+			UpdateCarrierCinematicCamera();
+			return;
+		}
 		const auto asset = m_resolveCinematicModel(shot.model);
 		auto origin = m_cinematicOrigin;
 		origin.x += shot.originOffsetMeters.x;
@@ -64,13 +74,47 @@ namespace Game {
 		m_cinematicScene.Initialize(shot, asset.model, asset.scale, m_scene.GetEnvironment(), origin, m_width,
 			m_height, m_cinematicFarZ);
 	}
+	void FlightScene::UpdateCarrierCinematicCamera() {
+		using namespace DirectX;
+		if (m_width == 0 || m_height == 0) return;
+		const auto* ship = m_scene.FindObject(m_mission.GetCarrierId());
+		const auto center = m_mission.GetCarrierCenter(m_scene);
+		if (!ship || !center || !ship->model->GetLocalBounds()) return;
+		const auto& bounds = *ship->model->GetLocalBounds();
+		XMVECTOR minimum = XMVectorReplicate(FLT_MAX), maximum = XMVectorReplicate(-FLT_MAX);
+		for (int corner = 0; corner < 8; ++corner) {
+			const auto point = XMVector3TransformCoord(XMVectorSet(
+				corner & 1 ? bounds.maximum.x : bounds.minimum.x,
+				corner & 2 ? bounds.maximum.y : bounds.minimum.y,
+				corner & 4 ? bounds.maximum.z : bounds.minimum.z, 1), XMLoadFloat4x4(&ship->worldTransform));
+			minimum = XMVectorMin(minimum, point);
+			maximum = XMVectorMax(maximum, point);
+		}
+		XMFLOAT3 dimensions;
+		XMStoreFloat3(&dimensions, maximum - minimum);
+		const float extent = std::max({dimensions.x, dimensions.y, dimensions.z, 1.0f});
+		const auto& shot = m_cinematic.GetCurrentShot();
+		// Carrier offsets are multiples of the world-space maximum ship dimension.
+		const auto pose = m_cinematic.GetPose();
+		XMFLOAT3 eye, target;
+		XMStoreFloat3(&eye, XMLoadFloat3(&*center) + XMLoadFloat3(&pose.cameraOffsetMeters) * extent);
+		XMStoreFloat3(&target, XMLoadFloat3(&*center) + XMLoadFloat3(&shot.lookAtOffsetMeters) * extent);
+		const float aspect = float(m_width) / m_height;
+		const float fov = 2 * std::atan(std::tan(XMConvertToRadians(shot.verticalFovDegrees) * 0.5f) *
+			std::max(1.0f, (16.0f / 9) / aspect));
+		Engine::Camera camera;
+		camera.Initialize(fov, aspect, 1, m_cinematicFarZ);
+		camera.LookAt(eye, target);
+		m_scene.SetCamera(camera);
+	}
 	void FlightScene::BeginCinematic(
 		const CinematicSettings& settings, const std::string& id, bool briefing) {
 		m_activeCinematicSettings = settings;
 		m_cinematicOrigin = m_player.GetPosition();
 		m_cinematic.Start(settings, id);
 		InitializeCinematicShot();
-		m_cinematicScene.Update(m_cinematic.GetPose());
+		if (m_cinematic.GetCurrentShot().target == "carrier") UpdateCarrierCinematicCamera();
+		else m_cinematicScene.Update(m_cinematic.GetPose());
 		if (briefing) m_cinematic.EnableBriefing();
 		m_combat.cinematic = m_cinematic.GetPresentation();
 		m_combat.audio.flying = m_combat.cinematic.briefingLine < 0;
@@ -101,7 +145,8 @@ namespace Game {
 		m_cinematic.Update(deltaSeconds, skipRequested);
 		const auto& after = m_cinematic.GetPresentation();
 		if (after.active && before.shotIndex != after.shotIndex) InitializeCinematicShot();
-		m_cinematicScene.Update(m_cinematic.GetPose());
+		if (m_cinematic.GetCurrentShot().target == "carrier") UpdateCarrierCinematicCamera();
+		else m_cinematicScene.Update(m_cinematic.GetPose());
 		// 従来の開始演出のみ、暗転後の自機カットで無入力飛行を続ける。
 		// 途中・終了・明示的なカット列は戦闘状態を一切進めない。
 		const float flightSeconds =

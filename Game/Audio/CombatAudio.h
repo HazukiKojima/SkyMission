@@ -44,6 +44,7 @@ namespace Game {
 			CinematicAudioSettings settings;
 			Clip bgm;
 			std::vector<Clip> briefing;
+			size_t briefingCount = 0;
 		};
 
 		static constexpr std::size_t kVoiceCount = 12;

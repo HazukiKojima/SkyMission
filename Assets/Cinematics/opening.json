@@ -31,6 +31,16 @@
     "briefingVolume": 0.4,
     "flightVolumeScale": 0.4
   },
+  "radio": [
+    {
+      "speaker": "指揮官",
+      "side": "friendly",
+      "text": "敵機4機、接近！直ちに迎撃せよ！",
+      "audio": "../Sound/敵機4機、接近！直ちに迎撃せよ！.wav",
+      "startSeconds": 5,
+      "durationSeconds": 3.6
+    }
+  ],
   "formationOffsets": [
     [
       0,

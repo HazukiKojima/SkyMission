@@ -5,11 +5,13 @@
 
 // 本番のモデルと描画パスで、導入の構図と暗転前後をPNGに記録する
 void TestCinematicRendering(const fs::path& repository, const fs::path& fixture) {
+	using namespace DirectX;
 	const auto root = repository / L"Assets";
 	const auto definition = FlightSceneLoader{}.Load({.environment = root / L"Environment/environment.json",
 		.playerAircraft = root / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
 		.enemyAircraft = root / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
-		.retroFilm = root / L"Environment/retroFilm.json"});
+		.retroFilm = root / L"Environment/retroFilm.json",
+		.ships = root / L"Ships/ships.json"});
 	const HWND window = CreateWindowW(L"STATIC", L"Opening capture (hidden)", WS_OVERLAPPEDWINDOW, 0, 0, 1280,
 		720, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 	Require(window != nullptr, "Opening capture window failed");
@@ -31,11 +33,11 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 		auto* commands = context.GetCommandList();
 		assets.InitializeSkySphere(device.GetDevice(), commands, definition.environment.sky.radius);
 		ocean.Initialize(device.GetDevice(), commands, definition.environment.ocean.size);
-		assets.Load(&device, &context,
-			{definition.environment,
-				{{EnemyModelId, definition.enemyAircraft.model, definition.enemyAircraft.modelImport},
-					{PlayerModelId, definition.playerAircraft.model,
-						definition.playerAircraft.modelImport}}});
+		Engine::RendererDefinition renderDefinition{definition.environment,
+			{{EnemyModelId, definition.enemyAircraft.model, definition.enemyAircraft.modelImport},
+			 {PlayerModelId, definition.playerAircraft.model, definition.playerAircraft.modelImport}}};
+		for (const auto& ship : definition.ships) renderDefinition.models.push_back(ship.asset);
+		assets.Load(&device, &context, renderDefinition);
 		hudRenderer.Initialize(device, commands);
 		context.EndFrame();
 		context.WaitForGpu();
@@ -91,6 +93,25 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 			context.SynchronizeFrameIndex(device);
 			flight.OnResize(width, height);
 			const auto& scene = flight.GetRenderScene();
+			if (flight.GetCombatSnapshot().cinematic.cinematicId == "midMission") {
+				const auto ship = std::find_if(scene.GetObjects().begin(), scene.GetObjects().end(),
+					[&](const auto& object) { return object.model == assets.GetModel(definition.ships.front().asset.id); });
+				Require(ship != scene.GetObjects().end(), "Carrier shot did not render the mission ship");
+				const auto& bounds = *ship->model->GetLocalBounds();
+				const auto transform = XMLoadFloat4x4(&ship->worldTransform) *
+					scene.GetCamera().GetView() * scene.GetCamera().GetProjection();
+				for (int corner = 0; corner < 8; ++corner) {
+					XMFLOAT3 projected;
+					XMStoreFloat3(&projected, XMVector3TransformCoord(XMVectorSet(
+						corner & 1 ? bounds.maximum.x : bounds.minimum.x,
+						corner & 2 ? bounds.maximum.y : bounds.minimum.y,
+						corner & 4 ? bounds.maximum.z : bounds.minimum.z, 1), transform));
+					Require(std::abs(projected.x) < 0.9f && std::abs(projected.y) < 0.7f &&
+						projected.z > 0 && projected.z < 1,
+						"Carrier was clipped or overlapped the cinematic bars");
+				}
+			}
+
 			updater.Update(scene, flight.GetCombatSnapshot().cinematic.elapsedSeconds,
 				definition.environment.retroFilm, buffers, device.GetDevice(), &context);
 			context.BeginFrame();
@@ -160,6 +181,17 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 		capture(L"opening-player.png", 1280, 720);
 		flight.Update({}, 0.25f);
 		capture(L"opening-gameplay.png", 1280, 720);
+		Require(!flight.GetCombatSnapshot().cinematic.active && flight.GetCombatSnapshot().cinematic.radioLine == 0,
+			"Radio did not follow the opening movie");
+		capture(L"opening-gameplay-small.png", 800, 600);
+		const auto beforeRadio = flight.GetCombatSnapshot();
+		for (int i = 0; i < 4; ++i) flight.Update({.pitch = 0.1f}, 0.25f);
+		Require(flight.GetCombatSnapshot().elapsedSeconds > beforeRadio.elapsedSeconds &&
+			flight.GetCombatSnapshot().playerPosition.z != beforeRadio.playerPosition.z &&
+			flight.GetCombatSnapshot().cinematic.radioLine == 0,
+			"Post-movie radio paused gameplay or disappeared early");
+		for (int i = 0; i < 11; ++i) flight.Update({}, 0.25f);
+		Require(flight.GetCombatSnapshot().cinematic.radioLine == -1, "Post-movie radio remained on the HUD");
 		flight.ConfigureCinematics(
 			definition.cinematics,
 			[&](const std::string& id) {
@@ -168,12 +200,21 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 										: definition.enemyAircraft.visualScale};
 			},
 			definition.environment.ocean.size);
+		for (size_t i = 0; i < definition.ships.size(); ++i) {
+			const auto& ship = definition.ships[i];
+			const auto id = flight.AddObject(assets.GetModel(ship.asset.id), ship.BuildTransform());
+			flight.RegisterMissionShip(id, i == 0);
+		}
 		Require(flight.PlayCinematic("midMission"), "Intermediate cinematic did not start");
 		capture(L"midMission-00.png", 1280, 720);
-		for (int i = 0; i < 8; ++i)
-			flight.Update({}, 0.25f);
-		capture(L"midMission-02.png", 800, 600);
-		flight.Update({}, 0.01f, {}, {.skipOpening = true});
+		for (int i = 0; i < 6; ++i) flight.Update({}, 0.25f);
+		capture(L"midMission-15.png", 1280, 720);
+		capture(L"midMission-15-small.png", 800, 600);
+		for (int i = 0; i < 5; ++i) flight.Update({}, 0.25f);
+		flight.Update({}, 0.24f);
+		capture(L"midMission-299.png", 1280, 720);
+		flight.Update({}, 0.01f);
+		Require(!flight.GetCombatSnapshot().cinematic.active, "Carrier shot exceeded three seconds");
 		Require(flight.PlayCinematic("ending"), "Ending cinematic did not start");
 		capture(L"ending-00.png", 1280, 720);
 		flight.Update({}, 0.01f, {}, {.skipOpening = true});
