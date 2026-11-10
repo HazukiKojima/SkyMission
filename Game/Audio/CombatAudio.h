@@ -20,13 +20,14 @@ namespace Game {
 		void Initialize(const std::filesystem::path& soundDirectory);
 		void Update(const CombatAudioState& state, unsigned hitCount, bool lockWarning = false,
 			bool missileWarning = false, float deltaSeconds = 0);
+		int UpdateOpening(const OpeningCinematicPresentation& opening, float deltaSeconds);
 		void SetSuspended(bool suspended);
 		void ResetPlayback();
 
 		std::size_t GetLoadedSoundCount() const;
 
 	  private:
-		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, BattleBgm, Count };
+		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, BattleBgm, AirRaid, Briefing1, Briefing2, Briefing3, Count };
 		enum class SoundKind { Hit, LockWarning, MissileWarning };
 		struct Clip {
 			std::vector<BYTE> samples;
@@ -54,9 +55,13 @@ namespace Game {
 
 		// 単発音・警告音・ループ音のボイス
 		std::array<IXAudio2SourceVoice*, kVoiceCount> m_voices{};
+		IXAudio2SourceVoice* m_briefingVoice = nullptr;
+		int m_briefingLine = -1;
+		float m_briefingFallbackSeconds = 0;
+		bool m_openingActive = false;
 		IXAudio2SourceVoice* m_warningVoice = nullptr;
-		std::array<IXAudio2SourceVoice*, 3> m_loops{};
-		std::array<bool, 3> m_loopPlaying{};
+		std::array<IXAudio2SourceVoice*, 4> m_loops{};
+		std::array<bool, 4> m_loopPlaying{};
 
 		// 終了までボイスが参照するため、再生中にバッファをリサイズしない
 		std::array<Clip, static_cast<std::size_t>(ClipKind::Count)> m_clips;
