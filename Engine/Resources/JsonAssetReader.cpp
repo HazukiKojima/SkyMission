@@ -4,6 +4,21 @@
 #include <vector>
 
 namespace Engine {
+	std::optional<size_t> JsonAssetReader::TryResolveArrayLength(
+		const std::filesystem::path& path, const std::string& key) const {
+		RedoxDocument transient;
+		const auto& document = AcquireDocument(path, transient);
+		using GetLength = int(__cdecl*)(std::intptr_t, const unsigned char*, int);
+		const auto getLength =
+			reinterpret_cast<GetLength>(RedoxModule::GetFunction("MyRedoxGetArrayLengthFromDocument"));
+		const int result = getLength(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
+			static_cast<int>(key.size()));
+		if (result == -3) return std::nullopt;
+		if (result < 0)
+			throw std::runtime_error("JSON '" + path.string() + "', field '" + key +
+				"': expected an array (REDox " + std::to_string(result) + ")");
+		return static_cast<size_t>(result);
+	}
 	namespace {
 		using RedoxGetString = int(__cdecl*)(std::intptr_t, const unsigned char*, int, unsigned char*, int);
 		using RedoxGetFloatArray = int(__cdecl*)(std::intptr_t, const unsigned char*, int, float*, int);

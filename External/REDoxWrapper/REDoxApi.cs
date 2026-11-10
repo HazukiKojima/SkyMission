@@ -333,7 +333,8 @@ public static unsafe class REDoxApi
 
     private static int ReadFloatArray(JsonDocument document, ReadOnlySpan<byte> key, float* output, int outputCapacity)
     {
-        if (!document.RootElement.TryGetProperty(key, out REDox.DElement value)) return InvalidSchema;
+        int lookup = FindValue(document, key, out REDox.DElement value);
+        if (lookup < 0) return lookup;
         Span<float> values = outputCapacity <= 256 ? stackalloc float[outputCapacity] : new float[outputCapacity];
         if (value.ValueKind == JsonValueKind.Number)
         {
@@ -374,13 +375,59 @@ public static unsafe class REDoxApi
 
     private static int ReadString(JsonDocument document, ReadOnlySpan<byte> key, byte* output, int outputCapacity)
     {
-        if (!document.RootElement.TryGetProperty(key, out REDox.DElement value)) return InvalidSchema;
+        int lookup = FindValue(document, key, out REDox.DElement value);
+        if (lookup < 0) return lookup;
+        if (value.ValueKind != JsonValueKind.String) return InvalidValue;
         string? result = value.GetString();
         if (result == null) return InvalidValue;
         int requiredLength = Encoding.UTF8.GetByteCount(result);
         if (requiredLength > outputCapacity) return InvalidValue;
         Encoding.UTF8.GetBytes(result.AsSpan(), new Span<byte>(output, outputCapacity));
         return requiredLength;
+    }
+
+    // 既存のルートキーを維持し、配列内の値にはJSON Pointerを使う。
+    private static int FindValue(JsonDocument document, ReadOnlySpan<byte> key, out REDox.DElement value)
+    {
+        value = document.RootElement;
+        string path = Encoding.UTF8.GetString(key);
+        if (!path.StartsWith('/'))
+            return value.TryGetProperty(key, out value) ? 0 : InvalidSchema;
+        foreach (string encoded in path[1..].Split('/'))
+        {
+            string part = encoded.Replace("~1", "/").Replace("~0", "~");
+            if (value.ValueKind == JsonValueKind.Object)
+            {
+                if (!value.TryGetProperty(part, out value)) return InvalidSchema;
+            }
+            else if (value.ValueKind == JsonValueKind.Array)
+            {
+                if (!int.TryParse(part, out int index) || index < 0 || index >= value.GetArrayLength())
+                    return InvalidValue;
+                int current = 0;
+                foreach (REDox.DElement element in value.EnumerateArray())
+                    if (current++ == index) { value = element; break; }
+            }
+            else return InvalidValue;
+        }
+        return 0;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetArrayLengthFromDocument", CallConvs = new[] { typeof(CallConvCdecl) })]
+    public static int MyRedoxGetArrayLengthFromDocument(nint handle, byte* keyUtf8, int keyLength)
+    {
+        if (handle == 0 || keyUtf8 == null || keyLength <= 0) return InvalidArguments;
+        try
+        {
+            lock (DocumentLock)
+            {
+                if (!Documents.TryGetValue(handle, out ParsedJsonDocument? document)) return InvalidArguments;
+                int lookup = FindValue(document.Document, new ReadOnlySpan<byte>(keyUtf8, keyLength), out var value);
+                if (lookup < 0) return lookup;
+                return value.ValueKind == JsonValueKind.Array ? value.GetArrayLength() : InvalidValue;
+            }
+        }
+        catch { return UnexpectedFailure; }
     }
 
     [UnmanagedCallersOnly(

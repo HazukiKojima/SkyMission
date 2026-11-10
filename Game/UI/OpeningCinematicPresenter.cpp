@@ -8,11 +8,7 @@ namespace Game {
 		if (!presentation.active || view.width == 0 || view.height == 0) return;
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		if (presentation.briefingLine >= 0) {
-			static constexpr std::string_view lines[][2] = {
-				{"敵母艦と護衛機を確認。", "基地を襲った部隊の発進元だ。"},
-				{"基地は現在も攻撃を受けており、", "増援は出せない。"},
-				{"君、一機で護衛機を排除し、", "母艦を撃沈せよ。"}};
-			const auto& text = lines[std::min(presentation.briefingLine, 2)];
+			const auto& text = presentation.briefingLines;
 			list.FilledRect({0, 0}, {float(view.width), float(view.height)}, {0, 0, 0, 1});
 			const float widest = std::max(Engine::HudDrawList::MeasureTextWidth(text[0], 1),
 				Engine::HudDrawList::MeasureTextWidth(text[1], 1));

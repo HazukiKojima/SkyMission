@@ -7,7 +7,9 @@ namespace Game {
 		settings.Validate();
 		m_openingSettings = settings;
 		auto origin = m_player.GetPosition();
-		origin.z -= 5000;
+		origin.x += settings.originOffsetMeters.x;
+		origin.y += settings.originOffsetMeters.y;
+		origin.z += settings.originOffsetMeters.z;
 		m_openingScene.Initialize(settings, std::move(model), visualScale, m_scene.GetEnvironment(), origin,
 			m_width, m_height, farZ);
 		m_openingEnabled = true;
@@ -20,13 +22,25 @@ namespace Game {
 		m_scene.SetCamera(m_cameraController.GetCamera());
 		m_opening.Start(m_openingSettings);
 		m_openingScene.Update(m_opening.GetPose());
+		if (m_briefingEnabled) m_opening.EnableBriefing();
 		m_combat.opening = m_opening.GetPresentation();
-		SetOpeningBriefingLine(m_briefingEnabled ? 0 : -1);
-		m_combat.audio.flying = m_briefingLine < 0;
+		m_combat.audio.flying = m_combat.opening.briefingLine < 0;
+	}
+	void FlightScene::EnableOpeningBriefing() {
+		m_briefingEnabled = true;
+		m_opening.EnableBriefing();
+		m_combat.opening = m_opening.GetPresentation();
+		m_combat.audio.flying = m_combat.opening.briefingLine < 0;
+	}
+	void FlightScene::UpdateOpeningBriefing(OpeningVoiceStatus voice, float deltaSeconds) {
+		m_opening.UpdateBriefing(voice, deltaSeconds);
+		m_combat.opening = m_opening.GetPresentation();
 	}
 	void FlightScene::UpdateOpening(float deltaSeconds, bool skipRequested) {
-		if (m_briefingLine >= 0 && !skipRequested) { m_combat.audio.flying = false; return; }
-		SetOpeningBriefingLine(-1);
+		if (m_opening.GetPresentation().briefingLine >= 0 && !skipRequested) {
+			m_combat.audio.flying = false;
+			return;
+		}
 		const float previousSeconds = m_opening.GetPresentation().elapsedSeconds;
 		m_opening.Update(deltaSeconds, skipRequested);
 		m_openingScene.Update(m_opening.GetPose());
@@ -45,8 +59,7 @@ namespace Game {
 			UpdateCamera({}, flightSeconds, {});
 		}
 		m_combat.opening = m_opening.GetPresentation();
-		SetOpeningBriefingLine(-1);
-		m_combat.audio.flying = m_briefingLine < 0;
+		m_combat.audio.flying = m_combat.opening.briefingLine < 0;
 		// 武器・ダメージ・任務の更新や操作入力は、終了・スキップのフレームにも実行しない
 	}
 } // namespace Game

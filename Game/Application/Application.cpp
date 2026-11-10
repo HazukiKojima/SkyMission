@@ -75,7 +75,7 @@ namespace Game {
 
 		InitializeFlightScene(assets);
 		timing.Mark("application.audio");
-		m_combatAudio.Initialize(assetsDir / L"Sound");
+		m_combatAudio.Initialize(assetsDir / L"Sound", assets.opening);
 		ConfigureResizeHandling();
 
 		m_lastTime = std::chrono::steady_clock::now();
@@ -175,7 +175,8 @@ namespace Game {
 			m_scene->Update(m_aircraftController.ReadInput(input), deltaSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();
-			m_scene->SetOpeningBriefingLine(m_combatAudio.UpdateOpening(combatState.opening, deltaSeconds));
+			const auto voice = m_combatAudio.UpdateOpening(combatState.opening);
+			m_scene->UpdateOpeningBriefing(voice, input.active ? deltaSeconds : 0);
 			m_combatAudio.Update(combatState.audio, combatState.hitCount, false, false, deltaSeconds);
 			const auto view = m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる

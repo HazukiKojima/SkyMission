@@ -19,7 +19,6 @@ namespace Game {
 		constexpr DWORD kAllStreams = static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS);
 		constexpr float kFlightVolume = 0.18f, kGunVolume = 0.42f;
 		constexpr float kBattleBgmVolume = 0.35f;
-		constexpr float kOpeningVolume = 0.4f; // 1.0f is the original opening volume.
 		constexpr float kLaunchVolume = 0.65f, kGunHitVolume = 0.65f, kMissileHitVolume = 0.75f;
 		constexpr float kAircraftVolume = 0.65f, kShipVolume = 0.75f;
 		constexpr float kHitVolume = 0.32f, kWarningVolume = 0.45f;
@@ -118,25 +117,40 @@ namespace Game {
 	}
 
 	void CombatAudio::Initialize(const std::filesystem::path& soundDirectory) {
+		// 単独利用時も従来のSoundディレクトリ基準の既定値を維持する。
+		OpeningCinematicSettings opening;
+		opening.audio.bgm = soundDirectory / L"Opening/空襲BGM.wav";
+		for (auto& entry : opening.briefing)
+			entry.audio = soundDirectory / L"Opening" / entry.audio.filename();
+		Initialize(soundDirectory, opening);
+	}
+	void CombatAudio::Initialize(
+		const std::filesystem::path& soundDirectory, const OpeningCinematicSettings& opening) {
+		opening.Validate();
 		Shutdown();
+		m_openingAudio = opening.audio;
 		const HRESULT comResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 		m_comInitialized = SUCCEEDED(comResult);
 		if (FAILED(comResult) && comResult != RPC_E_CHANGED_MODE) return;
 		m_mediaInitialized = SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET));
 		const wchar_t* names[] = {L"プレイヤー飛行音(50秒).mp3", L"プレイヤー機関銃発射音(5秒間).mp3",
 			L"プレイヤーミサイル発射音.mp3", L"プレイヤー機関銃被弾.mp3", L"プレイヤーミサイル被弾.mp3",
-			L"敵航空機爆発.mp3", L"敵戦艦爆発.mp3", L"BattleBGM.mp3",
-			L"Opening/空襲BGM.wav",
-			L"Opening/敵母艦と護衛機を確認。基地を襲った部隊の発進元だ.wav",
-			L"Opening/基地は現在も攻撃を受けており、増援は出せない.wav",
-			L"Opening/君、一機で護衛機を排除し、母艦を撃沈せよ.wav"};
+			L"敵航空機爆発.mp3", L"敵戦艦爆発.mp3", L"BattleBGM.mp3"};
 		for (std::size_t i = 0; i < m_clips.size(); ++i) {
 			const auto path = soundDirectory / names[i];
-			const UINT channels = (i == static_cast<std::size_t>(ClipKind::BattleBgm) || i == static_cast<std::size_t>(ClipKind::AirRaid)) ? 2 : 1;
+			const UINT channels = i == static_cast<std::size_t>(ClipKind::BattleBgm) ? 2 : 1;
 			if (!m_mediaInitialized || !LoadClip(path, m_clips[i], channels)) {
 				Engine::Log(L"CombatAudio: could not load {}\n", path.wstring());
 			}
 		}
+		const auto loadOpeningClip = [&](const std::filesystem::path& path, Clip& clip, UINT channels) {
+			if (!path.empty() && (!m_mediaInitialized || !LoadClip(path, clip, channels)))
+				Engine::Log(L"CombatAudio: could not load {}\n", path.wstring());
+		};
+		loadOpeningClip(opening.audio.bgm, m_openingBgm, 2);
+		m_briefingClips.resize(opening.briefing.size());
+		for (size_t i = 0; i < opening.briefing.size(); ++i)
+			loadOpeningClip(opening.briefing[i].audio, m_briefingClips[i], 1);
 		if (FAILED(XAudio2Create(m_engine.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR)) ||
 			FAILED(m_engine->CreateMasteringVoice(&m_master))) {
 			Engine::Log("CombatAudio: audio output unavailable\n");
@@ -153,7 +167,7 @@ namespace Game {
 			}
 		}
 		for (std::size_t i = 0; i < m_loops.size(); ++i) {
-			const auto& bgm = m_clips[static_cast<std::size_t>(i == 3 ? ClipKind::AirRaid : ClipKind::BattleBgm)];
+			const auto& bgm = i == 3 ? m_openingBgm : m_clips[static_cast<std::size_t>(ClipKind::BattleBgm)];
 			const auto& loopFormat = i >= 2 && !bgm.samples.empty() ? bgm.format : format;
 			if (FAILED(m_engine->CreateSourceVoice(&m_loops[i], &loopFormat))) {
 				Shutdown();
@@ -167,9 +181,12 @@ namespace Game {
 	}
 
 	std::size_t CombatAudio::GetLoadedSoundCount() const {
-		return static_cast<std::size_t>(std::count_if(m_clips.begin(), m_clips.end(), [](const Clip& clip) {
+		const auto loaded = [](const Clip& clip) {
 			return !clip.samples.empty();
-		}));
+		};
+		return static_cast<size_t>(std::count_if(m_clips.begin(), m_clips.end(), loaded) +
+				   std::count_if(m_briefingClips.begin(), m_briefingClips.end(), loaded)) +
+			(loaded(m_openingBgm) ? 1 : 0);
 	}
 
 	void CombatAudio::SetSuspended(bool suspended) {
@@ -193,14 +210,17 @@ namespace Game {
 		StopVoice(m_warningVoice);
 		StopVoice(m_briefingVoice);
 		m_briefingLine = -1;
+		m_briefingStatus = OpeningVoiceStatus::Unavailable;
 		m_loopPlaying = {};
 		m_warningCountdownSeconds = 0;
 		m_warningKind = 0;
 	}
 
 	void CombatAudio::SetLoop(std::size_t index, ClipKind kind, bool playing, float volume) {
+		SetLoopClip(index, m_clips[static_cast<std::size_t>(kind)], playing, volume);
+	}
+	void CombatAudio::SetLoopClip(std::size_t index, const Clip& clip, bool playing, float volume) {
 		auto* voice = m_loops[index];
-		const auto& clip = m_clips[static_cast<std::size_t>(kind)];
 		if (!voice || clip.samples.empty()) return;
 		voice->SetVolume(volume);
 		if (playing == m_loopPlaying[index]) return;
@@ -240,47 +260,52 @@ namespace Game {
 
 	void CombatAudio::Update(const CombatAudioState& state, unsigned hitCount, bool lockWarning,
 		bool missileWarning, float deltaSeconds) {
-		if (state.restarted && m_briefingLine < 0) {
+		if (state.restarted && !m_openingActive) {
 			ResetPlayback();
 		}
 		SetLoop(0, ClipKind::Flight, state.flying,
-			kFlightVolume * (m_openingActive ? kOpeningVolume : 1.0f));
+			kFlightVolume * (m_openingActive ? m_openingAudio.flightVolumeScale : 1.0f));
 		SetLoop(1, ClipKind::Gun, state.flying && state.gunFiring, kGunVolume);
 		SetLoop(2, ClipKind::BattleBgm, !m_openingActive, kBattleBgmVolume);
-		SetLoop(3, ClipKind::AirRaid, m_openingActive, 0.3f * kOpeningVolume);
+		SetLoopClip(3, m_openingBgm, m_openingActive, m_openingAudio.bgmVolume);
 		UpdateWarning(state.flying, lockWarning, missileWarning, deltaSeconds);
 		PlayEvents(state, hitCount);
 	}
-	int CombatAudio::UpdateOpening(const OpeningCinematicPresentation& opening, float deltaSeconds) {
+	OpeningVoiceStatus CombatAudio::UpdateOpening(const OpeningCinematicPresentation& opening) {
 		m_openingActive = opening.active;
 		if (opening.briefingLine < 0 || !opening.active) {
 			StopVoice(m_briefingVoice);
 			m_briefingLine = -1;
-			return -1;
+			m_briefingStatus = OpeningVoiceStatus::Unavailable;
+			return m_briefingStatus;
 		}
+		if (static_cast<size_t>(opening.briefingLine) >= m_briefingClips.size())
+			return OpeningVoiceStatus::Unavailable;
 		if (opening.briefingLine != m_briefingLine) {
 			StopVoice(m_briefingVoice);
 			m_briefingLine = opening.briefingLine;
-			m_briefingFallbackSeconds = 5;
-			const auto& clip = m_clips[static_cast<std::size_t>(ClipKind::Briefing1) + m_briefingLine];
+			m_briefingStatus = OpeningVoiceStatus::Unavailable;
+			const auto& clip = m_briefingClips[m_briefingLine];
 			if (m_briefingVoice && !clip.samples.empty()) {
 				XAUDIO2_BUFFER buffer{};
 				buffer.AudioBytes = static_cast<UINT32>(clip.samples.size());
 				buffer.pAudioData = clip.samples.data();
 				buffer.Flags = XAUDIO2_END_OF_STREAM;
-				m_briefingVoice->SetVolume(kOpeningVolume);
+				m_briefingVoice->SetVolume(m_openingAudio.briefingVolume);
 				if (SUCCEEDED(m_briefingVoice->SubmitSourceBuffer(&buffer)) &&
-					SUCCEEDED(m_briefingVoice->Start())) m_briefingFallbackSeconds = 0;
+					SUCCEEDED(m_briefingVoice->Start()))
+					m_briefingStatus = OpeningVoiceStatus::Playing;
+				else
+					StopVoice(m_briefingVoice);
 			}
-			return m_briefingLine;
+			return m_briefingStatus;
 		}
-		if (m_suspended) return m_briefingLine;
+		if (m_suspended) return m_briefingStatus;
 		XAUDIO2_VOICE_STATE state{};
 		if (m_briefingVoice) m_briefingVoice->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
-		if (m_briefingFallbackSeconds > 0)
-			m_briefingFallbackSeconds -= std::clamp(deltaSeconds, 0.0f, 0.25f);
-		if (state.BuffersQueued || m_briefingFallbackSeconds > 0) return m_briefingLine;
-		return m_briefingLine == 2 ? -1 : m_briefingLine + 1;
+		if (m_briefingStatus == OpeningVoiceStatus::Playing && !state.BuffersQueued)
+			m_briefingStatus = OpeningVoiceStatus::Finished;
+		return m_briefingStatus;
 	}
 	void CombatAudio::UpdateWarning(bool flying, bool lockWarning, bool missileWarning, float deltaSeconds) {
 		int warning = kNoWarning;
@@ -398,12 +423,15 @@ namespace Game {
 		if (m_briefingVoice) m_briefingVoice->DestroyVoice();
 		m_briefingVoice = nullptr;
 		m_briefingLine = -1;
+		m_briefingStatus = OpeningVoiceStatus::Unavailable;
 		m_openingActive = false;
 		if (m_master) {
 			m_master->DestroyVoice();
 		}
 		m_master = nullptr;
 		m_engine.Reset();
+		m_openingBgm = {};
+		m_briefingClips.clear();
 		for (auto& clip : m_clips) {
 			clip = {};
 		}

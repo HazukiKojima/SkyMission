@@ -13,6 +13,33 @@ namespace Game {
 		settings.Validate();
 		m_settings = settings;
 		m_presentation = {true, true, 0, 0, settings.title, settings.subtitle};
+		m_briefingSeconds = 0;
+		m_briefingStarted = false;
+	}
+	void OpeningCinematicController::SetBriefingLine(int line) {
+		m_presentation.briefingLine = line;
+		m_presentation.briefingLines =
+			line >= 0 ? m_settings.briefing.at(line).lines : std::array<std::string, 2>{};
+		m_briefingSeconds = 0;
+		m_briefingStarted = false;
+	}
+	void OpeningCinematicController::EnableBriefing() {
+		if (m_presentation.active) SetBriefingLine(m_settings.briefing.empty() ? -1 : 0);
+	}
+	void OpeningCinematicController::UpdateBriefing(OpeningVoiceStatus voice, float deltaSeconds) {
+		if (!m_presentation.active || m_presentation.briefingLine < 0 || !std::isfinite(deltaSeconds) ||
+			deltaSeconds <= 0)
+			return;
+		if (!m_briefingStarted) {
+			m_briefingStarted = true;
+			return;
+		}
+		if (voice == OpeningVoiceStatus::Playing) return;
+		m_briefingSeconds += std::min(deltaSeconds, 0.25f);
+		const auto index = static_cast<size_t>(m_presentation.briefingLine);
+		if (voice == OpeningVoiceStatus::Finished ||
+			m_briefingSeconds >= m_settings.briefing[index].fallbackSeconds)
+			SetBriefingLine(index + 1 < m_settings.briefing.size() ? static_cast<int>(index + 1) : -1);
 	}
 	void OpeningCinematicController::Update(float deltaSeconds, bool skipRequested) {
 		if (!m_presentation.active || !std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
@@ -20,6 +47,7 @@ namespace Game {
 			Finish();
 			return;
 		}
+		if (m_presentation.briefingLine >= 0) return;
 		m_presentation.elapsedSeconds =
 			std::min(m_settings.durationSeconds, m_presentation.elapsedSeconds + deltaSeconds);
 		if (m_presentation.elapsedSeconds >= m_settings.durationSeconds)
@@ -28,6 +56,7 @@ namespace Game {
 			RefreshPresentation();
 	}
 	void OpeningCinematicController::Finish() {
+		SetBriefingLine(-1);
 		m_presentation.active = false;
 		m_presentation.formationShot = false;
 		m_presentation.fadeOpacity = 0;

@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <vector>
 #include "Game/Combat/CombatTypes.h"
+#include "Game/Cinematics/OpeningCinematicSettings.h"
 
 namespace Game {
 	class CombatAudio {
@@ -18,16 +19,17 @@ namespace Game {
 
 		// 初期化・再生状態の制御
 		void Initialize(const std::filesystem::path& soundDirectory);
+		void Initialize(const std::filesystem::path& soundDirectory, const OpeningCinematicSettings& opening);
 		void Update(const CombatAudioState& state, unsigned hitCount, bool lockWarning = false,
 			bool missileWarning = false, float deltaSeconds = 0);
-		int UpdateOpening(const OpeningCinematicPresentation& opening, float deltaSeconds);
+		OpeningVoiceStatus UpdateOpening(const OpeningCinematicPresentation& opening);
 		void SetSuspended(bool suspended);
 		void ResetPlayback();
 
 		std::size_t GetLoadedSoundCount() const;
 
 	  private:
-		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, BattleBgm, AirRaid, Briefing1, Briefing2, Briefing3, Count };
+		enum class ClipKind { Flight, Gun, Launch, GunHit, MissileHit, Aircraft, Ship, BattleBgm, Count };
 		enum class SoundKind { Hit, LockWarning, MissileWarning };
 		struct Clip {
 			std::vector<BYTE> samples;
@@ -41,6 +43,7 @@ namespace Game {
 		void Play(const std::vector<int16_t>& samples, float volume, bool warning = false);
 		void PlayClip(ClipKind kind, float volume);
 		void SetLoop(std::size_t index, ClipKind kind, bool playing, float volume);
+		void SetLoopClip(std::size_t index, const Clip& clip, bool playing, float volume);
 		void UpdateWarning(bool flying, bool lockWarning, bool missileWarning, float deltaSeconds);
 		void PlayEvents(const CombatAudioState& state, unsigned hitCount);
 		void Shutdown();
@@ -57,7 +60,10 @@ namespace Game {
 		std::array<IXAudio2SourceVoice*, kVoiceCount> m_voices{};
 		IXAudio2SourceVoice* m_briefingVoice = nullptr;
 		int m_briefingLine = -1;
-		float m_briefingFallbackSeconds = 0;
+		OpeningVoiceStatus m_briefingStatus = OpeningVoiceStatus::Unavailable;
+		OpeningAudioSettings m_openingAudio;
+		Clip m_openingBgm;
+		std::vector<Clip> m_briefingClips;
 		bool m_openingActive = false;
 		IXAudio2SourceVoice* m_warningVoice = nullptr;
 		std::array<IXAudio2SourceVoice*, 4> m_loops{};

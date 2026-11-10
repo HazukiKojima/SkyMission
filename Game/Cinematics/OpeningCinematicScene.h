@@ -4,7 +4,7 @@
 #include <array>
 
 namespace Game {
-	// 演出専用の4機とカメラを所有し、戦闘シーンには触れない
+	// 演出専用の編隊とカメラを所有し、戦闘シーンには触れない
 	class OpeningCinematicScene {
 	  public:
 		void Initialize(const OpeningCinematicSettings& settings, std::shared_ptr<Engine::Model> model,
@@ -20,7 +20,7 @@ namespace Game {
 		Engine::Scene m_scene;
 		Engine::Camera m_camera;
 		OpeningCinematicSettings m_settings;
-		std::array<Engine::ObjectId, 4> m_aircraft{};
+		std::vector<Engine::ObjectId> m_aircraft;
 		DirectX::XMFLOAT3 m_origin{}, m_modelCenter{};
 		float m_visualScale = 1;
 		float m_framingScale = 1;

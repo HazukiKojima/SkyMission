@@ -12,9 +12,69 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 	std::ofstream(partial) << "{\"flightSpeedMetersPerSecond\":210}";
 	Require(LoadOpeningCinematicSettings(reader, partial).flightSpeedMetersPerSecond == 210,
 		"Partial opening configuration did not preserve defaults");
+	Require(missing.briefing.size() == 3 && missing.formationOffsets.size() == 4 &&
+			missing.originOffsetMeters.z == -5000 && missing.audio.bgmVolume == 0.12f,
+		"Missing opening configuration changed legacy content");
+	const auto configured = fixture / L"opening-data.json";
+	std::ofstream(configured) << R"({"briefing":[
+		{"lines":["First","Second"],"audio":"../音声/会話.wav","fallbackSeconds":0.5},
+		{"lines":["Third","Fourth"],"audio":"","fallbackSeconds":0.25}],
+		"formationOffsets":[[0,0,0],[2,1,-3]],"originOffsetMeters":[10,20,-30],
+		"audio":{"bgm":"../音声/曲.wav","bgmVolume":0.2,"briefingVolume":0.6,"flightVolumeScale":0.3}})";
+	const auto data = LoadOpeningCinematicSettings(reader, configured);
+	Require(data.briefing.size() == 2 && data.briefing[0].lines[1] == "Second" &&
+			data.briefing[0].audio == configured.parent_path() / L"../音声/会話.wav" &&
+			data.briefing[1].audio.empty() && data.formationOffsets[1].z == -3 &&
+			data.originOffsetMeters.x == 10 && data.audio.bgmVolume == 0.2f &&
+			data.audio.bgm == configured.parent_path() / L"../音声/曲.wav",
+		"Opening content or relative Japanese audio paths were not read");
+	OpeningCinematicController briefingController;
+	briefingController.Start(data);
+	briefingController.EnableBriefing();
+	Require(briefingController.GetPresentation().briefingLines == data.briefing[0].lines,
+		"Briefing presentation did not use its configured subtitles");
+	briefingController.UpdateBriefing(OpeningVoiceStatus::Unavailable, 0.1f);
+	briefingController.Update(0.25f, false);
+	Require(
+		briefingController.GetPresentation().elapsedSeconds == 0, "Cinematic clock advanced during briefing");
+	for (int i = 0; i < 5; ++i)
+		briefingController.UpdateBriefing(OpeningVoiceStatus::Playing, 0.25f);
+	briefingController.UpdateBriefing(OpeningVoiceStatus::Unavailable, 0);
+	Require(
+		briefingController.GetPresentation().briefingLine == 0, "Playback or suspension advanced briefing");
+	briefingController.UpdateBriefing(OpeningVoiceStatus::Finished, 0.1f);
+	Require(briefingController.GetPresentation().briefingLine == 1 &&
+			briefingController.GetPresentation().briefingLines == data.briefing[1].lines,
+		"Audio completion did not advance to matching subtitles");
+	briefingController.UpdateBriefing(OpeningVoiceStatus::Unavailable, 0.1f);
+	briefingController.UpdateBriefing(OpeningVoiceStatus::Unavailable, 0.25f);
+	Require(briefingController.GetPresentation().briefingLine == -1,
+		"Silent briefing did not use fallback duration");
+	briefingController.Start(data);
+	briefingController.EnableBriefing();
+	briefingController.Update(0.1f, true);
+	Require(!briefingController.GetPresentation().active &&
+			briefingController.GetPresentation().briefingLine == -1,
+		"Skip retained a briefing");
+	briefingController.Start(data);
+	briefingController.EnableBriefing();
+	Require(
+		briefingController.GetPresentation().briefingLine == 0, "Restart did not restore the first briefing");
+	std::ofstream(configured) << R"({"briefing":[]})";
+	briefingController.Start(LoadOpeningCinematicSettings(reader, configured));
+	briefingController.EnableBriefing();
+	Require(briefingController.GetPresentation().briefingLine == -1,
+		"Empty briefing did not bypass conversation");
 	const auto invalid = fixture / L"opening-invalid.json";
-	for (const auto json : {"{\"cutSeconds\":2}", "{\"verticalFovDegrees\":180}",
-			 "{\"cameraStartOffsetMeters\":[0,1]}", "{\"title\":7}", "{broken"}) {
+	for (const auto json :
+		{"{\"cutSeconds\":2}", "{\"verticalFovDegrees\":180}", "{\"cameraStartOffsetMeters\":[0,1]}",
+			"{\"title\":7}", "{broken", R"({"formationOffsets":[]})", R"({"formationOffsets":[[0,1]]})",
+			R"({"originOffsetMeters":[0,1]})", R"({"audio":7})", R"({"audio":{"bgmVolume":1.1}})",
+			R"({"audio":{"briefingVolume":-1}})", R"({"audio":{"flightVolumeScale":"bad"}})",
+			R"({"briefing":{}})", R"({"briefing":[{"lines":["a"],"audio":"","fallbackSeconds":1}]})",
+			R"({"briefing":[{"lines":["a",7],"audio":"","fallbackSeconds":1}]})",
+			R"({"briefing":[{"lines":["","b"],"audio":"","fallbackSeconds":1}]})",
+			R"({"briefing":[{"lines":["a","b"],"audio":"","fallbackSeconds":0}]})"}) {
 		std::ofstream(invalid) << json;
 		bool rejected = false;
 		try {
@@ -23,6 +83,33 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 			rejected = std::string(error.what()).find("opening-invalid.json") != std::string::npos;
 		}
 		Require(rejected, "Invalid opening JSON did not identify its source");
+	}
+	for (const auto& json : {std::string("{\"formationOffsets\":[") +
+				 [] {
+					 std::string entries;
+					 for (int i = 0; i < 33; ++i)
+						 entries += (i ? "," : "") + std::string("[0,0,0]");
+					 return entries;
+				 }() +
+				 "]}",
+			 std::string("{\"briefing\":[") +
+				 [] {
+					 std::string entries;
+					 for (int i = 0; i < 65; ++i)
+						 entries += (i ? "," : "") + std::string("{}");
+					 return entries;
+				 }() +
+				 "]}",
+			 std::string(R"({"briefing":[{"lines":[")") + std::string(193, 'x') +
+				 R"(","b"],"audio":"","fallbackSeconds":1}]})"}) {
+		std::ofstream(invalid) << json;
+		bool rejected = false;
+		try {
+			LoadOpeningCinematicSettings(reader, invalid);
+		} catch (const std::exception& error) {
+			rejected = std::string(error.what()).find("opening-invalid.json") != std::string::npos;
+		}
+		Require(rejected, "Opening collection/text limits were not validated with source context");
 	}
 	const auto settings =
 		LoadOpeningCinematicSettings(reader, repository / L"Assets/Cinematics/opening.json");
@@ -72,6 +159,7 @@ void TestOpeningCinematic(const fs::path& repository, const fs::path& fixture) {
 	for (int line = 0; line < 3; ++line) {
 		auto presentation = controller.GetPresentation();
 		presentation.briefingLine = line;
+		presentation.briefingLines = settings.briefing[line].lines;
 		Engine::RenderView view;
 		view.width = 800; view.height = 600;
 		Engine::HudDrawList list;

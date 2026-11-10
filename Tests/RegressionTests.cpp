@@ -83,6 +83,31 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.Initialize(repository / L"Assets/Sound");
 					Require(audio.GetLoadedSoundCount() == 12, "Not all combat and opening sound assets decoded");
 					audio.Update({.flying = true, .restarted = true}, 0);
+					auto configured = LoadOpeningCinematicSettings(
+						JsonAssetReader{}, repository / L"Assets/Cinematics/opening.json");
+					configured.briefing.resize(1);
+					audio.Initialize(repository / L"Assets/Sound", configured);
+					Require(audio.GetLoadedSoundCount() == 10,
+						"Configured opening clips were not loaded independently");
+					OpeningCinematicPresentation presentation;
+					presentation.active = true;
+					presentation.briefingLine = 0;
+					audio.UpdateOpening(presentation);
+					audio.ResetPlayback();
+					presentation.active = false;
+					Require(audio.UpdateOpening(presentation) == OpeningVoiceStatus::Unavailable,
+						"Skipped opening retained a briefing voice");
+					const auto brokenAudio = fixture / L"broken-briefing.wav";
+					std::ofstream(brokenAudio) << "invalid wave data";
+					configured.briefing[0].audio = brokenAudio;
+					audio.Initialize(repository / L"Assets/Sound", configured);
+					presentation.active = true;
+					Require(audio.UpdateOpening(presentation) == OpeningVoiceStatus::Unavailable,
+						"Broken audio did not report fallback status");
+					configured.briefing[0].audio = fixture / L"missing-briefing.wav";
+					audio.Initialize(repository / L"Assets/Sound", configured);
+					Require(audio.UpdateOpening(presentation) == OpeningVoiceStatus::Unavailable,
+						"Missing audio did not report fallback status");
 					audio.Initialize(fixture / L"missing-sound-directory");
 					Require(audio.GetLoadedSoundCount() == 0, "Missing clips retained old PCM");
 					audio.Update({.flying = true, .gunFiring = true, .missileLaunches = 1}, 0);

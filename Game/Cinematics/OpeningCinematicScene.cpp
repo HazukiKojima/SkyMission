@@ -27,6 +27,7 @@ namespace Game {
 							 bounds.maximum.z - bounds.minimum.z}) *
 			visualScale / kReferenceAircraftExtentMeters;
 		m_framingScale = std::max(m_framingScale, 0.01f);
+		m_aircraft.resize(settings.formationOffsets.size());
 		for (auto& id : m_aircraft)
 			id = m_scene.AddObject(model);
 		OnResize(width, height);
@@ -34,11 +35,8 @@ namespace Game {
 	void OpeningCinematicScene::Update(const OpeningCinematicPose& pose) {
 		XMFLOAT3 lead = m_origin;
 		lead.z += pose.travelMeters;
-		// 先頭・左右・後方の菱形に並べ、後方機は少し高くして機影の重なりを避ける
-		static constexpr std::array<XMFLOAT3, 4> kFormationOffsets{
-			XMFLOAT3{0, 0, 0}, XMFLOAT3{-1, 0, -1}, XMFLOAT3{1, 0, -1}, XMFLOAT3{0, 0.35f, -2}};
 		for (size_t index = 0; index < m_aircraft.size(); ++index) {
-			const auto& offset = kFormationOffsets[index];
+			const auto& offset = m_settings.formationOffsets[index];
 			const float x = lead.x + offset.x * m_settings.formationSpacingMeters * m_framingScale;
 			const float y = lead.y + offset.y * m_settings.formationSpacingMeters * m_framingScale;
 			const float z = lead.z + offset.z * m_settings.formationDepthMeters * m_framingScale;
