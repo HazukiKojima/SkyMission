@@ -15,10 +15,12 @@ namespace Game {
 		if (view.width == 0 || view.height == 0) return;
 		if (snapshot.cinematic.active) {
 			CinematicPresenter{m_tuning.ink}.Build(snapshot.cinematic, view, list);
+			if (snapshot.enemyRadio.clip >= 0 && snapshot.cinematic.radioLine < 0 && snapshot.cinematic.briefingLine < 0)
+				RadioCaptionPresenter{}.Build(snapshot.enemyRadio.caption, view, list,
+					view.height * snapshot.cinematic.text.barHeightFraction);
 			return;
 		}
 		RadarMapPresenter{}.Build(snapshot, view, list, m_tuning);
-		DrawCarrierHealth(snapshot, view, list);
 		DrawFlightStatus(snapshot, view, list);
 		DrawGunSight(snapshot, view, list);
 		DrawEnemyMarkers(snapshot, view, list);
@@ -26,6 +28,8 @@ namespace Game {
 		DrawControls(snapshot, view, list);
 		if (snapshot.cinematic.radioLine >= 0)
 			RadioCaptionPresenter{}.Build(snapshot.cinematic.radio, view, list);
+		else if (snapshot.enemyRadio.clip >= 0)
+			RadioCaptionPresenter{}.Build(snapshot.enemyRadio.caption, view, list);
 	}
 
 	void CombatHudPresenter::DrawControls(
@@ -53,38 +57,6 @@ namespace Game {
 		for (const auto text : controls) {
 			y += lineHeight;
 			list.Text({x, y}, "- " + std::string(text), fontSize, m_settings.color);
-		}
-	}
-
-	void CombatHudPresenter::DrawCarrierHealth(
-		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
-		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
-		const float lineWidth = std::max(1.0f, m_settings.lineWidth * scale);
-		const auto color = m_settings.color;
-		// 母艦のバーは距離やカメラの向きによらず画面左上に固定する。
-		if (snapshot.missionEnabled && snapshot.carrierPresent && snapshot.carrierMaxHealth > 0) {
-			const float health = std::clamp(snapshot.carrierHealth, 0.0f, snapshot.carrierMaxHealth);
-			const float ratio = health / snapshot.carrierMaxHealth;
-			const float x = m_tuning.layout.carrierBarX * scale;
-			const float y = m_tuning.layout.carrierBarY * scale;
-			const float width = m_tuning.layout.carrierBarWidth * scale,
-						height = m_tuning.layout.carrierBarHeight * scale;
-			const float labelSize = m_tuning.layout.carrierLabelFontSize * scale;
-			const std::string hp = std::to_string(static_cast<int>(std::ceil(health))) + " / " +
-				std::to_string(static_cast<int>(std::ceil(snapshot.carrierMaxHealth)));
-			list.Text({x, m_tuning.layout.carrierLabelY * scale},
-				health > 0 ? m_text.Text("敵空母") : m_text.Text("敵空母を撃破"), labelSize, color);
-			list.Text({x + width - Engine::HudDrawList::MeasureTextWidth(hp, labelSize),
-						  m_tuning.layout.carrierLabelY * scale},
-				hp, labelSize, color);
-			list.FilledRect({x, y}, {width, height}, {0.025f, 0.025f, 0.025f, 0.8f});
-			if (ratio > 0)
-				list.FilledRect(
-					{x, y}, {width * ratio, height}, ratio <= 0.25f ? m_tuning.alert : m_tuning.caution);
-			list.Line({x, y}, {x + width, y}, lineWidth, color);
-			list.Line({x, y + height}, {x + width, y + height}, lineWidth, color);
-			list.Line({x, y}, {x, y + height}, lineWidth, color);
-			list.Line({x + width, y}, {x + width, y + height}, lineWidth, color);
 		}
 	}
 

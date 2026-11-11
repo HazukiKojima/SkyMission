@@ -17,42 +17,6 @@ void TestCarrierMissileFlight() {
 }
 
 void TestMissionRules() {
-	// HPの塗り幅とゼロ時の空バーを、通常・小画面・横長の各解像度で確認する。
-	for (const auto dimensions :
-		{DirectX::XMUINT2{1920, 1080}, DirectX::XMUINT2{800, 600}, DirectX::XMUINT2{2560, 1080}}) {
-		Engine::RenderView view;
-		view.width = dimensions.x;
-		view.height = dimensions.y;
-		DirectX::XMStoreFloat4x4(&view.view, DirectX::XMMatrixIdentity());
-		DirectX::XMStoreFloat4x4(&view.projection,
-			DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, float(view.width) / view.height, 1, 10000));
-		for (float health : {300.0f, 200.0f, 0.0f}) {
-			CombatSnapshot snapshot;
-			snapshot.missionEnabled = snapshot.carrierPresent = true;
-			snapshot.carrierMaxHealth = 300;
-			snapshot.carrierHealth = health;
-			Engine::HudDrawList list;
-			list.Reset(view.width, view.height);
-			CombatHudPresenter{}.Build(snapshot, view, list);
-			// 頂点はNDC座標なので、画面左側では右端も負になる
-			float left = std::numeric_limits<float>::infinity();
-			float right = -std::numeric_limits<float>::infinity();
-			size_t fillVertices = 0;
-			for (const auto& vertex : list.GetVertices())
-				if (vertex.color.x == HudStyle::Caution.x && vertex.color.y == HudStyle::Caution.y &&
-					vertex.color.w == HudStyle::Caution.w) {
-					left = std::min(left, vertex.position.x);
-					right = std::max(right, vertex.position.x);
-					++fillVertices;
-				}
-			const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
-			Require(health == 0 ? fillVertices == 0
-								: fillVertices == 6 &&
-						std::abs((right - left) * view.width * 0.5f - 760 * scale * health / 300) < 0.01f,
-				"Carrier HP fill width did not follow health or viewport scale");
-		}
-	}
-
 	MissionState mission;
 	mission.ApplyCarrierDamage(100);
 	Require(!mission.IsDeckDisabled(), "Deck hit before carrier phase advanced mission");

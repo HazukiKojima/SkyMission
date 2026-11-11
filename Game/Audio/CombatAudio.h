@@ -27,6 +27,7 @@ namespace Game {
 		void Update(const CombatAudioState& state, unsigned hitCount, bool lockWarning = false,
 			bool missileWarning = false, float deltaSeconds = 0);
 		CinematicVoiceStatus UpdateCinematic(const CinematicPresentation& opening);
+		void UpdateEnemyRadio(const EnemyRadioPresentation& radio);
 		void SetSuspended(bool suspended);
 		void ResetPlayback();
 
@@ -69,6 +70,9 @@ namespace Game {
 
 		// 単発音・警告音・ループ音のボイス
 		std::array<IXAudio2SourceVoice*, kVoiceCount> m_voices{};
+		IXAudio2SourceVoice* m_enemyRadioVoice = nullptr;
+		std::array<Clip, EnemyRadioClips.size()> m_enemyRadioClips;
+		uint64_t m_enemyRadioSerial = 0;
 		IXAudio2SourceVoice* m_briefingVoice = nullptr;
 		int m_briefingLine = -1;
 		CinematicVoiceStatus m_briefingStatus = CinematicVoiceStatus::Unavailable;

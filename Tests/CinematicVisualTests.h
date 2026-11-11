@@ -88,7 +88,7 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 						3 * custom.formationDepthMeters * scale) < 0.01f,
 				"Configured formation offsets lost their model-relative scaling");
 		}
-		const auto capture = [&](const wchar_t* file, UINT width, UINT height) {
+		const auto capture = [&](const wchar_t* file, UINT width, UINT height, const EnemyRadioPresentation* radio = nullptr) {
 			device.Resize(width, height);
 			context.SynchronizeFrameIndex(device);
 			flight.OnResize(width, height);
@@ -148,7 +148,9 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 			auto view = updater.GetRenderView();
 			view.width = width;
 			view.height = height;
-			CombatHudPresenter{}.Build(flight.GetCombatSnapshot(), view, hud);
+			auto overlay = flight.GetCombatSnapshot();
+			if (radio) overlay.enemyRadio = *radio;
+			CombatHudPresenter{}.Build(overlay, view, hud);
 			Require(!hud.GetVertices().empty(), "Opening capture omitted its overlay");
 			hudRenderer.Record(device, commands, hud);
 			context.TransitionResource(device.GetCurrentRenderTarget(), D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -192,6 +194,10 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 			"Post-movie radio paused gameplay or disappeared early");
 		for (int i = 0; i < 11; ++i) flight.Update({}, 0.25f);
 		Require(flight.GetCombatSnapshot().cinematic.radioLine == -1, "Post-movie radio remained on the HUD");
+		const EnemyRadioPresentation deathCaption{0, 1, {"敵機", EnemyRadioClips[0].text, "enemy"}};
+		capture(L"enemy-radio-death.png", 1280, 720, &deathCaption);
+		const EnemyRadioPresentation reactionCaption{5, 2, {"敵僚機", EnemyRadioClips[5].text, "enemy"}};
+		capture(L"enemy-radio-reaction-small.png", 800, 600, &reactionCaption);
 		flight.ConfigureCinematics(
 			definition.cinematics,
 			[&](const std::string& id) {

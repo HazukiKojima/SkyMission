@@ -6,6 +6,7 @@
 #include <span>
 #include "MissionState.h"
 #include "Game/Cinematics/CinematicTypes.h"
+#include "EnemyRadio.h"
 
 namespace Game {
 	// 距離はワールド単位、時間は秒、角度は度。捕捉条件と維持条件を分けて揺れを抑える
@@ -79,6 +80,7 @@ namespace Game {
 	// シミュレーションからHUD・音声へ渡す表示用状態。表示側からゲーム状態を書き換えない
 	struct CombatSnapshot {
 		CinematicPresentation cinematic;
+		EnemyRadioPresentation enemyRadio;
 		float elapsedSeconds = 0; // HUDの明滅に使う戦闘開始からの経過秒数
 		CombatAudioState audio;
 		bool missionEnabled = true;

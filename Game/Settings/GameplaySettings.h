@@ -368,12 +368,6 @@ namespace Game {
 		float radarBottomMargin = 48.0f;
 		float radarRadius = 126.0f;
 		float radarStatusGap = 24.0f;
-		float carrierBarX = 48.0f;
-		float carrierBarY = 66.0f;
-		float carrierBarWidth = 760.0f;
-		float carrierBarHeight = 24.0f;
-		float carrierLabelY = 26.0f;
-		float carrierLabelFontSize = 30.0f;
 		float flightPanelTop = 420.0f;
 		float flightPanelWidth = 240.0f;
 		float flightPanelHeight = 64.0f;
@@ -427,12 +421,6 @@ namespace Game {
 			r.Number("/layout/radarBottomMargin", radarBottomMargin, 0, 10000);
 			r.Number("/layout/radarRadius", radarRadius, 0, 10000);
 			r.Number("/layout/radarStatusGap", radarStatusGap, 0, 10000);
-			r.Number("/layout/carrierBarX", carrierBarX, 0, 10000);
-			r.Number("/layout/carrierBarY", carrierBarY, 0, 10000);
-			r.Number("/layout/carrierBarWidth", carrierBarWidth, 0, 10000);
-			r.Number("/layout/carrierBarHeight", carrierBarHeight, 0, 10000);
-			r.Number("/layout/carrierLabelY", carrierLabelY, 0, 10000);
-			r.Number("/layout/carrierLabelFontSize", carrierLabelFontSize, 0, 10000);
 			r.Number("/layout/flightPanelTop", flightPanelTop, 0, 10000);
 			r.Number("/layout/flightPanelWidth", flightPanelWidth, 0, 10000);
 			r.Number("/layout/flightPanelHeight", flightPanelHeight, 0, 10000);
@@ -464,7 +452,6 @@ namespace Game {
 			r.Require(radarRadius > 0 && radarRadius <= 160, "layout", "inconsistent HUD layout");
 			r.Require(controlsFontSize > 0 && controlsLineHeight >= controlsFontSize, "layout",
 				"inconsistent HUD layout");
-			r.Require(carrierBarWidth > 0 && carrierBarHeight > 0, "layout", "inconsistent HUD layout");
 			r.Require(flightPanelWidth > flightPanelTipWidth && flightPanelHeight > 0, "layout",
 				"inconsistent HUD layout");
 			r.Require(missionLineHeight > 0, "layout", "inconsistent HUD layout");

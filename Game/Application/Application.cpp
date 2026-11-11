@@ -190,6 +190,7 @@ namespace Game {
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();
 			const auto voice = m_combatAudio.UpdateCinematic(combatState.cinematic);
+			m_combatAudio.UpdateEnemyRadio(combatState.enemyRadio);
 			m_scene->UpdateCinematicBriefing(voice, input.active ? deltaSeconds : 0);
 			m_combatAudio.Update(combatState.audio, combatState.hitCount, false, false, deltaSeconds);
 			const auto view = m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);

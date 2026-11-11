@@ -89,6 +89,8 @@ namespace Game {
 		m_combat.audio.flying = true;
 		UpdateCamera({}, dt, {});
 		m_midMissionPlayed = m_endingPlayed = false;
+		m_enemyRadio = {};
+		m_combat.enemyRadio = {};
 		m_cinematic = {};
 		m_combat.cinematic = {};
 		if (m_openingEnabled) StartOpening();
