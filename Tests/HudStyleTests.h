@@ -28,7 +28,7 @@ void TestHudTypography() {
 				"Invalid UTF-8 escaped the atlas");
 	}
 	std::string_view labels = "敵機接近照準速度高度北機体ロケット使用可秒任務達成自機撃墜R：再挑戦被弾ミサイ"
-							  "ル接近目標なし射程外命中全目標撃墜▶ホイール押込";
+							  "ル接近目標なし射程外命中全目標撃墜▶ホイール押込選択中の敵機を注視";
 	while (!labels.empty()) {
 		const auto character = Engine::HudFont::Next(labels);
 		Require(character < 128 || Engine::HudFont::Glyph(character) >= Engine::HudFont::AsciiCount,

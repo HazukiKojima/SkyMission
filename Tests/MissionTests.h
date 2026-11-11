@@ -161,6 +161,47 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		const auto initialPlayerId = initialized.GetObjects().front().id;
 		const auto initialEnemyPosition = initialized.GetCombatSnapshot().enemies.front().center;
 		{
+			auto tracking = initialized, normal = initialized;
+			Engine::InputSnapshot hold;
+			hold.active = true;
+			hold.keys['Z'] = true;
+			float largestDifference = 0;
+			bool trackedBeforeLock = false;
+			for (int frame = 0; frame < 60; ++frame) {
+				const CombatInput controls{.nextTarget = frame == 30};
+				tracking.Update({}, 1 / 60.0f, hold, controls);
+				normal.Update({}, 1 / 60.0f, {}, controls);
+				const auto& state = tracking.GetCombatSnapshot();
+				Require(state.selected == normal.GetCombatSnapshot().selected &&
+					state.lockState == normal.GetCombatSnapshot().lockState &&
+					state.playerPosition.z == normal.GetCombatSnapshot().playerPosition.z,
+					"Target camera changed aircraft flight or weapon targeting");
+				XMFLOAT4X4 a, b;
+				XMStoreFloat4x4(&a, tracking.GetRenderScene().GetCamera().GetView());
+				XMStoreFloat4x4(&b, normal.GetRenderScene().GetCamera().GetView());
+				const float difference = std::abs(a._13 - b._13) + std::abs(a._23 - b._23) +
+					std::abs(a._33 - b._33);
+				largestDifference = std::max(largestDifference, difference);
+				trackedBeforeLock |= difference > 0.001f && state.lockState != LockState::Locked;
+			}
+			Require(largestDifference > 0.001f && trackedBeforeLock,
+				"Scene failed to pass selected enemy to camera before lock completion");
+			// The carrier is selected automatically after patrol removal, but is not a camera target.
+			tracking = normal = initialized;
+			for (const auto& enemy : initialized.GetCombatSnapshot().enemies) {
+				tracking.RemoveObject(enemy.id);
+				normal.RemoveObject(enemy.id);
+			}
+			tracking.Update({}, 1 / 60.0f, hold);
+			normal.Update({}, 1 / 60.0f);
+			Require(tracking.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack,
+				"Camera exclusion fixture did not select carrier");
+			const auto a = tracking.GetRenderScene().GetCamera().GetPosition();
+			const auto b = normal.GetRenderScene().GetCamera().GetPosition();
+			Require(a.x == b.x && a.y == b.y && a.z == b.z,
+				"Carrier selection activated enemy camera orbit");
+		}
+		{
 			auto natural = initialized;
 			natural.EnableOpening(definition.opening, box, 20, 100000);
 			auto skipped = natural;

@@ -305,6 +305,17 @@ namespace Game {
 				.speed = m_player.GetSpeed(),
 				.maximumSpeed = m_player.GetMaximumSpeed()});
 		}
+		std::optional<DirectX::XMFLOAT3> lookTarget;
+		if (cameraInput.IsKeyDown('Z') && m_combat.result == CombatResult::Active &&
+			m_scene.FindObject(m_playerId)) {
+			for (const auto& enemy : m_combat.enemies) {
+				if (enemy.id == m_combat.selected && enemy.health > 0 && m_scene.FindObject(enemy.id)) {
+					lookTarget = enemy.center;
+					break;
+				}
+			}
+		}
+		m_cameraController.SetLookTarget(lookTarget);
 		m_cameraController.Update(dt, cameraInput);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
