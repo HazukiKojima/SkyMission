@@ -26,10 +26,40 @@ namespace Game {
 		DrawEnemyMarkers(snapshot, view, list);
 		DrawMissionStatus(snapshot, view, list);
 		DrawControls(snapshot, view, list);
+		DrawDebugCollisions(snapshot, view, list);
 		if (snapshot.cinematic.radioLine >= 0)
 			RadioCaptionPresenter{}.Build(snapshot.cinematic.radio, view, list);
 		else if (snapshot.enemyRadio.clip >= 0)
 			RadioCaptionPresenter{}.Build(snapshot.enemyRadio.caption, view, list);
+	}
+
+	void CombatHudPresenter::DrawDebugCollisions(
+		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
+#if defined(_DEBUG)
+		if (!snapshot.debugCollisionsEnabled) return;
+		const HudProjector projector(view);
+		for (const auto& box : snapshot.debugCollisions) {
+			XMFLOAT3 corners[8];
+			const auto& bounds = box.target.bounds;
+			for (int corner = 0; corner < 8; ++corner)
+				XMStoreFloat3(&corners[corner], XMVector3TransformCoord(XMVectorSet(
+					corner & 1 ? bounds.maximum.x : bounds.minimum.x,
+					corner & 2 ? bounds.maximum.y : bounds.minimum.y,
+					corner & 4 ? bounds.maximum.z : bounds.minimum.z, 1), XMLoadFloat4x4(&box.target.world)));
+			// 8頂点の各軸方向を一度ずつ結び、OBBの12辺を描く。
+			for (int corner = 0; corner < 8; ++corner)
+				for (int axis : {1, 2, 4})
+					if (!(corner & axis))
+						if (const auto line = projector.ProjectClippedSegment(corners[corner], corners[corner | axis]))
+							list.Line(line->head, line->tail, 2, box.color);
+		}
+		list.Text({24, 20}, "F3 COLLISION | PLAYER: GREEN  ENEMY: RED  CARRIER DECK: YELLOW", 18,
+			{1, 1, 1, 1});
+#else
+		(void)snapshot;
+		(void)view;
+		(void)list;
+#endif
 	}
 
 	void CombatHudPresenter::DrawControls(

@@ -107,6 +107,10 @@ namespace Game {
 		m_combat.audio = {};
 		m_combat.firedVolleys = 0;
 		m_combat.hitCount = 0;
+#if defined(_DEBUG)
+		if (cameraInput.WasKeyPressed(VK_F3)) m_debugCollisionsEnabled = !m_debugCollisionsEnabled;
+#endif
+		RefreshDebugCollisions();
 		if (!std::isfinite(dt) || dt <= 0) return;
 		dt = std::min(dt, 0.25f);
 		if (!m_initialState) {
@@ -484,6 +488,27 @@ namespace Game {
 		m_combat.lockState = m_targeting.GetState();
 		m_combat.acquireProgress = m_targeting.GetProgress();
 		BuildCombatSnapshot(m_combat, {m_player, m_gunSettings, m_combatSettings, m_weaponConfigured});
+		RefreshDebugCollisions();
+	}
+	void FlightScene::RefreshDebugCollisions() {
+		m_combat.debugCollisionsEnabled = false;
+		m_combat.debugCollisions.clear();
+#if defined(_DEBUG)
+		m_combat.debugCollisionsEnabled = m_debugCollisionsEnabled;
+		if (!m_debugCollisionsEnabled) return;
+		if (const auto* player = m_scene.FindObject(m_playerId);
+			player && player->model && player->model->GetLocalBounds()) {
+			m_combat.debugCollisions.push_back({
+				{m_playerId, *player->model->GetLocalBounds(), m_previousPlayerPosition, player->worldTransform},
+				{0.2f, 1.0f, 0.2f, 1.0f}});
+		}
+		for (const auto& target : BuildCollisionTargets())
+			m_combat.debugCollisions.push_back({target, {1.0f, 0.2f, 0.2f, 1.0f}});
+		if (!m_mission.IsDeckDisabled()) {
+			if (const auto deck = GetDeckTarget())
+				m_combat.debugCollisions.push_back({*deck, {1.0f, 0.8f, 0.1f, 1.0f}});
+		}
+#endif
 	}
 
 	void FlightScene::ApplyHits() {

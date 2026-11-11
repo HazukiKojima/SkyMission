@@ -54,6 +54,10 @@ namespace Game {
 		DirectX::XMFLOAT3 previousPosition;
 		DirectX::XMFLOAT4X4 world;
 	};
+	struct DebugCollisionBox {
+		CollisionTarget target;
+		DirectX::XMFLOAT4 color;
+	};
 	enum class ProjectileKind { Gun, Rocket, Bomb };
 	enum class AttackSource { Player, EnemyAircraft, AntiAircraft };
 	// 命中処理と演出に渡す通知。position・directionはワールド座標系
@@ -79,6 +83,8 @@ namespace Game {
 	};
 	// シミュレーションからHUD・音声へ渡す表示用状態。表示側からゲーム状態を書き換えない
 	struct CombatSnapshot {
+		bool debugCollisionsEnabled = false;
+		std::vector<DebugCollisionBox> debugCollisions;
 		CinematicPresentation cinematic;
 		EnemyRadioPresentation enemyRadio;
 		float elapsedSeconds = 0; // HUDの明滅に使う戦闘開始からの経過秒数

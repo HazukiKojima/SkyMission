@@ -166,6 +166,8 @@ namespace Game {
 		void UpdateGunEffects();
 		void ApplyRenderStates();
 		void RefreshCombatSnapshot();
+		void RefreshDebugCollisions();
+		bool m_debugCollisionsEnabled = false;
 
 		// 戦闘対象・増援の構築
 		CombatGeometry BuildCombatGeometry();

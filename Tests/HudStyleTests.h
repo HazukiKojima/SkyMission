@@ -100,6 +100,35 @@ void TestHudTypography() {
 			++carrierFrameVertices;
 	}
 	Require(carrierFrameVertices == 36, "Carrier marker did not render six outline edges");
+#if defined(_DEBUG)
+	{
+		Game::CombatSnapshot debug;
+		debug.debugCollisionsEnabled = true;
+		DirectX::XMFLOAT4X4 world;
+		DirectX::XMStoreFloat4x4(&world, DirectX::XMMatrixRotationY(0.5f) * DirectX::XMMatrixTranslation(0, 0, 1000));
+		const DirectX::XMFLOAT4 tint{0.123f, 0.456f, 0.789f, 1};
+		debug.debugCollisions.push_back({{1, {{-10, -10, -10}, {10, 10, 10}}, {}, world}, tint});
+		const auto countLines = [&] {
+			list.Reset(view.width, view.height);
+			Game::CombatHudPresenter{}.Build(debug, view, list);
+			size_t vertices = 0;
+			for (const auto& vertex : list.GetVertices()) {
+				Require(std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y),
+					"Collision overlay produced invalid projected coordinates");
+				if (vertex.color.x == tint.x && vertex.color.y == tint.y && vertex.color.z == tint.z) ++vertices;
+			}
+			return vertices;
+		};
+		Require(countLines() == 72, "Collision OBB did not render exactly twelve edges");
+		debug.debugCollisionsEnabled = false;
+		Require(countLines() == 0, "Disabled collision overlay still drew boxes");
+		debug.debugCollisionsEnabled = true;
+		debug.debugCollisions.front().target.world._43 = -1000;
+		Require(countLines() == 0, "Behind-camera collision box was drawn");
+		debug.debugCollisions.front().target.world._43 = 1;
+		countLines(); // Near-plane crossing must be clipped to finite screen coordinates.
+	}
+#endif
 	const auto ink = Engine::HudSettings{}.color;
 	Require(ink.x == Game::HudStyle::Ink.x && ink.y == Game::HudStyle::Ink.y &&
 			ink.z == Game::HudStyle::Ink.z && ink.w == Game::HudStyle::Ink.w,

@@ -159,6 +159,46 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				initialized.GetCombatSnapshot().playerAltitudeMeters == 1500,
 			"Mission factory returned an incomplete initial snapshot");
 		const auto initialPlayerId = initialized.GetObjects().front().id;
+#if defined(_DEBUG)
+		{
+			auto debug = initialized;
+			Require(!debug.GetCombatSnapshot().debugCollisionsEnabled &&
+				debug.GetCombatSnapshot().debugCollisions.empty(), "Collision debug was enabled by default");
+			Engine::InputSnapshot toggle;
+			toggle.active = true;
+			toggle.pressedKeys[VK_F3] = true;
+			debug.Update({}, 0.01f, toggle);
+			Require(debug.GetCombatSnapshot().debugCollisionsEnabled &&
+				debug.GetCombatSnapshot().debugCollisions.size() == definition.mission.patrolCount + 2,
+				"F3 did not expose player, enemies and carrier collision boxes");
+			for (const auto& box : debug.GetCombatSnapshot().debugCollisions) {
+				const auto object = std::find_if(debug.GetObjects().begin(), debug.GetObjects().end(), [&](const auto& o) {
+					return o.id == box.target.id;
+				});
+				Require(object != debug.GetObjects().end() &&
+					object->worldTransform._41 == box.target.world._41 &&
+					object->worldTransform._42 == box.target.world._42 &&
+					object->worldTransform._43 == box.target.world._43,
+					"Debug collision box used stale object transform");
+				if (box.color.z == 0.1f)
+					Require(box.target.bounds.maximum.y - box.target.bounds.minimum.y <
+						object->model->GetLocalBounds()->maximum.y - object->model->GetLocalBounds()->minimum.y,
+						"Carrier debug box showed hull instead of missile collision deck");
+			}
+			Engine::InputSnapshot held;
+			held.active = true;
+			held.keys[VK_F3] = true;
+			debug.Update({}, 0.01f, held);
+			Require(debug.GetCombatSnapshot().debugCollisionsEnabled, "Held F3 toggled collision debug repeatedly");
+			debug.RemoveObject(debug.GetCombatSnapshot().enemies.front().id);
+			debug.Update({}, 0.01f);
+			Require(debug.GetCombatSnapshot().debugCollisions.size() == definition.mission.patrolCount + 1,
+				"Removed enemy left a debug collision box");
+			debug.Update({}, 0.01f, toggle);
+			Require(!debug.GetCombatSnapshot().debugCollisionsEnabled &&
+				debug.GetCombatSnapshot().debugCollisions.empty(), "F3 failed to hide collision boxes");
+		}
+#endif
 		{
 			// A sea crash keeps its explosion visible instead of switching to the defeat movie.
 			auto crash = initialized;
