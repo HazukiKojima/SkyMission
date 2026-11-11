@@ -159,6 +159,11 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 						patrolCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
 					audio.Initialize(repository / L"Assets/Sound", patrolCommands);
 					Require(audio.GetLoadedSoundCount() == 22, "The three new commander voice assets were not decoded");
+					std::map<std::string, CinematicSettings> impactCommands;
+					for (const auto* id : {"carrierHit", "carrierComplete"})
+						impactCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
+					audio.Initialize(repository / L"Assets/Sound", impactCommands);
+					Require(audio.GetLoadedSoundCount() == 21, "Carrier impact and completion voices were not decoded");
 					const auto carrierCommand = LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics/midMission.json");
 					audio.Initialize(repository / L"Assets/Sound", std::map<std::string, CinematicSettings>{{"midMission", carrierCommand}});
 					Require(audio.GetLoadedSoundCount() == 20, "Carrier command voice was not decoded");

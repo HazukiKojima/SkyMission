@@ -243,5 +243,10 @@ namespace Game {
 		CombatSnapshot m_combat;
 		CombatEffectSystem m_effects;
 		size_t m_enemySequence = 0;
+		bool m_carrierTargetReady = true;
+		void UpdateCarrierCommand();
+		float m_carrierHitSpeakAtSeconds = -1;
+		bool m_carrierHitReported = false;
+		bool m_carrierCompleteReported = false;
 	};
 } // namespace Game

@@ -12,7 +12,8 @@ namespace Engine::HudFont {
 		U"と護衛確認基地襲った部進元在も攻受けおい君一排除沈"
 		U"指揮官直ち迎≪≫ホ押込選択注視司令"
 		U"燃るうあメデ落嘘ろつやんくそま…来パじゃ化物ぎ振めエンジ脱死頼むどば？僚"
-		U"ぞ調子４次爆阻止";
+		U"ぞ調子４次爆阻止"
+		U"能力奪";
 	inline constexpr unsigned AsciiCount = 95;
 	inline constexpr unsigned GlyphCount = AsciiCount + unsigned(Japanese.size());
 	static_assert(((GlyphCount + Columns - 1) / Columns) * Cell < Height - 8);

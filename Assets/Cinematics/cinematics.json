@@ -5,5 +5,7 @@
   "ending": "ending.json",
   "defeat": "defeat.json",
   "patrolEncouragement": "patrolEncouragement.json",
-  "patrolComplete": "patrolComplete.json"
+  "patrolComplete": "patrolComplete.json",
+  "carrierHit": "carrierHit.json",
+  "carrierComplete": "carrierComplete.json"
 }

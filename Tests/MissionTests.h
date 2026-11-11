@@ -434,6 +434,30 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				"Automatic carrier look did not start the command radio with enemy speech suppressed");
 			{
 				auto command = reusable;
+				Require(command.GetCombatSnapshot().selected == Engine::InvalidObjectId &&
+					command.GetCombatSnapshot().lockState == LockState::None && command.GetCombatSnapshot().acquireProgress == 0,
+					"Carrier target was exposed before the attack instruction finished");
+				{
+					auto ready = command;
+					const auto ammunition = ready.GetCombatSnapshot().carrierMissileAmmo;
+					ready.Update({}, 0.25f, {}, {.missilePressCount = 2});
+					Require(ready.GetCombatSnapshot().selected == Engine::InvalidObjectId &&
+						ready.GetCombatSnapshot().carrierMissileAmmo == ammunition && ready.GetCombatSnapshot().acquireProgress == 0,
+						"Carrier lock or launch was enabled while the command was speaking");
+					ready.UpdateCinematicBriefing(CinematicVoiceStatus::Finished, 0.01f);
+					Require(ready.GetCombatSnapshot().selected != Engine::InvalidObjectId &&
+						ready.GetCombatSnapshot().acquireProgress == 0,
+						"Carrier target did not appear after command completion or inherited lock time");
+					auto position = ready.GetCombatSnapshot().objectivePosition;
+					position.y = 1500; position.z += 6000;
+					ready.SetPlayerAircraftPosition(position);
+					for (int frame = 0; frame < 3; ++frame) ready.Update({}, 0.25f);
+					Require(ready.GetCombatSnapshot().lockState != LockState::Locked,
+						"Carrier locked before the new one-second acquisition interval");
+					ready.Update({}, 0.25f);
+					Require(ready.GetCombatSnapshot().lockState == LockState::Locked,
+						"Carrier did not lock after one second");
+				}
 				const auto before = command.GetCombatSnapshot();
 				command.Update({}, 0.25f);
 				Require(command.GetCombatSnapshot().elapsedSeconds > before.elapsedSeconds &&
@@ -442,6 +466,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				for (int i = 0; i < 20; ++i) command.Update({}, 0.25f);
 				Require(command.GetCombatSnapshot().cinematic.radioLine == -1,
 					"Carrier command did not expire during gameplay");
+				Require(command.GetCombatSnapshot().selected != Engine::InvalidObjectId,
+					"Carrier target was not released by missing-audio fallback");
 			}
 			// Explicit cinematic playback remains supported; only the automatic trigger changes.
 			Require(reusable.PlayCinematic("midMission"), "Explicit carrier cinematic stopped working");
@@ -743,8 +769,16 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 					lockLoss.GetCombatSnapshot().carrierMissileAmmo == 2,
 				"Distant carrier retained a stale lock or aiming consumed ammunition");
 		}
+		const auto configureCarrierDialogue = [&](FlightScene& combatScene) {
+			std::map<std::string, CinematicSettings> commands;
+			for (const auto* id : {"carrierHit", "carrierComplete"}) commands.emplace(id, definition.cinematics.at(id));
+			combatScene.ConfigureCinematics(commands, [&](const std::string& id) {
+				return FlightScene::CinematicModel{resolveModel(id), 1};
+			}, 100000);
+		};
 		{
 			auto volley = scene;
+			configureCarrierDialogue(volley);
 			lockCarrier(volley);
 			CombatInput doubleClick;
 			doubleClick.missilePressCount = 3;
@@ -766,14 +800,21 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 						reloading.GetCombatSnapshot().missileCooldownSeconds == 0,
 					"Missile magazine did not reload after four seconds");
 			}
-			for (int frame = 0; frame < 32 && !volley.GetCombatSnapshot().deckDisabled; ++frame)
+			for (int frame = 0; frame < 32 && !volley.GetCombatSnapshot().deckDisabled; ++frame) {
 				volley.Update({}, 0.25f);
+				Require(volley.GetCombatSnapshot().cinematic.cinematicId != "carrierHit",
+					"Double-shot volley played the redundant one-more-hit voice");
+			}
 			Require(volley.GetCombatSnapshot().deckDisabled &&
 					volley.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
 					volley.GetCombatSnapshot().enemies.empty() &&
 					volley.GetCombatSnapshot().audio.shipExplosions == 1,
 				"Two fast missiles did not destroy the rotated carrier exactly once");
+			Require(volley.GetCombatSnapshot().cinematic.cinematicId == "carrierComplete" &&
+				volley.GetCombatSnapshot().cinematic.radioLine == 0,
+				"Double-shot carrier disable did not play completion voice");
 		}
+		configureCarrierDialogue(scene);
 		for (int missileIndex = 0; missileIndex < 2; ++missileIndex) {
 			lockCarrier(scene);
 			const float before = scene.GetCombatSnapshot().carrierHealth;
@@ -787,6 +828,22 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 						!scene.GetCombatSnapshot().audio.shipExplosions &&
 						scene.GetEffectSnapshot().deckSmoke.empty(),
 					"First missile prematurely destroyed carrier");
+				{
+					auto quickSecond = scene;
+					quickSecond.Update({}, 0.01f, {}, drop);
+					for (int frame = 0; frame < 32 && !quickSecond.GetCombatSnapshot().deckDisabled; ++frame) {
+						quickSecond.Update({}, 0.25f);
+						Require(quickSecond.GetCombatSnapshot().cinematic.cinematicId != "carrierHit",
+							"Rapid second shot after impact did not cancel first-hit encouragement");
+					}
+					Require(quickSecond.GetCombatSnapshot().deckDisabled &&
+						quickSecond.GetCombatSnapshot().cinematic.cinematicId == "carrierComplete",
+						"Rapid second shot did not produce the completion voice");
+				}
+				for (int frame = 0; frame < 3; ++frame) scene.Update({}, 0.25f);
+				Require(scene.GetCombatSnapshot().cinematic.cinematicId == "carrierHit" &&
+					scene.GetCombatSnapshot().cinematic.radioLine == 0,
+					"Single first hit did not play encouragement");
 				checkDefeatRetry(scene);
 			}
 		}
@@ -795,6 +852,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack,
 			"Carrier defeat spawned reinforcements before the four-second delay");
 		Require(scene.GetCombatSnapshot().audio.shipExplosions == 1, "Deck audio missing or duplicated");
+		Require(scene.GetCombatSnapshot().cinematic.cinematicId == "carrierComplete" &&
+			scene.GetCombatSnapshot().cinematic.radioLine == 0, "Carrier explosion did not start completion voice");
 		const auto& carrierExplosion = scene.GetEffectSnapshot().explosions.back();
 		Require(carrierExplosion.radius == CarrierEffectSettings::explosionRadius &&
 				std::abs(carrierExplosion.position.x) < 0.01f &&

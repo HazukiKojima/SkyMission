@@ -263,7 +263,7 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		!carrierVoice.TakeCompletion(), "Gameplay-only command started a movie or emitted completion");
 	carrierVoice.Update(5, false);
 	Require(carrierVoice.GetPresentation().radioLine == -1, "Gameplay-only command did not expire");
-	for (const auto* id : {"patrolEncouragement", "patrolComplete"}) {
+	for (const auto* id : {"patrolEncouragement", "patrolComplete", "carrierHit", "carrierComplete"}) {
 		const auto command = LoadCinematicSettings(reader, repository / L"Assets/Cinematics" / (std::string(id) + ".json"));
 		Require(command.radio.size() == 1 && fs::exists(command.radio[0].audio), "Patrol command voice was missing");
 		for (const auto& text : {command.radio[0].caption.speaker, command.radio[0].caption.text}) {

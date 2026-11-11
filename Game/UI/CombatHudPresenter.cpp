@@ -397,7 +397,8 @@ namespace Game {
 				} else
 					DrawOffscreenIndicator(marker, color, view, list);
 			}
-			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active) {
+			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active &&
+				snapshot.selected != Engine::InvalidObjectId) {
 				std::string lock = m_text.Text("敵空母：照準を合わせてロック");
 				if (snapshot.lockState == LockState::Locked)
 					lock = m_text.Text("敵空母：ロック完了");

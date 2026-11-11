@@ -156,6 +156,7 @@ namespace Game {
 		m_combat.audio.gunFiring &= m_combat.audio.flying;
 		UpdateEnemyRadio(dt);
 		UpdatePatrolCommand(dt);
+		UpdateCarrierCommand();
 		UpdateCamera(input, dt, cameraInput);
 		CheckMissionCinematics();
 		UpdateEnemyRadio(0);
@@ -254,6 +255,10 @@ namespace Game {
 
 	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, bool next, float dt) {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
+			if (!m_carrierTargetReady) {
+				m_targeting.Update({}, geometry.muzzle, geometry.forward, false, 0);
+				return;
+			}
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
 				const CombatTarget carrier{m_mission.GetCarrierId(), *center, {}, m_text.Text("敵空母"),
 					m_mission.GetCarrierHealth()};
@@ -531,6 +536,8 @@ namespace Game {
 						}
 					} else {
 						m_effects.SpawnExplosion(hit.position, {});
+						if (!m_carrierHitReported && m_carrierMissiles.GetCount() == 0 && m_carrierMissiles.GetAmmo() > 0)
+							m_carrierHitSpeakAtSeconds = m_battleSeconds + 0.5f;
 					}
 				}
 				continue;
