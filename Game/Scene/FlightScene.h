@@ -185,7 +185,7 @@ namespace Game {
 		void BeginCinematic(const CinematicSettings& settings, const std::string& id, bool briefing);
 		void InitializeCinematicShot();
 		void UpdateCarrierCinematicCamera();
-		void CheckMissionCinematics();
+		void CheckMissionCinematics(float dt);
 
 		bool m_briefingEnabled = false;
 		bool m_openingEnabled = false;
@@ -248,5 +248,10 @@ namespace Game {
 		float m_carrierHitSpeakAtSeconds = -1;
 		bool m_carrierHitReported = false;
 		bool m_carrierCompleteReported = false;
+		size_t m_finalKills = 0;
+		bool m_finalEncouraged = false;
+		float m_reinforcementHoldSeconds = -1;
+		float m_victoryHoldSeconds = -1;
+		void UpdateFinalCommand();
 	};
 } // namespace Game

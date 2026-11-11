@@ -37,8 +37,6 @@ void TestMissionRules() {
 	Require(mission.Advance(0, true) && mission.GetPhase() == MissionPhase::FinalFighters,
 		"Deck hit did not start final fighters");
 	Require(!mission.Advance(2, true), "Deck hit spawned duplicate final fighters");
-	Require(mission.Advance(0, true) && mission.GetPhase() == MissionPhase::Commander,
-		"Commander did not follow fighters");
 	Require(!mission.Advance(1, true), "Victory before last aircraft");
 	auto simultaneous = mission;
 	Require(simultaneous.Advance(0, false) && simultaneous.GetPhase() == MissionPhase::Failed,
@@ -875,20 +873,24 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 					"Reinforcements or arrival cinematic started before four seconds");
 			}
 			arrival.Update({}, 0.25f);
+			Require(!arrival.GetCombatSnapshot().cinematic.active, "Arrival interrupted the completion report pause");
+			for (int frame = 0; frame < 8 && !arrival.GetCombatSnapshot().cinematic.active; ++frame) arrival.Update({}, 0.25f);
 			Require(arrival.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount &&
 				arrival.GetCombatSnapshot().cinematic.active &&
 				arrival.GetCombatSnapshot().cinematic.cinematicId == "reinforcements",
-				"Four-second delay did not spawn reinforcements and start arrival cinematic");
+				"Arrival warning did not follow the completion report and pause");
 			const auto paused = arrival.GetCombatSnapshot();
 			for (int frame = 0; frame < 4; ++frame) arrival.Update({}, 0.25f);
 			Require(arrival.GetCombatSnapshot().elapsedSeconds == paused.elapsedSeconds &&
 				arrival.GetCombatSnapshot().playerPosition.z == paused.playerPosition.z,
 				"Arrival cinematic failed to pause combat");
 			auto completed = arrival;
-			for (int frame = 0; frame < 8; ++frame) completed.Update({}, 0.25f);
+			for (int frame = 0; frame < 33; ++frame) completed.Update({}, 0.25f);
 			Require(!completed.GetCombatSnapshot().cinematic.active &&
 				completed.TakeCinematicCompletion() == CinematicCompletion::Completed,
 				"Arrival cinematic did not complete naturally");
+			Require(completed.GetCombatSnapshot().cinematic.cinematicId == "finalRally" &&
+				completed.GetCombatSnapshot().cinematic.radioLine == 0, "Return encouragement did not begin at combat resumption");
 			arrival.Update({}, 0.01f, {}, {.skipOpening = true});
 			Require(arrival.TakeCinematicCompletion() == CinematicCompletion::Skipped,
 				"Arrival cinematic could not be skipped");
@@ -917,31 +919,77 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				"Reinforcement spawned outside carrier defense area");
 		Require(!scene.GetCombatSnapshot().audio.shipExplosions, "Deck audio persisted across frames");
 		checkDefeatRetry(scene);
-		removeEnemies();
+		{
+			auto encouragement = scene;
+			std::map<std::string, CinematicSettings> finalCommands;
+			for (const auto* id : {"finalEncouragement", "ending"}) finalCommands.emplace(id, definition.cinematics.at(id));
+			encouragement.ConfigureCinematics(finalCommands, [&](const std::string& id) {
+				return FlightScene::CinematicModel{resolveModel(id), 1};
+			}, 100000);
+			auto safe = combat;
+			safe.bulletDamage = 10000; safe.playerHealth = 100000;
+			encouragement.ConfigureCombat(safe);
+			const auto oldEnemies = encouragement.GetCombatSnapshot().enemies;
+			for (size_t i = 0; i < 2; ++i) encouragement.RemoveObject(oldEnemies[i].id);
+			encouragement.SetPlayerAircraftPosition({100000, 1500, 0});
+			encouragement.AddEnemyAircraft(box, {100000, 1515, -160}, 5, definition.enemyAircraft.flightParameters,
+				definition.enemyAIParameters, 100, "FINAL FIRST");
+			encouragement.Update({}, 0.25f, {}, {{true}});
+			Require(encouragement.GetCombatSnapshot().enemies.size() == 2, "First final-wave target was not shot down");
+			auto second = encouragement.GetCombatSnapshot().playerPosition;
+			second.y += 15; second.z -= 160;
+			encouragement.AddEnemyAircraft(box, second, 5, definition.enemyAircraft.flightParameters,
+				definition.enemyAIParameters, 100, "FINAL SECOND");
+			encouragement.Update({}, 0.25f, {}, {{true}});
+			Require(encouragement.GetCombatSnapshot().enemies.size() == 2, "Second final-wave target was not shot down");
+			{
+				auto rushed = encouragement;
+				const auto remaining = rushed.GetCombatSnapshot().enemies;
+				for (const auto& enemy : remaining) rushed.RemoveObject(enemy.id);
+				rushed.Update({}, 0.25f);
+				for (int frame = 0; frame < 80 && !rushed.GetCombatSnapshot().cinematic.active; ++frame) {
+					Require(rushed.GetCombatSnapshot().cinematic.cinematicId != "finalEncouragement",
+						"Obsolete encouragement played after the final wave was already cleared");
+					rushed.Update({}, 0.25f);
+				}
+				Require(rushed.GetCombatSnapshot().result == CombatResult::Victory &&
+					rushed.GetCombatSnapshot().cinematic.cinematicId == "ending",
+					"Fast final clear did not lead to the ending after enemy speech");
+			}
+			for (int frame = 0; frame < 80 &&
+				encouragement.GetCombatSnapshot().cinematic.cinematicId != "finalEncouragement"; ++frame)
+				encouragement.Update({}, 0.25f);
+			Require(encouragement.GetCombatSnapshot().cinematic.cinematicId == "finalEncouragement" &&
+				encouragement.GetCombatSnapshot().cinematic.radioLine == 0,
+				"Final-wave encouragement did not follow two real kills");
+			const auto serial = encouragement.GetCombatSnapshot().cinematic.playbackSerial;
+			encouragement.UpdateCinematicBriefing(CinematicVoiceStatus::Finished, 0.01f);
+			for (int frame = 0; frame < 16; ++frame) encouragement.Update({}, 0.25f);
+			Require(encouragement.GetCombatSnapshot().cinematic.playbackSerial == serial,
+				"Final-wave encouragement repeated");
+		}
 		{
 			auto victoryMovie = scene;
-			victoryMovie.ConfigureCinematics(
-				definition.cinematics,
-				[&](const std::string& id) {
-					return FlightScene::CinematicModel{resolveModel(id), 1};
-				},
-				100000);
+			victoryMovie.ConfigureCinematics(definition.cinematics, [&](const std::string& id) {
+				return FlightScene::CinematicModel{resolveModel(id), 1};
+			}, 100000);
 			const auto enemies = victoryMovie.GetCombatSnapshot().enemies;
-			for (const auto& enemy : enemies)
-				victoryMovie.RemoveObject(enemy.id);
+			for (const auto& enemy : enemies) victoryMovie.RemoveObject(enemy.id);
 			victoryMovie.Update({}, 0.01f);
 			Require(victoryMovie.GetCombatSnapshot().result == CombatResult::Victory &&
-					victoryMovie.GetCombatSnapshot().cinematic.active &&
-					victoryMovie.GetCombatSnapshot().cinematic.cinematicId == "ending",
-				"Victory did not select its ending cinematic");
+				victoryMovie.GetCombatSnapshot().enemies.empty() && !victoryMovie.GetCombatSnapshot().cinematic.active,
+				"Four reinforcements did not end the mission or ending skipped its quiet pause");
+			for (int frame = 0; frame < 4; ++frame) victoryMovie.Update({}, 0.25f);
+			Require(victoryMovie.GetCombatSnapshot().cinematic.active &&
+				victoryMovie.GetCombatSnapshot().cinematic.cinematicId == "ending" &&
+				victoryMovie.GetCombatSnapshot().cinematic.radioLine == 0,
+				"Final mission report did not start after the quiet pause");
+			for (int frame = 0; frame < 28; ++frame) victoryMovie.Update({}, 0.25f);
+			Require(!victoryMovie.GetCombatSnapshot().cinematic.active, "Mission ending did not finish naturally");
 		}
-		Require(scene.GetCombatSnapshot().enemies.size() == 1 &&
-				scene.GetCombatSnapshot().enemies[0].name == "敵編隊長機" &&
-				scene.GetCombatSnapshot().enemies[0].health == combat.enemyHealth * 1.5f,
-			"Commander settings/phase incorrect");
-		checkDefeatRetry(scene);
 		removeEnemies();
-		Require(scene.GetCombatSnapshot().result == CombatResult::Victory, "Last kill did not win mission");
+		Require(scene.GetCombatSnapshot().result == CombatResult::Victory && scene.GetCombatSnapshot().enemies.empty(),
+			"Final four kills spawned an extra commander instead of ending the mission");
 		for (int frame = 0; frame < 100; ++frame)
 			scene.Update({}, 0.25f);
 		Require(!scene.GetEffectSnapshot().deckSmoke.empty() &&

@@ -1,0 +1,17 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 1
+  },
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "いい動きだ！そのまま押し切れ！",
+      "audio": "../Sound/いい動きだ！そのまま押し切れ！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 3.0
+    }
+  ]
+}

@@ -131,6 +131,13 @@ namespace Game {
 				UpdateEnemyRadio(dt);
 				m_effects.Update(dt);
 				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
+				if (m_combat.result == CombatResult::Victory) {
+					UpdatePlayer({}, dt);
+					ApplyRenderStates();
+					UpdateCamera({}, dt, {});
+					m_combat.audio.flying = m_scene.FindObject(m_playerId) != nullptr;
+				}
+				CheckMissionCinematics(dt);
 			}
 			return;
 		}
@@ -157,8 +164,9 @@ namespace Game {
 		UpdateEnemyRadio(dt);
 		UpdatePatrolCommand(dt);
 		UpdateCarrierCommand();
+		UpdateFinalCommand();
 		UpdateCamera(input, dt, cameraInput);
-		CheckMissionCinematics();
+		CheckMissionCinematics(dt);
 		UpdateEnemyRadio(0);
 	}
 
@@ -595,6 +603,7 @@ namespace Game {
 			if (enemy.health > 0 && m_scene.FindObject(enemy.objectId)) survivors.push_back(enemy.objectId);
 		for (const auto id : destroyed) m_enemyRadio.NotifyDestroyed(id, survivors);
 		if (m_mission.GetPhase() == MissionPhase::Patrol) m_patrolKills += destroyed.size();
+		if (m_mission.GetPhase() == MissionPhase::FinalFighters) m_finalKills += destroyed.size();
 		if (m_combat.playerHealth <= 0) {
 			RemoveObject(m_playerId);
 			m_combat.result = CombatResult::Defeat;

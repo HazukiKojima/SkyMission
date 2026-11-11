@@ -96,6 +96,9 @@ namespace Game {
 		m_carrierCommandDelay = 0;
 		m_carrierHitSpeakAtSeconds = -1;
 		m_carrierHitReported = m_carrierCompleteReported = false;
+		m_finalKills = 0;
+		m_finalEncouraged = false;
+		m_reinforcementHoldSeconds = m_victoryHoldSeconds = -1;
 		const auto command = m_cinematics.find("midMission");
 		m_carrierTargetReady = command == m_cinematics.end() || command->second.radio.empty();
 		m_enemyRadio = {};

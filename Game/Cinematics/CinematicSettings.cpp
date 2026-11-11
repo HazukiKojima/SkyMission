@@ -67,6 +67,8 @@ namespace Game {
 				throw std::invalid_argument("shots/" + std::to_string(i) + ": " + error.what());
 			}
 		}
+		if (!std::isfinite(endFadeSeconds) || endFadeSeconds < 0 || endFadeSeconds > TotalDuration())
+			throw std::invalid_argument("endFadeSeconds must be within the cinematic duration");
 		if (!std::isfinite(TotalDuration()))
 			throw std::invalid_argument("shots duration exceeds finite range");
 		if (shots.empty() &&
@@ -124,6 +126,7 @@ namespace Game {
 				}
 			};
 			number("durationSeconds", result.durationSeconds);
+			number("endFadeSeconds", result.endFadeSeconds);
 			number("fadeOutStartSeconds", result.fadeOutStartSeconds);
 			number("cutSeconds", result.cutSeconds);
 			number("fadeInStartSeconds", result.fadeInStartSeconds);

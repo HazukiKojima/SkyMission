@@ -231,9 +231,9 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	}
 	const auto middle = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/midMission.json");
 	const auto reinforcements = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/reinforcements.json");
-	Require(reinforcements.TotalDuration() == 3 && reinforcements.briefing.empty() &&
+	Require(reinforcements.TotalDuration() == 9.25f && reinforcements.briefing.empty() &&
 		reinforcements.model == "enemy" && reinforcements.formationOffsets.size() == 4,
-		"Reinforcement cinematic did not introduce four enemy aircraft for three seconds");
+		"Reinforcement cinematic did not show four aircraft with sequential warning and enemy dialogue");
 	Require(middle.shots.size() == 1 && middle.briefing.empty() && middle.TotalDuration() == 3 &&
 		middle.shots[0].target == "carrier",
 		"Three-second carrier cinematic definition was not loaded");
@@ -260,10 +260,10 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Require(carrierVoice.GetPresentation().radioLine == -1, "Skipping the carrier movie retained its voice");
 	carrierVoice.StartRadio(middle, "midMission");
 	Require(!carrierVoice.GetPresentation().active && carrierVoice.GetPresentation().radioLine == 0 &&
-		!carrierVoice.TakeCompletion(), "Gameplay-only command started a movie or emitted completion");
+		carrierVoice.TakeCompletion() == CinematicCompletion::Skipped, "Follow-up radio lost the preceding cinematic completion");
 	carrierVoice.Update(5, false);
 	Require(carrierVoice.GetPresentation().radioLine == -1, "Gameplay-only command did not expire");
-	for (const auto* id : {"patrolEncouragement", "patrolComplete", "carrierHit", "carrierComplete"}) {
+	for (const auto* id : {"patrolEncouragement", "patrolComplete", "carrierHit", "carrierComplete", "finalRally", "finalEncouragement"}) {
 		const auto command = LoadCinematicSettings(reader, repository / L"Assets/Cinematics" / (std::string(id) + ".json"));
 		Require(command.radio.size() == 1 && fs::exists(command.radio[0].audio), "Patrol command voice was missing");
 		for (const auto& text : {command.radio[0].caption.speaker, command.radio[0].caption.text}) {
@@ -272,6 +272,30 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 				"Patrol command used an unsupported Japanese glyph");
 		}
 	}
+	Require(reinforcements.radio.size() == 2 && reinforcements.radio[0].caption.side == "friendly" &&
+		reinforcements.radio[1].caption.side == "enemy" && fs::exists(reinforcements.radio[1].audio),
+		"Reinforcement warning or English enemy voice was missing");
+	CinematicController arrival;
+	arrival.Start(reinforcements, "reinforcements");
+	Require(arrival.GetPresentation().radioLine == 0, "Reinforcement warning did not start with the movie");
+	arrival.Update(4.35f, false);
+	Require(arrival.GetPresentation().radioLine == 1 && arrival.GetPresentation().radio.speaker == "敵編隊長",
+		"Enemy commander did not speak after the warning");
+	for (const auto& entry : reinforcements.radio) {
+		for (const auto& text : {entry.caption.text, entry.caption.speaker}) {
+			std::string_view remaining = text;
+			while (!remaining.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
+				"New story dialogue has an unsupported glyph");
+		}
+	}
+	const auto ending = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/ending.json");
+	Require(ending.radio.size() == 1 && fs::exists(ending.radio[0].audio) && ending.TotalDuration() == 7,
+		"Final mission completion voice was not configured");
+	arrival.Start(ending, "ending");
+	arrival.Update(6.8f, false);
+	Require(arrival.GetPresentation().fadeOpacity > 0.9f, "Ending did not fade out after the final report");
+	arrival.Update(0.2f, false);
+	Require(!arrival.GetPresentation().active, "Ending did not finish after its flyaway shot");
 	CinematicController timeline;
 	auto multi = middle;
 	multi.shots = {CinematicShotSettings{}, CinematicShotSettings{}};

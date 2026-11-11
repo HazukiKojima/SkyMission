@@ -164,6 +164,11 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 						impactCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
 					audio.Initialize(repository / L"Assets/Sound", impactCommands);
 					Require(audio.GetLoadedSoundCount() == 21, "Carrier impact and completion voices were not decoded");
+					std::map<std::string, CinematicSettings> finaleCommands;
+					for (const auto* id : {"reinforcements", "finalRally", "finalEncouragement", "ending"})
+						finaleCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
+					audio.Initialize(repository / L"Assets/Sound", finaleCommands);
+					Require(audio.GetLoadedSoundCount() == 24, "The five finale voice files were not decoded");
 					const auto carrierCommand = LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics/midMission.json");
 					audio.Initialize(repository / L"Assets/Sound", std::map<std::string, CinematicSettings>{{"midMission", carrierCommand}});
 					Require(audio.GetLoadedSoundCount() == 20, "Carrier command voice was not decoded");
@@ -1084,6 +1089,7 @@ int wmain(int argc, wchar_t** argv) {
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
 			TestCinematic(argv[1], fixture);
 			TestEnemyRadio();
+			TestMissionRules();
 			TestCombatMath();
 			TestEnemyCombatAI();
 			TestEnemyEngagementProfile();

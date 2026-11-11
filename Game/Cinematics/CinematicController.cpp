@@ -23,7 +23,9 @@ namespace Game {
 		m_briefingStarted = false;
 	}
 	void CinematicController::StartRadio(const CinematicSettings& settings, const std::string& id) {
+		const auto completion = m_completion;
 		Start(settings, id);
+		m_completion = completion;
 		m_presentation.active = false;
 		m_presentation.formationShot = false;
 		m_presentation.fadeOpacity = 0;
@@ -117,7 +119,8 @@ namespace Game {
 			m_presentation.title = shot.title;
 			m_presentation.subtitle = shot.subtitle;
 			m_presentation.formationShot = true;
-			m_presentation.fadeOpacity = 0;
+			m_presentation.fadeOpacity = m_settings.endFadeSeconds > 0
+				? SmoothProgress(seconds, m_settings.TotalDuration() - m_settings.endFadeSeconds, m_settings.endFadeSeconds) : 0;
 			return;
 		}
 		m_presentation.formationShot = seconds < m_settings.cutSeconds;

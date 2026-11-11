@@ -40,10 +40,12 @@ namespace Game {
 			case MissionPhase::FinalFighters:
 				SpawnMissionAircraft(m_mission.GetSettings().finalFighterCount, SquadronKind::Fighters);
 				break;
-			case MissionPhase::Commander:
-				SpawnMissionAircraft(1, SquadronKind::Commander);
-				break;
 			case MissionPhase::Complete:
+				if (m_cinematic.GetPresentation().cinematicId == "finalEncouragement" ||
+					m_cinematic.GetPresentation().cinematicId == "finalRally") {
+					m_cinematic.StopRadio();
+					m_combat.cinematic = m_cinematic.GetPresentation();
+				}
 				m_combat.result = CombatResult::Victory;
 				m_combat.allDownSeconds = m_combatSettings.feedback.allDownSeconds;
 				break;

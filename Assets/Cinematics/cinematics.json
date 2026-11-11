@@ -7,5 +7,7 @@
   "patrolEncouragement": "patrolEncouragement.json",
   "patrolComplete": "patrolComplete.json",
   "carrierHit": "carrierHit.json",
-  "carrierComplete": "carrierComplete.json"
+  "carrierComplete": "carrierComplete.json",
+  "finalRally": "finalRally.json",
+  "finalEncouragement": "finalEncouragement.json"
 }
