@@ -160,6 +160,7 @@ namespace Game {
 		void UpdateTargeting(const CombatGeometry& geometry, bool next, float dt);
 		void UpdateCamera(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput);
 		void ApplyHits();
+		void ApplySeaCollision();
 		void UpdateEnemyRadio(float dt);
 		EnemyRadioController m_enemyRadio;
 		void UpdateGunEffects();

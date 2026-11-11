@@ -928,6 +928,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		FlightScene scene;
 		scene.Initialize(1.0f, 1.0f, definition.environment.ocean.size);
 		scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
+		scene.SetPlayerAircraftPosition({0, 1500, 0});
 		scene.AddPlayerObject(renderer.GetModel(PlayerModelId));
 		scene.AddEnemyAircraft(renderer.GetModel(EnemyModelId), {30, 100, 0}, 1.0f,
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);

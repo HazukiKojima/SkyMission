@@ -159,6 +159,50 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				initialized.GetCombatSnapshot().playerAltitudeMeters == 1500,
 			"Mission factory returned an incomplete initial snapshot");
 		const auto initialPlayerId = initialized.GetObjects().front().id;
+		{
+			// A sea crash keeps its explosion visible instead of switching to the defeat movie.
+			auto crash = initialized;
+			crash.ConfigureCinematics(definition.cinematics, [&](const std::string& id) {
+				return FlightScene::CinematicModel{resolveModel(id), 1};
+			}, 100000);
+			crash.Update({}, 0.01f);
+			crash.SetPlayerAircraftPosition({0, -1000, 0});
+			crash.Update({}, 0.25f);
+			Require(crash.GetCombatSnapshot().result == CombatResult::Defeat &&
+				crash.GetCombatSnapshot().missionPhase == MissionPhase::Failed &&
+				crash.GetCombatSnapshot().playerHealth == 0 &&
+				crash.GetCombatSnapshot().audio.aircraftExplosions == 1 &&
+				!crash.GetCombatSnapshot().cinematic.active &&
+				!crash.GetEffectSnapshot().explosions.empty() &&
+				crash.GetEffectSnapshot().explosions.back().position.y >= 0,
+				"Sea crash failed to explode visibly and end mission");
+			Require(std::none_of(crash.GetObjects().begin(), crash.GetObjects().end(), [&](const auto& object) {
+				return object.id == initialPlayerId;
+			}), "Sea crash left player aircraft visible");
+			const auto effects = crash.GetEffectSnapshot().explosions.size();
+			crash.Update({}, 0.01f);
+			Require(crash.GetCombatSnapshot().audio.aircraftExplosions == 0 &&
+				crash.GetEffectSnapshot().explosions.size() == effects,
+				"Sea crash repeated its explosion");
+			crash.Update({}, 0.01f, {}, {.retry = true});
+			Require(crash.GetCombatSnapshot().result == CombatResult::Active &&
+				crash.GetCombatSnapshot().playerHealth > 0 &&
+				crash.GetCombatSnapshot().playerAltitudeMeters == 1500 &&
+				crash.GetEffectSnapshot().explosions.empty(), "Retry did not reset sea crash");
+			FlightScene clearance;
+			clearance.Initialize(1, 1, 10000);
+			clearance.AddPlayerObject(box);
+			const float bottom = box->GetLocalBounds()->minimum.y;
+			clearance.SetPlayerAircraftPosition({0, -bottom + 0.1f, 0});
+			clearance.Update({}, 0.0001f);
+			Require(clearance.GetCombatSnapshot().result == CombatResult::Active,
+				"Sea collision killed aircraft with positive clearance");
+			clearance.SetPlayerAircraftPosition({0, -bottom - 0.01f, 0});
+			clearance.Update({}, 0.0001f);
+			Require(clearance.GetCombatSnapshot().result == CombatResult::Defeat &&
+				clearance.GetCombatSnapshot().audio.aircraftExplosions == 1,
+				"Sea collision ignored aircraft bounds touching water");
+		}
 		const auto initialEnemyPosition = initialized.GetCombatSnapshot().enemies.front().center;
 		{
 			auto tracking = initialized, normal = initialized;
@@ -526,8 +570,9 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			aaScene.RemoveObject(playerId);
 			aaScene.AddPlayerObject(box);
 			aaScene.SetPlayerAircraftVisualScale(1000);
+			aaScene.SetPlayerAircraftPosition({0, 10000, 0});
 			XMFLOAT4X4 escortWorld;
-			XMStoreFloat4x4(&escortWorld, XMMatrixTranslation(0, 1000, 100));
+			XMStoreFloat4x4(&escortWorld, XMMatrixTranslation(0, 10000, 100));
 			aaScene.RegisterMissionShip(aaScene.AddObject(box, escortWorld), false);
 			bool heardGunHit = false;
 			for (int frame = 0; frame < 60 && !heardGunHit; ++frame) {

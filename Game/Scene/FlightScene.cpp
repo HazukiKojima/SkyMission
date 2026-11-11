@@ -144,6 +144,7 @@ namespace Game {
 
 		// 命中と撃破を反映してから、HUDとカメラへ最終状態を渡す
 		ApplyHits();
+		ApplySeaCollision();
 		UpdateMission(dt);
 		ApplyRenderStates();
 		RefreshCombatSnapshot();
@@ -567,6 +568,38 @@ namespace Game {
 			RemoveObject(m_playerId);
 			m_combat.result = CombatResult::Defeat;
 		}
+	}
+
+	void FlightScene::ApplySeaCollision() {
+		using namespace DirectX;
+		const auto* aircraft = m_scene.FindObject(m_playerId);
+		if (m_combat.playerHealth <= 0 || !aircraft || !aircraft->model) return;
+		const auto bounds = aircraft->model->GetLocalBounds();
+		if (!bounds) return;
+		float lowestY = std::numeric_limits<float>::infinity();
+		for (int corner = 0; corner < 8; ++corner) {
+			const auto point = XMVector3TransformCoord(XMVectorSet(
+				corner & 1 ? bounds->maximum.x : bounds->minimum.x,
+				corner & 2 ? bounds->maximum.y : bounds->minimum.y,
+				corner & 4 ? bounds->maximum.z : bounds->minimum.z, 1),
+				XMLoadFloat4x4(&aircraft->worldTransform));
+			lowestY = std::min(lowestY, XMVectorGetY(point));
+		}
+		if (lowestY > 0 || !std::isfinite(lowestY)) return;
+		// 大きい更新幅でも爆発を海中に埋めず、機体下端を海面に合わせる。
+		auto impact = *aircraft;
+		impact.worldTransform._42 -= lowestY;
+		auto position = m_player.GetPosition();
+		position.y -= lowestY;
+		m_player.SetPosition(position);
+		m_effects.SpawnExplosion(impact, m_player.GetVelocity(), m_playerVisualScale);
+		++m_combat.audio.aircraftExplosions;
+		m_combat.playerHealth = 0;
+		RemoveObject(m_playerId);
+		m_combat.result = CombatResult::Defeat;
+		m_carrierLookSeconds = 0;
+		// 爆発が見える通常画面のままゲームオーバーにする。
+		m_endingPlayed = true;
 	}
 
 	void FlightScene::UpdateEnemyRadio(float dt) {

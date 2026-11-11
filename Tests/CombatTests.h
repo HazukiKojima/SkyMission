@@ -765,9 +765,10 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			combat.feedback.destroyedSeconds = 2.2f;
 			scene.ConfigureCombat(combat);
 			scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
+			scene.SetPlayerAircraftPosition({0, 100, 0});
 			const auto playerId = scene.AddPlayerObject(player);
 			scene.ConfigurePlayerWeapon(definition.playerWeapon, player);
-			scene.AddEnemyAircraft(enemy, {0, 15, -160}, 5, definition.enemyAircraft.flightParameters,
+			scene.AddEnemyAircraft(enemy, {0, 115, -160}, 5, definition.enemyAircraft.flightParameters,
 				definition.enemyAIParameters, 100, "PATROL");
 			scene.Update({}, 0.25f, {}, {{true}});
 			const auto& state = scene.GetCombatSnapshot();
