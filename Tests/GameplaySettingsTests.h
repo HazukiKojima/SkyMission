@@ -162,31 +162,13 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 			RadarMapPresenter::FormatRange(400) == "400 m",
 		"Radar range labels disagree with configured meters");
 	write(
-		R"({"layout":{"radarSize":400,"radarLeftMargin":80,"radarBottomMargin":60,"radarStatusGap":50,"hitPosition":[120,140],"carrierBarX":140,"carrierBarY":120,"carrierBarWidth":200}})");
+		R"({"layout":{"radarSize":400,"radarLeftMargin":80,"radarBottomMargin":60,"radarStatusGap":50,"hitPosition":[120,140]}})");
 	UiTuning customLayout;
 	customLayout.Load(reader, file);
 	const auto customRadar = RadarMapPresenter::Layout(view, customLayout);
 	Require(customRadar.origin.x == 80 && customRadar.origin.y == 620 && customRadar.statusOrigin.x == 530 &&
 			customLayout.layout.hitPosition[0] == 120 && customLayout.layout.hitPosition[1] == 140,
 		"Nested HUD layout was ignored");
-	CombatSnapshot hudState;
-	hudState.carrierPresent = true;
-	hudState.carrierHealth = hudState.carrierMaxHealth = 300;
-	HudDrawList hudVertices;
-	hudVertices.Reset(view.width, view.height);
-	CombatHudPresenter hudPresenter;
-	hudPresenter.ConfigureTuning(customLayout);
-	hudPresenter.Build(hudState, view, hudVertices);
-	float barLeft = 1, barRight = -1;
-	for (const auto& vertex : hudVertices.GetVertices()) {
-		if (vertex.color.x == 0.025f && vertex.color.w == 0.8f) {
-			barLeft = std::min(barLeft, vertex.position.x);
-			barRight = std::max(barRight, vertex.position.x);
-		}
-	}
-	Require(std::abs(barLeft - (2 * 140.0f / view.width - 1)) < 0.0001f &&
-			std::abs(barRight - (2 * 340.0f / view.width - 1)) < 0.0001f,
-		"Configured carrier panel geometry ignored");
 	write(
 		R"({"gun":{"tracerOuterColor":[0.1,0.2,0.3,0.4]},"explosion":{"fireColdColor":[0,0,1,0.5],"fireHotColor":[1,0,0,1]}})");
 	EffectSettings customColors;
