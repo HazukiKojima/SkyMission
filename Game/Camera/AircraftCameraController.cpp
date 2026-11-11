@@ -63,7 +63,7 @@ namespace Game {
 			m_position.z += right.z * moveSpeed;
 		}
 
-		if (input.IsKeyDown('Z')) {
+		if (input.active && input.middleMouseDown) {
 			m_yaw += static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity;
 			m_pitch -= static_cast<float>(input.mouseDeltaY) * m_settings.mouseSensitivity;
 		}
@@ -97,7 +97,7 @@ namespace Game {
 		UpdateView();
 	}
 	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
-		if (input.IsKeyDown('Z')) {
+		if (input.active && input.middleMouseDown) {
 			m_lookYaw = std::remainder(
 				m_lookYaw - static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity, XM_2PI);
 			m_lookPitch =

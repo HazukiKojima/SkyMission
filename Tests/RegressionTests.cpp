@@ -262,14 +262,14 @@ void TestFollowCameraLook() {
 	};
 	Engine::InputSnapshot look;
 	look.active = true;
-	look.keys['Z'] = true;
+	look.middleMouseDown = true;
 	look.mouseDeltaX = 400;
 	look.mouseDeltaY = -100;
 	auto camera = reference;
 	camera.Update(1 / 60.0f, look);
 	const float initialOffset = distance(camera.GetPosition(), reference.GetPosition());
 	Require(camera.GetPosition().x > reference.GetPosition().x, "Right mouse motion orbited camera left");
-	Require(initialOffset > 100, "Z mouse movement did not orbit following camera");
+	Require(initialOffset > 100, "Middle-button mouse movement did not orbit following camera");
 	Engine::InputSnapshot bomb;
 	bomb.active = true;
 	bomb.rightMouseDown = true;
@@ -279,11 +279,11 @@ void TestFollowCameraLook() {
 	auto unchanged = reference;
 	unchanged.Update(1 / 60.0f, bomb);
 	Require(distance(unchanged.GetPosition(), reference.GetPosition()) < 0.01f,
-		"Bomb click rotated camera without Z");
+		"Bomb click rotated camera without middle button");
 	camera.Update(1 / 60.0f, {});
 	const float releaseOffset = distance(camera.GetPosition(), reference.GetPosition());
 	Require(releaseOffset > 1 && releaseOffset < initialOffset && releaseOffset > initialOffset * 0.5f,
-		"Z release snapped camera or did not start smooth return");
+		"Middle-button release snapped camera or did not start smooth return");
 	auto slowFrames = camera, fastFrames = camera;
 	for (int i = 0; i < 30; ++i)
 		slowFrames.Update(1 / 30.0f);
@@ -330,7 +330,7 @@ void TestFollowCameraLook() {
 				Require(std::abs(distantView.m[row][column] - nearbyView.m[row][column]) < 1e-5f,
 					"Camera rotation jitters during distant translation");
 	}
-	std::cout << "PASS: Z orbit, bomb/camera independence, smooth return, moving follow and frame-rate "
+	std::cout << "PASS: Middle-button orbit, bomb/camera independence, smooth return, moving follow and frame-rate "
 				 "stability\n";
 }
 
@@ -386,16 +386,16 @@ void TestRawInput() {
 	key(keyboard1, 'W', RI_KEY_MAKE, 0xff);
 	Require(!state.ConsumeFrame().IsKeyDown('W'), "Keyboard overrun packet was retained");
 
-	key(keyboard1, 'Z');
+	mouse(mouse1, RI_MOUSE_MIDDLE_BUTTON_DOWN, 0, 0);
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 3, -2);
 	mouse(mouse1, 0, 4, 5);
 	// マウス以外のデバイス削除で、蓄積した移動量を消さない
 	state.ForgetDevice(keyboard2);
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_UP, 2, 0);
 	snapshot = state.ConsumeFrame();
-	Require(!snapshot.rightMouseDown && snapshot.rightMousePressCount == 1 && snapshot.mouseDeltaX == 9 &&
+	Require(snapshot.middleMouseDown && !snapshot.rightMouseDown && snapshot.rightMousePressCount == 1 && snapshot.mouseDeltaX == 9 &&
 			snapshot.mouseDeltaY == 3,
-		"Z-held mouse motion was lost");
+		"Middle-button-held mouse motion was lost");
 	const auto next = state.ConsumeFrame();
 	Require(next.mouseDeltaX == 0 && next.mouseDeltaY == 0, "Raw mouse movement was replayed next frame");
 	AircraftCameraController camera;
@@ -404,12 +404,18 @@ void TestRawInput() {
 	DirectX::XMStoreFloat4x4(&before, camera.GetView());
 	camera.Update(0.0f, snapshot);
 	DirectX::XMStoreFloat4x4(&after, camera.GetView());
-	Require(std::abs(after._13 - before._13) > 0.001f, "Camera did not consume Z-held mouse motion");
-	key(keyboard1, 'Z', RI_KEY_BREAK);
-	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 100, 100);
-	Require(state.ConsumeFrame().mouseDeltaX == 0, "Mouse movement without Z rotated the camera");
-
+	Require(std::abs(after._13 - before._13) > 0.001f, "Camera did not consume Middle-button-held mouse motion");
+	mouse(mouse2, RI_MOUSE_MIDDLE_BUTTON_DOWN, 0, 0);
+	mouse(mouse1, RI_MOUSE_MIDDLE_BUTTON_UP, 0, 0);
+	Require(state.ConsumeFrame().middleMouseDown, "One mouse released another mouse's middle button");
+	state.ForgetDevice(mouse2);
+	Require(!state.ConsumeFrame().middleMouseDown, "Removed mouse left middle button held");
 	key(keyboard1, 'Z');
+	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 100, 100);
+	Require(state.ConsumeFrame().mouseDeltaX == 0, "Z still enabled camera motion without middle button");
+	key(keyboard1, 'Z', RI_KEY_BREAK);
+
+	mouse(mouse1, RI_MOUSE_MIDDLE_BUTTON_DOWN, 0, 0);
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 0, 0, MOUSE_MOVE_ABSOLUTE);
 	mouse(mouse1, 0, 65535, 65535, MOUSE_MOVE_ABSOLUTE);
 	snapshot = state.ConsumeFrame();
@@ -421,7 +427,7 @@ void TestRawInput() {
 	state.SetActive(false);
 	snapshot = state.ConsumeFrame();
 	Require(
-		!snapshot.active && !snapshot.IsKeyDown('W') && !snapshot.rightMouseDown && snapshot.mouseDeltaX == 0,
+		!snapshot.active && !snapshot.IsKeyDown('W') && !snapshot.rightMouseDown && !snapshot.middleMouseDown && snapshot.mouseDeltaX == 0,
 		"Focus loss did not clear keys, mouse buttons and motion");
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 100, 100);
 	key(keyboard1, 'W');
@@ -472,13 +478,16 @@ void TestRawInput() {
 		Require(GetCapture() != second.GetHandle(), "Bomb click captured the camera mouse");
 		SendMessageW(second.GetHandle(), WM_RBUTTONUP, 0, 0);
 		SendMessageW(second.GetHandle(), WM_KEYDOWN, 'Z', 0);
-		Require(GetCapture() == second.GetHandle(), "Z did not capture the camera mouse");
+		Require(GetCapture() != second.GetHandle(), "Z still captured the camera mouse");
 		SendMessageW(second.GetHandle(), WM_KEYUP, 'Z', 0);
-		Require(GetCapture() != second.GetHandle(), "Z release kept camera capture");
-		SendMessageW(second.GetHandle(), WM_KEYDOWN, 'Z', 0);
+		SendMessageW(second.GetHandle(), WM_MBUTTONDOWN, MK_MBUTTON, 0);
+		Require(GetCapture() == second.GetHandle(), "Middle button did not capture the camera mouse");
+		SendMessageW(second.GetHandle(), WM_MBUTTONUP, 0, 0);
+		Require(GetCapture() != second.GetHandle(), "Middle-button release kept camera capture");
+		SendMessageW(second.GetHandle(), WM_MBUTTONDOWN, MK_MBUTTON, 0);
 		SendMessageW(second.GetHandle(), WM_CANCELMODE, 0, 0);
 		Require(GetCapture() != second.GetHandle(), "Cancel mode kept camera capture");
-		SendMessageW(second.GetHandle(), WM_KEYDOWN, 'Z', 0);
+		SendMessageW(second.GetHandle(), WM_MBUTTONDOWN, MK_MBUTTON, 0);
 		SendMessageW(second.GetHandle(), WM_KILLFOCUS, 0, 0);
 		Require(GetCapture() != second.GetHandle(), "Focus loss kept camera capture");
 		UINT resizeCount = 0;

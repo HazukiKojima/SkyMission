@@ -38,7 +38,7 @@ namespace Game {
 		const float fontSize = m_tuning.layout.controlsFontSize * scale;
 		const float lineHeight = m_tuning.layout.controlsLineHeight * scale;
 		std::vector<std::string_view> controls{m_text.Text("WASD：操縦"), m_text.Text("Q / E：ヨー"),
-			m_text.Text("Ctrl / Space：加速 / 減速"), m_text.Text("Z + マウス：見回し"),
+			m_text.Text("Ctrl / Space：加速 / 減速"), m_text.Text("ホイール押込 + マウス：見回し"),
 			m_text.Text("左クリック：機銃"), m_text.Text("Tab：目標切替")};
 		if (snapshot.missionPhase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active)
 			controls.push_back(m_text.Text("右クリック：ミサイル (ロック後)"));
