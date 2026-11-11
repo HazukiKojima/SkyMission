@@ -91,6 +91,9 @@ namespace Game {
 		m_midMissionPlayed = m_endingPlayed = false;
 		m_reinforcementsPlayed = false;
 		m_carrierLookSeconds = 0;
+		m_patrolKills = 0;
+		m_patrolEncouraged = m_patrolPraiseStarted = m_patrolPraiseComplete = false;
+		m_carrierCommandDelay = 0;
 		m_enemyRadio = {};
 		m_combat.enemyRadio = {};
 		m_cinematic = {};

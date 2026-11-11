@@ -376,6 +376,18 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				for (const auto& enemy : enemies)
 					reusable.RemoveObject(enemy.id);
 				reusable.Update({}, 0.01f);
+				Require(reusable.GetCombatSnapshot().cinematic.cinematicId == "patrolComplete" &&
+					reusable.GetCombatSnapshot().cinematic.radioLine == 0 && !reusable.GetCombatSnapshot().cinematic.active,
+					"Cleared patrol did not start its completion praise before carrier look");
+				reusable.UpdateCinematicBriefing(CinematicVoiceStatus::Finished, 0.01f);
+				reusable.Update({}, 0.25f);
+				Require(reusable.GetCombatSnapshot().cinematic.cinematicId == "patrolComplete" &&
+					reusable.GetCombatSnapshot().cinematic.radioLine == -1,
+					"Carrier command began before half a second after praise voice completion");
+				reusable.Update({}, 0.25f);
+				Require(reusable.GetCombatSnapshot().cinematic.cinematicId == "midMission" &&
+					reusable.GetCombatSnapshot().cinematic.radioLine == 0,
+					"Carrier command did not start half a second after praise voice completion");
 			};
 			removePatrol();
 			Require(!reusable.GetCombatSnapshot().cinematic.active,
@@ -384,7 +396,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				auto natural = reusable;
 				const auto before = natural.GetCombatSnapshot();
 				XMFLOAT4X4 initialProjection, zoomedProjection, returningProjection;
-				XMStoreFloat4x4(&initialProjection, natural.GetRenderScene().GetCamera().GetProjection());
+				XMStoreFloat4x4(&initialProjection, initialized.GetRenderScene().GetCamera().GetProjection());
 				for (int frame = 0; frame < 6; ++frame) natural.Update({}, 0.25f);
 				XMStoreFloat4x4(&zoomedProjection, natural.GetRenderScene().GetCamera().GetProjection());
 				Require(zoomedProjection._22 > initialProjection._22 * 1.1f &&
@@ -415,6 +427,21 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				Require(std::abs(returningProjection._22 - originalProjection._22) < 0.001f &&
 					!natural.GetCombatSnapshot().cinematic.active,
 					"Carrier zoom repeated or failed to restore original field of view");
+			}
+			Require(!reusable.GetCombatSnapshot().cinematic.active &&
+				reusable.GetCombatSnapshot().cinematic.cinematicId == "midMission" &&
+				reusable.GetCombatSnapshot().cinematic.radioLine == 0 && reusable.GetCombatSnapshot().enemyRadio.clip == -1,
+				"Automatic carrier look did not start the command radio with enemy speech suppressed");
+			{
+				auto command = reusable;
+				const auto before = command.GetCombatSnapshot();
+				command.Update({}, 0.25f);
+				Require(command.GetCombatSnapshot().elapsedSeconds > before.elapsedSeconds &&
+					command.GetCombatSnapshot().cinematic.radioLine == 0,
+					"Carrier command paused gameplay or disappeared after its trigger");
+				for (int i = 0; i < 20; ++i) command.Update({}, 0.25f);
+				Require(command.GetCombatSnapshot().cinematic.radioLine == -1,
+					"Carrier command did not expire during gameplay");
 			}
 			// Explicit cinematic playback remains supported; only the automatic trigger changes.
 			Require(reusable.PlayCinematic("midMission"), "Explicit carrier cinematic stopped working");

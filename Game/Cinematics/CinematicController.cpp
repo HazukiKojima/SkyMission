@@ -22,6 +22,18 @@ namespace Game {
 		m_briefingSeconds = 0;
 		m_briefingStarted = false;
 	}
+	void CinematicController::StartRadio(const CinematicSettings& settings, const std::string& id) {
+		Start(settings, id);
+		m_presentation.active = false;
+		m_presentation.formationShot = false;
+		m_presentation.fadeOpacity = 0;
+		m_radioRunning = !m_settings.radio.empty();
+	}
+	void CinematicController::StopRadio() {
+		m_radioRunning = false;
+		m_presentation.radioLine = -1;
+		m_presentation.radio = {};
+	}
 	void CinematicController::SetBriefingLine(int line) {
 		m_presentation.briefingLine = line;
 		m_presentation.radioLine = -1;
@@ -32,7 +44,7 @@ namespace Game {
 		m_briefingStarted = false;
 	}
 	void CinematicController::EnableBriefing() {
-		if (m_presentation.active) SetBriefingLine(m_settings.briefing.empty() ? -1 : 0);
+		if (m_presentation.active && !m_settings.briefing.empty()) SetBriefingLine(0);
 	}
 	void CinematicController::UpdateBriefing(CinematicVoiceStatus voice, float deltaSeconds) {
 		if (!m_presentation.active || m_presentation.briefingLine < 0 || !std::isfinite(deltaSeconds) ||
@@ -85,6 +97,12 @@ namespace Game {
 		m_radioRunning = !m_settings.radio.empty() &&
 			m_settings.radio.back().startSeconds + m_settings.radio.back().durationSeconds > m_radioSeconds;
 		if (m_radioRunning) RefreshRadio();
+		if (reason == CinematicCompletion::Skipped && m_presentation.radioLine >= 0 &&
+			m_settings.radio[m_presentation.radioLine].startSeconds < m_settings.TotalDuration()) {
+			m_presentation.radioLine = -1;
+			m_presentation.radio = {};
+			m_radioRunning = false;
+		}
 	}
 	void CinematicController::RefreshPresentation() {
 		m_presentation.text = m_settings.text;

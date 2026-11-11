@@ -237,6 +237,41 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Require(middle.shots.size() == 1 && middle.briefing.empty() && middle.TotalDuration() == 3 &&
 		middle.shots[0].target == "carrier",
 		"Three-second carrier cinematic definition was not loaded");
+	Require(middle.radio.size() == 1 && middle.radio[0].caption.speaker == "司令官" &&
+		middle.radio[0].caption.text == "次は敵母艦だ。爆撃で敵機の発進を阻止せよ！" && fs::exists(middle.radio[0].audio),
+		"Carrier command caption or voice asset was not configured");
+	for (const auto& text : {middle.radio[0].caption.speaker, middle.radio[0].caption.text}) {
+		std::string_view remaining = text;
+		while (!remaining.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
+			"Carrier command used an unsupported glyph");
+	}
+	CinematicController carrierVoice;
+	carrierVoice.Start(middle, "midMission");
+	carrierVoice.EnableBriefing();
+	Require(carrierVoice.GetPresentation().radioLine == 0, "Empty briefing hid the carrier command");
+	carrierVoice.Update(3, false);
+	Require(!carrierVoice.GetPresentation().active && carrierVoice.GetPresentation().radioLine == 0,
+		"Carrier movie did not end at three seconds while preserving its command voice");
+	carrierVoice.Update(1.7f, false);
+	Require(carrierVoice.GetPresentation().radioLine == -1, "Carrier command did not expire");
+	carrierVoice.Start(middle, "midMission");
+	carrierVoice.Update(1, false);
+	carrierVoice.Update(0, true);
+	Require(carrierVoice.GetPresentation().radioLine == -1, "Skipping the carrier movie retained its voice");
+	carrierVoice.StartRadio(middle, "midMission");
+	Require(!carrierVoice.GetPresentation().active && carrierVoice.GetPresentation().radioLine == 0 &&
+		!carrierVoice.TakeCompletion(), "Gameplay-only command started a movie or emitted completion");
+	carrierVoice.Update(5, false);
+	Require(carrierVoice.GetPresentation().radioLine == -1, "Gameplay-only command did not expire");
+	for (const auto* id : {"patrolEncouragement", "patrolComplete"}) {
+		const auto command = LoadCinematicSettings(reader, repository / L"Assets/Cinematics" / (std::string(id) + ".json"));
+		Require(command.radio.size() == 1 && fs::exists(command.radio[0].audio), "Patrol command voice was missing");
+		for (const auto& text : {command.radio[0].caption.speaker, command.radio[0].caption.text}) {
+			std::string_view remaining = text;
+			while (!remaining.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
+				"Patrol command used an unsupported Japanese glyph");
+		}
+	}
 	CinematicController timeline;
 	auto multi = middle;
 	multi.shots = {CinematicShotSettings{}, CinematicShotSettings{}};
@@ -261,7 +296,7 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Require(!timeline.GetPresentation().active, "Large frame did not finish the complete shot sequence");
 	for (const auto* json : {R"({"radio":[{"speaker":"C","text":"Incoming","side":"invalid"}]})",
 		 R"({"radio":[{"speaker":"C","text":"Incoming","durationSeconds":-1}]})",
-		 R"({"radio":[{"speaker":"C","text":"Incoming","startSeconds":4,"durationSeconds":2}]})",
+		 R"({"radio":[{"speaker":"C","text":"Incoming","startSeconds":-1,"durationSeconds":2}]})",
 		 R"({"shots":[]})", R"({"shots":[{"target":"unknown"}]})", R"({"shots":[{"durationSeconds":0}]})",
 			 R"({"shots":[{"model":""}]})", R"({"shots":[{"formationOffsets":[]}]})",
 			 R"({"shots":[{"cameraStartOffsetMeters":[0,100,-50],"cameraEndOffsetMeters":[0,80,-50]}]})"}) {

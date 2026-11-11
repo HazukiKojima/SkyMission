@@ -154,6 +154,29 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					presentation.cinematicId = "middle";
 					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
 						"Switching cinematic IDs reused a previous briefing clip");
+					std::map<std::string, CinematicSettings> patrolCommands;
+					for (const auto* id : {"patrolEncouragement", "patrolComplete", "midMission"})
+						patrolCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
+					audio.Initialize(repository / L"Assets/Sound", patrolCommands);
+					Require(audio.GetLoadedSoundCount() == 22, "The three new commander voice assets were not decoded");
+					const auto carrierCommand = LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics/midMission.json");
+					audio.Initialize(repository / L"Assets/Sound", std::map<std::string, CinematicSettings>{{"midMission", carrierCommand}});
+					Require(audio.GetLoadedSoundCount() == 20, "Carrier command voice was not decoded");
+					presentation.cinematicId = "midMission";
+					presentation.active = true;
+					presentation.briefingLine = -1;
+					presentation.radioLine = 0;
+					const EnemyRadioPresentation lastKill{0, 100, {"敵機", EnemyRadioClips[0].text, "enemy"}};
+					audio.UpdateEnemyRadio(lastKill);
+					const auto carrierStatus = audio.UpdateCinematic(presentation);
+					audio.UpdateEnemyRadio(lastKill);
+					presentation.active = false;
+					const auto continuedStatus = audio.UpdateCinematic(presentation);
+					Require(carrierStatus != CinematicVoiceStatus::Playing || continuedStatus == CinematicVoiceStatus::Playing,
+						"Carrier voice was interrupted when the movie ended");
+					presentation.radioLine = -1;
+					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
+						"Carrier command did not stop with its caption");
 					audio.ResetPlayback();
 					audio.Update({.flying = true, .gunFiring = true, .missileLaunches = 1}, 0);
 				}

@@ -3,5 +3,7 @@
   "midMission": "midMission.json",
   "reinforcements": "reinforcements.json",
   "ending": "ending.json",
-  "defeat": "defeat.json"
+  "defeat": "defeat.json",
+  "patrolEncouragement": "patrolEncouragement.json",
+  "patrolComplete": "patrolComplete.json"
 }

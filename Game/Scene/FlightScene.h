@@ -199,6 +199,13 @@ namespace Game {
 		float m_cinematicFarZ = 100000;
 		bool m_midMissionPlayed = false;
 		float m_carrierLookSeconds = 0;
+		void UpdatePatrolCommand(float dt);
+		bool StartCommandRadio(const std::string& id);
+		size_t m_patrolKills = 0;
+		bool m_patrolEncouraged = false;
+		bool m_patrolPraiseStarted = false;
+		bool m_patrolPraiseComplete = false;
+		float m_carrierCommandDelay = 0;
 		bool m_endingPlayed = false;
 		bool m_reinforcementsPlayed = false;
 
