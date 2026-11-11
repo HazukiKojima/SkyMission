@@ -1179,6 +1179,14 @@ void TestHudRendering(const fs::path& fixture) {
 			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices,
 				"Mission objective and bomb HUD overflowed");
 			saveFrame("-mission-bombing");
+			snapshot.carrierPresent = true;
+			snapshot.missileCooldownSeconds = 0;
+			snapshot.lockState = LockState::Selected;
+			buildFrame();
+			saveFrame("-guide-carrier-lock");
+			snapshot.lockState = LockState::Locked;
+			buildFrame();
+			saveFrame("-guide-carrier-fire");
 			snapshot.missionPhase = MissionPhase::Commander;
 			snapshot.deckDisabled = true;
 			snapshot.enemies = {{1, {0, 30, 1000}, {}, "SQUADRON LEADER", 180}};

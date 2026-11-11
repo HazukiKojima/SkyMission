@@ -83,6 +83,34 @@ void TestHudTypography() {
 					"A built-in HUD label uses an unsupported glyph");
 			}
 		}
+	{
+		Game::CombatSnapshot guide;
+		guide.enemies = {{1, {0, 0, 1000}, {}, "ENEMY", 100}};
+		const auto hasGuide = [&] {
+			list.Reset(view.width, view.height);
+			Game::CombatHudPresenter{}.Build(guide, view, list);
+			return std::any_of(list.GetVertices().begin(), list.GetVertices().end(), [](const auto& vertex) {
+				return vertex.color.x == 0.015f && vertex.color.y == 0.025f && vertex.color.z == 0.04f && vertex.color.w == 0.78f;
+			});
+		};
+		guide.elapsedSeconds = 4.99f;
+		Require(hasGuide(), "Initial shooting guide disappeared before five seconds");
+		guide.elapsedSeconds = 5;
+		Require(!hasGuide(), "Initial shooting guide remained after five seconds");
+		guide.missionPhase = Game::MissionPhase::CarrierAttack;
+		guide.carrierPresent = true;
+		Require(!hasGuide(), "Carrier guide appeared before targeting was enabled");
+		guide.selected = 7;
+		guide.elapsedSeconds = 1000;
+		Require(hasGuide(), "Carrier guide did not remain until destruction");
+		guide.lockState = Game::LockState::Locked;
+		Require(hasGuide(), "Locked carrier did not show firing instructions");
+		guide.deckDisabled = true;
+		Require(!hasGuide(), "Destroyed carrier retained its firing instructions");
+		guide.deckDisabled = false;
+		guide.result = Game::CombatResult::Defeat;
+		Require(!hasGuide(), "Shooting guide remained after defeat");
+	}
 	// 母艦は敵機一覧に含めなくても、画面内に六角形の目標枠を描く
 	snapshot = {};
 	snapshot.missionPhase = Game::MissionPhase::CarrierAttack;

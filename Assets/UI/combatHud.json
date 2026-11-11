@@ -52,8 +52,8 @@
     "flightValuePadding": 12,
     "healthStatusY": 108,
     "fireWarningY": 330,
-    "missionX": 540,
-    "missionY": 116,
+    "missionX": 1872,
+    "missionY": 16,
     "missionLineHeight": 44,
     "missileStatusY": 188,
     "lockStatusY": 236,
@@ -85,8 +85,8 @@
       80
     ],
     "destroyedPosition": [
-      800,
-      720
+      920,
+      640
     ],
     "hitPosition": [
       920,

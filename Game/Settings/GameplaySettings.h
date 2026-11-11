@@ -378,8 +378,9 @@ namespace Game {
 		float flightValuePadding = 12.0f;
 		float healthStatusY = 108.0f;
 		float fireWarningY = 330.0f;
-		float missionX = 540.0f;
-		float missionY = 116.0f;
+		// Right edge of the mission text in the 1920-wide reference layout.
+		float missionX = 1872.0f;
+		float missionY = 16.0f;
 		float missionLineHeight = 44.0f;
 		float missileStatusY = 188.0f;
 		float lockStatusY = 236.0f;
@@ -399,7 +400,7 @@ namespace Game {
 		std::array<float, 2> retryPosition{740.0f, 440.0f};
 		std::array<float, 2> playerHitPosition{820.0f, 800.0f};
 		std::array<float, 2> targetStatusPosition{80.0f, 80.0f};
-		std::array<float, 2> destroyedPosition{800.0f, 720.0f};
+		std::array<float, 2> destroyedPosition{920.0f, 640.0f};
 		std::array<float, 2> hitPosition{920.0f, 640.0f};
 		std::array<float, 2> allDownPosition{760.0f, 180.0f};
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {

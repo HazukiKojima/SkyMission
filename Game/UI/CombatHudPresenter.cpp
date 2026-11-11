@@ -26,6 +26,7 @@ namespace Game {
 		DrawEnemyMarkers(snapshot, view, list);
 		DrawMissionStatus(snapshot, view, list);
 		DrawControls(snapshot, view, list);
+		DrawCombatGuide(snapshot, view, list);
 		DrawDebugCollisions(snapshot, view, list);
 		if (snapshot.cinematic.radioLine >= 0)
 			RadioCaptionPresenter{}.Build(snapshot.cinematic.radio, view, list);
@@ -33,6 +34,39 @@ namespace Game {
 			RadioCaptionPresenter{}.Build(snapshot.enemyRadio.caption, view, list);
 	}
 
+	void CombatHudPresenter::DrawCombatGuide(
+		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
+		if (snapshot.result != CombatResult::Active) return;
+		std::string title, detail;
+		bool locked = false;
+		if (snapshot.missionPhase == MissionPhase::Patrol && snapshot.elapsedSeconds < 5 && !snapshot.enemies.empty()) {
+			title = m_text.Text("左クリックで射撃");
+			detail = m_text.Text("敵機に照準を合わせて撃墜せよ");
+		} else if (snapshot.missionPhase == MissionPhase::CarrierAttack && snapshot.carrierPresent &&
+			!snapshot.deckDisabled && snapshot.selected != Engine::InvalidObjectId) {
+			locked = snapshot.lockState == LockState::Locked;
+			title = m_text.Text(locked ? "右クリックで射撃" : "母艦に照準を合わせてロックオン");
+			detail = m_text.Text(locked ? "ロックオン完了" : "ロックオン後、右クリックで射撃");
+
+		} else return;
+		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
+		const float available = view.width - 80 * scale;
+		const float titleSize = std::min(50 * scale, available / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(title, 1)));
+		const float detailSize = std::min(34 * scale, available / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(detail, 1)));
+		const float titleWidth = Engine::HudDrawList::MeasureTextWidth(title, titleSize);
+		const float detailWidth = Engine::HudDrawList::MeasureTextWidth(detail, detailSize);
+		const float width = std::max(titleWidth, detailWidth) + 48 * scale;
+		const float height = titleSize + detailSize + 50 * scale;
+		const float top = view.height * 0.76f - height * 0.5f;
+		list.FilledRect({(view.width - width) * 0.5f, top}, {width, height}, {0.015f, 0.025f, 0.04f, 0.78f});
+		const auto draw = [&](const std::string& text, float y, float size, float textWidth, XMFLOAT4 color) {
+			const float x = (view.width - textWidth) * 0.5f;
+			list.Text({x + 2 * scale, y + 2 * scale}, text, size, {0, 0, 0, 1});
+			list.Text({x, y}, text, size, color);
+		};
+		draw(title, top + 18 * scale, titleSize, titleWidth, locked ? m_tuning.selected : XMFLOAT4{1, 1, 1, 1});
+		draw(detail, top + 32 * scale + titleSize, detailSize, detailWidth, m_settings.color);
+	}
 	void CombatHudPresenter::DrawDebugCollisions(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 #if defined(_DEBUG)
@@ -297,13 +331,13 @@ namespace Game {
 		const auto color = m_settings.color;
 		const auto radar = RadarMapPresenter::Layout(view, m_tuning);
 		const HudProjector projector(view);
-		const float offsetX = (view.width - 1920 * scale) * 0.5f;
-		const float offsetY = (view.height - 1080 * scale) * 0.5f;
 		const auto drawStatus = [&](float y, std::string_view text) {
 			list.Text({radar.statusOrigin.x, radar.statusOrigin.y + y * scale}, text, fontSize, color);
 		};
-		const auto drawLabel = [&](float x, float y, std::string_view text) {
-			list.Text({offsetX + x * scale, offsetY + y * scale}, text, fontSize, color);
+		const auto drawLabel = [&](float rightEdge, float y, std::string_view text) {
+			const float right = view.width - (1920 - rightEdge) * scale;
+			const float width = Engine::HudDrawList::MeasureTextWidth(text, fontSize);
+			list.Text({right - width, y * scale}, text, fontSize, color);
 		};
 
 		{
@@ -339,11 +373,7 @@ namespace Game {
 					m_tuning.layout.missionY + 2 * m_tuning.layout.missionLineHeight,
 					m_text.Text("敵空母を撃破"));
 			if (snapshot.missionMessageSeconds > 0 && snapshot.result == CombatResult::Active) {
-				if (phase == MissionPhase::CarrierAttack)
-					drawLabel(m_tuning.layout.missionX,
-						m_tuning.layout.missionY + 3 * m_tuning.layout.missionLineHeight,
-						m_text.Text("敵空母を照準に捉え、ロックせよ"));
-				else if (phase == MissionPhase::FinalFighters)
+				if (phase == MissionPhase::FinalFighters)
 					drawLabel(m_tuning.layout.missionX,
 						m_tuning.layout.missionY + 3 * m_tuning.layout.missionLineHeight,
 						m_text.Text("艦隊の外の交戦区域で、敵戦闘機を撃墜せよ"));
