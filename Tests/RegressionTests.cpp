@@ -421,6 +421,28 @@ void TestTargetCameraLook() {
 	Require(separation(camera.GetPosition(), reference.GetPosition()) < 0.001f,
 		"Camera snap retained target orbit");
 	std::cout << "PASS: Z target orbit, release, manual priority, rear seam, reset and frame rates\n";
+	// Automatic mission focus works without input and temporarily overrides manual look.
+	auto automatic = reference, noisy = reference;
+	automatic.SetLookTarget(XMFLOAT3{5000, 1500, 0}, true);
+	noisy.SetLookTarget(XMFLOAT3{5000, 1500, 0}, true);
+	for (int frame = 0; frame < 120; ++frame) {
+		automatic.Update(1 / 60.0f);
+		noisy.Update(1 / 60.0f, manual);
+	}
+	Require(separation(automatic.GetPosition(), noisy.GetPosition()) < 0.001f &&
+		XMVectorGetX(direction(automatic)) > 0.99f,
+		"Automatic focus required Z or allowed manual interference");
+	XMFLOAT4X4 baseProjection, zoomProjection;
+	XMStoreFloat4x4(&baseProjection, reference.GetCamera().GetProjection());
+	XMStoreFloat4x4(&zoomProjection, automatic.GetCamera().GetProjection());
+	Require(zoomProjection._22 > baseProjection._22 * 1.1f, "Automatic focus did not zoom in");
+	automatic.SetLookTarget(std::nullopt);
+	for (int frame = 0; frame < 180; ++frame) automatic.Update(1 / 60.0f);
+	XMStoreFloat4x4(&zoomProjection, automatic.GetCamera().GetProjection());
+	Require(std::abs(zoomProjection._22 - baseProjection._22) < 0.001f &&
+		separation(automatic.GetPosition(), reference.GetPosition()) < 0.05f,
+		"Automatic focus did not smoothly restore camera and zoom");
+	std::cout << "PASS: automatic mission focus, zoom, input priority and restoration\n";
 }
 
 void TestRawInput() {

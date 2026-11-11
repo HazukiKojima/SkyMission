@@ -10,6 +10,10 @@ namespace Engine {
 		void Initialize(float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,
 			float farZ = 1000.0f);
 		void OnResize(UINT width, UINT height);
+		void SetVerticalFov(float fovY) {
+			m_fovY = fovY;
+			UpdateProjection();
+		}
 		void LookAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target);
 		void LookTo(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& direction);
 		DirectX::XMMATRIX GetView() const {

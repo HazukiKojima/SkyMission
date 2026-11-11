@@ -195,6 +195,7 @@ namespace Game {
 		DirectX::XMFLOAT3 m_cinematicOrigin{};
 		float m_cinematicFarZ = 100000;
 		bool m_midMissionPlayed = false;
+		float m_carrierLookSeconds = 0;
 		bool m_endingPlayed = false;
 
 		// 任務と敵側の武器

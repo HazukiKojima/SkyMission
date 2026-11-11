@@ -8,6 +8,9 @@ namespace Game {
 
 	void AircraftCameraController::Initialize(float fovY, float aspect, float nearZ, float farZ) {
 		m_camera.Initialize(fovY, aspect, nearZ, farZ);
+		m_baseFovY = fovY;
+		m_zoomScale = 1;
+		m_automaticLook = false;
 		m_lookYaw = m_lookPitch = 0;
 		m_lookTarget.reset();
 		UpdateView();
@@ -87,10 +90,16 @@ namespace Game {
 	void AircraftCameraController::UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input) {
 		UpdateFollowOrientation(deltaSeconds);
 		UpdateLookOffset(deltaSeconds, input);
+		const float zoom = m_automaticLook ? 0.85f : 1.0f;
+		m_zoomScale += (zoom - m_zoomScale) * (1 - std::exp(-m_settings.lookReturnRate * deltaSeconds));
+		m_camera.SetVerticalFov(m_baseFovY * m_zoomScale);
 		UpdateFollowPosition(deltaSeconds);
 	}
 	void AircraftCameraController::SnapToFollowTarget() {
 		m_lookTarget.reset();
+		m_automaticLook = false;
+		m_zoomScale = 1;
+		m_camera.SetVerticalFov(m_baseFovY);
 		if (!m_following) return;
 		m_lookYaw = 0;
 		m_lookPitch = 0;
@@ -99,7 +108,7 @@ namespace Game {
 		UpdateView();
 	}
 	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
-		if (input.active && input.middleMouseDown) {
+		if (input.active && input.middleMouseDown && !m_automaticLook) {
 			m_lookYaw = std::remainder(
 				m_lookYaw - static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity, XM_2PI);
 			m_lookPitch =
@@ -107,7 +116,7 @@ namespace Game {
 					-m_settings.lookPitchLimit, m_settings.lookPitchLimit);
 		} else {
 			float targetYaw = 0, targetPitch = 0;
-			if (input.IsKeyDown('Z') && m_lookTarget) {
+			if ((m_automaticLook || input.IsKeyDown('Z')) && m_lookTarget) {
 				const auto& point = *m_lookTarget;
 				// doubleで差と距離を求め、極端な座標でも角度の計算を有限に保つ。
 				const double dx = double(point.x) - m_followTarget.x;

@@ -89,6 +89,7 @@ namespace Game {
 		m_combat.audio.flying = true;
 		UpdateCamera({}, dt, {});
 		m_midMissionPlayed = m_endingPlayed = false;
+		m_carrierLookSeconds = 0;
 		m_enemyRadio = {};
 		m_combat.enemyRadio = {};
 		m_cinematic = {};

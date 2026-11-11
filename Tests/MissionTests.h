@@ -294,9 +294,46 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				reusable.Update({}, 0.01f);
 			};
 			removePatrol();
-			Require(reusable.GetCombatSnapshot().cinematic.active &&
-					reusable.GetCombatSnapshot().cinematic.cinematicId == "midMission",
-				"Carrier-attack transition did not start its cinematic");
+			Require(!reusable.GetCombatSnapshot().cinematic.active,
+				"Carrier introduction still started a separate cinematic");
+			{
+				auto natural = reusable;
+				const auto before = natural.GetCombatSnapshot();
+				XMFLOAT4X4 initialProjection, zoomedProjection, returningProjection;
+				XMStoreFloat4x4(&initialProjection, natural.GetRenderScene().GetCamera().GetProjection());
+				for (int frame = 0; frame < 6; ++frame) natural.Update({}, 0.25f);
+				XMStoreFloat4x4(&zoomedProjection, natural.GetRenderScene().GetCamera().GetProjection());
+				Require(zoomedProjection._22 > initialProjection._22 * 1.1f &&
+					!natural.GetCombatSnapshot().cinematic.active &&
+					natural.GetCombatSnapshot().elapsedSeconds > before.elapsedSeconds + 1.4f &&
+					natural.GetCombatSnapshot().playerPosition.z != before.playerPosition.z,
+					"Automatic carrier look failed to zoom or paused flight");
+				const auto& snapshot = natural.GetCombatSnapshot();
+				const auto eye = natural.GetRenderScene().GetCamera().GetPosition();
+				XMFLOAT4X4 view;
+				XMStoreFloat4x4(&view, natural.GetRenderScene().GetCamera().GetView());
+				const auto toCarrier = XMVector3Normalize(XMLoadFloat3(&snapshot.objectivePosition) - XMLoadFloat3(&eye));
+				Require(XMVectorGetX(XMVector3Dot(toCarrier, XMVectorSet(view._13, view._23, view._33, 0))) > 0.99f,
+					"Automatic carrier look did not face carrier without Z");
+				natural.OnResize(800, 600);
+				XMFLOAT4X4 resized;
+				XMStoreFloat4x4(&resized, natural.GetRenderScene().GetCamera().GetProjection());
+				Require(resized._22 == zoomedProjection._22, "Resize lost automatic carrier zoom");
+				for (int frame = 0; frame < 6; ++frame) natural.Update({}, 0.25f);
+				natural.Update({}, 0.25f);
+				XMStoreFloat4x4(&returningProjection, natural.GetRenderScene().GetCamera().GetProjection());
+				Require(returningProjection._22 < zoomedProjection._22,
+					"Carrier zoom did not start returning after three seconds");
+				for (int frame = 0; frame < 12; ++frame) natural.Update({}, 0.25f);
+				XMStoreFloat4x4(&returningProjection, natural.GetRenderScene().GetCamera().GetProjection());
+				XMFLOAT4X4 originalProjection;
+				XMStoreFloat4x4(&originalProjection, initialized.GetRenderScene().GetCamera().GetProjection());
+				Require(std::abs(returningProjection._22 - originalProjection._22) < 0.001f &&
+					!natural.GetCombatSnapshot().cinematic.active,
+					"Carrier zoom repeated or failed to restore original field of view");
+			}
+			// Explicit cinematic playback remains supported; only the automatic trigger changes.
+			Require(reusable.PlayCinematic("midMission"), "Explicit carrier cinematic stopped working");
 
 			{
 				auto natural = reusable;
@@ -361,9 +398,11 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			Require(!reusable.GetCombatSnapshot().cinematic.active, "Ending repeated after completion");
 			reusable.Update({}, 0.01f, {}, {.retry = true});
 			removePatrol();
-			Require(reusable.GetCombatSnapshot().cinematic.active &&
-					reusable.GetCombatSnapshot().cinematic.cinematicId == "midMission",
-				"Retry did not reset cinematic trigger state");
+			XMFLOAT4X4 retryProjection, baseProjection;
+			XMStoreFloat4x4(&retryProjection, reusable.GetRenderScene().GetCamera().GetProjection());
+			XMStoreFloat4x4(&baseProjection, initialized.GetRenderScene().GetCamera().GetProjection());
+			Require(!reusable.GetCombatSnapshot().cinematic.active && retryProjection._22 > baseProjection._22,
+				"Retry did not reset automatic carrier-look trigger");
 		}
 		initialized.RemoveObject(initialPlayerId);
 		initialized.Update({}, 0.01f);

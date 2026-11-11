@@ -32,6 +32,7 @@ namespace Game {
 		m_openingEnabled = definitions.contains("opening");
 		if (m_openingEnabled) m_openingSettings = definitions.at("opening");
 		m_midMissionPlayed = m_endingPlayed = false;
+		m_carrierLookSeconds = 0;
 	}
 	void FlightScene::EnableOpening(const CinematicSettings& settings, std::shared_ptr<Engine::Model> model,
 		float visualScale, float farZ) {
@@ -170,10 +171,6 @@ namespace Game {
 		if (m_combat.result != CombatResult::Active && !m_endingPlayed) {
 			m_endingPlayed = true;
 			PlayCinematic(m_combat.result == CombatResult::Victory ? "ending" : "defeat");
-		} else if (m_combat.result == CombatResult::Active &&
-			m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_midMissionPlayed) {
-			m_midMissionPlayed = true;
-			PlayCinematic("midMission");
 		}
 	}
 } // namespace Game

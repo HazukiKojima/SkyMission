@@ -306,6 +306,11 @@ namespace Game {
 				.maximumSpeed = m_player.GetMaximumSpeed()});
 		}
 		std::optional<DirectX::XMFLOAT3> lookTarget;
+		if (m_combat.result == CombatResult::Active &&
+			m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_midMissionPlayed) {
+			m_midMissionPlayed = true;
+			m_carrierLookSeconds = 3;
+		}
 		if (cameraInput.IsKeyDown('Z') && m_combat.result == CombatResult::Active &&
 			m_scene.FindObject(m_playerId)) {
 			for (const auto& enemy : m_combat.enemies) {
@@ -315,8 +320,18 @@ namespace Game {
 				}
 			}
 		}
-		m_cameraController.SetLookTarget(lookTarget);
+		bool automatic = false;
+		if (m_carrierLookSeconds > 0 && m_combat.result == CombatResult::Active &&
+			m_scene.FindObject(m_playerId)) {
+			lookTarget = m_mission.GetCarrierCenter(m_scene);
+			automatic = lookTarget.has_value();
+			if (!automatic) m_carrierLookSeconds = 0;
+		} else {
+			m_carrierLookSeconds = 0;
+		}
+		m_cameraController.SetLookTarget(lookTarget, automatic);
 		m_cameraController.Update(dt, cameraInput);
+		m_carrierLookSeconds = std::max(0.0f, m_carrierLookSeconds - dt);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
 
