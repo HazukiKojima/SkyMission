@@ -9,6 +9,7 @@ namespace Game {
 	void AircraftCameraController::Initialize(float fovY, float aspect, float nearZ, float farZ) {
 		m_camera.Initialize(fovY, aspect, nearZ, farZ);
 		m_lookYaw = m_lookPitch = 0;
+		m_lookTarget.reset();
 		UpdateView();
 	}
 
@@ -63,7 +64,7 @@ namespace Game {
 			m_position.z += right.z * moveSpeed;
 		}
 
-		if (input.IsKeyDown('Z')) {
+		if (input.active && input.middleMouseDown) {
 			m_yaw += static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity;
 			m_pitch -= static_cast<float>(input.mouseDeltaY) * m_settings.mouseSensitivity;
 		}
@@ -84,11 +85,12 @@ namespace Game {
 	}
 
 	void AircraftCameraController::UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input) {
-		UpdateLookOffset(deltaSeconds, input);
 		UpdateFollowOrientation(deltaSeconds);
+		UpdateLookOffset(deltaSeconds, input);
 		UpdateFollowPosition(deltaSeconds);
 	}
 	void AircraftCameraController::SnapToFollowTarget() {
+		m_lookTarget.reset();
 		if (!m_following) return;
 		m_lookYaw = 0;
 		m_lookPitch = 0;
@@ -97,17 +99,37 @@ namespace Game {
 		UpdateView();
 	}
 	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
-		if (input.IsKeyDown('Z')) {
+		if (input.active && input.middleMouseDown) {
 			m_lookYaw = std::remainder(
 				m_lookYaw - static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity, XM_2PI);
 			m_lookPitch =
 				std::clamp(m_lookPitch - static_cast<float>(input.mouseDeltaY) * m_settings.mouseSensitivity,
 					-m_settings.lookPitchLimit, m_settings.lookPitchLimit);
 		} else {
-			// 機体の追従とは別に視点のオフセットを減衰させ、解放時に瞬間移動しない。
+			float targetYaw = 0, targetPitch = 0;
+			if (input.IsKeyDown('Z') && m_lookTarget) {
+				const auto& point = *m_lookTarget;
+				// doubleで差と距離を求め、極端な座標でも角度の計算を有限に保つ。
+				const double dx = double(point.x) - m_followTarget.x;
+				const double dy = double(point.y) - m_followTarget.y;
+				const double dz = double(point.z) - m_followTarget.z;
+				const double horizontal = std::hypot(dx, dz);
+				const double distance = std::hypot(horizontal, dy);
+				if (std::isfinite(distance) && distance > 0.001) {
+					// 真上・真下ではヨーを維持し、水平角の不定による反転を避ける。
+					targetYaw = horizontal > 0.001
+						? std::remainder(float(std::atan2(dx, -dz)) - m_followCameraYaw, XM_2PI)
+						: m_lookYaw;
+					targetPitch = std::clamp(float(std::atan2(dy, horizontal)) - m_followCameraPitch,
+						-m_settings.lookPitchLimit, m_settings.lookPitchLimit);
+				}
+			}
+			// 自動注視と標準視点への復帰で同じ時間基準の補間を使う。
 			const float decay = std::exp(-m_settings.lookReturnRate * deltaSeconds);
-			m_lookYaw *= decay;
-			m_lookPitch *= decay;
+			const float blend = 1.0f - decay;
+			m_lookYaw = std::remainder(m_lookYaw +
+				std::remainder(targetYaw - m_lookYaw, XM_2PI) * blend, XM_2PI);
+			m_lookPitch += (targetPitch - m_lookPitch) * blend;
 		}
 	}
 	void AircraftCameraController::UpdateFollowOrientation(float deltaSeconds, bool snap) {

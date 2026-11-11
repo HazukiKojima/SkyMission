@@ -2,6 +2,7 @@
 #include "Game/Settings/GameplaySettings.h"
 #include "Engine/Camera/Camera.h"
 #include <DirectXMath.h>
+#include <optional>
 #include "Engine/Input/RawInputState.h"
 
 namespace Game {
@@ -31,6 +32,10 @@ namespace Game {
 		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
 		void SetFollowTarget(const AircraftCameraTarget& target);
+		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す。
+		void SetLookTarget(std::optional<DirectX::XMFLOAT3> target) {
+			m_lookTarget = target;
+		}
 		// 初回と暗転中の切替に使い、追従開始時の補間移動を画面に出さない
 		void SnapToFollowTarget();
 
@@ -67,6 +72,7 @@ namespace Game {
 		float m_followCameraYaw = 0.0f;
 		float m_followCameraPitch = 0.0f;
 		float m_lookYaw = 0, m_lookPitch = 0;
+		std::optional<DirectX::XMFLOAT3> m_lookTarget;
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followViewDirection = {0.0f, 0.0f, -1.0f};
 		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする

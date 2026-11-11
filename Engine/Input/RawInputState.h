@@ -21,6 +21,7 @@ namespace Engine {
 		bool rightMouseDown = false;
 		unsigned rightMousePressCount = 0;
 		bool leftMouseDown = false;
+		bool middleMouseDown = false;
 		std::int64_t mouseDeltaX = 0;
 		std::int64_t mouseDeltaY = 0;
 
@@ -95,6 +96,8 @@ namespace Engine {
 			if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) state.leftDown = false;
 			if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) state.rightDown = true;
 			if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP) state.rightDown = false;
+			if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) state.middleDown = true;
+			if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP) state.middleDown = false;
 			std::int64_t dx = mouse.lLastX, dy = mouse.lLastY;
 			if (mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
 				// 絶対位置入力は0〜65535の正規化座標から変換する
@@ -114,7 +117,7 @@ namespace Engine {
 				state.height = desktopHeight;
 			} else
 				state.hasAbsolute = false;
-			if (IsKeyDown('Z')) {
+			if (IsMiddleMouseDown()) {
 				m_deltaX += dx;
 				m_deltaY += dy;
 			}
@@ -128,6 +131,11 @@ namespace Engine {
 		bool IsRightMouseDown() const {
 			for (const auto& [device, state] : m_mice)
 				if (state.rightDown) return true;
+			return false;
+		}
+		bool IsMiddleMouseDown() const {
+			for (const auto& [device, state] : m_mice)
+				if (state.middleDown) return true;
 			return false;
 		}
 		bool IsLeftMouseDown() const {
@@ -146,6 +154,7 @@ namespace Engine {
 				snapshot.pressedKeys = m_pressedKeys;
 				snapshot.keyPressCounts = m_keyPressCounts;
 				snapshot.leftMouseDown = IsLeftMouseDown();
+				snapshot.middleMouseDown = IsMiddleMouseDown();
 				snapshot.mouseDeltaX = m_deltaX;
 				snapshot.mouseDeltaY = m_deltaY;
 			}
@@ -161,6 +170,7 @@ namespace Engine {
 		struct MouseState {
 			bool rightDown = false;
 			bool leftDown = false;
+			bool middleDown = false;
 			bool hasAbsolute = false;
 			bool virtualDesktop = false;
 			int width = 0;

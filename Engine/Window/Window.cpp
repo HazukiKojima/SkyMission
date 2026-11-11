@@ -137,16 +137,16 @@ namespace Engine {
 				}
 			}
 			m_input.ProcessKeyboard(raw.header.hDevice, raw.data.keyboard);
-			if (m_input.IsKeyDown('Z'))
-				BeginCameraLook();
-			else
-				EndCameraLook();
 		} else if (raw.header.dwType == RIM_TYPEMOUSE &&
 			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWMOUSE)) {
 			const bool virtualDesktop = (raw.data.mouse.usFlags & MOUSE_VIRTUAL_DESKTOP) != 0;
 			m_input.ProcessMouse(raw.header.hDevice, raw.data.mouse,
 				GetSystemMetrics(virtualDesktop ? SM_CXVIRTUALSCREEN : SM_CXSCREEN),
 				GetSystemMetrics(virtualDesktop ? SM_CYVIRTUALSCREEN : SM_CYSCREEN));
+			if (m_input.IsMiddleMouseDown())
+				BeginCameraLook();
+			else
+				EndCameraLook();
 		}
 	}
 
@@ -181,18 +181,12 @@ namespace Engine {
 					return 0;
 				}
 				break;
-			case WM_KEYDOWN:
-				if (wParam == 'Z') {
-					self->BeginCameraLook();
-					return 0;
-				}
-				break;
-			case WM_KEYUP:
-				if (wParam == 'Z') {
-					if (!self->m_input.IsKeyDown('Z')) self->EndCameraLook();
-					return 0;
-				}
-				break;
+			case WM_MBUTTONDOWN:
+				self->BeginCameraLook();
+				return 0;
+			case WM_MBUTTONUP:
+				if (!self->m_input.IsMiddleMouseDown()) self->EndCameraLook();
+				return 0;
 			case WM_RBUTTONDOWN:
 			case WM_RBUTTONUP:
 			case WM_CONTEXTMENU:
@@ -215,7 +209,7 @@ namespace Engine {
 			case WM_INPUT_DEVICE_CHANGE:
 				if (wParam == GIDC_REMOVAL) {
 					self->m_input.ForgetDevice(reinterpret_cast<HANDLE>(lParam));
-					if (!self->m_input.IsKeyDown('Z')) self->EndCameraLook();
+					if (!self->m_input.IsMiddleMouseDown()) self->EndCameraLook();
 				}
 				return 0;
 			case WM_CAPTURECHANGED:
