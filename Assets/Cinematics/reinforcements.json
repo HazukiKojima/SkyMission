@@ -1,0 +1,15 @@
+{
+  "briefing": [],
+  "audio": {"bgm": "", "flightVolumeScale": 0.4},
+  "model": "enemy",
+  "formationOffsets": [[0, 0, 0], [-1, 0, -1], [1, 0, -1], [0, 0.35, -2]],
+  "title": "敵増援編隊",
+  "subtitle": "敵機接近",
+  "shots": [
+    {
+      "durationSeconds": 3,
+      "cameraStartOffsetMeters": [240, 100, 480],
+      "cameraEndOffsetMeters": [150, 80, 400]
+    }
+  ]
+}

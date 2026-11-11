@@ -14,6 +14,7 @@ namespace Game {
 		}
 		m_missionSettings = settings;
 		m_mission = MissionState(settings.carrierHealth);
+		m_reinforcementElapsedSeconds = -1;
 		m_missionEnemyModel = std::move(enemyModel);
 		m_missionEnemyFlight = flight;
 		m_missionEnemyAI = ai;
@@ -21,6 +22,13 @@ namespace Game {
 	}
 	bool FlightMission::Advance(size_t remaining, bool alive, float dt) {
 		m_missionMessageSeconds = std::max(0.0f, m_missionMessageSeconds - dt);
+		if (alive && m_mission.GetPhase() == MissionPhase::CarrierAttack && m_mission.IsDeckDisabled()) {
+			if (m_reinforcementElapsedSeconds < 0)
+				m_reinforcementElapsedSeconds = 0;
+			else
+				m_reinforcementElapsedSeconds += dt;
+			if (m_reinforcementElapsedSeconds + 1e-6f < 4.0f) return false;
+		}
 		const bool changed = m_mission.Advance(remaining, alive);
 		if (changed) {
 			m_missionMessageSeconds = m_missionSettings.missionMessageDurationSeconds;

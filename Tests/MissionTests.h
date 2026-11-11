@@ -657,7 +657,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			for (int frame = 0; frame < 32 && !volley.GetCombatSnapshot().deckDisabled; ++frame)
 				volley.Update({}, 0.25f);
 			Require(volley.GetCombatSnapshot().deckDisabled &&
-					volley.GetCombatSnapshot().missionPhase == MissionPhase::FinalFighters &&
+					volley.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
+					volley.GetCombatSnapshot().enemies.empty() &&
 					volley.GetCombatSnapshot().audio.shipExplosions == 1,
 				"Two fast missiles did not destroy the rotated carrier exactly once");
 		}
@@ -678,9 +679,9 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			}
 		}
 		Require(scene.GetCombatSnapshot().deckDisabled &&
-				scene.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount &&
-				scene.GetCombatSnapshot().missionPhase == MissionPhase::FinalFighters,
-			"Missiles did not hit carrier/spawn final fighters once");
+				scene.GetCombatSnapshot().enemies.empty() &&
+				scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack,
+			"Carrier defeat spawned reinforcements before the four-second delay");
 		Require(scene.GetCombatSnapshot().audio.shipExplosions == 1, "Deck audio missing or duplicated");
 		const auto& carrierExplosion = scene.GetEffectSnapshot().explosions.back();
 		Require(carrierExplosion.radius == CarrierEffectSettings::explosionRadius &&
@@ -689,6 +690,54 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				std::abs(carrierExplosion.position.z + 6000) < 0.01f,
 			"Carrier explosion was not large or centered on the transformed model");
 		Require(!scene.GetEffectSnapshot().deckSmoke.empty(), "Carrier defeat did not emit smoke");
+		{
+			auto arrival = scene;
+			auto clips = definition.cinematics;
+			clips.erase("opening");
+			arrival.ConfigureCinematics(clips, [&](const std::string& id) {
+				return FlightScene::CinematicModel{resolveModel(id), 1};
+			}, 100000);
+			for (int frame = 0; frame < 15; ++frame) {
+				arrival.Update({}, 0.25f);
+				Require(arrival.GetCombatSnapshot().enemies.empty() &&
+					!arrival.GetCombatSnapshot().cinematic.active,
+					"Reinforcements or arrival cinematic started before four seconds");
+			}
+			arrival.Update({}, 0.25f);
+			Require(arrival.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount &&
+				arrival.GetCombatSnapshot().cinematic.active &&
+				arrival.GetCombatSnapshot().cinematic.cinematicId == "reinforcements",
+				"Four-second delay did not spawn reinforcements and start arrival cinematic");
+			const auto paused = arrival.GetCombatSnapshot();
+			for (int frame = 0; frame < 4; ++frame) arrival.Update({}, 0.25f);
+			Require(arrival.GetCombatSnapshot().elapsedSeconds == paused.elapsedSeconds &&
+				arrival.GetCombatSnapshot().playerPosition.z == paused.playerPosition.z,
+				"Arrival cinematic failed to pause combat");
+			auto completed = arrival;
+			for (int frame = 0; frame < 8; ++frame) completed.Update({}, 0.25f);
+			Require(!completed.GetCombatSnapshot().cinematic.active &&
+				completed.TakeCinematicCompletion() == CinematicCompletion::Completed,
+				"Arrival cinematic did not complete naturally");
+			arrival.Update({}, 0.01f, {}, {.skipOpening = true});
+			Require(arrival.TakeCinematicCompletion() == CinematicCompletion::Skipped,
+				"Arrival cinematic could not be skipped");
+			arrival.Update({}, 0.01f);
+			Require(!arrival.GetCombatSnapshot().cinematic.active &&
+				arrival.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount,
+				"Arrival cinematic or reinforcement wave repeated");
+			arrival.RemoveObject(playerId);
+			arrival.Update({}, 0.01f);
+			arrival.Update({}, 0.01f, {}, {.skipOpening = true});
+			arrival.Update({}, 0.01f, {}, {.retry = true});
+			Require(arrival.GetCombatSnapshot().missionPhase == MissionPhase::Patrol &&
+				!arrival.GetCombatSnapshot().deckDisabled &&
+				arrival.GetCombatSnapshot().enemies.size() == definition.mission.patrolCount,
+				"Retry after arrival cinematic failed to reset mission");
+		}
+		for (int frame = 0; frame < 16; ++frame) scene.Update({}, 0.25f);
+		Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::FinalFighters &&
+			scene.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount,
+			"Reinforcements did not spawn without a configured cinematic after four seconds");
 		scene.Update({}, 0.01f);
 		Require(scene.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount,
 			"Final fighters duplicated");

@@ -230,6 +230,10 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		Require(differentColor, "Enemy radio did not use its own color");
 	}
 	const auto middle = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/midMission.json");
+	const auto reinforcements = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/reinforcements.json");
+	Require(reinforcements.TotalDuration() == 3 && reinforcements.briefing.empty() &&
+		reinforcements.model == "enemy" && reinforcements.formationOffsets.size() == 4,
+		"Reinforcement cinematic did not introduce four enemy aircraft for three seconds");
 	Require(middle.shots.size() == 1 && middle.briefing.empty() && middle.TotalDuration() == 3 &&
 		middle.shots[0].target == "carrier",
 		"Three-second carrier cinematic definition was not loaded");

@@ -129,7 +129,7 @@ namespace Game {
 			if (!std::filesystem::exists(manifest))
 				return {{"opening", LoadCinematicSettings(reader, directory / L"opening.json")}};
 			std::map<std::string, CinematicSettings> result;
-			for (const auto* id : {"opening", "midMission", "ending", "defeat"}) {
+			for (const auto* id : {"opening", "midMission", "reinforcements", "ending", "defeat"}) {
 				if (reader.TryResolveString(manifest, id)) {
 					const auto path = reader.Resolve(manifest, id);
 					if (!std::filesystem::is_regular_file(path))

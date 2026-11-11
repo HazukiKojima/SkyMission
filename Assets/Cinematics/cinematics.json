@@ -1,6 +1,7 @@
 {
   "opening": "opening.json",
   "midMission": "midMission.json",
+  "reinforcements": "reinforcements.json",
   "ending": "ending.json",
   "defeat": "defeat.json"
 }

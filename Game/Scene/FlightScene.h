@@ -197,6 +197,7 @@ namespace Game {
 		bool m_midMissionPlayed = false;
 		float m_carrierLookSeconds = 0;
 		bool m_endingPlayed = false;
+		bool m_reinforcementsPlayed = false;
 
 		// 任務と敵側の武器
 		FlightMission m_mission;
