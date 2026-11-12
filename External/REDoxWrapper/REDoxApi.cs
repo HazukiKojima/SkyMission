@@ -390,9 +390,9 @@ public static unsafe class REDoxApi
     private static int FindValue(JsonDocument document, ReadOnlySpan<byte> key, out REDox.DElement value)
     {
         value = document.RootElement;
-        string path = Encoding.UTF8.GetString(key);
-        if (!path.StartsWith('/'))
+        if (key[0] != (byte)'/')
             return value.TryGetProperty(key, out value) ? 0 : InvalidSchema;
+        string path = Encoding.UTF8.GetString(key);
         foreach (string encoded in path[1..].Split('/'))
         {
             string part = encoded.Replace("~1", "/").Replace("~0", "~");

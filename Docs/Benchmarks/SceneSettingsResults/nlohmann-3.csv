@@ -1,0 +1,8 @@
+backend,process,sample,iterations,microseconds_per_load
+nlohmann,3,0,18,8500.16666667
+nlohmann,3,1,18,8577.86666667
+nlohmann,3,2,18,8598.32777778
+nlohmann,3,3,18,8512.03333333
+nlohmann,3,4,18,8447.9
+nlohmann,3,5,18,8367.54444444
+nlohmann,3,6,19,8310.98421053

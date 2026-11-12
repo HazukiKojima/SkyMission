@@ -1,0 +1,8 @@
+backend,process,sample,iterations,microseconds_per_load
+redox,2,0,19,8271.41578947
+redox,2,1,19,8258.56842105
+redox,2,2,19,7941.17368421
+redox,2,3,20,7795.985
+redox,2,4,20,7770.035
+redox,2,5,20,7780.815
+redox,2,6,20,7855.845
