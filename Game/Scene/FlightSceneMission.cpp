@@ -40,10 +40,12 @@ namespace Game {
 			case MissionPhase::FinalFighters:
 				SpawnMissionAircraft(m_mission.GetSettings().finalFighterCount, SquadronKind::Fighters);
 				break;
-			case MissionPhase::Commander:
-				SpawnMissionAircraft(1, SquadronKind::Commander);
-				break;
 			case MissionPhase::Complete:
+				if (m_cinematic.GetPresentation().cinematicId == "finalEncouragement" ||
+					m_cinematic.GetPresentation().cinematicId == "finalRally") {
+					m_cinematic.StopRadio();
+					m_combat.cinematic = m_cinematic.GetPresentation();
+				}
 				m_combat.result = CombatResult::Victory;
 				m_combat.allDownSeconds = m_combatSettings.feedback.allDownSeconds;
 				break;
@@ -107,6 +109,13 @@ namespace Game {
 				if (m_carrierMissiles.TryLaunch(m_scene, m_player.GetPosition(), m_player.GetVelocity(),
 						m_player.GetForward(), target)) {
 					++m_combat.audio.missileLaunches;
+					if (m_carrierMissiles.GetAmmo() == 0 || m_carrierMissiles.GetCount() > 1) {
+						m_carrierHitSpeakAtSeconds = -1;
+						if (m_cinematic.GetPresentation().cinematicId == "carrierHit") {
+							m_cinematic.StopRadio();
+							m_combat.cinematic = m_cinematic.GetPresentation();
+						}
+					}
 				}
 			}
 		}

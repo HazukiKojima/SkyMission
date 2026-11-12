@@ -83,6 +83,34 @@ void TestHudTypography() {
 					"A built-in HUD label uses an unsupported glyph");
 			}
 		}
+	{
+		Game::CombatSnapshot guide;
+		guide.enemies = {{1, {0, 0, 1000}, {}, "ENEMY", 100}};
+		const auto hasGuide = [&] {
+			list.Reset(view.width, view.height);
+			Game::CombatHudPresenter{}.Build(guide, view, list);
+			return std::any_of(list.GetVertices().begin(), list.GetVertices().end(), [](const auto& vertex) {
+				return vertex.color.x == 0.015f && vertex.color.y == 0.025f && vertex.color.z == 0.04f && vertex.color.w == 0.78f;
+			});
+		};
+		guide.elapsedSeconds = 4.99f;
+		Require(hasGuide(), "Initial shooting guide disappeared before five seconds");
+		guide.elapsedSeconds = 5;
+		Require(!hasGuide(), "Initial shooting guide remained after five seconds");
+		guide.missionPhase = Game::MissionPhase::CarrierAttack;
+		guide.carrierPresent = true;
+		Require(!hasGuide(), "Carrier guide appeared before targeting was enabled");
+		guide.selected = 7;
+		guide.elapsedSeconds = 1000;
+		Require(hasGuide(), "Carrier guide did not remain until destruction");
+		guide.lockState = Game::LockState::Locked;
+		Require(hasGuide(), "Locked carrier did not show firing instructions");
+		guide.deckDisabled = true;
+		Require(!hasGuide(), "Destroyed carrier retained its firing instructions");
+		guide.deckDisabled = false;
+		guide.result = Game::CombatResult::Defeat;
+		Require(!hasGuide(), "Shooting guide remained after defeat");
+	}
 	// 母艦は敵機一覧に含めなくても、画面内に六角形の目標枠を描く
 	snapshot = {};
 	snapshot.missionPhase = Game::MissionPhase::CarrierAttack;
@@ -100,6 +128,35 @@ void TestHudTypography() {
 			++carrierFrameVertices;
 	}
 	Require(carrierFrameVertices == 36, "Carrier marker did not render six outline edges");
+#if defined(_DEBUG)
+	{
+		Game::CombatSnapshot debug;
+		debug.debugCollisionsEnabled = true;
+		DirectX::XMFLOAT4X4 world;
+		DirectX::XMStoreFloat4x4(&world, DirectX::XMMatrixRotationY(0.5f) * DirectX::XMMatrixTranslation(0, 0, 1000));
+		const DirectX::XMFLOAT4 tint{0.123f, 0.456f, 0.789f, 1};
+		debug.debugCollisions.push_back({{1, {{-10, -10, -10}, {10, 10, 10}}, {}, world}, tint});
+		const auto countLines = [&] {
+			list.Reset(view.width, view.height);
+			Game::CombatHudPresenter{}.Build(debug, view, list);
+			size_t vertices = 0;
+			for (const auto& vertex : list.GetVertices()) {
+				Require(std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y),
+					"Collision overlay produced invalid projected coordinates");
+				if (vertex.color.x == tint.x && vertex.color.y == tint.y && vertex.color.z == tint.z) ++vertices;
+			}
+			return vertices;
+		};
+		Require(countLines() == 72, "Collision OBB did not render exactly twelve edges");
+		debug.debugCollisionsEnabled = false;
+		Require(countLines() == 0, "Disabled collision overlay still drew boxes");
+		debug.debugCollisionsEnabled = true;
+		debug.debugCollisions.front().target.world._43 = -1000;
+		Require(countLines() == 0, "Behind-camera collision box was drawn");
+		debug.debugCollisions.front().target.world._43 = 1;
+		countLines(); // Near-plane crossing must be clipped to finite screen coordinates.
+	}
+#endif
 	const auto ink = Engine::HudSettings{}.color;
 	Require(ink.x == Game::HudStyle::Ink.x && ink.y == Game::HudStyle::Ink.y &&
 			ink.z == Game::HudStyle::Ink.z && ink.w == Game::HudStyle::Ink.w,

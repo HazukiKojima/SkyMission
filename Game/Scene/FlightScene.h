@@ -160,11 +160,14 @@ namespace Game {
 		void UpdateTargeting(const CombatGeometry& geometry, bool next, float dt);
 		void UpdateCamera(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput);
 		void ApplyHits();
+		void ApplySeaCollision();
 		void UpdateEnemyRadio(float dt);
 		EnemyRadioController m_enemyRadio;
 		void UpdateGunEffects();
 		void ApplyRenderStates();
 		void RefreshCombatSnapshot();
+		void RefreshDebugCollisions();
+		bool m_debugCollisionsEnabled = false;
 
 		// 戦闘対象・増援の構築
 		CombatGeometry BuildCombatGeometry();
@@ -182,7 +185,7 @@ namespace Game {
 		void BeginCinematic(const CinematicSettings& settings, const std::string& id, bool briefing);
 		void InitializeCinematicShot();
 		void UpdateCarrierCinematicCamera();
-		void CheckMissionCinematics();
+		void CheckMissionCinematics(float dt);
 
 		bool m_briefingEnabled = false;
 		bool m_openingEnabled = false;
@@ -195,7 +198,16 @@ namespace Game {
 		DirectX::XMFLOAT3 m_cinematicOrigin{};
 		float m_cinematicFarZ = 100000;
 		bool m_midMissionPlayed = false;
+		float m_carrierLookSeconds = 0;
+		void UpdatePatrolCommand(float dt);
+		bool StartCommandRadio(const std::string& id);
+		size_t m_patrolKills = 0;
+		bool m_patrolEncouraged = false;
+		bool m_patrolPraiseStarted = false;
+		bool m_patrolPraiseComplete = false;
+		float m_carrierCommandDelay = 0;
 		bool m_endingPlayed = false;
+		bool m_reinforcementsPlayed = false;
 
 		// 任務と敵側の武器
 		FlightMission m_mission;
@@ -231,5 +243,15 @@ namespace Game {
 		CombatSnapshot m_combat;
 		CombatEffectSystem m_effects;
 		size_t m_enemySequence = 0;
+		bool m_carrierTargetReady = true;
+		void UpdateCarrierCommand();
+		float m_carrierHitSpeakAtSeconds = -1;
+		bool m_carrierHitReported = false;
+		bool m_carrierCompleteReported = false;
+		size_t m_finalKills = 0;
+		bool m_finalEncouraged = false;
+		float m_reinforcementHoldSeconds = -1;
+		float m_victoryHoldSeconds = -1;
+		void UpdateFinalCommand();
 	};
 } // namespace Game

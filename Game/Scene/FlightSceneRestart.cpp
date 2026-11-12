@@ -89,6 +89,18 @@ namespace Game {
 		m_combat.audio.flying = true;
 		UpdateCamera({}, dt, {});
 		m_midMissionPlayed = m_endingPlayed = false;
+		m_reinforcementsPlayed = false;
+		m_carrierLookSeconds = 0;
+		m_patrolKills = 0;
+		m_patrolEncouraged = m_patrolPraiseStarted = m_patrolPraiseComplete = false;
+		m_carrierCommandDelay = 0;
+		m_carrierHitSpeakAtSeconds = -1;
+		m_carrierHitReported = m_carrierCompleteReported = false;
+		m_finalKills = 0;
+		m_finalEncouraged = false;
+		m_reinforcementHoldSeconds = m_victoryHoldSeconds = -1;
+		const auto command = m_cinematics.find("midMission");
+		m_carrierTargetReady = command == m_cinematics.end() || command->second.radio.empty();
 		m_enemyRadio = {};
 		m_combat.enemyRadio = {};
 		m_cinematic = {};

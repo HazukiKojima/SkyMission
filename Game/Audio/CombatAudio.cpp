@@ -331,6 +331,9 @@ namespace Game {
 		if (!m_activeCinematicAudio ||
 			static_cast<size_t>(voiceLine) >= m_activeCinematicAudio->briefing.size())
 			return CinematicVoiceStatus::Unavailable;
+		// Command speech owns the radio channel even if an enemy caption is stale this frame.
+		StopVoice(m_enemyRadioVoice);
+		m_enemyRadioSerial = 0;
 		if (voiceLine != m_briefingLine) {
 			StopVoice(m_briefingVoice);
 			m_briefingLine = voiceLine;
@@ -358,7 +361,7 @@ namespace Game {
 		return m_briefingStatus;
 	}
 	void CombatAudio::UpdateEnemyRadio(const EnemyRadioPresentation& radio) {
-		if (radio.clip < 0 || static_cast<size_t>(radio.clip) >= m_enemyRadioClips.size()) {
+		if (m_briefingLine >= 0 || radio.clip < 0 || static_cast<size_t>(radio.clip) >= m_enemyRadioClips.size()) {
 			StopVoice(m_enemyRadioVoice);
 			m_enemyRadioSerial = 0;
 			return;

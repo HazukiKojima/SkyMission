@@ -2,7 +2,7 @@
   "selectionDistance": 22000,
   "acquireDistance": 10000,
   "acquireAngleDegrees": 25,
-  "acquireSeconds": 2,
+  "acquireSeconds": 1,
   "maintainDistance": 12000,
   "maintainAngleDegrees": 35,
   "lossGraceSeconds": 0.15,

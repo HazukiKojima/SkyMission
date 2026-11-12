@@ -67,6 +67,8 @@ namespace Game {
 				throw std::invalid_argument("shots/" + std::to_string(i) + ": " + error.what());
 			}
 		}
+		if (!std::isfinite(endFadeSeconds) || endFadeSeconds < 0 || endFadeSeconds > TotalDuration())
+			throw std::invalid_argument("endFadeSeconds must be within the cinematic duration");
 		if (!std::isfinite(TotalDuration()))
 			throw std::invalid_argument("shots duration exceeds finite range");
 		if (shots.empty() &&
@@ -86,9 +88,8 @@ namespace Game {
 				throw std::invalid_argument("radio requires speaker, text and friendly/enemy side");
 			const float end = entry.startSeconds + entry.durationSeconds;
 			if (!std::isfinite(entry.startSeconds) || !std::isfinite(entry.durationSeconds) ||
-				!std::isfinite(end) || entry.startSeconds < previousEnd || entry.durationSeconds <= 0 ||
-				(entry.startSeconds < TotalDuration() && end > TotalDuration()))
-				throw std::invalid_argument("radio intervals must be ordered, non-overlapping and must not straddle the cinematic end");
+				!std::isfinite(end) || entry.startSeconds < previousEnd || entry.durationSeconds <= 0)
+				throw std::invalid_argument("radio intervals must be ordered and non-overlapping");
 			previousEnd = end;
 		}
 		if (briefing.size() > 64) throw std::invalid_argument("briefing must contain at most 64 entries");
@@ -125,6 +126,7 @@ namespace Game {
 				}
 			};
 			number("durationSeconds", result.durationSeconds);
+			number("endFadeSeconds", result.endFadeSeconds);
 			number("fadeOutStartSeconds", result.fadeOutStartSeconds);
 			number("cutSeconds", result.cutSeconds);
 			number("fadeInStartSeconds", result.fadeInStartSeconds);

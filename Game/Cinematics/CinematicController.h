@@ -8,6 +8,9 @@ namespace Game {
 	class CinematicController {
 	  public:
 		void Start(const CinematicSettings& settings, const std::string& id = "opening");
+		// Start timed dialogue during gameplay without switching cameras or pausing combat.
+		void StartRadio(const CinematicSettings& settings, const std::string& id);
+		void StopRadio();
 		void Update(float deltaSeconds, bool skipRequested);
 		void EnableBriefing();
 		void UpdateBriefing(CinematicVoiceStatus voice, float deltaSeconds);

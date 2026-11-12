@@ -45,7 +45,7 @@ namespace Game {
 			}
 		}
 		void Update(float dt, std::span<const Engine::ObjectId> survivors, bool blocked) {
-			if (blocked) { Clear(); return; }
+			if (blocked) { StopCurrent(); return; }
 			const auto alive = [&](Engine::ObjectId id) {
 				return std::find(survivors.begin(), survivors.end(), id) != survivors.end();
 			};
@@ -68,6 +68,7 @@ namespace Game {
 				break;
 			}
 		}
+		bool IsBusy() const { return m_presentation.clip >= 0 || !m_pending.empty(); }
 		void Clear() { m_pending.clear(); StopCurrent(); m_gap = 0; }
 		const EnemyRadioPresentation& GetPresentation() const { return m_presentation; }
 	  private:

@@ -765,10 +765,77 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			combat.feedback.destroyedSeconds = 2.2f;
 			scene.ConfigureCombat(combat);
 			scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
+			scene.SetPlayerAircraftPosition({0, 100, 0});
 			const auto playerId = scene.AddPlayerObject(player);
 			scene.ConfigurePlayerWeapon(definition.playerWeapon, player);
-			scene.AddEnemyAircraft(enemy, {0, 15, -160}, 5, definition.enemyAircraft.flightParameters,
+			scene.AddEnemyAircraft(enemy, {0, 115, -160}, 5, definition.enemyAircraft.flightParameters,
 				definition.enemyAIParameters, 100, "PATROL");
+			{
+				FlightScene encouragement;
+				encouragement.Initialize(1, 1, 100000);
+				auto safeCombat = combat;
+				safeCombat.playerHealth = 100000;
+				encouragement.ConfigureCombat(safeCombat);
+				encouragement.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
+				encouragement.SetPlayerAircraftPosition({0, 1500, 0});
+				encouragement.AddPlayerObject(player);
+				encouragement.ConfigurePlayerWeapon(definition.playerWeapon, player);
+				encouragement.ConfigureCinematics(definition.cinematics, [&](const std::string& id) {
+					return FlightScene::CinematicModel{id == PlayerModelId ? player : enemy, 1};
+				}, 100000);
+				encouragement.AddEnemyAircraft(enemy, {0, 1515, -160}, 5, definition.enemyAircraft.flightParameters,
+					definition.enemyAIParameters, 100, "TEST");
+				for (float x : {-1000.0f, 1000.0f}) encouragement.AddEnemyAircraft(enemy, {x, 1500, -10000},
+					5, definition.enemyAircraft.flightParameters, definition.enemyAIParameters, 100, "SURVIVOR");
+				encouragement.Update({}, 0.25f, {}, {{true}});
+				Require(encouragement.GetCombatSnapshot().enemies.size() == 2 &&
+					encouragement.GetCombatSnapshot().cinematic.cinematicId != "patrolEncouragement",
+					"Encouragement started before the second patrol kill");
+				auto second = encouragement.GetCombatSnapshot().playerPosition;
+				second.y += 15; second.z -= 160;
+				encouragement.AddEnemyAircraft(enemy, second, 5, definition.enemyAircraft.flightParameters,
+					definition.enemyAIParameters, 100, "SECOND");
+				encouragement.Update({}, 0.25f, {}, {{true}});
+				Require(encouragement.GetCombatSnapshot().enemies.size() == 2, "Second patrol fixture was not shot down");
+				for (int frame = 0; frame < 80 &&
+					encouragement.GetCombatSnapshot().cinematic.cinematicId != "patrolEncouragement"; ++frame)
+					encouragement.Update({}, 0.25f);
+				Require(encouragement.GetCombatSnapshot().cinematic.cinematicId == "patrolEncouragement" &&
+					encouragement.GetCombatSnapshot().cinematic.radioLine == 0,
+					"Second patrol kill did not lead to encouragement after enemy chatter");
+				const auto serial = encouragement.GetCombatSnapshot().cinematic.playbackSerial;
+				encouragement.UpdateCinematicBriefing(CinematicVoiceStatus::Finished, 0.01f);
+				for (int frame = 0; frame < 20; ++frame) encouragement.Update({}, 0.25f);
+				Require(encouragement.GetCombatSnapshot().cinematic.playbackSerial == serial,
+					"Patrol encouragement repeated");
+			}
+			{
+				auto transition = scene;
+				DirectX::XMFLOAT4X4 shipTransform;
+				DirectX::XMStoreFloat4x4(&shipTransform, DirectX::XMMatrixTranslation(0, 0, -8500));
+				const auto carrier = transition.AddObject(enemy, shipTransform);
+				transition.RegisterMissionShip(carrier, true);
+				transition.ConfigureCinematics(definition.cinematics, [&](const std::string& id) {
+					return FlightScene::CinematicModel{id == PlayerModelId ? player : enemy, 1};
+				}, 100000);
+				transition.Update({}, 0.25f, {}, {{true}});
+				const auto& command = transition.GetCombatSnapshot();
+				Require(command.enemies.empty() && command.audio.aircraftExplosions == 1 &&
+					command.missionPhase == MissionPhase::CarrierAttack && !command.cinematic.active &&
+					command.enemyRadio.clip >= 0,
+					"Last patrol kill did not allow the dying enemy voice before completion praise");
+				for (int frame = 0; frame < 60 && command.cinematic.cinematicId != "patrolComplete"; ++frame)
+					transition.Update({}, 0.25f);
+				Require(command.cinematic.cinematicId == "patrolComplete" && command.cinematic.radioLine == 0 &&
+					command.enemyRadio.clip == -1, "Patrol praise did not follow the final death call");
+				transition.UpdateCinematicBriefing(CinematicVoiceStatus::Finished, 0.01f);
+				transition.Update({}, 0.25f);
+				Require(command.cinematic.cinematicId == "patrolComplete" && command.cinematic.radioLine == -1,
+					"Carrier order interrupted the half-second pause");
+				transition.Update({}, 0.25f);
+				Require(command.cinematic.cinematicId == "midMission" && command.cinematic.radioLine == 0,
+					"Carrier order did not follow the praise and pause");
+			}
 			scene.Update({}, 0.25f, {}, {{true}});
 			const auto& state = scene.GetCombatSnapshot();
 			Require(state.enemies.empty() && state.hitCount == 1 && state.hitSeconds == 1.1f &&
@@ -1112,6 +1179,14 @@ void TestHudRendering(const fs::path& fixture) {
 			Require(list.GetVertices().size() < Engine::HudDrawList::MaxVertices,
 				"Mission objective and bomb HUD overflowed");
 			saveFrame("-mission-bombing");
+			snapshot.carrierPresent = true;
+			snapshot.missileCooldownSeconds = 0;
+			snapshot.lockState = LockState::Selected;
+			buildFrame();
+			saveFrame("-guide-carrier-lock");
+			snapshot.lockState = LockState::Locked;
+			buildFrame();
+			saveFrame("-guide-carrier-fire");
 			snapshot.missionPhase = MissionPhase::Commander;
 			snapshot.deckDisabled = true;
 			snapshot.enemies = {{1, {0, 30, 1000}, {}, "SQUADRON LEADER", 180}};

@@ -132,7 +132,7 @@ namespace Game {
 			else if (m_phase == MissionPhase::CarrierAttack && IsDeckDisabled())
 				m_phase = MissionPhase::FinalFighters;
 			else if (m_phase == MissionPhase::FinalFighters && remainingAircraft == 0)
-				m_phase = MissionPhase::Commander;
+				m_phase = MissionPhase::Complete;
 			else if (m_phase == MissionPhase::Commander && remainingAircraft == 0)
 				m_phase = MissionPhase::Complete;
 			return before != m_phase;

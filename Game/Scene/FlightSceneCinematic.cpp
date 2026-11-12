@@ -32,6 +32,18 @@ namespace Game {
 		m_openingEnabled = definitions.contains("opening");
 		if (m_openingEnabled) m_openingSettings = definitions.at("opening");
 		m_midMissionPlayed = m_endingPlayed = false;
+		m_reinforcementsPlayed = false;
+		m_carrierLookSeconds = 0;
+		m_patrolKills = 0;
+		m_patrolEncouraged = m_patrolPraiseStarted = m_patrolPraiseComplete = false;
+		m_carrierCommandDelay = 0;
+		m_carrierHitSpeakAtSeconds = -1;
+		m_carrierHitReported = m_carrierCompleteReported = false;
+		m_finalKills = 0;
+		m_finalEncouraged = false;
+		m_reinforcementHoldSeconds = m_victoryHoldSeconds = -1;
+		const auto command = m_cinematics.find("midMission");
+		m_carrierTargetReady = command == m_cinematics.end() || command->second.radio.empty();
 	}
 	void FlightScene::EnableOpening(const CinematicSettings& settings, std::shared_ptr<Engine::Model> model,
 		float visualScale, float farZ) {
@@ -119,6 +131,10 @@ namespace Game {
 		m_combat.cinematic = m_cinematic.GetPresentation();
 		m_combat.audio.flying = m_combat.cinematic.briefingLine < 0;
 		m_combat.audio.gunFiring = false;
+		if (id == "midMission" && !settings.radio.empty()) {
+			m_carrierTargetReady = false;
+			RefreshCombatSnapshot();
+		}
 	}
 	void FlightScene::StartOpening() {
 		UpdateCamera({}, 0, {});
@@ -133,8 +149,23 @@ namespace Game {
 		m_combat.audio.flying = m_combat.cinematic.briefingLine < 0;
 	}
 	void FlightScene::UpdateCinematicBriefing(CinematicVoiceStatus voice, float deltaSeconds) {
+		const bool wasReady = m_carrierTargetReady;
 		m_cinematic.UpdateBriefing(voice, deltaSeconds);
+		if (voice == CinematicVoiceStatus::Finished && m_cinematic.GetPresentation().radioLine >= 0 &&
+			!m_cinematic.GetPresentation().active) {
+			const auto id = m_cinematic.GetPresentation().cinematicId;
+			if (id == "patrolComplete" && !m_patrolPraiseComplete) {
+				m_patrolPraiseComplete = true;
+				m_carrierCommandDelay = 0.5f;
+			}
+			if (id == "midMission") m_carrierTargetReady = true;
+			if (id == "carrierComplete") m_reinforcementHoldSeconds = 1;
+			if (id == "patrolComplete" || id == "patrolEncouragement" || id == "midMission" ||
+				id == "carrierHit" || id == "carrierComplete" || id == "finalRally" ||
+				id == "finalEncouragement") m_cinematic.StopRadio();
+		}
 		m_combat.cinematic = m_cinematic.GetPresentation();
+		if (!wasReady && m_carrierTargetReady) RefreshCombatSnapshot();
 	}
 	void FlightScene::UpdateCinematic(float deltaSeconds, bool skipRequested) {
 		if (m_cinematic.GetPresentation().briefingLine >= 0 && !skipRequested) {
@@ -165,15 +196,98 @@ namespace Game {
 		if (!after.active) m_scene.SetCamera(m_cameraController.GetCamera());
 		m_combat.cinematic = after;
 		m_combat.audio.flying = after.active && after.briefingLine < 0;
+		if (!after.active && before.cinematicId == "reinforcements") StartCommandRadio("finalRally");
 	}
-	void FlightScene::CheckMissionCinematics() {
-		if (m_combat.result != CombatResult::Active && !m_endingPlayed) {
+	bool FlightScene::StartCommandRadio(const std::string& id) {
+		const auto found = m_cinematics.find(id);
+		if (found == m_cinematics.end() || found->second.radio.empty()) return false;
+		if (id == "midMission") m_carrierTargetReady = false;
+		m_cinematic.StartRadio(found->second, id);
+		m_combat.cinematic = m_cinematic.GetPresentation();
+		return true;
+	}
+	void FlightScene::UpdatePatrolCommand(float dt) {
+		if (m_combat.result != CombatResult::Active || m_cinematic.GetPresentation().active) return;
+		const auto phase = m_mission.GetPhase();
+		const bool speaking = m_cinematic.GetPresentation().radioLine >= 0;
+		if (phase == MissionPhase::Patrol) {
+			if (m_patrolKills >= 2 && !m_patrolEncouraged && !m_enemyRadio.IsBusy() && !speaking)
+				m_patrolEncouraged = StartCommandRadio("patrolEncouragement");
+			return;
+		}
+		if (phase != MissionPhase::CarrierAttack) return;
+		if (m_midMissionPlayed) {
+			if (!m_carrierTargetReady && m_cinematic.GetPresentation().cinematicId == "midMission" && !speaking) {
+				m_carrierTargetReady = true;
+				RefreshCombatSnapshot();
+			}
+			return;
+		}
+		if (!m_patrolPraiseStarted) {
+			if (m_enemyRadio.IsBusy() || speaking) return;
+			m_patrolPraiseStarted = true;
+			if (StartCommandRadio("patrolComplete")) return;
+			// Configurations without the new dialogue retain their carrier introduction.
+			m_patrolPraiseComplete = true;
+		}
+		if (!m_patrolPraiseComplete) {
+			// Missing audio devices/files fall back to the subtitle duration.
+			if (!speaking) { m_patrolPraiseComplete = true; m_carrierCommandDelay = 0.5f; }
+			return;
+		}
+		m_carrierCommandDelay = std::max(0.0f, m_carrierCommandDelay - dt);
+		if (m_carrierCommandDelay > 0) return;
+		m_midMissionPlayed = true;
+		m_carrierLookSeconds = 3;
+		if (m_mission.GetCarrierCenter(m_scene)) StartCommandRadio("midMission");
+	}
+	void FlightScene::UpdateCarrierCommand() {
+		if (m_combat.result != CombatResult::Active || m_cinematic.GetPresentation().active) return;
+		if (m_mission.GetPhase() != MissionPhase::CarrierAttack) return;
+		if (m_mission.IsDeckDisabled()) {
+			m_carrierHitSpeakAtSeconds = -1;
+			if (!m_carrierCompleteReported) m_carrierCompleteReported = StartCommandRadio("carrierComplete");
+			return;
+		}
+		if (m_carrierHitSpeakAtSeconds < 0) return;
+		if (m_carrierMissiles.GetCount() > 0 || m_carrierMissiles.GetAmmo() == 0) {
+			m_carrierHitSpeakAtSeconds = -1;
+			return;
+		}
+		if (m_battleSeconds >= m_carrierHitSpeakAtSeconds) {
+			m_carrierHitSpeakAtSeconds = -1;
+			m_carrierHitReported = StartCommandRadio("carrierHit");
+		}
+	}
+	void FlightScene::UpdateFinalCommand() {
+		if (m_combat.result == CombatResult::Active && m_mission.GetPhase() == MissionPhase::FinalFighters &&
+			!m_cinematic.GetPresentation().active && m_finalKills >= 2 && !m_finalEncouraged &&
+			!m_enemyRadio.IsBusy() && m_cinematic.GetPresentation().radioLine < 0)
+			m_finalEncouraged = StartCommandRadio("finalEncouragement");
+	}
+	void FlightScene::CheckMissionCinematics(float dt) {
+		if (m_combat.result == CombatResult::Victory && !m_endingPlayed) {
+			if (m_enemyRadio.IsBusy() || m_combat.cinematic.radioLine >= 0) return;
+			if (m_victoryHoldSeconds < 0) { m_victoryHoldSeconds = 1; return; }
+			m_victoryHoldSeconds = std::max(0.0f, m_victoryHoldSeconds - dt);
+			if (m_victoryHoldSeconds > 0) return;
 			m_endingPlayed = true;
-			PlayCinematic(m_combat.result == CombatResult::Victory ? "ending" : "defeat");
-		} else if (m_combat.result == CombatResult::Active &&
-			m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_midMissionPlayed) {
-			m_midMissionPlayed = true;
-			PlayCinematic("midMission");
+			PlayCinematic("ending");
+		} else if (m_combat.result == CombatResult::Defeat && !m_endingPlayed) {
+			m_endingPlayed = true;
+			PlayCinematic("defeat");
+		} else if (m_combat.result == CombatResult::Active && !m_reinforcementsPlayed) {
+			if (m_carrierCompleteReported && m_combat.cinematic.cinematicId == "carrierComplete" &&
+				m_combat.cinematic.radioLine < 0) {
+				if (m_reinforcementHoldSeconds < 0) m_reinforcementHoldSeconds = 1;
+				else m_reinforcementHoldSeconds = std::max(0.0f, m_reinforcementHoldSeconds - dt);
+			}
+			if (m_mission.GetPhase() != MissionPhase::FinalFighters) return;
+			if (m_combat.cinematic.cinematicId == "carrierComplete" &&
+				(m_combat.cinematic.radioLine >= 0 || m_reinforcementHoldSeconds > 0)) return;
+			m_reinforcementsPlayed = true;
+			m_carrierLookSeconds = 0;
+			PlayCinematic("reinforcements");
 		}
 	}
 } // namespace Game

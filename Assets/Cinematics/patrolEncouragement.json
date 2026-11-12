@@ -1,0 +1,17 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 1
+  },
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "いいぞ、その調子だ！残りの敵機も頼む！",
+      "audio": "../Sound/いいぞ、その調子だ！残りの敵機も頼む！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 3.7
+    }
+  ]
+}

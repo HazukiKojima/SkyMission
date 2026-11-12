@@ -60,6 +60,7 @@ namespace Game {
 		std::vector<CinematicRadioEntry> radio;
 		CinematicAudioSettings audio;
 		CinematicTextSettings text;
+		float endFadeSeconds = 0; // Optional final fade for explicit shot sequences.
 		float fadeOutStartSeconds = 3.6f;
 		float cutSeconds = 3.8f;
 		float fadeInStartSeconds = 4;

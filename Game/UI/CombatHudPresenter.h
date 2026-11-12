@@ -25,6 +25,10 @@ namespace Game {
 			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
 
 	  private:
+		void DrawCombatGuide(
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+		void DrawDebugCollisions(
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
 		void DrawControls(
 			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
 		void DrawFlightStatus(

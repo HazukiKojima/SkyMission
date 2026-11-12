@@ -107,6 +107,10 @@ namespace Game {
 		m_combat.audio = {};
 		m_combat.firedVolleys = 0;
 		m_combat.hitCount = 0;
+#if defined(_DEBUG)
+		if (cameraInput.WasKeyPressed(VK_F3)) m_debugCollisionsEnabled = !m_debugCollisionsEnabled;
+#endif
+		RefreshDebugCollisions();
 		if (!std::isfinite(dt) || dt <= 0) return;
 		dt = std::min(dt, 0.25f);
 		if (!m_initialState) {
@@ -127,6 +131,13 @@ namespace Game {
 				UpdateEnemyRadio(dt);
 				m_effects.Update(dt);
 				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
+				if (m_combat.result == CombatResult::Victory) {
+					UpdatePlayer({}, dt);
+					ApplyRenderStates();
+					UpdateCamera({}, dt, {});
+					m_combat.audio.flying = m_scene.FindObject(m_playerId) != nullptr;
+				}
+				CheckMissionCinematics(dt);
 			}
 			return;
 		}
@@ -144,14 +155,19 @@ namespace Game {
 
 		// 命中と撃破を反映してから、HUDとカメラへ最終状態を渡す
 		ApplyHits();
+		ApplySeaCollision();
 		UpdateMission(dt);
 		ApplyRenderStates();
 		RefreshCombatSnapshot();
 		m_combat.audio.flying = m_combat.result == CombatResult::Active && m_scene.FindObject(m_playerId);
 		m_combat.audio.gunFiring &= m_combat.audio.flying;
-		UpdateCamera(input, dt, cameraInput);
-		CheckMissionCinematics();
 		UpdateEnemyRadio(dt);
+		UpdatePatrolCommand(dt);
+		UpdateCarrierCommand();
+		UpdateFinalCommand();
+		UpdateCamera(input, dt, cameraInput);
+		CheckMissionCinematics(dt);
+		UpdateEnemyRadio(0);
 	}
 
 	void FlightScene::UpdateCombatTimers(float dt) {
@@ -247,6 +263,10 @@ namespace Game {
 
 	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, bool next, float dt) {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
+			if (!m_carrierTargetReady) {
+				m_targeting.Update({}, geometry.muzzle, geometry.forward, false, 0);
+				return;
+			}
 			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
 				const CombatTarget carrier{m_mission.GetCarrierId(), *center, {}, m_text.Text("敵空母"),
 					m_mission.GetCarrierHealth()};
@@ -306,6 +326,7 @@ namespace Game {
 				.maximumSpeed = m_player.GetMaximumSpeed()});
 		}
 		std::optional<DirectX::XMFLOAT3> lookTarget;
+
 		if (cameraInput.IsKeyDown('Z') && m_combat.result == CombatResult::Active &&
 			m_scene.FindObject(m_playerId)) {
 			for (const auto& enemy : m_combat.enemies) {
@@ -315,8 +336,18 @@ namespace Game {
 				}
 			}
 		}
-		m_cameraController.SetLookTarget(lookTarget);
+		bool automatic = false;
+		if (m_carrierLookSeconds > 0 && m_combat.result == CombatResult::Active &&
+			m_scene.FindObject(m_playerId)) {
+			lookTarget = m_mission.GetCarrierCenter(m_scene);
+			automatic = lookTarget.has_value();
+			if (!automatic) m_carrierLookSeconds = 0;
+		} else {
+			m_carrierLookSeconds = 0;
+		}
+		m_cameraController.SetLookTarget(lookTarget, automatic);
 		m_cameraController.Update(dt, cameraInput);
+		m_carrierLookSeconds = std::max(0.0f, m_carrierLookSeconds - dt);
 		m_scene.SetCamera(m_cameraController.GetCamera());
 	}
 
@@ -468,6 +499,27 @@ namespace Game {
 		m_combat.lockState = m_targeting.GetState();
 		m_combat.acquireProgress = m_targeting.GetProgress();
 		BuildCombatSnapshot(m_combat, {m_player, m_gunSettings, m_combatSettings, m_weaponConfigured});
+		RefreshDebugCollisions();
+	}
+	void FlightScene::RefreshDebugCollisions() {
+		m_combat.debugCollisionsEnabled = false;
+		m_combat.debugCollisions.clear();
+#if defined(_DEBUG)
+		m_combat.debugCollisionsEnabled = m_debugCollisionsEnabled;
+		if (!m_debugCollisionsEnabled) return;
+		if (const auto* player = m_scene.FindObject(m_playerId);
+			player && player->model && player->model->GetLocalBounds()) {
+			m_combat.debugCollisions.push_back({
+				{m_playerId, *player->model->GetLocalBounds(), m_previousPlayerPosition, player->worldTransform},
+				{0.2f, 1.0f, 0.2f, 1.0f}});
+		}
+		for (const auto& target : BuildCollisionTargets())
+			m_combat.debugCollisions.push_back({target, {1.0f, 0.2f, 0.2f, 1.0f}});
+		if (!m_mission.IsDeckDisabled()) {
+			if (const auto deck = GetDeckTarget())
+				m_combat.debugCollisions.push_back({*deck, {1.0f, 0.8f, 0.1f, 1.0f}});
+		}
+#endif
 	}
 
 	void FlightScene::ApplyHits() {
@@ -492,6 +544,8 @@ namespace Game {
 						}
 					} else {
 						m_effects.SpawnExplosion(hit.position, {});
+						if (!m_carrierHitReported && m_carrierMissiles.GetCount() == 0 && m_carrierMissiles.GetAmmo() > 0)
+							m_carrierHitSpeakAtSeconds = m_battleSeconds + 0.5f;
 					}
 				}
 				continue;
@@ -548,10 +602,44 @@ namespace Game {
 		for (const auto& enemy : m_enemies)
 			if (enemy.health > 0 && m_scene.FindObject(enemy.objectId)) survivors.push_back(enemy.objectId);
 		for (const auto id : destroyed) m_enemyRadio.NotifyDestroyed(id, survivors);
+		if (m_mission.GetPhase() == MissionPhase::Patrol) m_patrolKills += destroyed.size();
+		if (m_mission.GetPhase() == MissionPhase::FinalFighters) m_finalKills += destroyed.size();
 		if (m_combat.playerHealth <= 0) {
 			RemoveObject(m_playerId);
 			m_combat.result = CombatResult::Defeat;
 		}
+	}
+
+	void FlightScene::ApplySeaCollision() {
+		using namespace DirectX;
+		const auto* aircraft = m_scene.FindObject(m_playerId);
+		if (m_combat.playerHealth <= 0 || !aircraft || !aircraft->model) return;
+		const auto bounds = aircraft->model->GetLocalBounds();
+		if (!bounds) return;
+		float lowestY = std::numeric_limits<float>::infinity();
+		for (int corner = 0; corner < 8; ++corner) {
+			const auto point = XMVector3TransformCoord(XMVectorSet(
+				corner & 1 ? bounds->maximum.x : bounds->minimum.x,
+				corner & 2 ? bounds->maximum.y : bounds->minimum.y,
+				corner & 4 ? bounds->maximum.z : bounds->minimum.z, 1),
+				XMLoadFloat4x4(&aircraft->worldTransform));
+			lowestY = std::min(lowestY, XMVectorGetY(point));
+		}
+		if (lowestY > 0 || !std::isfinite(lowestY)) return;
+		// 大きい更新幅でも爆発を海中に埋めず、機体下端を海面に合わせる。
+		auto impact = *aircraft;
+		impact.worldTransform._42 -= lowestY;
+		auto position = m_player.GetPosition();
+		position.y -= lowestY;
+		m_player.SetPosition(position);
+		m_effects.SpawnExplosion(impact, m_player.GetVelocity(), m_playerVisualScale);
+		++m_combat.audio.aircraftExplosions;
+		m_combat.playerHealth = 0;
+		RemoveObject(m_playerId);
+		m_combat.result = CombatResult::Defeat;
+		m_carrierLookSeconds = 0;
+		// 爆発が見える通常画面のままゲームオーバーにする。
+		m_endingPlayed = true;
 	}
 
 	void FlightScene::UpdateEnemyRadio(float dt) {
@@ -559,6 +647,7 @@ namespace Game {
 		for (const auto& enemy : m_enemies)
 			if (enemy.health > 0 && m_scene.FindObject(enemy.objectId)) survivors.push_back(enemy.objectId);
 		const auto& movie = m_combat.cinematic;
+		if (m_combat.result == CombatResult::Defeat) m_enemyRadio.Clear();
 		m_enemyRadio.Update(dt, survivors, m_combat.result == CombatResult::Defeat ||
 			movie.briefingLine >= 0 || movie.radioLine >= 0);
 		m_combat.enemyRadio = m_enemyRadio.GetPresentation();

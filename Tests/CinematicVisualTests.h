@@ -221,6 +221,10 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 		capture(L"midMission-299.png", 1280, 720);
 		flight.Update({}, 0.01f);
 		Require(!flight.GetCombatSnapshot().cinematic.active, "Carrier shot exceeded three seconds");
+		Require(flight.GetCombatSnapshot().cinematic.radioLine == 0, "Carrier voice did not survive movie end");
+		capture(L"midMission-command-gameplay.png", 1280, 720);
+		for (int i = 0; i < 7; ++i) flight.Update({}, 0.25f);
+		Require(flight.GetCombatSnapshot().cinematic.radioLine == -1, "Carrier command failed to expire");
 		Require(flight.PlayCinematic("ending"), "Ending cinematic did not start");
 		capture(L"ending-00.png", 1280, 720);
 		flight.Update({}, 0.01f, {}, {.skipOpening = true});

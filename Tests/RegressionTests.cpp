@@ -154,6 +154,39 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					presentation.cinematicId = "middle";
 					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
 						"Switching cinematic IDs reused a previous briefing clip");
+					std::map<std::string, CinematicSettings> patrolCommands;
+					for (const auto* id : {"patrolEncouragement", "patrolComplete", "midMission"})
+						patrolCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
+					audio.Initialize(repository / L"Assets/Sound", patrolCommands);
+					Require(audio.GetLoadedSoundCount() == 22, "The three new commander voice assets were not decoded");
+					std::map<std::string, CinematicSettings> impactCommands;
+					for (const auto* id : {"carrierHit", "carrierComplete"})
+						impactCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
+					audio.Initialize(repository / L"Assets/Sound", impactCommands);
+					Require(audio.GetLoadedSoundCount() == 21, "Carrier impact and completion voices were not decoded");
+					std::map<std::string, CinematicSettings> finaleCommands;
+					for (const auto* id : {"reinforcements", "finalRally", "finalEncouragement", "ending"})
+						finaleCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
+					audio.Initialize(repository / L"Assets/Sound", finaleCommands);
+					Require(audio.GetLoadedSoundCount() == 24, "The five finale voice files were not decoded");
+					const auto carrierCommand = LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics/midMission.json");
+					audio.Initialize(repository / L"Assets/Sound", std::map<std::string, CinematicSettings>{{"midMission", carrierCommand}});
+					Require(audio.GetLoadedSoundCount() == 20, "Carrier command voice was not decoded");
+					presentation.cinematicId = "midMission";
+					presentation.active = true;
+					presentation.briefingLine = -1;
+					presentation.radioLine = 0;
+					const EnemyRadioPresentation lastKill{0, 100, {"敵機", EnemyRadioClips[0].text, "enemy"}};
+					audio.UpdateEnemyRadio(lastKill);
+					const auto carrierStatus = audio.UpdateCinematic(presentation);
+					audio.UpdateEnemyRadio(lastKill);
+					presentation.active = false;
+					const auto continuedStatus = audio.UpdateCinematic(presentation);
+					Require(carrierStatus != CinematicVoiceStatus::Playing || continuedStatus == CinematicVoiceStatus::Playing,
+						"Carrier voice was interrupted when the movie ended");
+					presentation.radioLine = -1;
+					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
+						"Carrier command did not stop with its caption");
 					audio.ResetPlayback();
 					audio.Update({.flying = true, .gunFiring = true, .missileLaunches = 1}, 0);
 				}
@@ -421,6 +454,28 @@ void TestTargetCameraLook() {
 	Require(separation(camera.GetPosition(), reference.GetPosition()) < 0.001f,
 		"Camera snap retained target orbit");
 	std::cout << "PASS: Z target orbit, release, manual priority, rear seam, reset and frame rates\n";
+	// Automatic mission focus works without input and temporarily overrides manual look.
+	auto automatic = reference, noisy = reference;
+	automatic.SetLookTarget(XMFLOAT3{5000, 1500, 0}, true);
+	noisy.SetLookTarget(XMFLOAT3{5000, 1500, 0}, true);
+	for (int frame = 0; frame < 120; ++frame) {
+		automatic.Update(1 / 60.0f);
+		noisy.Update(1 / 60.0f, manual);
+	}
+	Require(separation(automatic.GetPosition(), noisy.GetPosition()) < 0.001f &&
+		XMVectorGetX(direction(automatic)) > 0.99f,
+		"Automatic focus required Z or allowed manual interference");
+	XMFLOAT4X4 baseProjection, zoomProjection;
+	XMStoreFloat4x4(&baseProjection, reference.GetCamera().GetProjection());
+	XMStoreFloat4x4(&zoomProjection, automatic.GetCamera().GetProjection());
+	Require(zoomProjection._22 > baseProjection._22 * 1.1f, "Automatic focus did not zoom in");
+	automatic.SetLookTarget(std::nullopt);
+	for (int frame = 0; frame < 180; ++frame) automatic.Update(1 / 60.0f);
+	XMStoreFloat4x4(&zoomProjection, automatic.GetCamera().GetProjection());
+	Require(std::abs(zoomProjection._22 - baseProjection._22) < 0.001f &&
+		separation(automatic.GetPosition(), reference.GetPosition()) < 0.05f,
+		"Automatic focus did not smoothly restore camera and zoom");
+	std::cout << "PASS: automatic mission focus, zoom, input priority and restoration\n";
 }
 
 void TestRawInput() {
@@ -906,6 +961,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		FlightScene scene;
 		scene.Initialize(1.0f, 1.0f, definition.environment.ocean.size);
 		scene.SetPlayerAircraftFlightParameters(definition.playerAircraft.flightParameters);
+		scene.SetPlayerAircraftPosition({0, 1500, 0});
 		scene.AddPlayerObject(renderer.GetModel(PlayerModelId));
 		scene.AddEnemyAircraft(renderer.GetModel(EnemyModelId), {30, 100, 0}, 1.0f,
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
@@ -1033,6 +1089,7 @@ int wmain(int argc, wchar_t** argv) {
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
 			TestCinematic(argv[1], fixture);
 			TestEnemyRadio();
+			TestMissionRules();
 			TestCombatMath();
 			TestEnemyCombatAI();
 			TestEnemyEngagementProfile();

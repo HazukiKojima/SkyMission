@@ -33,8 +33,9 @@ namespace Game {
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
 		void SetFollowTarget(const AircraftCameraTarget& target);
 		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す。
-		void SetLookTarget(std::optional<DirectX::XMFLOAT3> target) {
+		void SetLookTarget(std::optional<DirectX::XMFLOAT3> target, bool automatic = false) {
 			m_lookTarget = target;
+			m_automaticLook = automatic && target.has_value();
 		}
 		// 初回と暗転中の切替に使い、追従開始時の補間移動を画面に出さない
 		void SnapToFollowTarget();
@@ -73,6 +74,9 @@ namespace Game {
 		float m_followCameraPitch = 0.0f;
 		float m_lookYaw = 0, m_lookPitch = 0;
 		std::optional<DirectX::XMFLOAT3> m_lookTarget;
+		bool m_automaticLook = false;
+		float m_baseFovY = DefaultFovY;
+		float m_zoomScale = 1;
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followViewDirection = {0.0f, 0.0f, -1.0f};
 		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする
