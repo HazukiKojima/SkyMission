@@ -30,8 +30,7 @@ namespace Game {
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 		UpdateWindow(m_window->GetHandle());
 
-		const auto exeDir = ExecutableDirectory();
-		const std::filesystem::path assetsDir = exeDir / L"..\\..\\Assets";
+		const auto assetsDir = AssetsDirectory();
 		const FlightSceneLoader sceneLoader;
 		const SceneSourcePaths scenePaths = {.environment = assetsDir / L"Environment/environment.json",
 			.playerAircraft = assetsDir / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",

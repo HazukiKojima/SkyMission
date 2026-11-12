@@ -83,8 +83,8 @@ namespace Engine {
 			D3D12SerializeRootSignature(&rootDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootBlob, &error));
 		ThrowIfFailed(gpu->CreateRootSignature(
 			0, rootBlob->GetBufferPointer(), rootBlob->GetBufferSize(), IID_PPV_ARGS(&m_root)));
-		ThrowIfFailed(D3DReadFileToBlob((ExecutableDirectory() / L"HudVS.cso").c_str(), &vs));
-		ThrowIfFailed(D3DReadFileToBlob((ExecutableDirectory() / L"HudPS.cso").c_str(), &ps));
+		ThrowIfFailed(D3DReadFileToBlob((ShaderDirectory() / L"HudVS.cso").c_str(), &vs));
+		ThrowIfFailed(D3DReadFileToBlob((ShaderDirectory() / L"HudPS.cso").c_str(), &ps));
 		const D3D12_INPUT_ELEMENT_DESC layout[] = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
