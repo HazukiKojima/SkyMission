@@ -21,6 +21,7 @@ namespace Game {
 	// 飛行・AI・武器・任務・カメラを統合し、描画用Sceneと表示用スナップショットを更新する
 	class FlightScene {
 	  public:
+		void StartNewMission() { Restart(0); EnableOpeningBriefing(); }
 		// 初期化・設定
 		// 必須アセットと設定をまとめて渡し、完成したミッションだけを返す
 		static FlightScene CreateMission(const FlightSceneDefinition& definition,

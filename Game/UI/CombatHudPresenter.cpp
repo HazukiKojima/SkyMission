@@ -106,7 +106,6 @@ namespace Game {
 			m_text.Text("Z長押し：選択中の敵機を注視"), m_text.Text("左クリック：機銃"), m_text.Text("Tab：目標切替")};
 		if (snapshot.missionPhase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active)
 			controls.push_back(m_text.Text("右クリック：ミサイル (ロック後)"));
-		if (snapshot.result != CombatResult::Active) controls.push_back(m_text.Text("R：再挑戦"));
 
 		float width = Engine::HudDrawList::MeasureTextWidth(m_text.Text("操作方法"), fontSize);
 		for (const auto text : controls)
@@ -178,8 +177,6 @@ namespace Game {
 			(snapshot.result != CombatResult::Victory || snapshot.allDownSeconds <= 0)) {
 			drawLabel(m_tuning.layout.resultPosition[0], m_tuning.layout.resultPosition[1],
 				snapshot.result == CombatResult::Victory ? m_text.Text("任務達成") : m_text.Text("自機撃墜"));
-			drawLabel(
-				m_tuning.layout.retryPosition[0], m_tuning.layout.retryPosition[1], m_text.Text("R：再挑戦"));
 		}
 		if (snapshot.playerHitSeconds > 0) {
 			const auto& d = snapshot.playerHitDirection;

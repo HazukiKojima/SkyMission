@@ -14,7 +14,7 @@ namespace Engine::HudFont {
 		U"燃るうあメデ落嘘ろつやんくそま…来パじゃ化物ぎ振めエンジ脱死頼むどば？僚"
 		U"ぞ調子４次爆阻止"
 		U"能力奪"
-		U"オ"
+		U"オタト戻ショア"
 		U"抜前帰待動き滅生還新俺必ず叩";
 	inline constexpr unsigned AsciiCount = 95;
 	inline constexpr unsigned GlyphCount = AsciiCount + unsigned(Japanese.size());
