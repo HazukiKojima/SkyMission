@@ -11,6 +11,7 @@
 #include <string>
 #include <system_error>
 #include <vector>
+#include <utility>
 
 namespace Engine {
 	inline constexpr std::uintmax_t MaxJsonFileSize = 16u * 1024u * 1024u;
@@ -140,12 +141,33 @@ namespace Engine {
 	// 途中のファイル変更は反映せず、破棄時に全ハンドルを解放する
 	class JsonDocumentCache {
 	  public:
+		JsonDocumentCache() = default;
+		JsonDocumentCache(JsonDocumentCache&& other) noexcept
+			: m_files(std::move(other.m_files)), m_documents(std::move(other.m_documents)) {
+			other.m_lastDocument = nullptr;
+		}
+		JsonDocumentCache& operator=(JsonDocumentCache&& other) noexcept {
+			if (this != &other) {
+				m_lastDocument = nullptr;
+				other.m_lastDocument = nullptr;
+				m_files = std::move(other.m_files);
+				m_documents = std::move(other.m_documents);
+			}
+			return *this;
+		}
 		const RedoxDocument& Get(const std::filesystem::path& jsonPath) {
+			// Most settings read many fields from the same absolute path in succession.
+			// Relative paths still resolve each time so a working-directory change is respected.
+			if (jsonPath.is_absolute() && m_lastDocument && jsonPath == m_lastPath) return *m_lastDocument;
 			const std::filesystem::path key = Normalize(jsonPath);
 			auto found = m_documents.find(key);
 			if (found == m_documents.end()) {
 				const std::vector<char>& json = m_files.Read(key);
 				found = m_documents.emplace(key, RedoxDocument(json)).first;
+			}
+			if (jsonPath.is_absolute()) {
+				m_lastPath = jsonPath;
+				m_lastDocument = &found->second; // std::map insertions preserve references.
 			}
 			return found->second;
 		}
@@ -159,5 +181,7 @@ namespace Engine {
 
 		JsonFileCache m_files;
 		std::map<std::filesystem::path, RedoxDocument> m_documents;
+		std::filesystem::path m_lastPath;
+		const RedoxDocument* m_lastDocument = nullptr;
 	};
 } // namespace Engine

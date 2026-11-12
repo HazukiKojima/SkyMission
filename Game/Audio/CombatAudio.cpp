@@ -1,5 +1,6 @@
 #include "CombatAudio.h"
 #include "Engine/Log.h"
+#include "Engine/Interop/Redox/RedoxBridge.h"
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
@@ -131,7 +132,10 @@ namespace Game {
 		if (FAILED(comResult) && comResult != RPC_E_CHANGED_MODE) return;
 		m_mediaInitialized = SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET));
 		m_settings = {};
-		m_settings.Load(Engine::JsonAssetReader{}, soundDirectory / L"audio.json");
+		{
+			Engine::JsonDocumentCache audioDocuments;
+			m_settings.Load(Engine::JsonAssetReader{audioDocuments}, soundDirectory / L"audio.json");
+		}
 		const std::string names[] = {m_settings.flightFile, m_settings.gunFile, m_settings.launchFile,
 			m_settings.gunHitFile, m_settings.missileHitFile, m_settings.aircraftFile, m_settings.shipFile,
 			m_settings.battleBgmFile};
