@@ -18,7 +18,6 @@ namespace Game {
 		CombatInput ReadInput(const Engine::InputSnapshot& input) const {
 			return {.weapon = WeaponController{}.ReadInput(input),
 				.nextTarget = input.WasKeyPressed(VK_TAB),
-				.retry = input.WasKeyPressed('R'),
 				.missilePressCount = input.active ? input.rightMousePressCount : 0u,
 				.skipOpening = input.active && input.WasKeyPressed(VK_RETURN)};
 		}

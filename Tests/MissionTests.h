@@ -986,6 +986,13 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				"Final mission report did not start after the quiet pause");
 			for (int frame = 0; frame < 28; ++frame) victoryMovie.Update({}, 0.25f);
 			Require(!victoryMovie.GetCombatSnapshot().cinematic.active, "Mission ending did not finish naturally");
+			victoryMovie.StartNewMission();
+			const auto& restarted = victoryMovie.GetCombatSnapshot();
+			Require(restarted.result == CombatResult::Active && restarted.missionPhase == MissionPhase::Patrol &&
+				restarted.playerHealth > 0 && restarted.enemies.size() == definition.mission.patrolCount &&
+				restarted.cinematic.active && restarted.cinematic.cinematicId == "opening" &&
+				restarted.cinematic.briefingLine == 0,
+				"Starting from the title after victory did not reset the mission and opening briefing");
 		}
 		removeEnemies();
 		Require(scene.GetCombatSnapshot().result == CombatResult::Victory && scene.GetCombatSnapshot().enemies.empty(),

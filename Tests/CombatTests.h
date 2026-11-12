@@ -364,6 +364,11 @@ void TestAIParameters(const fs::path& repository, const fs::path& fixture) {
 
 void TestCombatMath() {
 	using namespace DirectX;
+	InputSnapshot rKey;
+	rKey.active = true;
+	rKey.keys['R'] = true;
+	rKey.pressedKeys['R'] = true;
+	Require(!CombatController{}.ReadInput(rKey).retry, "R still requests a rematch");
 	RawInputState raw;
 	raw.SetActive(true);
 	RAWKEYBOARD key{};

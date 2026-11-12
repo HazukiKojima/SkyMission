@@ -140,7 +140,7 @@ namespace Engine {
 	void GraphicsPipeline::Initialize(ID3D12Device* device, const PipelineOptions& options) {
 		m_rootSignature = CreateRootSignatureWithSrvCount(
 			device, options.srvCount, options.addressMode, options.rootLayout);
-		const auto directory = ExecutableDirectory();
+		const auto directory = ShaderDirectory();
 		ComPtr<ID3DBlob> vertexShader, pixelShader;
 		const auto loadShader = [&](const std::wstring& path, ID3DBlob** blob) {
 			const auto absolute = directory / std::filesystem::path(path);

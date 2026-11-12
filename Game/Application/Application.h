@@ -32,6 +32,10 @@ namespace Game {
 	  private:
 		void InitializeFlightScene(const FlightSceneDefinition& assets);
 		void ConfigureResizeHandling();
+		void BuildMenuHud();
+		enum class Screen { Title, Playing, Clear };
+		Screen m_screen = Screen::Title;
+		const Engine::Scene& PrepareCaptureScene();
 		HINSTANCE m_hInstance;
 		std::unique_ptr<Window> m_window;
 
@@ -43,6 +47,10 @@ namespace Game {
 		CombatEffectPresenter m_effectPresenter;
 		CombatAudio m_combatAudio;
 		Engine::HudDrawList m_hud;
+		// F6: normal -> environment with ships -> environment only.
+		unsigned m_captureMode = 0;
+		Engine::Scene m_captureScene;
+		std::vector<std::shared_ptr<Engine::Model>> m_captureShipModels;
 		std::wstring m_windowTitle = L"SkyMission";
 		// フレーム時間とFPSの計測
 		float m_elapsedTime = 0.0f;
