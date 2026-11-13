@@ -1,0 +1,17 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 1
+  },
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "ここを切り抜けろ。お前の帰りを待っている！",
+      "audio": "../Sound/ここを切り抜けろ。お前の帰りを待っている！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 3.5
+    }
+  ]
+}

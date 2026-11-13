@@ -3,12 +3,14 @@
     "normal": "Textures/Ocean_Normal1.jpg",
     "normal2": "Textures/Ocean_Normal2.jpg",
     "size": 10000000.0,
-    "waveLength": 90000.0,
-    "waveSteepness": 0.0005,
-    "normalUvScale": 0.1,
-    "wavePatternUvScale": 0.1,
+    "waveLength": 20000.0,
+    "waveSteepness": 0.003,
+    "normalUvScale": 0.035,
+    "wavePatternUvScale": 0.035,
     "fogStartDistance": 6500000.0,
     "fogEndDistance": 10000000.0,
     "edgeFadeStart": 0.98,
-    "edgeFadeWidth": 0.015
+    "edgeFadeWidth": 0.015,
+    "fogTop": 350.0,
+    "fogDensity": 1.12e-06
 }

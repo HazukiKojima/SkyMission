@@ -1,336 +1,336 @@
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
+#include "../../Renderer/RootBindings.h"
 #include "Model.h"
+#include "ModelGeometry.h"
+#include "ModelGeometryCache.h"
+#include "MaterialTexturePaths.h"
+#include "../Buffer/BufferUtilities.h"
+#include "../../Log.h"
 #include "../../Renderer/Device/RenderDevice.h"
-#include <assimp/Importer.hpp>
 #include <assimp/material.h>
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
 #include <algorithm>
-#include <cctype>
+#include <cmath>
 #include <cwctype>
-#include <cstring>
-#include <DirectXMath.h>
-#include <filesystem>
 #include <limits>
-#include <string>
-#include <vector>
-
+#include "Engine/StartupTiming.h"
 namespace Engine {
+	using namespace ModelProcessing;
 	namespace {
-		struct ModelVertex {
-			DirectX::XMFLOAT3 position;
-			DirectX::XMFLOAT2 texcoord;
-			DirectX::XMFLOAT3 normal;
-			DirectX::XMFLOAT4 tangent;
-		};
-
-		bool CreateUploadBuffer(ID3D12Device* device, const void* data, UINT size, ComPtr<ID3D12Resource>& buffer) {
-			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-			auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
-			ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer)));
-
-			void* mappedData = nullptr;
-			HRESULT hr = buffer->Map(0, nullptr, &mappedData);
-			if (FAILED(hr)) {
-				return false;
-			}
-			memcpy(mappedData, data, size);
-			buffer->Unmap(0, nullptr);
-			return true;
-		}
-
-		std::filesystem::path FindTexturePath(const std::filesystem::path& modelDirectory, const std::filesystem::path& texturePath) {
-			const std::filesystem::path texturesDirectory = modelDirectory / L"Textures";
-			const std::filesystem::path candidates[] = {
-				texturePath.is_absolute() ? texturePath : modelDirectory / texturePath,
-				texturesDirectory / texturePath,
-				texturesDirectory / texturePath.filename()
-			};
-
-			for (const auto& candidate : candidates) {
-				if (std::filesystem::exists(candidate)) {
-					return candidate;
-				}
-			}
-
-			return {};
-		}
-
-		std::filesystem::path FindFallbackTexturePath(const std::filesystem::path& modelDirectory, const std::string& materialName) {
-			const std::filesystem::path texturesDirectory = modelDirectory / L"Textures";
-			const std::filesystem::path fallbackPath = materialName.find("boomb") != std::string::npos
-				? texturesDirectory / L"T_boomb_AO.png"
-				: texturesDirectory / L"T_Jet_ID.png";
-			return std::filesystem::exists(fallbackPath) ? fallbackPath : std::filesystem::path();
-		}
-
-		std::filesystem::path ResolveMaterialTexture(const aiMaterial* material, aiTextureType type, const std::filesystem::path& modelDirectory) {
+		std::filesystem::path ResolveMaterialTexture(const aiMaterial* material, aiTextureType type,
+			const std::filesystem::path& modelDirectory, const ModelLoadOptions& options) {
 			aiString texturePath;
-			if (material->GetTexture(type, 0, &texturePath) != AI_SUCCESS || texturePath.length == 0 || texturePath.C_Str()[0] == '*') {
+			if (material->GetTexture(type, 0, &texturePath) != AI_SUCCESS || texturePath.length == 0 ||
+				texturePath.C_Str()[0] == '*') {
 				return {};
 			}
 
 			const char8_t* pathUtf8 = reinterpret_cast<const char8_t*>(texturePath.C_Str());
 			const std::filesystem::path relativePath(std::u8string(pathUtf8, pathUtf8 + texturePath.length));
-			return FindTexturePath(modelDirectory, relativePath);
+			const auto resolved =
+				MaterialTexturePaths::FindTexturePath(modelDirectory, relativePath, options);
+			if (resolved.empty())
+				Log(L"Model::Load - missing texture '{}' in '{}'\n", relativePath.wstring(),
+					modelDirectory.wstring());
+			return resolved;
 		}
 
-		std::filesystem::path FindNamedMaterialTexturePath(
-			const std::filesystem::path& modelDirectory,
-			const std::string& materialName,
-			const std::filesystem::path& baseColorPath,
-			const std::wstring& suffix) {
-			const std::filesystem::path texturesDirectory = modelDirectory / L"Textures";
-			const std::wstring baseColorSuffix = L"_Base_color_1001";
-			std::wstring baseName = baseColorPath.stem().wstring();
-			std::wstring baseNameLower = baseName;
-			std::transform(baseNameLower.begin(), baseNameLower.end(), baseNameLower.begin(), towlower);
-			std::wstring baseSuffixLower = baseColorSuffix;
-			std::transform(baseSuffixLower.begin(), baseSuffixLower.end(), baseSuffixLower.begin(), towlower);
-			const size_t baseColorPosition = baseNameLower.find(baseSuffixLower);
-			if (baseColorPosition != std::wstring::npos) {
-				const auto candidate = texturesDirectory / (baseName.substr(0, baseColorPosition) + suffix);
-				if (std::filesystem::exists(candidate)) {
-					return candidate;
-				}
-			}
-
-			std::string materialNameLower = materialName;
-			std::transform(materialNameLower.begin(), materialNameLower.end(), materialNameLower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-			std::error_code error;
-			for (const auto& entry : std::filesystem::directory_iterator(texturesDirectory, error)) {
-				if (error || !entry.is_regular_file()) {
-					continue;
-				}
-				std::wstring filename = entry.path().filename().wstring();
-				std::wstring filenameLower = filename;
-				std::transform(filenameLower.begin(), filenameLower.end(), filenameLower.begin(), towlower);
-				std::wstring suffixLower = suffix;
-				std::transform(suffixLower.begin(), suffixLower.end(), suffixLower.begin(), towlower);
-				if (filenameLower.size() < suffixLower.size() || filenameLower.substr(filenameLower.size() - suffixLower.size()) != suffixLower) {
-					continue;
-				}
-
-				const std::wstring prefix = filename.substr(0, filename.size() - suffix.size());
-				const std::string prefixUtf8(prefix.begin(), prefix.end());
-				std::string prefixLower = prefixUtf8;
-				std::transform(prefixLower.begin(), prefixLower.end(), prefixLower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-				if (prefixLower == materialNameLower) {
-					return entry.path();
-				}
-			}
-
-			return {};
-		}
-	}
-
-	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice, const std::wstring& filePath) {
-		m_meshes.clear();
+	} // namespace
+	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
+		const std::wstring& filePath, const ModelLoadOptions& options) {
+		for (auto& meshes : m_lodMeshes)
+			meshes.clear();
+		m_lodCount = options.generateLods ? 3u : 1u;
+		m_cullingRadius = 0;
+		m_nodePositions.clear();
+		m_localBounds.reset();
+		m_vertexBuffer.Reset();
+		m_indexBuffer.Reset();
+		m_vertexUpload.Reset();
+		m_indexUpload.Reset();
 		m_fallbackTexture.reset();
 		m_fallbackMetallicTexture.reset();
 		m_fallbackRoughnessTexture.reset();
 		m_fallbackNormalTexture.reset();
 
 		const std::filesystem::path modelPath(filePath);
-		const auto utf8Path = modelPath.u8string();
-		const std::string importerPath(reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size());
-
-		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(importerPath,
-			aiProcess_Triangulate |
-			aiProcess_JoinIdenticalVertices |
-			aiProcess_ImproveCacheLocality |
-			aiProcess_ConvertToLeftHanded |
-			aiProcess_GenSmoothNormals |
-			aiProcess_CalcTangentSpace |
-			aiProcess_PreTransformVertices);
-		if (!scene || !scene->HasMeshes()) {
-			OutputDebugStringA(importer.GetErrorString());
-			OutputDebugStringA("\n");
-			return false;
-		}
-
-		aiVector3D boundsMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-		aiVector3D boundsMax(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-		for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
-			const aiMesh* mesh = scene->mMeshes[meshIndex];
-			for (unsigned int vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex) {
-				const aiVector3D& position = mesh->mVertices[vertexIndex];
-				boundsMin.x = std::min(boundsMin.x, position.x);
-				boundsMin.y = std::min(boundsMin.y, position.y);
-				boundsMin.z = std::min(boundsMin.z, position.z);
-				boundsMax.x = std::max(boundsMax.x, position.x);
-				boundsMax.y = std::max(boundsMax.y, position.y);
-				boundsMax.z = std::max(boundsMax.z, position.z);
-			}
-		}
-
-		const float extent = std::max({ boundsMax.x - boundsMin.x, boundsMax.y - boundsMin.y, boundsMax.z - boundsMin.z });
-		if (extent <= 0.0f) {
-			OutputDebugStringA("Model::Load - model has no valid dimensions\n");
-			return false;
-		}
-		const float scale = 10.0f / extent;
-
-		m_fallbackTexture = std::make_unique<Texture>();
-		if (!m_fallbackTexture->CreateFromSolidColor(device, commandList, 255, 255, 255)) {
-			return false;
-		}
-		m_fallbackMetallicTexture = std::make_unique<Texture>();
-		if (!m_fallbackMetallicTexture->CreateFromSolidColor(device, commandList, 0, 0, 0)) {
-			return false;
-		}
-		m_fallbackRoughnessTexture = std::make_unique<Texture>();
-		if (!m_fallbackRoughnessTexture->CreateFromSolidColor(device, commandList, 255, 255, 255)) {
-			return false;
-		}
-		m_fallbackNormalTexture = std::make_unique<Texture>();
-		if (!m_fallbackNormalTexture->CreateFromSolidColor(device, commandList, 128, 128, 255)) {
-			return false;
-		}
-
-		const std::filesystem::path modelDirectory = modelPath.parent_path();
-		m_meshes.reserve(scene->mNumMeshes);
-		uint64_t totalVertices = 0;
-		uint64_t totalIndices = 0;
-		uint64_t totalVertexBufferBytes = 0;
-		uint64_t totalIndexBufferBytes = 0;
-		for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
-			const aiMesh* sourceMesh = scene->mMeshes[meshIndex];
-			if (!sourceMesh->HasPositions() || !sourceMesh->HasFaces()) {
-				continue;
-			}
-
-			std::vector<ModelVertex> vertices;
-			vertices.reserve(sourceMesh->mNumVertices);
-			for (unsigned int vertexIndex = 0; vertexIndex < sourceMesh->mNumVertices; ++vertexIndex) {
-				const aiVector3D& position = sourceMesh->mVertices[vertexIndex];
-				const aiVector3D texcoord = sourceMesh->HasTextureCoords(0) ? sourceMesh->mTextureCoords[0][vertexIndex] : aiVector3D();
-				const aiVector3D normal = sourceMesh->HasNormals() ? sourceMesh->mNormals[vertexIndex] : aiVector3D(0.0f, 1.0f, 0.0f);
-				const aiVector3D tangent = sourceMesh->HasTangentsAndBitangents() ? sourceMesh->mTangents[vertexIndex] : aiVector3D(1.0f, 0.0f, 0.0f);
-				const aiVector3D bitangent = sourceMesh->HasTangentsAndBitangents() ? sourceMesh->mBitangents[vertexIndex] : aiVector3D(0.0f, 0.0f, 1.0f);
-				const float tangentSign = normal.x * (tangent.y * bitangent.z - tangent.z * bitangent.y)
-					+ normal.y * (tangent.z * bitangent.x - tangent.x * bitangent.z)
-					+ normal.z * (tangent.x * bitangent.y - tangent.y * bitangent.x) < 0.0f ? -1.0f : 1.0f;
-				vertices.push_back({
-					{ (position.x - (boundsMin.x + boundsMax.x) * 0.5f) * scale,
-					  (position.y - boundsMin.y) * scale + 0.1f,
-					  (position.z - (boundsMin.z + boundsMax.z) * 0.5f) * scale },
-					{ texcoord.x, texcoord.y },
-					{ normal.x, normal.y, normal.z },
-					{ tangent.x, tangent.y, tangent.z, tangentSign }
-					});
-			}
-
-			std::vector<uint32_t> indices;
-			indices.reserve(static_cast<size_t>(sourceMesh->mNumFaces) * 3);
-			for (unsigned int faceIndex = 0; faceIndex < sourceMesh->mNumFaces; ++faceIndex) {
-				const aiFace& face = sourceMesh->mFaces[faceIndex];
-				if (face.mNumIndices == 3) {
-					indices.insert(indices.end(), face.mIndices, face.mIndices + 3);
-				}
-			}
-			if (indices.empty() || vertices.size() > UINT_MAX / sizeof(ModelVertex) || indices.size() > UINT_MAX / sizeof(uint32_t)) {
-				continue;
-			}
-
-			Mesh mesh;
-			if (!CreateUploadBuffer(device, vertices.data(), static_cast<UINT>(vertices.size() * sizeof(ModelVertex)), mesh.vertexBuffer) ||
-				!CreateUploadBuffer(device, indices.data(), static_cast<UINT>(indices.size() * sizeof(uint32_t)), mesh.indexBuffer)) {
-				return false;
-			}
-			mesh.vertexBufferView.BufferLocation = mesh.vertexBuffer->GetGPUVirtualAddress();
-			mesh.vertexBufferView.SizeInBytes = static_cast<UINT>(vertices.size() * sizeof(ModelVertex));
-			mesh.vertexBufferView.StrideInBytes = sizeof(ModelVertex);
-			mesh.indexBufferView.BufferLocation = mesh.indexBuffer->GetGPUVirtualAddress();
-			mesh.indexBufferView.SizeInBytes = static_cast<UINT>(indices.size() * sizeof(uint32_t));
-			mesh.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-			mesh.indexCount = static_cast<UINT>(indices.size());
-			totalVertices += vertices.size();
-			totalIndices += indices.size();
-			totalVertexBufferBytes += vertices.size() * sizeof(ModelVertex);
-			totalIndexBufferBytes += indices.size() * sizeof(uint32_t);
-
-			if (sourceMesh->mMaterialIndex < scene->mNumMaterials) {
-				const aiMaterial* material = scene->mMaterials[sourceMesh->mMaterialIndex];
-				aiString materialName;
-				material->Get(AI_MATKEY_NAME, materialName);
-				std::filesystem::path resolvedTexturePath = ResolveMaterialTexture(material, aiTextureType_BASE_COLOR, modelDirectory);
-				if (resolvedTexturePath.empty()) {
-					resolvedTexturePath = ResolveMaterialTexture(material, aiTextureType_DIFFUSE, modelDirectory);
-				}
-				if (resolvedTexturePath.empty()) {
-					resolvedTexturePath = FindNamedMaterialTexturePath(modelDirectory, materialName.C_Str(), {}, L"_Base_color_1001.png");
-				}
-				if (resolvedTexturePath.empty()) {
-					resolvedTexturePath = FindFallbackTexturePath(modelDirectory, materialName.C_Str());
-				}
-				if (!resolvedTexturePath.empty()) {
-					mesh.diffuseTexture = Texture::LoadCached(device, commandList, resolvedTexturePath.wstring(), true, false, false, DXGI_FORMAT_BC3_UNORM_SRGB);
-				}
-
-				std::filesystem::path metallicPath = ResolveMaterialTexture(material, aiTextureType_METALNESS, modelDirectory);
-				if (metallicPath.empty()) {
-					metallicPath = FindNamedMaterialTexturePath(modelDirectory, materialName.C_Str(), resolvedTexturePath, L"_Metallic_1001.png");
-				}
-				if (!metallicPath.empty()) {
-					mesh.metallicTexture = Texture::LoadCached(device, commandList, metallicPath.wstring(), false, false, false, DXGI_FORMAT_BC4_UNORM);
-				}
-
-				std::filesystem::path roughnessPath = ResolveMaterialTexture(material, aiTextureType_DIFFUSE_ROUGHNESS, modelDirectory);
-				if (roughnessPath.empty()) {
-					roughnessPath = FindNamedMaterialTexturePath(modelDirectory, materialName.C_Str(), resolvedTexturePath, L"_Roughness_1001.png");
-				}
-				if (!roughnessPath.empty()) {
-					mesh.roughnessTexture = Texture::LoadCached(device, commandList, roughnessPath.wstring(), false, false, false, DXGI_FORMAT_BC4_UNORM);
-				}
-
-				std::filesystem::path normalPath = ResolveMaterialTexture(material, aiTextureType_NORMALS, modelDirectory);
-				if (normalPath.empty()) {
-					normalPath = FindNamedMaterialTexturePath(modelDirectory, materialName.C_Str(), resolvedTexturePath, L"_Normal_1001.png");
-				}
-				if (normalPath.empty()) {
-					normalPath = FindNamedMaterialTexturePath(modelDirectory, materialName.C_Str(), resolvedTexturePath, L"_Normal_OpenGL_1001.png");
-				}
-				if (!normalPath.empty()) {
-					std::wstring normalFilename = normalPath.filename().wstring();
-					std::transform(normalFilename.begin(), normalFilename.end(), normalFilename.begin(), towlower);
-					const bool invertNormalGreen = normalFilename.find(L"_opengl_") != std::wstring::npos;
-					mesh.normalTexture = Texture::LoadCached(device, commandList, normalPath.wstring(), false, false, invertNormalGreen, DXGI_FORMAT_BC5_UNORM);
-				}
-			}
-
-			auto descriptorHandle = renderDevice->AllocateSrvDescriptor(&mesh.textureSrvIndex);
-			(mesh.diffuseTexture ? mesh.diffuseTexture.get() : m_fallbackTexture.get())->CreateShaderResourceView(device, descriptorHandle);
-			descriptorHandle = renderDevice->AllocateSrvDescriptor();
-			(mesh.metallicTexture ? mesh.metallicTexture.get() : m_fallbackMetallicTexture.get())->CreateShaderResourceView(device, descriptorHandle);
-			descriptorHandle = renderDevice->AllocateSrvDescriptor();
-			(mesh.roughnessTexture ? mesh.roughnessTexture.get() : m_fallbackRoughnessTexture.get())->CreateShaderResourceView(device, descriptorHandle);
-			descriptorHandle = renderDevice->AllocateSrvDescriptor();
-			(mesh.normalTexture ? mesh.normalTexture.get() : m_fallbackNormalTexture.get())->CreateShaderResourceView(device, descriptorHandle);
-			m_meshes.push_back(std::move(mesh));
-		}
-
-		char message[512];
-		sprintf_s(message, sizeof(message),
-			"[Model Memory] Meshes: %zu, Vertices: %llu, Indices: %llu, Vertex Buffers: %.2f MiB, Index Buffers: %.2f MiB, Total: %.2f MiB\n",
-			m_meshes.size(),
-			static_cast<unsigned long long>(totalVertices),
-			static_cast<unsigned long long>(totalIndices),
-			static_cast<double>(totalVertexBufferBytes) / (1024.0 * 1024.0),
-			static_cast<double>(totalIndexBufferBytes) / (1024.0 * 1024.0),
-			static_cast<double>(totalVertexBufferBytes + totalIndexBufferBytes) / (1024.0 * 1024.0));
-		OutputDebugStringA(message);
-
-		return !m_meshes.empty();
+		auto prepared = PrepareModelGeometry(modelPath, options);
+		m_sourceMeshCount = prepared.levels[0].size();
+		if (prepared.levels[0].empty()) return false;
+		m_nodePositions = std::move(prepared.nodePositions);
+		m_localBounds = prepared.bounds;
+		m_cullingRadius = prepared.cullingRadius;
+		StartupTiming timing("model.materials_and_upload");
+		InitializeFallbackTextures(device, commandList);
+		const auto modelDirectory = modelPath.parent_path();
+		return CreateMeshes(prepared, options, modelDirectory, device, commandList, renderDevice);
 	}
 
-	void Model::Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice) const {
-		for (const Mesh& mesh : m_meshes) {
-			commandList->SetGraphicsRootDescriptorTable(0, renderDevice->GetSrvGpuHandle(mesh.textureSrvIndex));
+	bool Model::CreateMeshes(PreparedModelGeometry& prepared, const ModelLoadOptions& options,
+		const std::filesystem::path& modelDirectory, ID3D12Device* device,
+		ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice) {
+		struct Batch {
+			Mesh mesh;
+			std::vector<ModelVertex> vertices;
+			std::vector<uint32_t> indices;
+		};
+		std::array<std::vector<Batch>, 3> batches;
+		std::vector<TextureDescriptorSet> textureDescriptorSets;
+		std::unordered_map<unsigned, Mesh> materials;
+		for (size_t geometryIndex = 0; geometryIndex < prepared.levels[0].size(); ++geometryIndex) {
+			auto& geometry = prepared.levels[0][geometryIndex];
+			const auto materialIndex = geometry.materialIndex;
+			auto [material, inserted] = materials.try_emplace(materialIndex);
+			if (inserted) {
+				if (materialIndex < prepared.materials.size())
+					LoadMaterialTextures(material->second, prepared.materials[materialIndex], modelDirectory,
+						options, device, commandList);
+				AssignMaterialDescriptors(material->second, device, renderDevice, textureDescriptorSets);
+			}
+			for (unsigned lod = 0; lod < m_lodCount; ++lod) {
+				const unsigned level = m_lodCount - 1 - lod;
+				auto& data = prepared.levels[level][geometryIndex];
+				if (data.indices.empty()) continue;
+				auto& list = batches[level];
+				auto batch = list.end();
+				if (options.mergeStaticMeshes && !geometry.isRotatingNode)
+					batch = std::find_if(list.begin(), list.end(), [&](const Batch& item) {
+						return !item.mesh.isRotatingNode &&
+							item.mesh.textureSrvIndex == material->second.textureSrvIndex;
+					});
+				if (batch == list.end()) {
+					Mesh mesh = material->second;
+					mesh.isRotatingNode = geometry.isRotatingNode;
+					mesh.nodeRotationPivot = geometry.nodeRotationPivot;
+					mesh.nodeRotationAxis = geometry.nodeRotationAxis;
+					list.push_back({std::move(mesh), {}, {}});
+					batch = std::prev(list.end());
+				}
+				const auto offset = static_cast<uint32_t>(batch->vertices.size());
+				for (auto index : data.indices)
+					batch->indices.push_back(index + offset);
+				batch->vertices.insert(batch->vertices.end(), data.vertices.begin(), data.vertices.end());
+			}
+			std::vector<ModelVertex>().swap(geometry.vertices);
+			std::vector<uint32_t>().swap(geometry.indices);
+			for (unsigned level = 1; level < m_lodCount; ++level) {
+				std::vector<ModelVertex>().swap(prepared.levels[level][geometryIndex].vertices);
+				std::vector<uint32_t>().swap(prepared.levels[level][geometryIndex].indices);
+			}
+		}
+		std::vector<ModelVertex> vertices;
+		std::vector<uint32_t> indices;
+		size_t vertexCount = 0, indexCount = 0;
+		for (const auto& level : batches)
+			for (const auto& batch : level) {
+				vertexCount += batch.vertices.size();
+				indexCount += batch.indices.size();
+			}
+		if (vertexCount > UINT_MAX / sizeof(ModelVertex) || indexCount > UINT_MAX / sizeof(uint32_t))
+			throw std::runtime_error("Combined model buffers exceed D3D12 view limits");
+		vertices.reserve(vertexCount);
+		indices.reserve(indexCount);
+		for (unsigned level = 0; level < m_lodCount; ++level) {
+			for (auto& batch : batches[level]) {
+				auto& mesh = batch.mesh;
+				mesh.vertexBufferView = {vertices.size() * sizeof(ModelVertex),
+					static_cast<UINT>(batch.vertices.size() * sizeof(ModelVertex)), sizeof(ModelVertex)};
+				mesh.indexBufferView = {indices.size() * sizeof(uint32_t),
+					static_cast<UINT>(batch.indices.size() * sizeof(uint32_t)), DXGI_FORMAT_R32_UINT};
+				mesh.indexCount = static_cast<UINT>(batch.indices.size());
+				vertices.insert(vertices.end(), batch.vertices.begin(), batch.vertices.end());
+				indices.insert(indices.end(), batch.indices.begin(), batch.indices.end());
+				std::vector<ModelVertex>().swap(batch.vertices);
+				std::vector<uint32_t>().swap(batch.indices);
+				m_lodMeshes[level].push_back(std::move(mesh));
+			}
+			if (m_lodMeshes[level].empty() && level > 0) m_lodMeshes[level] = m_lodMeshes[level - 1];
+		}
+		if (!IsLoaded()) return false;
+		UploadGeometry(device, commandList, vertices.data(), vertices.size() * sizeof(ModelVertex),
+			indices.data(), indices.size() * sizeof(uint32_t));
+		Log("Model batches {}, triangles {}/{}/{}\n", GetMeshCount(), GetTriangleCount(0),
+			GetTriangleCount(1), GetTriangleCount(2));
+		return true;
+	}
+
+	size_t Model::CountNodes(std::string_view name) const {
+		const auto found = m_nodePositions.find(std::string(name));
+		return found == m_nodePositions.end() ? 0 : found->second.size();
+	}
+
+	std::optional<DirectX::XMFLOAT3> Model::FindNodePosition(std::string_view name) const {
+		const auto found = m_nodePositions.find(std::string(name));
+		if (found == m_nodePositions.end() || found->second.size() != 1) return std::nullopt;
+		return found->second.front();
+	}
+
+	void Model::AssignMaterialDescriptors(Mesh& mesh, ID3D12Device* device, RenderDevice* renderDevice,
+		std::vector<TextureDescriptorSet>& sets) {
+		const Texture* diffuseTexture =
+			mesh.diffuseTexture ? mesh.diffuseTexture.get() : m_fallbackTexture.get();
+		const Texture* metallicTexture =
+			mesh.metallicTexture ? mesh.metallicTexture.get() : m_fallbackMetallicTexture.get();
+		const Texture* roughnessTexture =
+			mesh.roughnessTexture ? mesh.roughnessTexture.get() : m_fallbackRoughnessTexture.get();
+		const Texture* normalTexture =
+			mesh.normalTexture ? mesh.normalTexture.get() : m_fallbackNormalTexture.get();
+		const auto descriptorSet =
+			std::find_if(sets.begin(), sets.end(), [&](const TextureDescriptorSet& set) {
+				return set.diffuse == diffuseTexture && set.metallic == metallicTexture &&
+					set.roughness == roughnessTexture && set.normal == normalTexture;
+			});
+		if (descriptorSet != sets.end()) {
+			mesh.textureSrvIndex = descriptorSet->srvIndex;
+		} else {
+			auto descriptorHandle = renderDevice->AllocateSrvDescriptor(&mesh.textureSrvIndex);
+			diffuseTexture->CreateShaderResourceView(device, descriptorHandle);
+			descriptorHandle = renderDevice->AllocateSrvDescriptor();
+			metallicTexture->CreateShaderResourceView(device, descriptorHandle);
+			descriptorHandle = renderDevice->AllocateSrvDescriptor();
+			roughnessTexture->CreateShaderResourceView(device, descriptorHandle);
+			descriptorHandle = renderDevice->AllocateSrvDescriptor();
+			normalTexture->CreateShaderResourceView(device, descriptorHandle);
+			sets.push_back(
+				{diffuseTexture, metallicTexture, roughnessTexture, normalTexture, mesh.textureSrvIndex});
+		}
+	}
+
+	void Model::UploadGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* commandList,
+		const void* vertices, size_t vertexBytes, const void* indices, size_t indexBytes) {
+		m_vertexBuffer = CreateStaticBuffer(device, commandList, vertices, vertexBytes,
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_vertexUpload);
+		m_indexBuffer = CreateStaticBuffer(
+			device, commandList, indices, indexBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
+		for (auto& meshes : m_lodMeshes)
+			for (auto& mesh : meshes) {
+				mesh.vertexBufferView.BufferLocation += m_vertexBuffer->GetGPUVirtualAddress();
+				mesh.indexBufferView.BufferLocation += m_indexBuffer->GetGPUVirtualAddress();
+			}
+	}
+
+	void Model::InitializeFallbackTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commands) {
+		m_fallbackTexture = std::make_unique<Texture>();
+		if (!m_fallbackTexture->CreateFromSolidColor(device, commands, 255, 255, 255)) {
+			throw std::runtime_error("Failed to initialize fallback material texture.");
+		}
+
+		m_fallbackMetallicTexture = std::make_unique<Texture>();
+		if (!m_fallbackMetallicTexture->CreateFromSolidColor(device, commands, 0, 0, 0)) {
+			throw std::runtime_error("Failed to initialize fallback material texture.");
+		}
+
+		m_fallbackRoughnessTexture = std::make_unique<Texture>();
+		if (!m_fallbackRoughnessTexture->CreateFromSolidColor(device, commands, 255, 255, 255)) {
+			throw std::runtime_error("Failed to initialize fallback material texture.");
+		}
+
+		m_fallbackNormalTexture = std::make_unique<Texture>();
+		if (!m_fallbackNormalTexture->CreateFromSolidColor(device, commands, 128, 128, 255)) {
+			throw std::runtime_error("Failed to initialize fallback material texture.");
+		}
+	}
+
+	void Model::LoadMaterialTextures(Mesh& mesh, const PreparedMaterial& source,
+		const std::filesystem::path& modelDirectory, const ModelLoadOptions& options, ID3D12Device* device,
+		ID3D12GraphicsCommandList* commandList) {
+		aiMaterial materialData;
+		const aiString sourceName(source.name);
+		materialData.AddProperty(&sourceName, AI_MATKEY_NAME);
+		constexpr aiTextureType types[] = {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE,
+			aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_NORMALS};
+		for (size_t type = 0; type < std::size(types); ++type) {
+			if (source.textures[type].empty()) continue;
+			const aiString path(source.textures[type]);
+			materialData.AddProperty(&path, AI_MATKEY_TEXTURE(types[type], 0));
+		}
+		const aiMaterial* material = &materialData;
+		aiString materialName;
+		material->Get(AI_MATKEY_NAME, materialName);
+		std::filesystem::path resolvedTexturePath =
+			ResolveMaterialTexture(material, aiTextureType_BASE_COLOR, modelDirectory, options);
+		if (resolvedTexturePath.empty()) {
+			resolvedTexturePath =
+				ResolveMaterialTexture(material, aiTextureType_DIFFUSE, modelDirectory, options);
+		}
+
+		if (resolvedTexturePath.empty()) {
+			resolvedTexturePath = MaterialTexturePaths::FindNamedMaterialTexturePath(
+				modelDirectory, materialName.C_Str(), {}, options.baseColorSuffix, options);
+		}
+
+		if (resolvedTexturePath.empty()) {
+			resolvedTexturePath =
+				MaterialTexturePaths::FindFallbackTexturePath(modelDirectory, materialName.C_Str(), options);
+		}
+
+		if (!resolvedTexturePath.empty()) {
+			mesh.diffuseTexture = Texture::LoadCached(device, commandList, resolvedTexturePath.wstring(),
+				{.useSrgb = true,
+					.generateMipmaps = true,
+					.invertNormalGreen = false,
+					.targetFormat = DXGI_FORMAT_BC3_UNORM_SRGB,
+					.maxDimension = options.maxTextureDimension});
+		}
+
+		const auto loadScalarMap = [&](aiTextureType type, const std::wstring& suffix, DXGI_FORMAT format) {
+			auto path = ResolveMaterialTexture(material, type, modelDirectory, options);
+			if (path.empty())
+				path = MaterialTexturePaths::FindNamedMaterialTexturePath(
+					modelDirectory, materialName.C_Str(), resolvedTexturePath, suffix, options);
+			if (path.empty()) return std::shared_ptr<Texture>{};
+			return Texture::LoadCached(device, commandList, path.wstring(),
+				{.useSrgb = false,
+					.generateMipmaps = true,
+					.targetFormat = format,
+					.maxDimension = options.maxTextureDimension});
+		};
+		mesh.metallicTexture =
+			loadScalarMap(aiTextureType_METALNESS, options.metallicSuffix, DXGI_FORMAT_BC4_UNORM);
+		mesh.roughnessTexture =
+			loadScalarMap(aiTextureType_DIFFUSE_ROUGHNESS, options.roughnessSuffix, DXGI_FORMAT_BC4_UNORM);
+
+		std::filesystem::path normalPath =
+			ResolveMaterialTexture(material, aiTextureType_NORMALS, modelDirectory, options);
+		if (normalPath.empty()) {
+			normalPath = MaterialTexturePaths::FindNamedMaterialTexturePath(
+				modelDirectory, materialName.C_Str(), resolvedTexturePath, options.normalSuffix, options);
+		}
+
+		if (normalPath.empty()) {
+			normalPath = MaterialTexturePaths::FindNamedMaterialTexturePath(modelDirectory,
+				materialName.C_Str(), resolvedTexturePath, options.openGlNormalSuffix, options);
+		}
+
+		if (!normalPath.empty()) {
+			std::wstring normalFilename = normalPath.filename().wstring();
+			std::transform(normalFilename.begin(), normalFilename.end(), normalFilename.begin(), towlower);
+			const bool invertNormalGreen = !options.openGlMarker.empty() &&
+				normalFilename.find(options.openGlMarker) != std::wstring::npos;
+			mesh.normalTexture = Texture::LoadCached(device, commandList, normalPath.wstring(),
+				{.useSrgb = false,
+					.generateMipmaps = true,
+					.invertNormalGreen = invertNormalGreen,
+					.targetFormat = DXGI_FORMAT_BC5_UNORM,
+					.maxDimension = options.maxTextureDimension});
+		}
+	}
+
+	void Model::Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
+		float nodeRotationAngle, unsigned lod) const {
+		struct NodeRotationConstants {
+			float angle;
+			DirectX::XMFLOAT3 pivot;
+			DirectX::XMFLOAT3 axis;
+			UINT enabled;
+		};
+		static_assert(sizeof(NodeRotationConstants) == RootBinding::NodeRotationDwords * sizeof(UINT));
+
+		for (const Mesh& mesh : m_lodMeshes[std::min(lod, m_lodCount - 1)]) {
+			const NodeRotationConstants nodeRotationConstants = {nodeRotationAngle, mesh.nodeRotationPivot,
+				mesh.nodeRotationAxis, mesh.isRotatingNode ? 1u : 0u};
+			commandList->SetGraphicsRoot32BitConstants(
+				RootBinding::NodeRotation, RootBinding::NodeRotationDwords, &nodeRotationConstants, 0);
+			commandList->SetGraphicsRootDescriptorTable(
+				RootBinding::TextureTable, renderDevice->GetSrvGpuHandle(mesh.textureSrvIndex));
 			commandList->IASetVertexBuffers(0, 1, &mesh.vertexBufferView);
 			commandList->IASetIndexBuffer(&mesh.indexBufferView);
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -339,32 +339,41 @@ namespace Engine {
 	}
 
 	void Model::ReleaseUploadResources() {
+		m_vertexUpload.Reset();
+		m_indexUpload.Reset();
 		if (m_fallbackTexture) {
 			m_fallbackTexture->ReleaseUploadResources();
 		}
+
 		if (m_fallbackMetallicTexture) {
 			m_fallbackMetallicTexture->ReleaseUploadResources();
 		}
+
 		if (m_fallbackRoughnessTexture) {
 			m_fallbackRoughnessTexture->ReleaseUploadResources();
 		}
+
 		if (m_fallbackNormalTexture) {
 			m_fallbackNormalTexture->ReleaseUploadResources();
 		}
 
-		for (Mesh& mesh : m_meshes) {
-			if (mesh.diffuseTexture) {
-				mesh.diffuseTexture->ReleaseUploadResources();
+		for (auto& meshes : m_lodMeshes)
+			for (Mesh& mesh : meshes) {
+				if (mesh.diffuseTexture) {
+					mesh.diffuseTexture->ReleaseUploadResources();
+				}
+
+				if (mesh.metallicTexture) {
+					mesh.metallicTexture->ReleaseUploadResources();
+				}
+
+				if (mesh.roughnessTexture) {
+					mesh.roughnessTexture->ReleaseUploadResources();
+				}
+
+				if (mesh.normalTexture) {
+					mesh.normalTexture->ReleaseUploadResources();
+				}
 			}
-			if (mesh.metallicTexture) {
-				mesh.metallicTexture->ReleaseUploadResources();
-			}
-			if (mesh.roughnessTexture) {
-				mesh.roughnessTexture->ReleaseUploadResources();
-			}
-			if (mesh.normalTexture) {
-				mesh.normalTexture->ReleaseUploadResources();
-			}
-		}
 	}
-}
+} // namespace Engine

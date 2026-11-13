@@ -49,7 +49,8 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 T = SafeNormalize(input.tangent.xyz - N * dot(input.tangent.xyz, N));
     float3 B = SafeNormalize(cross(N, T)) * input.tangent.w;
     float2 tangentNormalXY = gNormal.Sample(gSampler, input.texcoord).rg * 2.0f - 1.0f;
-    float3 tangentNormal = float3(tangentNormalXY, sqrt(saturate(1.0f - dot(tangentNormalXY, tangentNormalXY))));
+    float3 tangentNormal =
+        float3(tangentNormalXY, sqrt(saturate(1.0f - dot(tangentNormalXY, tangentNormalXY))));
     N = SafeNormalize(T * tangentNormal.x + B * tangentNormal.y + N * tangentNormal.z);
 
     float3 L = SafeNormalize(lighting.sunDirection);
@@ -68,11 +69,11 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float3 diffuseWeight = (1.0f - F) * (1.0f - metallic);
     float3 diffuse = diffuseWeight * albedo.rgb / 3.14159265f;
     float3 directLighting = (diffuse + specular) * GetSunRadiance(lighting) * NdotL;
-    float3 ambientLighting = lerp(albedo.rgb, F0, metallic) * GetAmbientRadiance(lighting) * 1.5f;
-    float3 color = (directLighting + ambientLighting) * 1.35f;
+    float3 ambientLighting = lerp(albedo.rgb, F0, metallic) * GetAmbientRadiance(lighting) * 1.8f;
+    float3 color = (directLighting + ambientLighting) * 1.5f;
 
-    // Lift the aircraft's dark material without changing the sky or ocean exposure.
-    color = pow(saturate(color), 0.82f);
+    // 空や海の露出を変えずに、機体マテリアルの暗部を持ち上げる
+    color = pow(saturate(color), 0.76f);
 
     return float4(color, albedo.a);
 }

@@ -1,0 +1,17 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 1
+  },
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "敵機４機の撃墜を確認。よくやった！",
+      "audio": "../Sound/敵機４機の撃墜を確認。よくやった！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 3.6
+    }
+  ]
+}

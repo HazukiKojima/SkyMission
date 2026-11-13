@@ -1,0 +1,87 @@
+#pragma once
+#include "Game/Settings/GameplaySettings.h"
+#include "Engine/Camera/Camera.h"
+#include <DirectXMath.h>
+#include <optional>
+#include "Engine/Input/RawInputState.h"
+
+namespace Game {
+	// 追従先の位置・向き・速度（ワールド単位/秒）
+	struct AircraftCameraTarget {
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT3 heading;
+		DirectX::XMFLOAT3 forward;
+		bool pitchInputActive;
+		float speed;
+		float maximumSpeed;
+	};
+
+	class AircraftCameraController {
+	  public:
+		static constexpr float DefaultFovY = DirectX::XM_PI / 3.0f; // 縦視野角60度
+		void Configure(const CameraSettings& settings) {
+			m_settings = settings;
+		}
+		AircraftCameraController() = default;
+		~AircraftCameraController() = default;
+
+		// 射影と初期視点を設定する（fovYはラジアン、nearZ・farZはワールド単位）
+		void Initialize(
+			float fovY = DefaultFovY, float aspect = 16.0f / 9.0f, float nearZ = 0.1f, float farZ = 1000.0f);
+
+		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
+		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
+		void SetFollowTarget(const AircraftCameraTarget& target);
+		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す。
+		void SetLookTarget(std::optional<DirectX::XMFLOAT3> target, bool automatic = false) {
+			m_lookTarget = target;
+			m_automaticLook = automatic && target.has_value();
+		}
+		// 初回と暗転中の切替に使い、追従開始時の補間移動を画面に出さない
+		void SnapToFollowTarget();
+
+		// レンダーターゲットのサイズが変わったときに通知する
+		void OnResize(UINT width, UINT height);
+
+		const Engine::Camera& GetCamera() const {
+			return m_camera;
+		}
+		DirectX::XMMATRIX GetView() const {
+			return m_camera.GetView();
+		}
+		DirectX::XMFLOAT3 GetPosition() const {
+			return m_position;
+		}
+
+	  private:
+		void UpdateView();
+		void UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input);
+		void UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input);
+		void UpdateFollowOrientation(float deltaSeconds, bool snap = false);
+		void UpdateFollowPosition(float deltaSeconds, bool snap = false);
+
+		DirectX::XMFLOAT3 m_position = {0.0f, 10.0f, -10.0f};
+		float m_yaw = 0.0f;	   // ラジアン
+		float m_pitch = -0.4f; // ラジアン
+		bool m_following = false;
+		DirectX::XMFLOAT3 m_followTarget = {0.0f, 0.0f, 0.0f};
+		DirectX::XMFLOAT3 m_followHeading = {0.0f, 0.0f, -1.0f};
+		DirectX::XMFLOAT3 m_followForward = {0.0f, 0.0f, -1.0f};
+		bool m_followPitchInputActive = false;
+		float m_followSpeed = 60.0f;
+		float m_followMaximumSpeed = 800.0f;
+		float m_followCameraYaw = 0.0f;
+		float m_followCameraPitch = 0.0f;
+		float m_lookYaw = 0, m_lookPitch = 0;
+		std::optional<DirectX::XMFLOAT3> m_lookTarget;
+		bool m_automaticLook = false;
+		float m_baseFovY = DefaultFovY;
+		float m_zoomScale = 1;
+		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
+		DirectX::XMFLOAT3 m_followViewDirection = {0.0f, 0.0f, -1.0f};
+		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする
+
+		CameraSettings m_settings;
+		Engine::Camera m_camera;
+	};
+} // namespace Game

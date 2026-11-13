@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -19,37 +19,76 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Core\Application.cpp" />
-    <ClCompile Include="Engine\Core\Camera.cpp" />
-    <ClCompile Include="Engine\Core\Scene.cpp" />
-    <ClCompile Include="Engine\Core\SceneLoader.cpp" />
-    <ClCompile Include="Engine\Core\Window.cpp" />
+    <ClCompile Include="Engine\Precompiled.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClInclude Include="Engine\Precompiled.h" />
+    <ClInclude Include="Engine\Renderer\Device\RenderVisibility.h" />
+    <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h" />
+    <None Include="Engine\Renderer\Shader\OceanFog.hlsli" />
+    <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
+    <ClCompile Include="Game\Aircraft\AircraftAIController.cpp" />
+    <ClCompile Include="Game\Audio\CombatAudio.cpp" />
+    <ClCompile Include="Game\Application\Application.cpp" />
+    <ClCompile Include="Game\Aircraft\AircraftController.cpp" />
+    <ClCompile Include="Engine\Camera\Camera.cpp" />
+    <ClCompile Include="Engine\Scene\Scene.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneLoader.cpp" />
+    <ClCompile Include="Engine\Window\Window.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererConstantBuffers.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\OceanGeometry.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererPipelines.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererAssets.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererFrameUpdater.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RendererPasses.cpp" />
     <ClCompile Include="Engine\Renderer\Device\Renderer.cpp" />
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
-    <ClCompile Include="Engine\Resources\AssetPathResolver.cpp" />
-    <ClCompile Include="Engine\Resources\Mesh\Model.cpp" />
+    <ClCompile Include="Engine\Resources\JsonAssetReader.cpp" />
+    <ClCompile Include="Engine\Resources\Mesh\Model.cpp">
+      <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
+      <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp" />
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Core\Application.h" />
-    <ClInclude Include="Engine\Core\Camera.h" />
-    <ClInclude Include="Engine\Core\Scene.h" />
-    <ClInclude Include="Engine\Core\SceneLoader.h" />
-    <ClInclude Include="Engine\Core\Window.h" />
+    <ClInclude Include="Game\Aircraft\AircraftAIController.h" />
+    <ClInclude Include="Game\Application\Application.h" />
+    <ClInclude Include="Game\Aircraft\AircraftController.h" />
+    <ClInclude Include="Game\Aircraft\AircraftFlightParameters.h" />
+    <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h" />
+    <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h" />
+    <ClInclude Include="Engine\Scene\OceanParameters.h" />
+    <ClInclude Include="Game\Aircraft\AircraftFlightModel.h" />
+    <ClInclude Include="Engine\Camera\Camera.h" />
+    <ClInclude Include="Engine\Scene\Scene.h" />
+    <ClInclude Include="Game\Scene\FlightSceneLoader.h" />
+    <ClInclude Include="Engine\Scene\SkyParameters.h" />
+    <ClInclude Include="Engine\Renderer\RetroFilmParameters.h" />
+    <ClInclude Include="Engine\Window\Window.h" />
     <ClInclude Include="Engine\Renderer\Device\CommandContext.h" />
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererConstantBuffers.h" />
+    <ClInclude Include="Engine\Renderer\Device\OceanGeometry.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererPipelines.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererAssets.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererFrameUpdater.h" />
+    <ClInclude Include="Engine\Renderer\Device\RendererPasses.h" />
     <ClInclude Include="Engine\Renderer\Device\Renderer.h" />
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h" />
-    <ClInclude Include="Engine\Resources\AssetPathResolver.h" />
+    <ClInclude Include="Engine\Resources\JsonAssetReader.h" />
     <ClInclude Include="Engine\Resources\Mesh\Model.h" />
     <ClInclude Include="Engine\Resources\Mesh\SkySphere.h" />
     <ClInclude Include="Engine\Resources\Texture\Texture.h" />
+  </ItemGroup>
+  <ItemGroup>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Engine\Renderer\Shader\BasicPS.hlsl">
@@ -84,6 +123,24 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmPS.hlsl">
+      <DisableOptimizations>false</DisableOptimizations>
+      <AdditionalOptions>/O3 %(AdditionalOptions)</AdditionalOptions>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\RetroFilmVS.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\ModelPS.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -101,6 +158,8 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\OceanPS.hlsl">
+      <DisableOptimizations>false</DisableOptimizations>
+      <AdditionalOptions>/O3 %(AdditionalOptions)</AdditionalOptions>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -109,6 +168,8 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Engine\Renderer\Shader\OceanVS.hlsl">
+      <DisableOptimizations>false</DisableOptimizations>
+      <AdditionalOptions>/O3 %(AdditionalOptions)</AdditionalOptions>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
@@ -134,8 +195,18 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\Aircraft\aircraft.json" />
+    <None Include="Assets\Aircraft\F4U4Corsair\aiParameters.json" />
+    <None Include="Assets\Aircraft\F4U4Corsair\F4U4Corsair.json" />
+    <None Include="Assets\Aircraft\F4U4Corsair\flightParameters.json" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\flightParameters.json" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\N1K2JShidenKai.json" />
+    <None Include="Assets\Environment\environment.json" />
+    <None Include="Assets\Environment\Ocean\Ocean.json" />
+    <None Include="Assets\Environment\Sky\sky.json" />
     <None Include="Engine\Renderer\Shader\Common.hlsli" />
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli" />
+    <None Include="Assets\Environment\retroFilm.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
@@ -161,7 +232,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -190,18 +261,19 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IntDir>$(OutDir)</IntDir>
+    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IntDir>$(SolutionDir)x64\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -215,11 +287,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -233,9 +306,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -248,21 +322,15 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
-      <PostBuildEvent>
-        <Command>set DOTNET_CLI_UI_LANGUAGE=en
-      dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
-      if errorlevel 1 exit /b %errorlevel%
-      copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
-      if errorlevel 1 exit /b %errorlevel%</Command>
-      </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -275,13 +343,19 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
-      <PostBuildEvent>
-        <Command>set DOTNET_CLI_UI_LANGUAGE=en
-      dotnet publish "$(SolutionDir)External\REDoxWrapper\REDoxWrapper.csproj" -c $(Configuration) -r win-x64
-      if errorlevel 1 exit /b %errorlevel%
-      copy /Y "$(SolutionDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll" "$(OutDir)REDoxWrapper.dll"
-      if errorlevel 1 exit /b %errorlevel%</Command>
-      </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>Engine/Precompiled.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)SkyMission.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles>Engine/Precompiled.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/MP2 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <FxCompile>
+      <AdditionalOptions>/WX %(AdditionalOptions)</AdditionalOptions>
+    </FxCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -290,10 +364,263 @@
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
-      <ErrorText>このプロジェクトは、このコンピューターに存在しない NuGet パッケージを参照しています。NuGet パッケージを復元してからビルドしてください。詳細については、https://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイル: {0}</ErrorText>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Restore the NuGet packages before building the project. For more information, see https://go.microsoft.com/fwlink/?LinkID=322105. The missing file is: {0}
+</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets'))" />
     <Error Condition="!Exists('packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />
   </Target>
-</Project>
+  <ItemGroup>
+    <REDoxWrapperPublishInput Include="$(MSBuildProjectFullPath)" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedAircraftAIParameters.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedAircraftFlightParameters.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedOceanParameters.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\Generated\GeneratedSkyParameters.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxApi.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\NumericParameterLayout.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\ParsedJsonDocument.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)External\REDoxWrapper\REDoxWrapper.csproj" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)global.json" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\Program.cs" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Game\Aircraft\AircraftFlightParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Game\Aircraft\AircraftAIController.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Engine\Scene\OceanParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Engine\Scene\SkyParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Directory.Build.props" Condition="Exists('$(ProjectDir)Directory.Build.props')" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Directory.Build.targets" Condition="Exists('$(ProjectDir)Directory.Build.targets')" />
+  </ItemGroup>
+  <PropertyGroup>
+    <REDoxWrapperPublishDll>$(ProjectDir)External\REDoxWrapper\bin\$(Configuration)\net10.0\win-x64\publish\REDoxWrapper.dll</REDoxWrapperPublishDll>
+    <REDoxWrapperPublishStamp>$(ProjectDir)External\REDoxWrapper\obj\native-publish\$(Configuration)\win-x64.stamp</REDoxWrapperPublishStamp>
+  </PropertyGroup>
+  <Target Name="PublishREDoxWrapper" BeforeTargets="ClCompile" Condition="'$(Platform)' == 'x64'" Inputs="@(REDoxWrapperPublishInput)" Outputs="$(REDoxWrapperPublishStamp);$(REDoxWrapperPublishDll)">
+    <Exec Command="set DOTNET_CLI_UI_LANGUAGE=en&#xD;&#xA;dotnet publish &quot;$(ProjectDir)External\REDoxWrapper\REDoxWrapper.csproj&quot; -c $(Configuration) -r win-x64" />
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(REDoxWrapperPublishStamp)'))" />
+    <Touch Files="$(REDoxWrapperPublishStamp)" AlwaysCreate="true" />
+  </Target>
+  <Target Name="CopyREDoxWrapper" AfterTargets="Build" Condition="'$(Platform)' == 'x64'">
+    <Copy SourceFiles="$(REDoxWrapperPublishDll)" DestinationFiles="$(OutDir)REDoxWrapper.dll" SkipUnchangedFiles="true" />
+  </Target>
 
+  <ItemGroup>
+    <ClInclude Include="Engine\Log.h" />
+    <ClInclude Include="Engine\ExecutablePath.h" />
+    <ClInclude Include="Game\Aircraft\ValidateFlightParameters.h" />
+    <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h" />
+    <ClInclude Include="Engine\Resources\Mesh\ModelLoadOptions.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Resources\Mesh\MaterialTexturePaths.cpp" />
+    <ClInclude Include="Engine\Resources\Mesh\MaterialTexturePaths.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Aircraft\F4U4Corsair\modelImport.json" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\modelImport.json" />
+    <None Include="Tests\RegressionTests.cpp" />
+    <None Include="Tests\RunRegressionTests.ps1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Input\RawInputState.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="Game\Scene\FlightScene.h" />
+    <ClCompile Include="Game\Scene\FlightScene.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneMission.cpp" />
+    <ClInclude Include="Game\Combat\MissionState.h" />
+    <ClInclude Include="Game\Weapons\BombFlight.h" />
+    <ClInclude Include="Tests\MissionTests.h" />
+    <None Include="Assets\Combat\mission.json" />
+    <ClInclude Include="Game\Camera\AircraftCameraController.h" />
+    <ClCompile Include="Game\Camera\AircraftCameraController.cpp" />
+    <ClInclude Include="Engine\Renderer\RendererDefinition.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Renderer\RootBindings.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\WeaponController.h" />
+    <ClInclude Include="Game\Weapons\WeaponDefinition.h" />
+    <ClInclude Include="Game\Weapons\AircraftGun.h" />
+    <ClInclude Include="Game\Weapons\ProjectileSystem.h" />
+    <ClInclude Include="Game\Audio\CombatAudio.h" />
+    <ClCompile Include="Game\Weapons\AircraftGun.cpp" />
+    <ClCompile Include="Game\Weapons\ProjectileSystem.cpp" />
+    <None Include="Assets\Aircraft\N1K2JShidenKai\weapon.json" />
+    <None Include="Assets\Ammunition\20mmAmmo\ammunition.json" />
+    <None Include="Assets\Ammunition\20mmAmmo\modelImport.json" />
+    <None Include="Docs\Design\PlayerAircraftGun.md" />
+    <ClInclude Include="Tests\WeaponTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Scene\Bounds3.h" />
+    <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h" />
+    <ClInclude Include="Engine\Renderer\Hud\HudFont.h" />
+    <ClCompile Include="Engine\Renderer\Hud\HudDrawList.cpp" />
+    <ClInclude Include="Engine\Renderer\Hud\HudRenderer.h" />
+    <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp" />
+    <ClInclude Include="Game\Combat\CombatTypes.h" />
+    <ClInclude Include="Game\Combat\CombatController.h" />
+    <ClInclude Include="Game\Combat\EnemyGunBehavior.h" />
+    <ClInclude Include="Game\Combat\GunAimSolver.h" />
+    <ClCompile Include="Game\Combat\GunAimSolver.cpp" />
+    <ClInclude Include="Game\Combat\TargetingSystem.h" />
+    <ClCompile Include="Game\Combat\TargetingSystem.cpp" />
+    <ClInclude Include="Game\Combat\ProjectileCollision.h" />
+    <ClCompile Include="Game\Combat\ProjectileCollision.cpp" />
+    <ClInclude Include="Game\Combat\CombatSettingsLoader.h" />
+    <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp" />
+    <ClInclude Include="Game\UI\CombatHudPresenter.h" />
+    <ClInclude Include="Game\UI\HudStyle.h" />
+    <ClInclude Include="Game\UI\RadarMapPresenter.h" />
+    <ClCompile Include="Game\UI\RadarMapPresenter.cpp" />
+    <ClCompile Include="Game\UI\CombatHudPresenter.cpp" />
+    <None Include="Assets\Combat\targeting.json" />
+    <None Include="Assets\UI\combatHud.json" />
+    <None Include="Docs\Design\TargetLockCombatHud.md" />
+    <FxCompile Include="Engine\Renderer\Shader\HudVS.hlsl"><ShaderType>Vertex</ShaderType><ShaderModel>5.0</ShaderModel><EntryPointName>VS</EntryPointName></FxCompile>
+    <FxCompile Include="Engine\Renderer\Shader\HudPS.hlsl"><ShaderType>Pixel</ShaderType><ShaderModel>5.0</ShaderModel><EntryPointName>PS</EntryPointName></FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\CombatTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Effects\CombatEffectSettings.h" />
+    <ClInclude Include="Game\Effects\CombatEffectTypes.h" />
+    <ClInclude Include="Game\Effects\CombatEffectSystem.h" />
+    <ClCompile Include="Game\Effects\CombatEffectSystem.cpp" />
+    <ClInclude Include="Game\Effects\EffectDrawContext.h" />
+    <ClCompile Include="Game\Effects\EffectDrawContext.cpp" />
+    <ClInclude Include="Game\Effects\CombatEffectPresenter.h" />
+    <ClCompile Include="Game\Effects\CombatEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\ExplosionEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\ImpactEffectPresenter.cpp" />
+    <ClInclude Include="Game\UI\HudProjection.h" />
+    <ClCompile Include="Game\UI\HudProjection.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\CombatEffectTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Effects\GunEffectPresenter.cpp" />
+    <ClInclude Include="Game\Weapons\GunShotEvent.h" />
+    <ClInclude Include="Tests\GunEffectTests.h" />
+    <None Include="Docs\Design\GunFireEffects.md" />
+    <None Include="Assets\Ammunition\Rocket\ammunition.json" />
+    <None Include="Assets\Ammunition\Rocket\modelImport.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="global.json" />
+    <None Include="Assets\Sound\プレイヤーミサイル発射音.mp3" />
+    <None Include="Assets\Sound\プレイヤーミサイル被弾.mp3" />
+    <None Include="Assets\Sound\プレイヤー機関銃発射音(5秒間).mp3" />
+    <None Include="Assets\Sound\プレイヤー機関銃被弾.mp3" />
+    <None Include="Assets\Sound\プレイヤー飛行音(50秒).mp3" />
+    <None Include="Assets\Sound\敵戦艦爆発.mp3" />
+    <None Include="Assets\Sound\敵航空機爆発.mp3" />
+    <ClInclude Include="Tests\EnvironmentSettingsTests.h"></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\BombSystem.h" />
+    <ClInclude Include="Game\Weapons\BombDefinition.h" />
+    <ClInclude Include="Tests\BombTests.h" />
+    <ClCompile Include="Game\Weapons\BombSystem.cpp" />
+    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\DeckSmokePresenter.cpp" />
+    <None Include="Assets\Ammunition\Bomb\ammunition.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Scene\FlightMission.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneRestart.cpp" />
+    <!-- Keep CPU-heavy model preparation fast in Debug, retaining symbols and the debug CRT. -->
+    <ClCompile Include="Engine\Resources\Mesh\ModelGeometry.cpp">
+      <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
+      <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\ModelGeometryCache.cpp">
+      <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
+      <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClInclude Include="Engine\Resources\Mesh\ModelGeometryCache.h" />
+    <ClInclude Include="Engine\StartupTiming.h" />
+    <ClCompile Include="Engine\Resources\Mesh\ModelLod.cpp">
+      <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
+      <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Engine\Resources\Mesh\ModelImporter.cpp" />
+    <ClInclude Include="Game\Scene\FlightMission.h" />
+    <ClInclude Include="Engine\Resources\Mesh\ModelGeometry.h" />
+    <ClInclude Include="Engine\Resources\Mesh\ModelImporter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Combat\CombatSnapshotBuilder.cpp" />
+    <ClInclude Include="Game\Combat\CombatSnapshotBuilder.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Weapons\CarrierMissileSystem.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\CarrierMissileSystem.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Game\Weapons\ProjectilePose.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Scene\CloudSettings.cpp" />
+    <ClInclude Include="Engine\Scene\CloudSettings.h" />
+    <ClCompile Include="Game\Scene\CloudSettingsLoader.cpp" />
+    <ClInclude Include="Game\Scene\CloudSettingsLoader.h" />
+    <None Include="Assets\Environment\Clouds.json" />
+    <None Include="Engine\Renderer\Shader\VolumetricClouds.hlsli" />
+    <None Include="Engine\Renderer\Shader\CloudCommon.hlsli" />
+    <None Include="Engine\Renderer\Shader\CloudComposite.hlsli" />
+    <None Include="Engine\Renderer\Shader\CirrusClouds.hlsli" />
+    <FxCompile Include="Engine\Renderer\Shader\CloudPS.hlsl">
+      <ShaderType>Pixel</ShaderType>
+      <ShaderModel>5.0</ShaderModel>
+      <EntryPointName>PS</EntryPointName>
+      <DisableOptimizations>false</DisableOptimizations>
+      <AdditionalOptions>/O3 %(AdditionalOptions)</AdditionalOptions>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Game\Cinematics\CinematicSettings.cpp" />
+    <ClCompile Include="Game\Cinematics\CinematicController.cpp" />
+    <ClCompile Include="Game\Cinematics\CinematicScene.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneCinematic.cpp" />
+    <ClCompile Include="Game\UI\CinematicPresenter.cpp" />
+    <ClInclude Include="Game\Cinematics\CinematicSettings.h" />
+    <ClInclude Include="Game\Cinematics\CinematicTypes.h" />
+    <ClInclude Include="Game\Cinematics\CinematicController.h" />
+    <ClInclude Include="Game\Cinematics\CinematicScene.h" />
+    <ClInclude Include="Game\UI\CinematicPresenter.h" />
+    <ClInclude Include="Game\UI\RadioCaptionPresenter.h" />
+    <ClInclude Include="Game\Combat\EnemyRadio.h" />
+    <ClInclude Include="Tests\CinematicTests.h" />
+    <ClInclude Include="Game\Combat\EnemyEngagementProfile.h" />
+    <ClInclude Include="Tests\CinematicVisualTests.h" />
+    <None Include="Assets\Cinematics\opening.json" />
+    <None Include="Assets\Cinematics\cinematics.json" />
+    <None Include="Assets\Cinematics\midMission.json" />
+    <None Include="Assets\Cinematics\ending.json" />
+    <None Include="Assets\Cinematics\defeat.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Tests\GameplaySettingsTests.h" />
+    <ClInclude Include="Game\Settings\SettingsReader.h" />
+    <ClInclude Include="Game\Settings\GameplaySettings.h" />
+    <ClInclude Include="Game\Settings\UiTextSettings.h" />
+    <None Include="Assets\Camera\aircraftCamera.json" />
+    <None Include="Assets\Effects\combatEffects.json" />
+    <None Include="Assets\Combat\enemyWeapon.json" />
+    <None Include="Assets\Sound\audio.json" />
+    <None Include="Assets\UI\labels.json" />
+  </ItemGroup>
+</Project>

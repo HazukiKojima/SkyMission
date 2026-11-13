@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.14</RuntimeFrameworkVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <PublishAot>true</PublishAot>
+    <NativeLib>Shared</NativeLib>
+    <OptimizationPreference>Speed</OptimizationPreference>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CAPCOM.REDox" Version="1.0.3" />
+    <Compile Include="BenchmarkGc.cs" />
+    <Compile Include="../../../../External/REDoxWrapper/REDoxApi.cs" />
+    <Compile Include="../../../../External/REDoxWrapper/NumericParameterLayout.cs" />
+    <Compile Include="../../../../External/REDoxWrapper/ParsedJsonDocument.cs" />
+    <Compile Include="../../../../External/REDoxWrapper/Generated/*.cs" />
+  </ItemGroup>
+</Project>

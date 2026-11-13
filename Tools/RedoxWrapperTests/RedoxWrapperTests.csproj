@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CAPCOM.REDox" Version="1.0.3" />
+    <Compile Include="Program.cs" />
+    <Compile Include="../../External/REDoxWrapper/REDoxApi.cs" />
+    <Compile Include="../../External/REDoxWrapper/NumericParameterLayout.cs" />
+    <Compile Include="../../External/REDoxWrapper/ParsedJsonDocument.cs" />
+    <Compile Include="../../External/REDoxWrapper/Generated/*.cs" />
+  </ItemGroup>
+</Project>

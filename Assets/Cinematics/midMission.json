@@ -1,0 +1,41 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 0
+  },
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "次は敵母艦だ。爆撃で敵機の発進を阻止せよ！",
+      "audio": "../Sound/次は敵母艦だ。爆撃で敵機の発進を阻止せよ！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 4.6
+    }
+  ],
+  "title": "敵空母",
+  "subtitle": "CARRIER ATTACK",
+  "shots": [
+    {
+      "target": "carrier",
+      "durationSeconds": 3,
+      "cameraStartOffsetMeters": [
+        -0.75,
+        0.45,
+        1.6
+      ],
+      "cameraEndOffsetMeters": [
+        -0.55,
+        0.45,
+        1.6
+      ],
+      "lookAtOffsetMeters": [
+        0,
+        0,
+        0
+      ],
+      "verticalFovDegrees": 55
+    }
+  ]
+}

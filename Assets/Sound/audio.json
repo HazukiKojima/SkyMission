@@ -1,0 +1,22 @@
+{
+  "flightVolume": 0.18,
+  "gunVolume": 0.42,
+  "battleBgmVolume": 0.35,
+  "launchVolume": 0.65,
+  "gunHitVolume": 0.65,
+  "missileHitVolume": 0.75,
+  "aircraftVolume": 0.65,
+  "shipVolume": 0.75,
+  "hitVolume": 0.32,
+  "warningVolume": 0.45,
+  "missileWarningIntervalSeconds": 0.22,
+  "lockWarningIntervalSeconds": 0.65,
+  "flightFile": "プレイヤー飛行音(50秒).mp3",
+  "gunFile": "プレイヤー機関銃発射音(5秒間).mp3",
+  "launchFile": "プレイヤーミサイル発射音.mp3",
+  "gunHitFile": "プレイヤー機関銃被弾.mp3",
+  "missileHitFile": "プレイヤーミサイル被弾.mp3",
+  "aircraftFile": "敵航空機爆発.mp3",
+  "shipFile": "敵戦艦爆発.mp3",
+  "battleBgmFile": "BattleBGM.mp3"
+}

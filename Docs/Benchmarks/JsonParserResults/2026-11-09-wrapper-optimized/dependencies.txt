@@ -1,0 +1,6 @@
+CAPCOM.REDox=1.0.3
+REDox.dll SHA256=0FDA0FDEF825D66FEE93F0BD5B09E02A10275C563BC8CFB60C0AC134D8C06256
+RE:DOX package/core unchanged
+.NET Native AOT runtime=10.0.14
+nlohmann/json=3.12.0
+Optimized implementation=External/REDoxWrapper/REDoxApi.cs + NumericParameterLayout.cs + ParsedJsonDocument.cs

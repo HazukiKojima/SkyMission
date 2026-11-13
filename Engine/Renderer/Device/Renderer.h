@@ -1,81 +1,80 @@
+#pragma once
 #include "../../EngineCommon.h"
-#include "../../Resources/Buffer/VertexBuffer.h"
-#include "../../Resources/Mesh/Model.h"
-#include "../../Resources/Mesh/SkySphere.h"
-#include "../Pipeline/GraphicsPipeline.h"
-#include "../../Resources/Texture/Texture.h"
+#include "../RetroFilmParameters.h"
 #include "../Device/RenderDevice.h"
 #include "../Device/CommandContext.h"
-#include <vector>
+#include "RendererConstantBuffers.h"
+#include "OceanGeometry.h"
+#include "RendererPipelines.h"
+#include "RendererAssets.h"
+#include "RendererFrameUpdater.h"
+#include "RendererPasses.h"
+#include "GpuFrameProfiler.h"
+#include "Engine/Renderer/Hud/HudRenderer.h"
 
 namespace Engine {
 	class Scene;
-	struct SceneAssetPaths;
+	struct RendererDefinition;
 
 	class Renderer {
-	public:
+	  public:
 		Renderer() = default;
-		~Renderer();
+		~Renderer() noexcept;
 
-		void Initialize(HWND hwnd, UINT width, UINT height, const SceneAssetPaths& assets);
+		// 初期化・設定
+		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
 		void InitializeConstantBuffers(const Scene& scene);
-		void Update(const Scene& scene, float elapsedTime);
-		void Render(UINT width, UINT height, const Scene& scene);
+		void ReserveModelCapacity(size_t objectCount);
+
+		// フレーム更新・描画
+		RenderView UpdateFrameConstants(const Scene& scene, float elapsedTime);
+		void Render(UINT width, UINT height, const Scene& scene, const HudDrawList* hud = nullptr);
 		void Resize(UINT width, UINT height);
-		float GetOceanSize() const { return m_oceanSize; }
-		std::shared_ptr<Engine::Model> GetModel() const { return m_model; }
 
-	private:
-		struct ModelConstantBuffer {
-			Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-			UINT8* mappedData = nullptr;
-		};
+		// 状態・アセットの取得
+		const GpuFrameTimings& GetGpuTimings() const {
+			return m_gpuProfiler.Latest();
+		}
+		const RenderStatistics& GetRenderStatistics() const {
+			return m_statistics;
+		}
+		size_t GetModelCapacity() const {
+			return m_constantBuffers.GetModelCapacity();
+		}
+		float GetOceanSize() const {
+			return m_frameUpdater.GetOceanSize();
+		}
+		const std::wstring& GetAdapterName() const {
+			return m_device->GetAdapterName();
+		}
+		std::shared_ptr<Model> GetModel(std::string_view id) const {
+			return m_assets.GetModel(id);
+		}
 
-		void EnsureModelConstantBufferCapacity(size_t objectCount);
+	  private:
+		void RecordScenePass(const Scene& scene);
+		void RecordRetroFilmPass();
 
 		std::unique_ptr<RenderDevice> m_device;
 		std::unique_ptr<CommandContext> m_context;
 
-		std::unique_ptr<Engine::VertexBuffer> m_vertexBuffer;
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
-		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-		UINT m_indexCount;
-		std::unique_ptr<Engine::GraphicsPipeline> m_pipeline;
-		std::unique_ptr<Engine::GraphicsPipeline> m_oceanPipeline;
-		std::unique_ptr<Engine::GraphicsPipeline> m_skyPipeline;
-		std::unique_ptr<Engine::GraphicsPipeline> m_oceanFogPipeline;
-		std::unique_ptr<Engine::GraphicsPipeline> m_modelPipeline;
+		// 描画リソースとフレーム更新
+		OceanGeometry m_oceanGeometry;
+		RendererPipelines m_pipelines;
+		RendererAssets m_assets;
+		RendererFrameUpdater m_frameUpdater;
+		RendererConstantBuffers m_constantBuffers;
 
-		std::shared_ptr<Engine::Texture> m_texture;
-		UINT m_textureSrvIndex = 0;
-		std::shared_ptr<Engine::Texture> m_oceanNormalTexture;
-		UINT m_oceanNormalTextureSrvIndex = 0;
-		std::shared_ptr<Engine::Texture> m_oceanNormalTexture2;
-		UINT m_oceanNormalTexture2SrvIndex = 0;
+		// 描画パスと計測
+		SkyRenderPass m_skyPass;
+		OceanRenderPass m_oceanPass;
+		ModelRenderPass m_modelPass;
+		GpuFrameProfiler m_gpuProfiler;
+		RenderStatistics m_statistics;
+		RetroFilmRenderPass m_retroFilmPass;
+		CloudRenderPass m_cloudPass;
+		HudRenderer m_hudRenderer;
 
-		std::shared_ptr<Engine::Texture> m_skyTexture;
-		UINT m_skyTextureSrvIndex = 0;
-
-		// 定数バッファ
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBuffer;
-		UINT8* m_cbvDataPtr = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_oceanFogConstantBuffer;
-		UINT8* m_oceanFogCbvDataPtr = nullptr;
-		std::vector<ModelConstantBuffer> m_modelConstantBuffers[RenderDevice::FrameCount];
-
-		UINT m_vertexCount;
-		float m_oceanSize = 10000000.0f;
-		float m_oceanWaveLength = 40000.0f;
-		float m_oceanWaveSteepness = 0.0005f;
-		float m_oceanNormalUvScale = 0.04f;
-		float m_oceanWavePatternUvScale = 0.04f;
-		float m_oceanFogStartDistance = 6500000.0f;
-		float m_oceanFogEndDistance = 10000000.0f;
-		float m_oceanEdgeFadeStart = 0.98f;
-		float m_oceanEdgeFadeWidth = 0.015f;
-
-		// Sky Sphere
-		std::unique_ptr<Engine::SkySphere> m_skySphere;
-		std::shared_ptr<Engine::Model> m_model;
+		RetroFilmParameters m_retroFilmParameters{};
 	};
-}
+} // namespace Engine

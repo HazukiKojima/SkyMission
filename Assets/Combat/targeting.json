@@ -1,0 +1,20 @@
+{
+  "selectionDistance": 22000,
+  "acquireDistance": 10000,
+  "acquireAngleDegrees": 25,
+  "acquireSeconds": 1,
+  "maintainDistance": 12000,
+  "maintainAngleDegrees": 35,
+  "lossGraceSeconds": 0.15,
+  "assistAngleDegrees": 3,
+  "enemyHealth": 120,
+  "bulletDamage": 10,
+  "playerHealth": 100,
+  "feedback": {
+    "playerHitSeconds": 0.7,
+    "hitSeconds": 0.15,
+    "destroyedSeconds": 0.8,
+    "enemyFireWarningSeconds": 1,
+    "allDownSeconds": 3
+  }
+}

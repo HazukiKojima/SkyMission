@@ -1,0 +1,16 @@
+{
+    "propellerName": "",
+    "textureDirectory": "Textures",
+    "baseColorStemSuffix": "_Albedo",
+    "baseColorSuffix": "_Albedo.png",
+    "metallicSuffix": "_Metallic.png",
+    "roughnessSuffix": "_Roughness.png",
+    "normalSuffix": "_Normal.png",
+    "openGlNormalSuffix": "",
+    "openGlMarker": "",
+    "fallbackMaterialToken": "",
+    "matchingFallbackTexture": "",
+    "defaultFallbackTexture": "20mm_Albedo.png",
+    "normalizedExtent": 20.0,
+    "groundOffset": 0.0
+}

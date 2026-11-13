@@ -1,0 +1,40 @@
+#pragma once
+#include "Engine/Renderer/RendererDefinition.h"
+#include <array>
+#include <cmath>
+#include <stdexcept>
+#include <unordered_set>
+
+namespace Game {
+	// 4門共通の発射設定。時間は秒、muzzleSpeedはワールド単位/秒
+	struct GunSettings {
+		std::array<std::string, 4> muzzleNames;
+		float fireInterval = 0.1f;
+		float muzzleSpeed = 900.0f;
+		float lifetime = 3.0f;
+		size_t maxProjectiles = 128;
+	};
+
+	// 数値の正値・有限性、最低4発の容量、銃口名の非空・重複なしを検証する
+	// モデル内にその名前のノードが存在するかはAircraftGun::Configureで検証する
+	inline void ValidateGunSettings(const GunSettings& settings) {
+		for (const auto& [name, value] : {std::pair{"fireInterval", settings.fireInterval},
+				 std::pair{"muzzleSpeed", settings.muzzleSpeed}, std::pair{"lifetime", settings.lifetime}}) {
+			if (!std::isfinite(value) || value <= 0)
+				throw std::invalid_argument(std::string(name) + " must be positive and finite");
+		}
+		if (settings.maxProjectiles < 4) throw std::invalid_argument("maxProjectiles must be at least 4");
+		std::unordered_set<std::string> names;
+		for (const auto& name : settings.muzzleNames)
+			if (name.empty() || !names.insert(name).second)
+				throw std::invalid_argument("muzzleNames must contain four unique nonempty names");
+	}
+
+	struct WeaponDefinition {
+		GunSettings gun;
+		Engine::ModelAssetDefinition ammunition;
+		// Assimpの座標変換後のモデル前方軸
+		DirectX::XMFLOAT3 modelForward{0, 1, 0};
+		std::filesystem::path sourcePath;
+	};
+} // namespace Game

@@ -1,0 +1,13 @@
+{
+    "enabled": 1,
+    "bottom": 4300,
+    "top": 13000,
+    "coverage": 0.18,
+    "density": 0.0015,
+    "scale": 3200,
+    "wind": [18, 7],
+    "maxDistance": 40000,
+    "steps": 48,
+    "seed": 1945
+}
+

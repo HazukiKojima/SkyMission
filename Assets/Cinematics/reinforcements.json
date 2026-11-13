@@ -1,0 +1,65 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 0.4
+  },
+  "model": "enemy",
+  "formationOffsets": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      -1,
+      0,
+      -1
+    ],
+    [
+      1,
+      0,
+      -1
+    ],
+    [
+      0,
+      0.35,
+      -2
+    ]
+  ],
+  "title": "敵増援編隊",
+  "subtitle": "敵機接近",
+  "shots": [
+    {
+      "durationSeconds": 9.25,
+      "cameraStartOffsetMeters": [
+        240,
+        100,
+        480
+      ],
+      "cameraEndOffsetMeters": [
+        150,
+        80,
+        400
+      ]
+    }
+  ],
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "待て、新たな敵機を確認！４機、接近中だ！",
+      "audio": "../Sound/待て、新たな敵機を確認！４機、接近中だ！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 4.2
+    },
+    {
+      "speaker": "敵編隊長",
+      "side": "enemy",
+      "text": "よくも俺たちの母艦を……！必ず叩き落とせ！",
+      "audio": "../Sound/You’ll pay for what you did to our carrier…! Bring him down—no matter what!.wav",
+      "startSeconds": 4.35,
+      "durationSeconds": 4.8
+    }
+  ]
+}

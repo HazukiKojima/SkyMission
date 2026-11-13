@@ -1,0 +1,435 @@
+#include "FlightSceneLoader.h"
+#include "CloudSettingsLoader.h"
+#include "Game/Aircraft/ValidateFlightParameters.h"
+#include "Engine/Interop/Redox/JsonParametersLoader.h"
+#include "Engine/Resources/JsonAssetReader.h"
+#include "Engine/Scene/OceanParameters.h"
+#include "Engine/Scene/SkyParameters.h"
+#include "External/REDoxWrapper/Generated/AircraftAIParametersLayout.h"
+#include "External/REDoxWrapper/Generated/OceanParametersLayout.h"
+#include "External/REDoxWrapper/Generated/SkyParametersLayout.h"
+#include <cmath>
+#include <stdexcept>
+#include <limits>
+#include "Game/Combat/CombatSettingsLoader.h"
+
+namespace Game {
+	using namespace Engine;
+	namespace {
+
+		ModelLoadOptions LoadModelOptions(
+			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
+			const auto path = reader.Resolve(aircraftPath, "modelImport");
+			const auto wide = [&](const char* key) {
+				const auto value = reader.ResolveString(path, key);
+				return std::filesystem::path(
+					std::u8string(reinterpret_cast<const char8_t*>(value.data()), value.size()))
+					.wstring();
+			};
+			ModelLoadOptions options{.rotatingNodeName = reader.ResolveString(path, "propellerName"),
+				.textureDirectory = wide("textureDirectory"),
+				.baseColorStemSuffix = wide("baseColorStemSuffix"),
+				.baseColorSuffix = wide("baseColorSuffix"),
+				.metallicSuffix = wide("metallicSuffix"),
+				.roughnessSuffix = wide("roughnessSuffix"),
+				.normalSuffix = wide("normalSuffix"),
+				.openGlNormalSuffix = wide("openGlNormalSuffix"),
+				.openGlMarker = wide("openGlMarker"),
+				.fallbackMaterialToken = reader.ResolveString(path, "fallbackMaterialToken"),
+				.matchingFallbackTexture = wide("matchingFallbackTexture"),
+				.defaultFallbackTexture = wide("defaultFallbackTexture"),
+				.normalizedExtent = reader.ResolveFloat(path, "normalizedExtent"),
+				.groundOffset = reader.ResolveFloat(path, "groundOffset")};
+			if (!std::isfinite(options.normalizedExtent) || options.normalizedExtent <= 0.0f)
+				throw std::runtime_error("normalizedExtent must be positive and finite");
+			if (!std::isfinite(options.groundOffset)) throw std::runtime_error("groundOffset must be finite");
+			return options;
+		}
+
+		AircraftDefinition LoadAircraftDefinition(const JsonAssetReader& reader,
+			const JsonParametersLoader& loader, const std::filesystem::path& path) {
+			AircraftDefinition aircraft{.model = reader.Resolve(path, "model"),
+				.visualScale = reader.ResolveFloat(path, "visualScale"),
+				.flightParameters = loader.Load<AircraftFlightParameters>(
+					reader.Resolve(path, "flightParameters"), "MyRedoxGetAircraftFlightParameters"),
+				.modelImport = LoadModelOptions(reader, path)};
+			if (!std::isfinite(aircraft.visualScale) || aircraft.visualScale <= 0)
+				throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
+			aircraft.animation.Load(reader, path);
+			ValidateFlightParameters(aircraft.flightParameters);
+			return aircraft;
+		}
+
+		DirectX::XMFLOAT3 LoadModelForward(const JsonAssetReader& reader, const std::filesystem::path& path) {
+			const auto axis = reader.ResolveString(path, "modelForward");
+			if (axis == "+X") return {1, 0, 0};
+			if (axis == "-X") return {-1, 0, 0};
+			if (axis == "+Y") return {0, 1, 0};
+			if (axis == "-Y") return {0, -1, 0};
+			if (axis == "+Z") return {0, 0, 1};
+			if (axis == "-Z") return {0, 0, -1};
+			throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
+		}
+
+		WeaponDefinition LoadWeapon(
+			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
+			const auto weaponPath = reader.Resolve(aircraftPath, "weapon");
+			const auto pathText = [](const std::filesystem::path& path) {
+				const auto text = path.u8string();
+				return std::string(reinterpret_cast<const char*>(text.data()), text.size());
+			};
+			WeaponDefinition definition;
+			definition.sourcePath = weaponPath;
+			try {
+				const char* muzzleKeys[] = {"muzzleL1", "muzzleL2", "muzzleR1", "muzzleR2"};
+				for (size_t i = 0; i < 4; ++i)
+					definition.gun.muzzleNames[i] = reader.ResolveString(weaponPath, muzzleKeys[i]);
+				definition.gun.fireInterval = reader.ResolveFloat(weaponPath, "fireInterval");
+				definition.gun.muzzleSpeed = reader.ResolveFloat(weaponPath, "muzzleSpeed");
+				definition.gun.lifetime = reader.ResolveFloat(weaponPath, "lifetime");
+				const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
+				if (!std::isfinite(capacity) || capacity < 4 || std::floor(capacity) != capacity ||
+					capacity > static_cast<float>(std::numeric_limits<int>::max() / 2))
+					throw std::invalid_argument(
+						"maxProjectiles must be an integer of at least 4 within supported range");
+				definition.gun.maxProjectiles = static_cast<size_t>(capacity);
+				ValidateGunSettings(definition.gun);
+			} catch (const std::exception& error) {
+				throw std::runtime_error(pathText(weaponPath) + ": " + error.what());
+			}
+			const auto ammoPath = reader.Resolve(weaponPath, "ammunition");
+			try {
+				definition.ammunition = {
+					AmmunitionModelId, reader.Resolve(ammoPath, "model"), LoadModelOptions(reader, ammoPath)};
+				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
+				definition.modelForward = LoadModelForward(reader, ammoPath);
+			} catch (const std::exception& error) {
+				throw std::runtime_error(pathText(ammoPath) + ": " + error.what());
+			}
+			return definition;
+		}
+
+		BombDefinition LoadBomb(const JsonAssetReader& reader, const std::filesystem::path& path) {
+			try {
+				BombDefinition definition;
+				definition.missile.Load(
+					reader, reader.Resolve(path, "model").parent_path() / L"ammunition.json");
+				definition.ammunition = {
+					BombModelId, reader.Resolve(path, "model"), LoadModelOptions(reader, path)};
+				definition.ammunition.options.origin = ModelOrigin::BoundsCenter;
+				definition.modelForward = LoadModelForward(reader, path);
+				return definition;
+			} catch (const std::exception& error) {
+				throw std::runtime_error(path.string() + ": " + error.what());
+			}
+		}
+		std::map<std::string, CinematicSettings> LoadCinematics(
+			const JsonAssetReader& reader, const std::filesystem::path& directory) {
+			const auto manifest = directory / L"cinematics.json";
+			if (!std::filesystem::exists(manifest))
+				return {{"opening", LoadCinematicSettings(reader, directory / L"opening.json")}};
+			std::map<std::string, CinematicSettings> result;
+			for (const auto* id : {"opening", "midMission", "reinforcements", "ending", "defeat", "patrolEncouragement", "patrolComplete", "carrierHit", "carrierComplete", "finalRally", "finalEncouragement"}) {
+				if (reader.TryResolveString(manifest, id)) {
+					const auto path = reader.Resolve(manifest, id);
+					if (!std::filesystem::is_regular_file(path))
+						throw std::runtime_error(
+							manifest.string() + ": missing cinematic '" + id + "': " + path.string());
+					result.emplace(id, LoadCinematicSettings(reader, path));
+				}
+			}
+			return result;
+		}
+
+		void ValidateAIParameters(const AircraftAIParameters& parameters) {
+			for (const float value : {parameters.cruiseSpeed, parameters.attackSpeed, parameters.escapeSpeed,
+					 parameters.reengageDistance, parameters.attackRunSeconds,
+					 parameters.separationLookAheadSeconds, parameters.tailDistance, parameters.flankDistance,
+					 parameters.pursuitPredictionSeconds, parameters.maximumDisengageSeconds,
+					 parameters.repositionSeconds})
+				if (!std::isfinite(value) || value <= 0)
+					throw std::runtime_error("Invalid enemy attack-run parameter");
+			if (parameters.attackSpeed >= parameters.cruiseSpeed ||
+				parameters.cruiseSpeed >= parameters.escapeSpeed ||
+				parameters.disengageDistance >= parameters.tailDistance ||
+				parameters.tailDistance >= parameters.reengageDistance ||
+				parameters.reengageDistance >= parameters.attackDistance)
+				throw std::runtime_error("Invalid enemy speed/distance ordering");
+			if (!std::isfinite(parameters.reactionSeconds) || parameters.reactionSeconds <= 0)
+				throw std::runtime_error("reactionSeconds must be positive and finite");
+			if (!std::isfinite(parameters.maneuverSeconds) || parameters.maneuverSeconds <= 0)
+				throw std::runtime_error("maneuverSeconds must be positive and finite");
+			if (!std::isfinite(parameters.disengageDistance) || parameters.disengageDistance <= 0)
+				throw std::runtime_error("disengageDistance must be positive and finite");
+			if (!std::isfinite(parameters.threatDistance) || parameters.threatDistance <= 0)
+				throw std::runtime_error("threatDistance must be positive and finite");
+			if (!std::isfinite(parameters.attackDistance) || parameters.attackDistance <= 0)
+				throw std::runtime_error("attackDistance must be positive and finite");
+			if (!std::isfinite(parameters.aimAngleDegrees) || parameters.aimAngleDegrees <= 0)
+				throw std::runtime_error("aimAngleDegrees must be positive and finite");
+			if (!std::isfinite(parameters.aimHoldSeconds) || parameters.aimHoldSeconds <= 0)
+				throw std::runtime_error("aimHoldSeconds must be positive and finite");
+			if (!std::isfinite(parameters.openingGraceSeconds) || parameters.openingGraceSeconds <= 0)
+				throw std::runtime_error("openingGraceSeconds must be positive and finite");
+			if (!std::isfinite(parameters.aimErrorDegrees) || parameters.aimErrorDegrees <= 0)
+				throw std::runtime_error("aimErrorDegrees must be positive and finite");
+			if (parameters.aimAngleDegrees > 45 || parameters.aimErrorDegrees > parameters.aimAngleDegrees ||
+				parameters.disengageDistance >= parameters.attackDistance)
+				throw std::runtime_error("Invalid enemy aim or distance ranges");
+			if (!std::isfinite(parameters.directionChangeSeconds) ||
+				parameters.directionChangeSeconds <= 0.0f ||
+				!std::isfinite(parameters.altitudeChangeSeconds) ||
+				parameters.altitudeChangeSeconds <= 0.0f || !std::isfinite(parameters.lowAltitude) ||
+				parameters.lowAltitude < 0.0f || !std::isfinite(parameters.highAltitude) ||
+				parameters.highAltitude <= parameters.lowAltitude ||
+				!std::isfinite(parameters.pitchLookAheadDistance) ||
+				parameters.pitchLookAheadDistance <= 0.0f || !std::isfinite(parameters.turnGain) ||
+				parameters.turnGain <= 0.0f || !std::isfinite(parameters.pitchGain) ||
+				parameters.pitchGain <= 0.0f || !std::isfinite(parameters.speedMatchGain) ||
+				parameters.speedMatchGain <= 0.0f ||
+				!std::isfinite(parameters.highGManeuverIntervalSeconds) ||
+				parameters.highGManeuverIntervalSeconds <= 0.0f ||
+				!std::isfinite(parameters.highGManeuverDurationSeconds) ||
+				parameters.highGManeuverDurationSeconds <= 0.0f ||
+				parameters.highGManeuverDurationSeconds > parameters.highGManeuverIntervalSeconds) {
+				throw std::runtime_error("Enemy aircraft AI parameters are outside their valid ranges.");
+			}
+		}
+
+		AircraftAIParameters LoadAIParameters(const JsonAssetReader& reader,
+			const JsonParametersLoader& loader, const std::filesystem::path& aircraftPath) {
+			const auto path = reader.Resolve(aircraftPath, "aiParameters");
+			const auto parameters = loader.Load<AircraftAIParameters>(path, "MyRedoxGetAircraftAIParameters");
+			ValidateAIParameters(parameters);
+			return parameters;
+		}
+
+		void RequireEnvironment(
+			const std::filesystem::path& path, const std::string& field, bool valid, const char* reason) {
+			if (valid) return;
+			const auto text = path.u8string();
+			throw std::runtime_error("JSON '" +
+				std::string(reinterpret_cast<const char*>(text.data()), text.size()) + "', field '" + field +
+				"': " + reason);
+		}
+
+		void ValidateOceanSettings(const OceanSettings& ocean, const std::filesystem::path& path) {
+			// 不正値をGPUへ渡さず、CPUの波高計算とシェーダーで同じ条件を保証する
+			for (const auto& [field, value] :
+				{std::pair{"size", ocean.size}, std::pair{"waveLength", ocean.waveLength},
+					std::pair{"normalUvScale", ocean.normalUvScale},
+					std::pair{"wavePatternUvScale", ocean.wavePatternUvScale},
+					std::pair{"edgeFadeWidth", ocean.edgeFadeWidth}, std::pair{"fogTop", ocean.fogTop}})
+				RequireEnvironment(
+					path, field, std::isfinite(value) && value > 0, "must be positive and finite");
+			for (const auto& [field, value] : {std::pair{"waveSteepness", ocean.waveSteepness},
+					 std::pair{"fogStartDistance", ocean.fogStartDistance},
+					 std::pair{"fogDensity", ocean.fogDensity},
+					 std::pair{"edgeFadeStart", ocean.edgeFadeStart}})
+				RequireEnvironment(
+					path, field, std::isfinite(value) && value >= 0, "must be nonnegative and finite");
+			RequireEnvironment(path, "fogEndDistance",
+				std::isfinite(ocean.fogEndDistance) && ocean.fogEndDistance > ocean.fogStartDistance,
+				"must be finite and greater than fogStartDistance");
+			RequireEnvironment(path, "edgeFadeStart", ocean.edgeFadeStart < 1, "must be less than 1");
+			RequireEnvironment(path, "edgeFadeWidth", ocean.edgeFadeWidth <= 1, "must be at most 1");
+		}
+
+		void ValidateSkySettings(const SkySettings& sky, const std::filesystem::path& path) {
+			RequireEnvironment(
+				path, "radius", std::isfinite(sky.radius) && sky.radius > 0, "must be positive and finite");
+			for (const auto& [field, value] : {std::pair{"sunIntensity", sky.sunIntensity},
+					 std::pair{"ambientIntensity", sky.ambientIntensity}})
+				RequireEnvironment(
+					path, field, std::isfinite(value) && value >= 0, "must be nonnegative and finite");
+			for (const auto& [field, value] :
+				{std::pair{"sunColor", sky.sunColor}, std::pair{"ambientColor", sky.ambientColor}})
+				RequireEnvironment(path, field,
+					std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z) &&
+						value.x >= 0 && value.y >= 0 && value.z >= 0,
+					"must contain three nonnegative finite components");
+			const auto& direction = sky.sunDirection;
+			const double lengthSquared = double(direction.x) * direction.x +
+				double(direction.y) * direction.y + double(direction.z) * direction.z;
+			RequireEnvironment(path, "sunDirection", std::isfinite(lengthSquared) && lengthSquared > 1e-12,
+				"must be finite and nonzero");
+		}
+
+		RenderEnvironmentDefinition LoadEnvironment(const SceneSourcePaths& paths,
+			const JsonAssetReader& reader, const JsonParametersLoader& parametersLoader) {
+			const auto skyJsonPath = reader.Resolve(paths.environment, "sky");
+			const auto oceanJsonPath = reader.Resolve(paths.environment, "ocean");
+
+			const OceanParameters oceanParameters =
+				parametersLoader.Load<OceanParameters>(oceanJsonPath, "MyRedoxGetOceanParameters");
+			const SkyParameters skyParameters =
+				parametersLoader.Load<SkyParameters>(skyJsonPath, "MyRedoxGetSkyParameters");
+			const RetroFilmParameters retroFilmParameters =
+				parametersLoader.Load<RetroFilmParameters>(paths.retroFilm, "MyRedoxGetRetroFilmParameters");
+			const OceanSettings ocean = {.size = oceanParameters.size,
+				.waveLength = oceanParameters.waveLength,
+				.waveSteepness = oceanParameters.waveSteepness,
+				.normalUvScale = oceanParameters.normalUvScale,
+				.wavePatternUvScale = oceanParameters.wavePatternUvScale,
+				.fogStartDistance = oceanParameters.fogStartDistance,
+				.fogEndDistance = oceanParameters.fogEndDistance,
+				.edgeFadeStart = oceanParameters.edgeFadeStart,
+				.edgeFadeWidth = oceanParameters.edgeFadeWidth,
+				.fogTop = reader.ResolveFloat(oceanJsonPath, "fogTop"),
+				.fogDensity = reader.ResolveFloat(oceanJsonPath, "fogDensity")};
+			ValidateOceanSettings(ocean, oceanJsonPath);
+			const SkySettings sky = {.radius = skyParameters.radius,
+				.sunDirection = {skyParameters.sunDirection[0], skyParameters.sunDirection[1],
+					skyParameters.sunDirection[2]},
+				.sunIntensity = skyParameters.sunIntensity,
+				.sunColor = {skyParameters.sunColor[0], skyParameters.sunColor[1], skyParameters.sunColor[2]},
+				.ambientIntensity = skyParameters.ambientIntensity,
+				.ambientColor = {skyParameters.ambientColor[0], skyParameters.ambientColor[1],
+					skyParameters.ambientColor[2]}};
+
+			ValidateSkySettings(sky, skyJsonPath);
+
+			return {reader.Resolve(skyJsonPath, "texture"), reader.Resolve(oceanJsonPath, "texture"),
+				reader.Resolve(oceanJsonPath, "normal"), reader.Resolve(oceanJsonPath, "normal2"), ocean, sky,
+				retroFilmParameters,
+				LoadCloudSettings(reader, paths.environment.parent_path() / L"Clouds.json")};
+		}
+	} // namespace
+	DirectX::XMFLOAT4X4 ShipDefinition::BuildTransform() const {
+		using namespace DirectX;
+		XMFLOAT4X4 transform;
+		XMStoreFloat4x4(&transform,
+			XMMatrixScaling(size, size, size) *
+				XMMatrixRotationRollPitchYaw(XMConvertToRadians(rotationDegrees.x),
+					XMConvertToRadians(rotationDegrees.y), XMConvertToRadians(rotationDegrees.z)) *
+				XMMatrixTranslation(position.x, position.y + waterlineOffset, position.z));
+		return transform;
+	}
+
+	std::vector<ShipDefinition> LoadShipDefinitions(
+		const JsonAssetReader& reader, const std::filesystem::path& path) {
+		try {
+			const float count = reader.ResolveFloat(path, "shipCount");
+			if (!std::isfinite(count) || count < 0 || count > 1024 || std::floor(count) != count)
+				throw std::runtime_error("shipCount must be an integer in [0,1024]");
+			const float textureLimit = reader.ResolveFloat(path, "maxTextureDimension");
+			if (!std::isfinite(textureLimit) || textureLimit < 4 || textureLimit > 16384 ||
+				std::floor(textureLimit) != textureLimit)
+				throw std::runtime_error("maxTextureDimension must be an integer in [4,16384]");
+			std::vector<ShipDefinition> ships;
+			for (int i = 1; i <= static_cast<int>(count); ++i) {
+				const auto prefix = "ship" + std::to_string(i);
+				const auto vector = [&](const char* suffix) {
+					const auto key = prefix + suffix;
+					const auto values = reader.ResolveFloatArray(path, key);
+					if (values.size() != 3 || !std::isfinite(values[0]) || !std::isfinite(values[1]) ||
+						!std::isfinite(values[2]))
+						throw std::runtime_error(key + " must contain three finite numbers");
+					return DirectX::XMFLOAT3{values[0], values[1], values[2]};
+				};
+				ShipDefinition ship;
+				ship.asset.id = prefix;
+				ship.asset.file = reader.Resolve(path, prefix + "Model");
+				ship.asset.options.normalizedExtent = 1;
+				ship.asset.options.groundOffset = 0;
+				ship.asset.options.maxTextureDimension = static_cast<unsigned>(textureLimit);
+				ship.asset.options.generateLods = true;
+				ship.position = vector("Position");
+				ship.rotationDegrees = vector("RotationDegrees");
+				ship.size = reader.ResolveFloat(path, prefix + "Size");
+				ship.waterlineOffset = reader.ResolveFloat(path, prefix + "WaterlineOffset");
+				if (!std::isfinite(ship.size) || ship.size <= 0)
+					throw std::runtime_error(prefix + "Size must be positive and finite");
+				if (!std::isfinite(ship.waterlineOffset))
+					throw std::runtime_error(prefix + "WaterlineOffset must be finite");
+				const auto transform = ship.BuildTransform();
+				for (const auto& row : transform.m)
+					for (float value : row)
+						if (!std::isfinite(value))
+							throw std::runtime_error(prefix + " transform exceeds finite range");
+				ships.push_back(std::move(ship));
+			}
+			return ships;
+		} catch (const std::exception& error) {
+			throw std::runtime_error(path.string() + ": " + error.what());
+		}
+	}
+	FlightSceneDefinition FlightSceneLoader::Load(const SceneSourcePaths& paths) const {
+		JsonDocumentCache documents;
+		JsonAssetReader reader(documents);
+		JsonParametersLoader parameters(documents);
+
+		MissionSettings mission;
+		if (!paths.mission.empty()) {
+			try {
+				const auto count = [&](const char* key, size_t maximum) {
+					const float value = reader.ResolveFloat(paths.mission, key);
+					if (!std::isfinite(value) || value < 1 || value > float(maximum) ||
+						std::floor(value) != value)
+						throw std::invalid_argument(std::string(key) + " must be an integer within range");
+					return static_cast<size_t>(value);
+				};
+				mission.patrolCount = count("patrolCount", 8);
+				mission.finalFighterCount = count("finalFighterCount", 8);
+				mission.maxHostileProjectiles = count("maxHostileProjectiles", 512);
+				mission.LoadTuning(reader, paths.mission);
+				mission.bombReloadSeconds = reader.ResolveFloat(paths.mission, "bombReloadSeconds");
+				mission.carrierMissileSpeed = reader.ResolveFloat(paths.mission, "carrierMissileSpeed");
+				mission.carrierHealth = reader.ResolveFloat(paths.mission, "carrierHealth");
+				mission.bombDamage = reader.ResolveFloat(paths.mission, "bombDamage");
+				mission.commanderHealthMultiplier =
+					reader.ResolveFloat(paths.mission, "commanderHealthMultiplier");
+				mission.enemyGunSpeed = reader.ResolveFloat(paths.mission, "enemyGunSpeed");
+				mission.enemyGunInterval = reader.ResolveFloat(paths.mission, "enemyGunInterval");
+				mission.commanderGunInterval = reader.ResolveFloat(paths.mission, "commanderGunInterval");
+				mission.aaRange = reader.ResolveFloat(paths.mission, "aaRange");
+				mission.aaInterval = reader.ResolveFloat(paths.mission, "aaInterval");
+				mission.deckHeightFraction = reader.ResolveFloat(paths.mission, "deckHeightFraction");
+				mission.deckWidthFraction = reader.ResolveFloat(paths.mission, "deckWidthFraction");
+				mission.deckLengthFraction = reader.ResolveFloat(paths.mission, "deckLengthFraction");
+				mission.Validate();
+			} catch (const std::exception& error) {
+				throw std::runtime_error(paths.mission.string() + ": " + error.what());
+			}
+		}
+		const auto assetsRoot = paths.environment.parent_path().parent_path();
+		CameraSettings camera;
+		camera.Load(reader, assetsRoot / L"Camera/aircraftCamera.json");
+		EnemyGunTuning enemyGun;
+		enemyGun.Load(reader, assetsRoot / L"Combat/enemyWeapon.json");
+		EnemyAITuning enemyAI;
+		enemyAI.Load(reader, reader.Resolve(paths.enemyAircraft, "aiParameters"));
+		EffectSettings effects;
+		effects.Load(reader, assetsRoot / L"Effects/combatEffects.json");
+		UiTuning ui;
+		ui.Load(reader, assetsRoot / L"UI/combatHud.json");
+		UiTextSettings text;
+		text.Load(reader, assetsRoot / L"UI/labels.json");
+		return {.camera = camera,
+			.enemyGunTuning = enemyGun,
+			.enemyAITuning = enemyAI,
+			.effects = effects,
+			.ui = ui,
+			.text = text,
+			.environment = LoadEnvironment(paths, reader, parameters),
+			.playerAircraft = LoadAircraftDefinition(reader, parameters, paths.playerAircraft),
+			.enemyAircraft = LoadAircraftDefinition(reader, parameters, paths.enemyAircraft),
+			.enemyAIParameters = LoadAIParameters(reader, parameters, paths.enemyAircraft),
+			.playerWeapon = LoadWeapon(reader, paths.playerAircraft),
+			.bomb = LoadBomb(reader,
+				paths.bomb.empty()
+					? paths.environment.parent_path().parent_path() / L"Ammunition/Bomb/ammunition.json"
+					: paths.bomb),
+			.combat = LoadCombatSettings(
+				reader, paths.environment.parent_path().parent_path() / L"Combat/targeting.json"),
+			.hud =
+				LoadHudSettings(reader, paths.environment.parent_path().parent_path() / L"UI/combatHud.json"),
+			.ships = paths.ships.empty() ? std::vector<ShipDefinition>{}
+										 : LoadShipDefinitions(reader, paths.ships),
+			.mission = mission,
+			.opening = LoadCinematicSettings(
+				reader, paths.environment.parent_path().parent_path() / L"Cinematics/opening.json"),
+			.cinematics =
+				LoadCinematics(reader, paths.environment.parent_path().parent_path() / L"Cinematics")};
+	}
+} // namespace Game

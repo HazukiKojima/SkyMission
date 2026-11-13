@@ -1,0 +1,48 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 0.4
+  },
+  "model": "player",
+  "formationOffsets": [
+    [
+      0,
+      0,
+      0
+    ]
+  ],
+  "originOffsetMeters": [
+    0,
+    0,
+    -2000
+  ],
+  "title": "任務達成",
+  "subtitle": "RETURN TO BASE",
+  "shots": [
+    {
+      "durationSeconds": 7,
+      "cameraStartOffsetMeters": [
+        180,
+        80,
+        360
+      ],
+      "cameraEndOffsetMeters": [
+        100,
+        60,
+        300
+      ]
+    }
+  ],
+  "endFadeSeconds": 1.2,
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "敵機の全滅を確認。任務完了だ。……よく生き残った。帰還せよ！",
+      "audio": "../Sound/敵機の全滅を確認。任務完了だ。……よく生き残った。帰還せよ！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 5.6
+    }
+  ]
+}

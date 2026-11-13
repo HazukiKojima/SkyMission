@@ -1,0 +1,16 @@
+{
+    "propellerName": "",
+    "textureDirectory": "Textures",
+    "baseColorStemSuffix": "_c",
+    "baseColorSuffix": "_c.jpg",
+    "metallicSuffix": "",
+    "roughnessSuffix": "",
+    "normalSuffix": "_n_n.jpg",
+    "openGlNormalSuffix": "",
+    "openGlMarker": "",
+    "fallbackMaterialToken": "",
+    "matchingFallbackTexture": "",
+    "defaultFallbackTexture": "us_2000lb_mk_84_air_c.jpg",
+    "normalizedExtent": 50,
+    "groundOffset": 0
+}

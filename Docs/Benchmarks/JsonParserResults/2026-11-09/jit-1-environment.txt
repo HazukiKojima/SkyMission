@@ -1,0 +1,16 @@
+UTC=2026-11-08T16:46:37.4623496+00:00
+Framework=.NET 10.0.14
+OS=Microsoft Windows 10.0.26200
+Architecture=X64
+Processor=AMD64 Family 25 Model 33 Stepping 0, AuthenticAMD
+LogicalProcessors=12
+ServerGC=False
+DynamicCode=True
+REDox=1.0.3.0
+System.Text.Json=10.0.0.0
+TieredCompilation=0
+SamplesPerProcess=9
+TargetMillisecondsPerSample=100
+Allocation=managed bytes on current thread only; excludes native allocations and pooled capacity
+Includes=DOM construction/disposal; UTF8 conversion only where labelled; 30-field float extraction where labelled
+Excludes=disk IO, DLL loading, PInvoke/interop, wrapper handle dictionary/lock, startup compilation, DTO deserialization

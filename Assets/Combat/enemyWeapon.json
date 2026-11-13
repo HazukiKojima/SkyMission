@@ -1,0 +1,16 @@
+{
+  "damage": 2,
+  "lifetimeSeconds": 3,
+  "initialDelaySeconds": 0.35,
+  "initialDelayRangeSeconds": 2.4,
+  "burstSeconds": 0.4,
+  "burstRangeSeconds": 0.45,
+  "pauseSeconds": 1.1,
+  "pauseRangeSeconds": 1.7,
+  "minimumLeadFraction": 0.35,
+  "leadVariation": 0.2,
+  "yawErrorDegrees": 2.5,
+  "pitchErrorDegrees": 1.8,
+  "minimumSpreadDegrees": 3,
+  "spreadRangeDegrees": 3
+}

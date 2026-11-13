@@ -1,0 +1,108 @@
+{
+  "briefing": [
+    {
+      "lines": [
+        "敵母艦と護衛機を確認。",
+        "基地を襲った部隊の発進元だ。"
+      ],
+      "audio": "../Sound/Opening/敵母艦と護衛機を確認。基地を襲った部隊の発進元だ.wav",
+      "fallbackSeconds": 5
+    },
+    {
+      "lines": [
+        "基地は現在も攻撃を受けており、",
+        "増援は出せない。"
+      ],
+      "audio": "../Sound/Opening/基地は現在も攻撃を受けており、増援は出せない.wav",
+      "fallbackSeconds": 5
+    },
+    {
+      "lines": [
+        "君、一機で護衛機を排除し、",
+        "母艦を撃沈せよ。"
+      ],
+      "audio": "../Sound/Opening/君、一機で護衛機を排除し、母艦を撃沈せよ.wav",
+      "fallbackSeconds": 5
+    }
+  ],
+  "audio": {
+    "bgm": "../Sound/Opening/空襲BGM.wav",
+    "bgmVolume": 0.12,
+    "briefingVolume": 0.4,
+    "flightVolumeScale": 0.4
+  },
+  "radio": [
+    {
+      "speaker": "指揮官",
+      "side": "friendly",
+      "text": "敵機4機、接近！直ちに迎撃せよ！",
+      "audio": "../Sound/敵機4機、接近！直ちに迎撃せよ！.wav",
+      "startSeconds": 5,
+      "durationSeconds": 3.6
+    }
+  ],
+  "formationOffsets": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      -1,
+      0,
+      -1
+    ],
+    [
+      1,
+      0,
+      -1
+    ],
+    [
+      0,
+      0.35,
+      -2
+    ]
+  ],
+  "originOffsetMeters": [
+    0,
+    0,
+    -5000
+  ],
+  "durationSeconds": 5,
+  "fadeOutStartSeconds": 3.6,
+  "cutSeconds": 3.8,
+  "fadeInStartSeconds": 4,
+  "fadeInSeconds": 0.7,
+  "formationSpacingMeters": 180,
+  "formationDepthMeters": 200,
+  "flightSpeedMetersPerSecond": 180,
+  "propellerRadiansPerSecond": 35,
+  "cameraStartOffsetMeters": [
+    180,
+    100,
+    360
+  ],
+  "cameraEndOffsetMeters": [
+    100,
+    75,
+    320
+  ],
+  "lookAtOffsetMeters": [
+    0,
+    0,
+    -50
+  ],
+  "verticalFovDegrees": 55,
+  "title": "敵哨戒編隊",
+  "subtitle": "正面より接近",
+  "textScale": 1.5,
+  "briefingFontSize": 48,
+  "titleFontSize": 48,
+  "subtitleFontSize": 28,
+  "hintFontSize": 24,
+  "lineSpacing": 1.6,
+  "barHeightFraction": 0.1,
+  "titleBottomOffset": 120,
+  "subtitleBottomOffset": 58,
+  "skipHint": "Enter：スキップ"
+}

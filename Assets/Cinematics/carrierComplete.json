@@ -1,0 +1,17 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 1
+  },
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "敵母艦の発進能力を奪った。よくやった！",
+      "audio": "../Sound/敵母艦の発進能力を奪った。よくやった！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 3.7
+    }
+  ]
+}

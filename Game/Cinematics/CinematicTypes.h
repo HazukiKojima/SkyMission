@@ -1,0 +1,39 @@
+#pragma once
+#include "Game/Settings/GameplaySettings.h"
+#include <DirectXMath.h>
+#include <string>
+#include <array>
+#include <cstdint>
+
+namespace Game {
+	enum class CinematicVoiceStatus { Unavailable, Playing, Finished };
+	enum class CinematicCompletion { Completed, Skipped };
+	// Shared caption data for allied/enemy radio messages.
+	struct RadioCaption {
+		std::string speaker;
+		std::string text;
+		std::string side = "friendly";
+	};
+	// HUDへ渡す値だけを保持し、描画側に再生制御やシーンの所有権を渡さない
+	struct CinematicPresentation {
+		bool active = false;
+		bool formationShot = true;
+		float elapsedSeconds = 0;
+		float fadeOpacity = 0;
+		std::string title;
+		std::string subtitle;
+		int briefingLine = -1; // 会話項目の番号。-1は映像演出。
+		std::array<std::string, 2> briefingLines;
+		std::string cinematicId = "opening";
+		size_t shotIndex = 0;
+		uint64_t playbackSerial = 0;
+		CinematicTextSettings text;
+		int radioLine = -1;
+		RadioCaption radio;
+	};
+	struct CinematicPose {
+		DirectX::XMFLOAT3 cameraOffsetMeters;
+		float travelMeters = 0;
+		float propellerRadians = 0;
+	};
+} // namespace Game

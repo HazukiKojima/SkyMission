@@ -1,0 +1,17 @@
+{
+  "briefing": [],
+  "audio": {
+    "bgm": "",
+    "flightVolumeScale": 1
+  },
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "命中を確認！いいぞ、もう一撃だ！",
+      "audio": "../Sound/命中を確認！いいぞ、もう一撃だ！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 3.5
+    }
+  ]
+}
