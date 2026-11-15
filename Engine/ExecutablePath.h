@@ -16,7 +16,7 @@ namespace Engine {
 	}
 	inline std::filesystem::path AssetsDirectory() {
 		const auto directory = ExecutableDirectory();
-		// 配布版のRuntime内、EXE直下、開発ビルドの順で解決する。
+		// 配布版のRuntime内、EXE直下、開発ビルドの順で解決する
 		for (const auto& candidate : {directory.parent_path() / L"Assets",
 			 directory / L"Assets", directory / L"../../Assets"}) {
 			if (std::filesystem::is_directory(candidate)) return candidate;

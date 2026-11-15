@@ -24,7 +24,6 @@ namespace Engine {
 			return m_height;
 		}
 
-		// リサイズイベントのコールバック登録
 		void SetOnResize(std::function<void(UINT, UINT)> cb) {
 			m_onResize = cb;
 		}

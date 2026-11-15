@@ -30,7 +30,7 @@ void TestHostileProjectileOrientation() {
 	std::cout << "PASS: hostile bullet orientation across axes, reverse directions and flight updates\n";
 }
 
-// RegressionTests.cppのRequireと共通のGPU初期化環境を使用する。
+// RegressionTests.cppのRequireと共通のGPU初期化環境を使用する
 void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	using namespace DirectX;
 	RawInputState raw;
@@ -185,7 +185,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	writeWeapon(128, 900, badAmmo);
 	rejectConfig("normalizedExtent", badAmmo);
 
-	// メッシュは親の平行移動を受け、銃口はさらに子の変換を受ける。
+	// メッシュは親の平行移動を受け、銃口はさらに子の変換を受ける
 	const auto nodeFile = fixture / L"muzzles.dae";
 	const auto writeNodes = [&](bool duplicate) {
 		std::ofstream file(nodeFile);
@@ -335,7 +335,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 				std::abs(rotated._43 - XMVectorGetZ(expectedPosition)) < 0.001f,
 			"Rotated/scaled muzzle position did not match aircraft pose");
 
-		// 同じ形状でも中心原点を指定するとY補正だけが変わる。
+		// 同じ形状でも中心原点を指定するとY補正だけが変わる
 		auto centered = std::make_shared<Model>();
 		ModelLoadOptions centeredOptions;
 		centeredOptions.origin = ModelOrigin::BoundsCenter;

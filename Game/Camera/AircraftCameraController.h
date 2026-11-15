@@ -32,7 +32,7 @@ namespace Game {
 		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
 		void SetFollowTarget(const AircraftCameraTarget& target);
-		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す。
+		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す
 		void SetLookTarget(std::optional<DirectX::XMFLOAT3> target, bool automatic = false) {
 			m_lookTarget = target;
 			m_automaticLook = automatic && target.has_value();

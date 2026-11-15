@@ -86,8 +86,8 @@ float OceanHorizonFog(float3 rayOrigin, float3 rayDirection, float maxDistance)
     if (intersectsFog && fogExit > fogEnter)
     {
 
-        // Density is a product of cubic smoothsteps. Four-point Gauss-Legendre
-        // integrates the degree-six polynomial on the unclamped interval.
+        // 密度は3次スムーズステップの積。4点のガウス＝ルジャンドル求積で、
+        // クランプ前の区間における6次多項式を積分する
         float horizontalSpeed = max(abs(rayDirection.x), abs(rayDirection.z));
         fogEnter = max(fogEnter, oceanFogStartDistance / max(horizontalSpeed, 1e-6f));
         float midpoint = (fogEnter + fogExit) * 0.5f;

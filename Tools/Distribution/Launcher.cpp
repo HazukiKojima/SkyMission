@@ -2,7 +2,7 @@
 #define NOMINMAX
 #include <Windows.h>
 
-// Win32だけで起動し、開発環境やVCランタイムを必要としない。
+// Win32だけで起動し、開発環境やVCランタイムを必要としない
 extern "C" void WINAPI LauncherEntry() {
 	static wchar_t path[32768];
 	const DWORD length = GetModuleFileNameW(nullptr, path, 32768);

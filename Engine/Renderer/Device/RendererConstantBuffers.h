@@ -49,8 +49,8 @@ namespace Engine {
 		float oceanEdgeFadeWidth;
 		float padding1[2];
 		DirectX::XMFLOAT4 cloudLayer; // bottom, top, coverage, extinction density
-		DirectX::XMFLOAT4 cloudMotion; // inverse scale, X/Z wind, enabled
-		DirectX::XMFLOAT4 cloudQuality; // max near ray distance, steps, seed, elapsed seconds
+		DirectX::XMFLOAT4 cloudMotion; // 逆スケール、X/Z方向の風、有効フラグ
+		DirectX::XMFLOAT4 cloudQuality; // 近距離レイの最大距離、ステップ数、シード、経過秒数
 	};
 
 	struct ModelConstantBufferData {

@@ -84,8 +84,8 @@ PS_INPUT VS(VS_INPUT input)
     float steepness = max(oceanWaveSteepness, 0.0f);
 
     const int NUM_WAVES = 6;
-    // Match the 257-point exponential grid without adding vertices. Short waves
-    // must fade before the sparse outer cells undersample their displacement.
+    // 頂点を増やさずに、257点の指数格子へ合わせる。短い波は、
+    // 疎な外側のセルが変位をサンプリングしきれなくなる前に、減衰させる
     float gridBase = oceanSize * 0.5f / (exp(5.5f) - 1.0f);
     float gridSpacing = (max(abs(input.position.x), abs(input.position.z)) + gridBase) *
         (exp(5.5f / 128.0f) - 1.0f);
@@ -111,7 +111,7 @@ PS_INPUT VS(VS_INPUT input)
     }
 
     pos.y -= oceanWaveHeightOffset;
-    // Distant waves are subpixel; fade geometric displacement before the sparse outer grid aliases.
+    // 遠方の波はサブピクセルになる。疎な外側の格子でエイリアシングが出る前に、幾何的な変位を減衰させる
     float waveDetail =
         1.0f - smoothstep(oceanWaveLength * 16.0f, oceanWaveLength * 64.0f, length(input.position.xz));
     pos = lerp(float3(wavePos.x, -oceanWaveHeightOffset, wavePos.z), pos, waveDetail);

@@ -30,7 +30,7 @@ namespace Game {
 		uint64_t serial = 0;
 		RadioCaption caption;
 	};
-	// One speech channel; keep only the latest waiting exchange during a kill streak.
+	// 音声チャンネルは1つ。連続撃墜中は、待機中の最新の会話だけを残す
 	class EnemyRadioController {
 	  public:
 		void NotifyDestroyed(Engine::ObjectId victim, std::span<const Engine::ObjectId> survivors) {

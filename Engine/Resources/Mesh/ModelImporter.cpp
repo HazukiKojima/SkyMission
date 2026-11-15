@@ -15,7 +15,7 @@ namespace Engine::ModelImport {
 		std::filesystem::path ModelSceneCachePath(const std::filesystem::path& source, unsigned flags) {
 			auto extension = source.extension().wstring();
 			std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
-			// FBX contains its geometry and material definitions; OBJ can depend on an external MTL.
+			// FBXは形状とマテリアル定義を含むが、OBJは外部のMTLに依存することがある
 			if (extension != L".fbx") return {};
 			std::error_code error;
 			auto canonical = std::filesystem::weakly_canonical(source, error);
@@ -45,7 +45,7 @@ namespace Engine::ModelImport {
 
 	} // namespace
 	const aiScene* ImportScene(Assimp::Importer& importer, const std::string& importerPath) {
-		// Animation is driven by FlightScene/node rotation; imported animation tracks are never used.
+		// アニメーションはFlightSceneとノード回転で駆動するため、読み込んだアニメーショントラックは使わない
 		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_ANIMATIONS, false);
 		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_CAMERAS, false);
 		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_READ_LIGHTS, false);

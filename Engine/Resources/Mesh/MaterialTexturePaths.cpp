@@ -15,7 +15,7 @@ namespace Engine::MaterialTexturePaths {
 		for (const auto& candidate : candidates) {
 			if (std::filesystem::is_regular_file(candidate)) return candidate;
 		}
-		// Some FBX exports retain .jpg references when the supplied image is .jpeg.
+		// 一部のFBXは、画像が.jpegでも.jpgとして参照したまま出力される
 		auto extension = texturePath.extension().wstring();
 		std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
 		if (extension == L".jpg" || extension == L".jpeg") {

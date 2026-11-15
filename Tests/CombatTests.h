@@ -211,7 +211,7 @@ void TestEnemyCombatAI() {
 		aircraft, {{0, 300, -100}, {0, 0, 60}, {0, 0, 1}}, forward, 0.1f, p, 0, true);
 	Require(avoiding.flight.highGTurn && std::abs(avoiding.flight.turn) > 0.1f && !avoiding.fire,
 		"Imminent collision did not override straight flight");
-	// Identical geometry must produce distinct, reproducible pilot choices.
+	// 同じ配置でも、パイロットの選択はバラつきつつ再現可能にする
 	{
 		AircraftFlightModel formationAircraft;
 		formationAircraft.SetPosition({0, 1500, 0});
@@ -640,14 +640,14 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			simulatePursuit({5000, 1500, 0}, 1, turning, physicalPlayer);
 			simulatePursuit({0, 1500, 5000}, 2, turning, physicalPlayer);
 		}
-	// Mission guns fire across repeated passes while preserving the flight controls.
+	// ミッションの機銖は、飛行操作を保ちながら繰り返しの通過で発射する
 	for (bool turning : {false, true})
 		for (size_t slot = 0; slot < 6; ++slot)
 			simulatePursuit({(float(slot) - 2.5f) * 1500,
 								1500 + std::array<float, 6>{150, 650, -250, 1000, 350, -100}[slot],
 								-5500 - std::array<float, 6>{-600, 1000, -1300, 500, -200, 1500}[slot]},
 				slot, turning, true, true);
-	// Even from identical starting positions, six aircraft must choose different turn sites.
+	// 6機が同じ初期位置からでも、異なる旋回地点を選ぶ
 	for (bool turning : {false, true}) {
 		std::array<AircraftFlightModel, 6> planes;
 		std::array<AircraftAIController, 6> controllers;
@@ -712,7 +712,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				  << " closest=" << closestTurnPoints << " time spread=" << *times.second - *times.first
 				  << '\n';
 	}
-	// A fleeing player must not drag a defending fighter away indefinitely.
+	// 逃げるプレイヤーが、迎撃機を無限に引き離し続けてはいけない
 	{
 		AircraftFlightModel fighter;
 		fighter.SetFlightParameters(definition.enemyAircraft.flightParameters);

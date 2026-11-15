@@ -95,7 +95,7 @@ namespace Game {
 		AircraftFlightParameters m_missionEnemyFlight;
 		AircraftAIParameters m_missionEnemyAI;
 		float m_missionEnemyScale = 1;
-		// -1: 未撃破。撃破を確認したフレームの次から4秒を計測する。
+		// -1: 未撃破。撃破を確認したフレームの次から4秒を計測する
 		float m_reinforcementElapsedSeconds = -1;
 
 		// 母艦・護衛艦と表示用の状態

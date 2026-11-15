@@ -8,7 +8,7 @@
 namespace Game {
 	enum class CinematicVoiceStatus { Unavailable, Playing, Finished };
 	enum class CinematicCompletion { Completed, Skipped };
-	// Shared caption data for allied/enemy radio messages.
+	// 味方・敵の無線メッセージで共通の字幕データ
 	struct RadioCaption {
 		std::string speaker;
 		std::string text;
@@ -22,7 +22,7 @@ namespace Game {
 		float fadeOpacity = 0;
 		std::string title;
 		std::string subtitle;
-		int briefingLine = -1; // 会話項目の番号。-1は映像演出。
+		int briefingLine = -1; // 会話項目の番号。-1は映像演出
 		std::array<std::string, 2> briefingLines;
 		std::string cinematicId = "opening";
 		size_t shotIndex = 0;

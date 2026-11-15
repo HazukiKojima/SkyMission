@@ -118,14 +118,14 @@ namespace Game {
 			float targetYaw = 0, targetPitch = 0;
 			if ((m_automaticLook || input.IsKeyDown('Z')) && m_lookTarget) {
 				const auto& point = *m_lookTarget;
-				// doubleで差と距離を求め、極端な座標でも角度の計算を有限に保つ。
+				// doubleで差と距離を求め、極端な座標でも角度の計算を有限に保つ
 				const double dx = double(point.x) - m_followTarget.x;
 				const double dy = double(point.y) - m_followTarget.y;
 				const double dz = double(point.z) - m_followTarget.z;
 				const double horizontal = std::hypot(dx, dz);
 				const double distance = std::hypot(horizontal, dy);
 				if (std::isfinite(distance) && distance > 0.001) {
-					// 真上・真下ではヨーを維持し、水平角の不定による反転を避ける。
+					// 真上・真下ではヨーを維持し、水平角の不定による反転を避ける
 					targetYaw = horizontal > 0.001
 						? std::remainder(float(std::atan2(dx, -dz)) - m_followCameraYaw, XM_2PI)
 						: m_lookYaw;
@@ -133,7 +133,7 @@ namespace Game {
 						-m_settings.lookPitchLimit, m_settings.lookPitchLimit);
 				}
 			}
-			// 自動注視と標準視点への復帰で同じ時間基準の補間を使う。
+			// 自動注視と標準視点への復帰で同じ時間基準の補間を使う
 			const float decay = std::exp(-m_settings.lookReturnRate * deltaSeconds);
 			const float blend = 1.0f - decay;
 			m_lookYaw = std::remainder(m_lookYaw +
@@ -184,7 +184,7 @@ namespace Game {
 			target - smoothedDirection * followDistance + worldUp * m_settings.followHeight;
 		const XMVECTOR desiredLookAt =
 			target + smoothedDirection * m_settings.lookAheadMeters + worldUp * m_settings.followLookHeight;
-		// 大きなワールド座標同士の減算で視線が揺れないよう、相対オフセットから求める。
+		// 大きなワールド座標同士の減算で視線が揺れないよう、相対オフセットから求める
 		XMStoreFloat3(&m_followViewDirection,
 			smoothedDirection * (followDistance + m_settings.lookAheadMeters) +
 				worldUp * (m_settings.followLookHeight - m_settings.followHeight));

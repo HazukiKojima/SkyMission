@@ -111,7 +111,7 @@ namespace Game {
 	}
 
 	void CombatAudio::Initialize(const std::filesystem::path& soundDirectory) {
-		// 単独利用時も従来のSoundディレクトリ基準の既定値を維持する。
+		// 単独利用時も従来のSoundディレクトリ基準の既定値を維持する
 		CinematicSettings opening;
 		opening.audio.bgm = soundDirectory / L"Opening/空襲BGM.wav";
 		for (auto& entry : opening.briefing)
@@ -322,7 +322,7 @@ namespace Game {
 			m_activeCinematicAudio = bank == m_cinematicBanks.end() ? nullptr : &bank->second;
 		}
 		m_cinematicActive = opening.active;
-		// Radio clips share the speech voice, but do not stop the cinematic clock.
+		// 無線クリップは音声ボイスを共有するが、演出の時計は止めない
 		const int voiceLine = opening.briefingLine >= 0 ? opening.briefingLine
 			: opening.radioLine >= 0 && m_activeCinematicAudio
 				? static_cast<int>(m_activeCinematicAudio->briefingCount) + opening.radioLine : -1;
@@ -335,7 +335,7 @@ namespace Game {
 		if (!m_activeCinematicAudio ||
 			static_cast<size_t>(voiceLine) >= m_activeCinematicAudio->briefing.size())
 			return CinematicVoiceStatus::Unavailable;
-		// Command speech owns the radio channel even if an enemy caption is stale this frame.
+		// 敵の字幕がこのフレームで古くなっていても、指令音声が無線チャンネルを占有する
 		StopVoice(m_enemyRadioVoice);
 		m_enemyRadioSerial = 0;
 		if (voiceLine != m_briefingLine) {

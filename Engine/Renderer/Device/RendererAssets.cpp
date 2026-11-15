@@ -59,7 +59,7 @@ namespace Engine {
 		assert(m_oceanNormalTexture2SrvIndex == m_oceanTextureSrvIndex + 2);
 		m_skyTexture =
 			LoadTexture(*device, *context, assets.environment.skyTexture, {}, m_skyTextureSrvIndex);
-		// Submit bounded batches so upload heaps do not accumulate across all models.
+		// 全モデル分のアップロードヒープを溜めないよう、上限付きのバッチで送信する
 		const auto finishBatch = [&]() {
 			context->EndFrame();
 			context->WaitForGpu();

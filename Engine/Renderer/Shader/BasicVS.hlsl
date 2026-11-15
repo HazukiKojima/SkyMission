@@ -49,8 +49,6 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
     return float3(d.x * (a * cosf), a * sinf, d.y * (a * cosf));
 }
 
-// 頂点の変形と座標変換
-
 PS_INPUT VS(VS_INPUT input)
 {
     PS_INPUT result;
@@ -59,20 +57,14 @@ PS_INPUT VS(VS_INPUT input)
 
     float3 pos = wavePos;
 
-    // 接線と従法線
-
     float3 tangent = float3(1.0f, 0.0f, 0.0f);
     float3 binormal = float3(0.0f, 0.0f, 1.0f);
-
-    // 波の設定
 
     float2 baseWindDir = normalize(float2(1.0f, 0.6f));
     float wavelength = 30.0f;
     float steepness = 0.055f;
 
     const int NUM_WAVES = 6;
-
-    // 複数の波を重ねる
 
     for (int i = 0; i < NUM_WAVES; ++i)
     {
@@ -90,15 +82,9 @@ PS_INPUT VS(VS_INPUT input)
         steepness *= 0.72f;
     }
 
-    // 法線を計算する
-
     float3 normal = normalize(cross(binormal, tangent));
 
-    // ワールド座標へ変換する
-
     float3 worldPos = pos;
-
-    // 描画に必要な値を出力する
 
     result.position = mul(float4(worldPos, 1.0f), mvp);
     result.worldPos = worldPos;

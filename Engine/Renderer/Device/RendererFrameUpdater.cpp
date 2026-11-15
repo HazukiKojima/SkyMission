@@ -35,7 +35,7 @@ namespace Engine {
 		const XMMATRIX view = camera.GetView();
 		const XMMATRIX proj = camera.GetProjection(oceanCornerDistance * kProjectionMargin);
 		const XMMATRIX mvp = world * view * proj;
-		// 遠方へ移動しても逆行列の平行移動成分で視線の精度を失わない。
+		// 遠方へ移動しても逆行列の平行移動成分で視線の精度を失わない
 		XMMATRIX relativeView = view;
 		relativeView.r[3] = XMVectorSet(0, 0, 0, 1);
 		const XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, relativeView * proj);

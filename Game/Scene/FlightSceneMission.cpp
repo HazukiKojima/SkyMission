@@ -150,7 +150,7 @@ namespace Game {
 					enemy.flightModel.GetForward(), direction, enemy.aiParameters.aimAngleDegrees)) {
 				continue;
 			}
-			// 2発分の空きがないときは発射せず、片方だけの斉射を避ける。
+			// 2発分の空きがないときは発射せず、片方だけの斉射を避ける
 			if (m_hostileProjectiles.GetCount() + 2 > m_enemyGunSettings.maxProjectiles) continue;
 			const auto directions = SpreadEnemyGunDirections(
 				direction, enemy.slot, enemy.gunPattern.GetShotIndex(), m_enemyGunTuning);

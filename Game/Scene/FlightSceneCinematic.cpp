@@ -106,7 +106,7 @@ namespace Game {
 		XMStoreFloat3(&dimensions, maximum - minimum);
 		const float extent = std::max({dimensions.x, dimensions.y, dimensions.z, 1.0f});
 		const auto& shot = m_cinematic.GetCurrentShot();
-		// Carrier offsets are multiples of the world-space maximum ship dimension.
+		// 母艦のオフセットは、ワールド空間での艦の最大寸法の倍数で指定する
 		const auto pose = m_cinematic.GetPose();
 		XMFLOAT3 eye, target;
 		XMStoreFloat3(&eye, XMLoadFloat3(&*center) + XMLoadFloat3(&pose.cameraOffsetMeters) * extent);
@@ -178,8 +178,8 @@ namespace Game {
 		if (after.active && before.shotIndex != after.shotIndex) InitializeCinematicShot();
 		if (m_cinematic.GetCurrentShot().target == "carrier") UpdateCarrierCinematicCamera();
 		else m_cinematicScene.Update(m_cinematic.GetPose());
-		// 従来の開始演出のみ、暗転後の自機カットで無入力飛行を続ける。
-		// 途中・終了・明示的なカット列は戦闘状態を一切進めない。
+		// 従来の開始演出のみ、暗転後の自機カットで無入力飛行を続ける
+		// 途中・終了・明示的なカット列は戦闘状態を一切進めない
 		const float flightSeconds =
 			skipRequested || before.cinematicId != "opening" || !m_activeCinematicSettings.shots.empty()
 			? 0.0f
@@ -227,11 +227,11 @@ namespace Game {
 			if (m_enemyRadio.IsBusy() || speaking) return;
 			m_patrolPraiseStarted = true;
 			if (StartCommandRadio("patrolComplete")) return;
-			// Configurations without the new dialogue retain their carrier introduction.
+			// 新しい会話を持たない設定では、従来の母艦紹介を維持する
 			m_patrolPraiseComplete = true;
 		}
 		if (!m_patrolPraiseComplete) {
-			// Missing audio devices/files fall back to the subtitle duration.
+			// 音声デバイスやファイルがない場合は、字幕の表示時間で代替する
 			if (!speaking) { m_patrolPraiseComplete = true; m_carrierCommandDelay = 0.5f; }
 			return;
 		}

@@ -37,7 +37,7 @@ namespace Game {
 		for (const auto offset : {cameraStartOffsetMeters, cameraEndOffsetMeters, lookAtOffsetMeters})
 			for (float value : {offset.x, offset.y, offset.z})
 				if (!std::isfinite(value)) throw std::invalid_argument("camera offsets must be finite");
-		// 補間経路全体で、注視点との重なりと真上からの特異点を防ぐ。
+		// 補間経路全体で、注視点との重なりと真上からの特異点を防ぐ
 		const double x = double(cameraStartOffsetMeters.x) - lookAtOffsetMeters.x;
 		const double z = double(cameraStartOffsetMeters.z) - lookAtOffsetMeters.z;
 		const double dx = double(cameraEndOffsetMeters.x) - cameraStartOffsetMeters.x;
@@ -112,7 +112,7 @@ namespace Game {
 		const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
 		CinematicSettings result;
 		try {
-			// 省略時の既定音声も設定ファイルの所在を基準に解決する。
+			// 省略時の既定音声も設定ファイルの所在を基準に解決する
 			result.audio.bgm = path.parent_path() / result.audio.bgm;
 			for (auto& entry : result.briefing)
 				entry.audio = path.parent_path() / entry.audio;
@@ -190,7 +190,7 @@ namespace Game {
 					result.radio.push_back(std::move(entry));
 				}
 			}
-			// 先頭から辿るため、audioがオブジェクト以外なら型エラーになる。
+			// 先頭から辿るため、audioがオブジェクト以外なら型エラーになる
 			if (auto bgm = reader.TryResolveString(path, "/audio/bgm"))
 				result.audio.bgm =
 					bgm->empty() ? std::filesystem::path{} : reader.Resolve(path, "/audio/bgm");

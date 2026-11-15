@@ -1,5 +1,5 @@
-// Optically thin high clouds, evaluated at the final pixel resolution.
-// World-space sheets provide parallax/occlusion without noisy volume marching.
+// 光学的に薄い高層の雲。最終的なピクセル解像度で評価する
+// ワールド空間のシートにより、ノイズの多いボリューム走査なしで視差と遮蔽を得る
 float CirrusHash(float2 p)
 {
     float3 v = frac(float3(p.x, p.y, p.x) * 0.1031f);
@@ -20,7 +20,7 @@ float CirrusDensity(float2 worldXZ, float cloudTime, float sheet, float footprin
     p += float2(cloudQuality.z * 0.013f, cloudQuality.z * 0.021f) + sheet * float2(31.7f, 17.3f);
     float2 direction = normalize(float2(0.93f, 0.37f + sheet * 0.12f));
     float2 q = float2(dot(p, direction), dot(p, float2(-direction.y, direction.x)));
-    // Long wind-aligned filaments, with broad curvature and soft feathered ends.
+    // 風に沿った長い筋。大きく湾曲し、端は柔らかくぼかす
     float envelope = CirrusNoise(p * 1.30f + 7.1f) * 0.65f + CirrusNoise(p * 3.1f + 31.2f) * 0.35f;
     float2 bend = float2(CirrusNoise(q * 0.8f + 19.7f), CirrusNoise(q * 0.8f + 67.1f)) - 0.5f;
     q = (q + bend * 1.5f) * float2(0.80f, 2.7f);
@@ -43,7 +43,7 @@ float3 CompositeCirrus(float2 uv, float3 background)
     {
         float3 ray = CloudViewRay(uv);
         float surface = CloudSceneDistance(uv, ray);
-        // From below, cumulus is in front of these high sheets; from above it is behind.
+        // 下から見ると積雲はこの高層のシートより手前、上から見ると奥になる
         float foregroundTransmission = ray.y > 0 && cloudLayer.w > 0 ?
             saturate(gClouds.SampleLevel(gSampler, uv, 0).a) : 1;
         float3 scattered = 0;
@@ -55,7 +55,7 @@ float3 CompositeCirrus(float2 uv, float3 background)
             float altitude = max(14000, cloudLayer.y + 1000) + sheet * 2000;
             float distance = (altitude - cameraPosition.y) / denominator;
             float2 worldXZ = cameraPosition.xz + ray.xz * distance;
-            // Grazing rays magnify the sheet footprint much more than t * angular pixel size.
+            // 浅い角度のレイでは、シートの接地面積が t × 角度ピクセルサイズよりずっと大きく拡大される
             float footprint = max(length(ddx(worldXZ)), length(ddy(worldXZ)));
             if (distance > 0 && distance < min(surface, 180000))
             {
@@ -64,7 +64,7 @@ float3 CompositeCirrus(float2 uv, float3 background)
                 opacity *= smoothstep(0.02f, 0.08f, abs(ray.y));
                 opacity *= 1 - smoothstep(100000, 180000, distance);
                 opacity *= foregroundTransmission;
-                // The existing film pass grades the cloud together with the original scene.
+                // 既存のフィルムパスが、雲を元のシーンと一緒に色調補正する
                 float3 color = float3(0.93f, 0.95f, 0.98f);
                 scattered += transmission * opacity * color;
                 transmission *= 1 - opacity;

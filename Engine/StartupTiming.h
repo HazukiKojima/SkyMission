@@ -7,7 +7,7 @@
 #include <string_view>
 
 namespace Engine {
-	// Opt-in trace for separating engine loading from process launch/debugger overhead.
+	// エンジンの読み込みを、プロセス起動やデバッガーのオーバーヘッドから切り分けるための、任意の計測
 	class StartupTiming {
 	  public:
 		explicit StartupTiming(std::string_view stage) : m_stage(stage) {}
@@ -39,7 +39,7 @@ namespace Engine {
 				std::ofstream output(path, std::ios::app);
 				output << m_stage << '\t' << milliseconds << " ms\n";
 			} catch (...) {
-				// A diagnostic file must never prevent loading.
+				// 診断ファイルの失敗を、読み込みの妨げにしない
 			}
 		}
 		std::string_view m_stage;

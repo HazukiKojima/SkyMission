@@ -18,8 +18,8 @@ void TestRenderOptimizationMath() {
 	Require(OceanGeometry::GridCoordinate(129, size) <
 			(OceanGeometry::GridCoordinate(256, size) - OceanGeometry::GridCoordinate(255, size)) / 20,
 		"Ocean must retain much greater density around the camera");
-	// Measure the actual height field: a prevailing swell should vary much less
-	// across the wind than along it, without requiring every crest to be identical.
+	// 実際の高さ場を測る。優勢なうねりは、風上方向よりも
+	// 風と直角の方向で大きく変化が小さいことを確かめる。各波頂の一致は求めない
 	const XMFLOAT2 wind{0.85749293f, 0.51449576f};
 	double alongEnergy = 0, acrossEnergy = 0;
 	const auto height = [](float x, float z) {

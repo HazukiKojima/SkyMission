@@ -17,14 +17,14 @@
 
 namespace Engine::ModelProcessing {
 	namespace {
-		constexpr uint64_t Magic =
-			0x534d47454f4d3032ULL; // Change when import/geometry/LOD processing changes.
+		// 読み込み、形状、LODの処理を変えたときに更新する
+		constexpr uint64_t Magic = 0x534d47454f4d3032ULL;
 
 		std::filesystem::path CachePath(
 			const std::filesystem::path& source, const ModelLoadOptions& options) {
 			auto extension = source.extension().wstring();
 			std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
-			// Other formats can depend on external geometry/material definitions.
+			// その他の形式は、外部の形状やマテリアル定義に依存することがある
 			if (extension != L".fbx") return {};
 			std::error_code error;
 			auto canonical = std::filesystem::weakly_canonical(source, error);

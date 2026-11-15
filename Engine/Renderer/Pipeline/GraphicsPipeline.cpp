@@ -5,7 +5,6 @@
 
 namespace {
 	namespace Binding = Engine::RootBinding;
-	// ルートシグネチャを生成するヘルパー
 	// srvCount: ルートテーブル内のSRV数
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRootSignatureWithSrvCount(ID3D12Device* device,
 		UINT srvCount, D3D12_TEXTURE_ADDRESS_MODE addressMode, Engine::RootSignatureLayout layout) {
@@ -64,7 +63,6 @@ namespace {
 		return rootSignature;
 	}
 
-	// グラフィックスパイプラインステートを生成するヘルパー
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device* device,
 		ID3D12RootSignature* rootSignature, ID3DBlob* vertexShader, ID3DBlob* pixelShader,
 		const Engine::PipelineOptions& options) {
@@ -89,7 +87,6 @@ namespace {
 
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-		// ラスタライザ設定
 		CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
 
 		// Assimpでモデルの座標系と巻き順を左手座標系へ変換済み
@@ -97,7 +94,6 @@ namespace {
 
 		psoDesc.RasterizerState = rasterizerDesc;
 
-		// ブレンド設定
 		CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
 		if (options.alphaBlend) {
 			blendDesc.RenderTarget[0].BlendEnable = TRUE;

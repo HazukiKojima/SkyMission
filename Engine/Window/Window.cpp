@@ -74,7 +74,7 @@ namespace Engine {
 	}
 
 	void Window::BeginCameraLook() {
-		// 標準のウィンドウ移動・サイズ変更が所有するキャプチャは奪わない。
+		// 標準のウィンドウ移動・サイズ変更が所有するキャプチャは奪わない
 		if (m_cameraMouseCaptured || GetCapture() != nullptr) return;
 		SetCapture(m_hwnd);
 		m_cameraMouseCaptured = GetCapture() == m_hwnd;
@@ -122,7 +122,7 @@ namespace Engine {
 		const auto& raw = *reinterpret_cast<const RAWINPUT*>(storage.data());
 		if (raw.header.dwType == RIM_TYPEKEYBOARD &&
 			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWKEYBOARD)) {
-			// 全画面切り替えのEnterをゲーム側のスキップ操作に渡さない。
+			// 全画面切り替えのEnterをゲーム側のスキップ操作に渡さない
 			if (raw.data.keyboard.VKey == VK_RETURN) {
 				const bool released = (raw.data.keyboard.Flags & RI_KEY_BREAK) != 0;
 				if (m_fullscreenEnterHeld) {
@@ -160,7 +160,7 @@ namespace Engine {
 		if (self) {
 			switch (message) {
 			case WM_CLOSE:
-				// Keep the HWND alive while the renderer's loading thread creates its swap chain.
+				// レンダラーの読み込みスレッドがスワップチェーンを作る間、HWNDを破棄しない
 				if (self->m_loading) {
 					self->m_closeRequested = true;
 					return 0;
@@ -190,7 +190,7 @@ namespace Engine {
 			case WM_RBUTTONDOWN:
 			case WM_RBUTTONUP:
 			case WM_CONTEXTMENU:
-				// 発射はRaw Inputの押下エッジで処理し、カメラのキャプチャには使わない。
+				// 発射はRaw Inputの押下エッジで処理し、カメラのキャプチャには使わない
 				return 0;
 			case WM_INPUT:
 				if (GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT)

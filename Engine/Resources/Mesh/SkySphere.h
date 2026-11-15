@@ -15,7 +15,6 @@ namespace Engine {
 		SkySphere() = default;
 		~SkySphere() = default;
 
-		// 球体メッシュを生成して頂点/インデックスバッファを作成する
 		void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius = 100.0f,
 			UINT slices = 64, UINT stacks = 32);
 		// 転送コマンドの GPU 完了後に呼ぶ
@@ -27,17 +26,14 @@ namespace Engine {
 			return m_indexBuffer.Get();
 		}
 
-		// 頂点バッファビューを取得
 		D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const {
 			return m_vertexBufferView;
 		}
 
-		// インデックスバッファビューを取得
 		const D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() const {
 			return m_indexBufferView;
 		}
 
-		// インデックス数を取得
 		UINT GetIndexCount() const {
 			return m_indexCount;
 		}

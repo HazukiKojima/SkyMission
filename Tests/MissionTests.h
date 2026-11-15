@@ -109,7 +109,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		Require(box->Load(device.GetDevice(), context.GetCommandList(), &device,
 					(fixture / L"combat-box.obj").wstring(), options),
 			"Mission carrier fixture failed");
-		// 本番と同じ生成経路で、初回更新前の表示とリトライを検証する。
+		// 本番と同じ生成経路で、初回更新前の表示とリトライを検証する
 		auto missionDefinition = definition;
 		missionDefinition.ships.resize(3);
 		for (size_t i = 0; i < missionDefinition.ships.size(); ++i) {
@@ -198,7 +198,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		}
 #endif
 		{
-			// A sea crash keeps its explosion visible instead of switching to the defeat movie.
+			// 海への墨落では、敗北ムービーに切り替えず爆発を表示し続ける
 			auto crash = initialized;
 			crash.ConfigureCinematics(definition.cinematics, [&](const std::string& id) {
 				return FlightScene::CinematicModel{resolveModel(id), 1};
@@ -268,7 +268,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			}
 			Require(largestDifference > 0.001f && trackedBeforeLock,
 				"Scene failed to pass selected enemy to camera before lock completion");
-			// The carrier is selected automatically after patrol removal, but is not a camera target.
+			// 母艦は哨戒機の排除後に自動で選ばれるが、カメラの対象にはならない
 			tracking = normal = initialized;
 			for (const auto& enemy : initialized.GetCombatSnapshot().enemies) {
 				tracking.RemoveObject(enemy.id);
@@ -467,7 +467,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				Require(command.GetCombatSnapshot().selected != Engine::InvalidObjectId,
 					"Carrier target was not released by missing-audio fallback");
 			}
-			// Explicit cinematic playback remains supported; only the automatic trigger changes.
+			// 明示的な演出再生は引き続き使える。変わるのは自動開始の条件だけ
 			Require(reusable.PlayCinematic("midMission"), "Explicit carrier cinematic stopped working");
 
 			{
@@ -576,7 +576,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			rejectedMissingModel = std::string(error.what()).find(PlayerModelId) != std::string::npos;
 		}
 		Require(rejectedMissingModel, "Mission factory accepted a missing player model");
-		// Enemy weapon setup must not depend on whether player/mission setup ran first.
+		// 敵の武装設定は、プレイヤーやミッションの設定を先に行ったかに依存しない
 		auto weaponSettings = definition.mission;
 		weaponSettings.maxHostileProjectiles = 4;
 		weaponSettings.enemyGunInterval = 0.07f;
@@ -655,7 +655,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			Require(maxAltitude - minAltitude > 1000 && maxDepth - minDepth > 2000,
 				"Patrol formation did not stagger altitude and approach distance");
 		}
-		// A nearby escort firing into the enlarged player fixture guarantees a gun hit.
+		// 近くの護衛機が拡大したプレイヤーへ撃つことで、機銖の命中を保証する
 		{
 			auto aaScene = scene;
 			aaScene.RemoveObject(playerId);
@@ -784,7 +784,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			Require(volley.GetCombatSnapshot().audio.missileLaunches == 2 &&
 					volley.GetCombatSnapshot().carrierMissileAmmo == 0,
 				"Queued double-click did not fire exactly the two loaded missiles");
-			// Guidance retains the launched target even after the aircraft breaks its lock.
+			// 機体がロックを外しても、誘導は発射時の目標を保持する
 			volley.SetPlayerAircraftPosition({100000, 1500, 0});
 			{
 				auto reloading = volley;

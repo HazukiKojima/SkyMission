@@ -21,7 +21,6 @@ namespace Game {
 
 	Application::~Application() {}
 
-	// アプリケーション初期化処理
 	void Application::Initialize() {
 		StartupTiming timing("application.window_and_json");
 		const auto startupTime = std::chrono::steady_clock::now();
@@ -54,7 +53,7 @@ namespace Game {
 			} comScope;
 			m_renderer->Initialize(hwnd, width, height, assets.BuildRendererDefinition());
 		});
-		// DXGI may send window messages during swap-chain creation, so keep the UI thread pumping.
+		// スワップチェーン作成中にDXGIがウィンドウメッセージを送るため、UIスレッドで処理し続ける
 		while (loading.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
 			MSG message{};
 			while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
@@ -63,7 +62,7 @@ namespace Game {
 			}
 			MsgWaitForMultipleObjectsEx(0, nullptr, 16, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 		}
-		loading.get(); // Propagate initialization errors after the worker has stopped.
+		loading.get(); // ワーカー停止後に、初期化エラーを呼び出し元へ伝播する
 		m_window->SetLoading(false);
 		if (!m_window->GetHandle()) return;
 		if (width != m_window->GetWidth() || height != m_window->GetHeight()) {
@@ -116,9 +115,7 @@ namespace Game {
 	}
 
 	void Application::ConfigureResizeHandling() {
-		// ウィンドウリサイズ時のコールバックを設定
 		m_window->SetOnResize([this](UINT w, UINT h) {
-			// 最小化などで幅/高さが0のときは処理しない
 			if (w == 0 || h == 0) return;
 
 			m_renderer->Resize(w, h);
@@ -129,7 +126,6 @@ namespace Game {
 		});
 	}
 
-	// メインループ（メッセージ処理と更新/描画）
 	int Application::Run() {
 		MSG msg = {};
 		bool suspended = false;
@@ -201,7 +197,7 @@ namespace Game {
 					BuildMenuHud();
 					return;
 				}
-				// 開始のEnterをオープニングのスキップ操作として再利用しない。
+				// 開始のEnterをオープニングのスキップ操作として再利用しない
 				m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 				m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
 				m_hudPresenter.Build(m_scene->GetCombatSnapshot(),
@@ -264,7 +260,7 @@ namespace Game {
 	const Engine::Scene& Application::PrepareCaptureScene() {
 		const auto& source = m_scene->GetRenderScene();
 		if (m_captureMode == 0) return source;
-		// Build a render-only scene; gameplay objects, damage and mission state stay intact.
+		// 描画専用のシーンを作る。ゲーム内オブジェクト、被害、ミッション状態は変更しない
 		m_captureScene = Engine::Scene{};
 		m_captureScene.SetCamera(source.GetCamera());
 		m_captureScene.SetEnvironment(source.GetEnvironment());
@@ -279,7 +275,6 @@ namespace Game {
 		return m_captureScene;
 	}
 
-	// 描画処理（レンダリングコマンド発行）
 	void Application::Render() {
 		const auto& scene = m_captureMode == 0 ? m_scene->GetRenderScene() : m_captureScene;
 		m_renderer->Render(m_window->GetWidth(), m_window->GetHeight(), scene,

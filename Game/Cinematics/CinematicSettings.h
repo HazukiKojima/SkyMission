@@ -29,7 +29,7 @@ namespace Game {
 		float flightVolumeScale = 0.4f;
 	};
 	struct CinematicShotSettings {
-		// "model" renders a separate formation; "carrier" films the mission ship.
+		// "model"は別の編隊を描画し、"carrier"はミッションの母艦を撮影する
 		std::string target = "model";
 		std::string model = "enemy";
 		float modelScale = 1;
@@ -60,12 +60,12 @@ namespace Game {
 		std::vector<CinematicRadioEntry> radio;
 		CinematicAudioSettings audio;
 		CinematicTextSettings text;
-		float endFadeSeconds = 0; // Optional final fade for explicit shot sequences.
+		float endFadeSeconds = 0; // カットを明示した場合に使う、任意の最終フェード
 		float fadeOutStartSeconds = 3.6f;
 		float cutSeconds = 3.8f;
 		float fadeInStartSeconds = 4;
 		float fadeInSeconds = 0.7f;
-		// 空なら従来の編隊紹介→戦闘視点。指定時は順にカットを再生する。
+		// 空なら従来の編隊紹介→戦闘視点。指定時は順にカットを再生する
 		std::vector<CinematicShotSettings> shots;
 		void Validate() const;
 		float TotalDuration() const;

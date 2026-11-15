@@ -16,8 +16,8 @@ float CloudNoise(float3 p)
     float n11 = lerp(CloudHash(cell + float3(0, 1, 1)), CloudHash(cell + float3(1, 1, 1)), f.x);
     return lerp(lerp(n00, n10, f.y), lerp(n01, n11, f.y), f.z);
 }
-// Weather and density are continuous world-space fields. There are no cloud centers,
-// bounding ellipsoids, per-cell spawn decisions, or exclusion ring around the player.
+// 天候と密度は、ワールド空間で連続した場として扱う。雲の中心、
+// 境界の楕円体、セルごとの出現判定、プレイヤー周囲の除外リングは持たない
 float4 CloudWeatherCorners(float2 cell, uint band)
 {
     float seed = cloudQuality.z * 0.017f + band * 19.13f;
@@ -33,7 +33,7 @@ float2 CloudWeatherPosition(float3 position, float cloudTime)
 }
 float CloudWeatherMinimum(uint band)
 {
-    // Temporary cumulus-only coverage reduction; cirrus retains its original coverage.
+    // 積雲だけの被覆率を一時的に下げる。巻雲は元の被覆率を保つ
     const float cumulusCoverageScale = 1.0f / 12.0f;
     return lerp(0.58f, 0.20f, cloudLayer.z * cumulusCoverageScale) + band * 0.06f;
 }
@@ -74,7 +74,7 @@ float CloudBandDensity(float3 position, float cloudTime, float footprint, uint b
             float3 p = (position - float3(cloudMotion.y, 0, cloudMotion.z) * cloudTime) * cloudMotion.x;
             p += float3(cloudQuality.z * 0.013f, 17.3f, cloudQuality.z * 0.021f);
             p += float3(band * 23.7f, band * 11.3f, band * 41.1f);
-            // Each band has independently varying cloud base AND development height.
+            // 各層は、雲底の高さと発達の高さを独立して変化させる
             float development = CloudDevelopment(p.xz * 0.70f);
             float lift = CloudDevelopment(p.xz * 0.29f + float2(13.4f, 7.8f));
             float bottom = 0.03f + (weather - 0.5f) * 0.06f + lift * (band == 0 ? 0.08f : 0.25f);
@@ -83,7 +83,7 @@ float CloudBandDensity(float3 position, float cloudTime, float footprint, uint b
             float profile = smoothstep(0, 0.16f, vertical) * (1 - smoothstep(0.72f, 1, vertical));
             if (profile > 0)
             {
-                // Stretch the body vertically so tall columns grow from the connected lower cloud.
+                // 本体を縦に伸ばし、背の高い雲柱が、つながった下層の雲から育つようにする
                 float3 body = p;
                 body.y = (position.y - bandBottom) * cloudMotion.x * 0.55f + 17.3f + band * 11.3f;
                 float coarseWeight = 1 - smoothstep(0.40f, 1.0f, footprint * cloudMotion.x);
@@ -96,7 +96,7 @@ float CloudBandDensity(float3 position, float cloudTime, float footprint, uint b
                 float shape = coarse * 0.68f + medium * 0.32f;
                 float field = shape - (0.68f - amount * 0.28f) - smoothstep(0.55f, 1, vertical) * 0.12f;
                 field += development * smoothstep(0.15f, 0.60f, vertical) * 0.06f;
-                // Keep billowing large forms without unresolved fine cellular erosion.
+                // 大きなもこもことした形を保ち、解像しきれない細かいセル状の侵食は加えない
                 density = smoothstep(-0.015f, 0.14f, field) * profile * amount * (1 - band * 0.15f);
             }
         }
@@ -115,7 +115,7 @@ float CloudDensity(float3 position, float cloudTime, float footprint)
 {
     float density = 0;
     float h = (position.y - cloudLayer.x) / (cloudLayer.y - cloudLayer.x);
-    // Two fixed bands avoid dynamic loop/index overhead in the hot primary and shadow paths.
+    // 2層を固定にして、負荷の高い主光線と影の経路で、動的なループや添字のコストを避ける
     if (h > 0 && h < 0.44001f)
         density += CloudBandDensity(position, cloudTime, footprint, 0);
     if (h > 0.31f && h < 0.69721f)
@@ -166,8 +166,8 @@ float4 IntegrateClouds(float2 uv, float cloudTime, float2 cloudPixel)
         CloudShellIntervals(ray, intervals);
         float begin = intervals.x;
         float end = min(intervals.y, min(CloudSceneDistance(uv, ray), 160000));
-        // The density profile cannot reach the full configured shell height.
-        // Clip only guaranteed empty space; preserve all visible billows.
+        // 密度の分布は、設定した殻の高さいっぱいには届かない
+        // 確実に空の空間だけを切り捨て、見えるもこもこは全て残す
         float densityTop = cloudLayer.x + (cloudLayer.y - cloudLayer.x) * 0.69721f;
         if (ray.y > 1e-6f)
             end = min(end, (densityTop - cameraPosition.y) / ray.y);
@@ -197,13 +197,13 @@ float4 IntegrateClouds(float2 uv, float cloudTime, float2 cloudPixel)
             if (i >= budget || begin >= end || result.a < 0.015f) break;
             float3 startPosition = cameraPosition + ray * begin;
             float2 weatherPosition = CloudWeatherPosition(startPosition, cloudTime);
-            // Conservative weather bounds in 1/8-cell tiles reject clear sky before density work.
+            // 1/8セルのタイルで天候の範囲を安全側に見積もり、密度の計算前に晴天を除外する
             const float weatherTile = 0.125f;
             float2 cell = floor(weatherPosition / weatherTile) * weatherTile;
             if (any(cell != cachedWeatherCell))
             {
-                // Smooth interpolation is monotonic per axis, so the four tile corners bound
-                // every weather value inside it, including tiles near a coarse-cell boundary.
+                // 滑らかな補間は軸ごとに単調なので、タイルの4隅の値が、
+                // 粗いセルの境界付近を含め、タイル内の全ての天候値の範囲を与える
                 float2 tileLow = frac(cell);
                 float2 tileHigh = tileLow + weatherTile;
                 tileLow = tileLow * tileLow * (3 - 2 * tileLow);
@@ -234,19 +234,19 @@ float4 IntegrateClouds(float2 uv, float cloudTime, float2 cloudPixel)
                 float2 boundary = cell + float2(ray.x >= 0 ? weatherTile : 0, ray.z >= 0 ? weatherTile : 0);
                 float2 crossing = abs(boundary - weatherPosition) * weatherCellSize /
                     max(abs(ray.xz), 1e-8f);
-                // A clear lower band does not imply that the cloud above it is clear.
+                // 下層が晴れていても、その上の雲が晴れているとは限らない
                 float skip = min(min(crossing.x, crossing.y), CloudBandBoundaryDistance(startPosition, ray));
                 begin += max(1, skip);
             }
             else
             {
-                // Logarithmic spacing reaches the complete horizon within the bounded budget.
+                // 対数間隔にすることで、限られたステップ数でも水平線の先まで届く
                 float stepLength = min(end - begin, clamp(begin * 0.025f, 120, 600) * qualityScale);
                 float distanceAlongRay = begin + 0.5f * stepLength;
                 float3 position = cameraPosition + ray * distanceAlongRay;
                 float footprint = distanceAlongRay * angularFootprint;
-                // Integrate both ends of each smooth interval, reusing the previous endpoint.
-                // This avoids random grain and stabilizes edges with fewer density evaluations.
+                // 滑らかな各区間の両端を積分し、前の端点を再利用する
+                // ランダムな粒状感を避け、少ない密度評価で輪郭を安定させる
                 float densityStart = abs(begin - previousDensityEnd) < 0.5f ? previousDensity :
                     CloudDensity(startPosition, cloudTime, begin * angularFootprint);
                 previousDensityEnd = begin + stepLength;
@@ -255,9 +255,9 @@ float4 IntegrateClouds(float2 uv, float cloudTime, float2 cloudPixel)
                 float density = (densityStart + previousDensity) * 0.5f;
                 if (density > 0.001f)
                 {
-                    // Sunlight varies more slowly than the silhouette; share its endpoint samples.
-                    // Use fixed distance knots, independent of the first nonempty density sample.
-                    // Matching endpoint footprints prevents shadow-detail changes at cache refreshes.
+                    // 太陽光は輪郭よりもゆっくり変化するので、端点のサンプルを共有する
+                    // 最初に密度のあったサンプルに依存せず、固定の距離の節点を使う
+                    // 端点の範囲をそろえることで、キャッシュ更新時の影の細部の変化を防ぐ
                     float lightInterval = 1200 * qualityScale;
                     if (distanceAlongRay >= lightEnd)
                     {

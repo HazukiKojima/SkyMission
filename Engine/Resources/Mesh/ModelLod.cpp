@@ -80,7 +80,7 @@ namespace Engine::ModelProcessing {
 					   c = remap[source.indices[i + 2]];
 			if (a != b && b != c && a != c) result.indices.insert(result.indices.end(), {a, b, c});
 		}
-		// Discard vertices no longer referenced by surviving triangles.
+		// 残った三角形から参照されなくなった頂点を破棄する
 		std::vector<ModelVertex> compact;
 		compact.reserve(result.vertices.size());
 		std::vector<uint32_t> used(result.vertices.size(), UINT32_MAX);

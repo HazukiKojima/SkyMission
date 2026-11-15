@@ -74,7 +74,7 @@ namespace Game {
 		scene.OnResize(width, height);
 		scene.ApplyRenderStates();
 		scene.RefreshCombatSnapshot();
-		// 初回Updateの有無によらず、完成時点を再挑戦の基準にする。
+		// 初回Updateの有無によらず、完成時点を再挑戦の基準にする
 		scene.SaveInitialState();
 		return scene;
 	}
@@ -194,7 +194,7 @@ namespace Game {
 		std::span<const CollisionTarget> targets) {
 		using namespace DirectX;
 		if (!m_weaponConfigured) return;
-		// 弾追加でシーン内のポインタが無効になるため、機体行列は値として保持する。
+		// 弾追加でシーン内のポインタが無効になるため、機体行列は値として保持する
 		const bool hasPlayer = m_scene.FindObject(m_playerId) != nullptr;
 		m_combat.audio.gunFiring = input.weapon.fire && hasPlayer;
 		const auto ages = m_gun.Update({input.weapon.fire && hasPlayer}, dt);
@@ -493,7 +493,7 @@ namespace Game {
 		m_combat.enemies = geometry.enemies;
 		m_combat.muzzle = geometry.muzzle;
 		m_combat.forward = geometry.forward;
-		// 命中・増援後の対象を再検証する。捕捉時間はここでは進めない。
+		// 命中・増援後の対象を再検証する。捕捉時間はここでは進めない
 		UpdateTargeting(geometry, false, 0);
 		m_combat.selected = m_targeting.GetSelected();
 		m_combat.lockState = m_targeting.GetState();
@@ -626,7 +626,7 @@ namespace Game {
 			lowestY = std::min(lowestY, XMVectorGetY(point));
 		}
 		if (lowestY > 0 || !std::isfinite(lowestY)) return;
-		// 大きい更新幅でも爆発を海中に埋めず、機体下端を海面に合わせる。
+		// 大きい更新幅でも爆発を海中に埋めず、機体下端を海面に合わせる
 		auto impact = *aircraft;
 		impact.worldTransform._42 -= lowestY;
 		auto position = m_player.GetPosition();
@@ -638,7 +638,7 @@ namespace Game {
 		RemoveObject(m_playerId);
 		m_combat.result = CombatResult::Defeat;
 		m_carrierLookSeconds = 0;
-		// 爆発が見える通常画面のままゲームオーバーにする。
+		// 爆発が見える通常画面のままゲームオーバーにする
 		m_endingPlayed = true;
 	}
 

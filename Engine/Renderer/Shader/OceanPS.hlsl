@@ -55,7 +55,7 @@ struct PS_INPUT
 
 float2 OceanFlowCoordinates(float2 worldXZ)
 {
-    // Same wind as the Gerstner swell: U crosses the wind, V follows it.
+    // ゲルストナー波のうねりと同じ風。Uは風に直交し、Vは風に沿う
     const float2 wind = float2(0.85749293f, 0.51449576f);
     const float2 across = float2(-wind.y, wind.x);
     return float2(dot(worldXZ, across), dot(worldXZ, wind));
@@ -63,8 +63,8 @@ float2 OceanFlowCoordinates(float2 worldXZ)
 
 float2 OceanSurfaceWarp(float2 worldXZ)
 {
-    // Mostly longitudinal phase variation; keep lateral distortion small so
-    // neighbouring wave groups retain one prevailing direction.
+    // 位相の変化はほぼ風の進行方向に限り、横方向の歪みは小さく保つ
+    // 隣り合う波の群れが、一つの優勢な方向を保つようにするため
     float2 p = OceanFlowCoordinates(worldXZ) * max(oceanNormalUvScale, 1e-6f);
     float broadPhase = p.y * 0.029f + p.x * 0.011f;
     float crossPhase = p.y * 0.013f - p.x * 0.019f;
@@ -86,7 +86,7 @@ float3 SampleOceanNormal(float3 wavePos, float2 surfaceWarp)
     float3 n2 = gOceanNormal2.Sample(gSampler, uv2).xyz * 2.0f - 1.0f;
     float2 flowSlopes = n1.xy * (1.0f + surfaceWarp.y * 0.15f) +
         n2.xy * (1.0f - surfaceWarp.x * 0.15f);
-    // Convert map slopes from the wind frame to T (+X), B (-Z).
+    // マップの傾きを、風の座標系からT(+X)、B(-Z)へ変換する
     const float2 wind = float2(0.85749293f, 0.51449576f);
     float2 worldSlopes = float2(-wind.y, wind.x) * flowSlopes.x + wind * flowSlopes.y;
     float2 slopes = float2(worldSlopes.x, -worldSlopes.y);
@@ -148,7 +148,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     // 海面の鏡面反射
 
-    // Broaden highlights when normal variation is subpixel instead of producing glitter.
+    // 法線の変化がサブピクセルのときは、ちらつきを出さずにハイライトを広げる
     float normalVariation = length(fwidth(N));
     float roughness = lerp(0.16f, 0.32f, smoothstep(0.01f, 0.08f, normalVariation));
     float3 sunSpecular = CalculateSunSpecular(N, V, L, roughness, lighting);

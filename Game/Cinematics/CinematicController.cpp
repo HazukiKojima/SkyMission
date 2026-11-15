@@ -94,7 +94,7 @@ namespace Game {
 		m_presentation.active = false;
 		m_presentation.formationShot = false;
 		m_presentation.fadeOpacity = 0;
-		// A skipped movie also hands control to the player before the post-movie call.
+		// ムービーをスキップした場合も、ムービー後の通信の前にプレイヤーへ操作を戻す
 		m_radioSeconds = m_settings.TotalDuration();
 		m_radioRunning = !m_settings.radio.empty() &&
 			m_settings.radio.back().startSeconds + m_settings.radio.back().durationSeconds > m_radioSeconds;

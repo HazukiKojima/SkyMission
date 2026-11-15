@@ -156,8 +156,8 @@ namespace Engine {
 			return *this;
 		}
 		const RedoxDocument& Get(const std::filesystem::path& jsonPath) {
-			// Most settings read many fields from the same absolute path in succession.
-			// Relative paths still resolve each time so a working-directory change is respected.
+			// 多くの設定は、同じ絶対パスから複数の項目を続けて読む
+			// 相対パスは毎回解決し、作業ディレクトリの変更を反映する
 			if (jsonPath.is_absolute() && m_lastDocument && jsonPath == m_lastPath) return *m_lastDocument;
 			const std::filesystem::path key = Normalize(jsonPath);
 			auto found = m_documents.find(key);

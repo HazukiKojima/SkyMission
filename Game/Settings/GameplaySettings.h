@@ -378,7 +378,7 @@ namespace Game {
 		float flightValuePadding = 12.0f;
 		float healthStatusY = 108.0f;
 		float fireWarningY = 330.0f;
-		// Right edge of the mission text in the 1920-wide reference layout.
+		// 幅1920の基準レイアウトにおける、ミッション文の右端
 		float missionX = 1872.0f;
 		float missionY = 16.0f;
 		float missionLineHeight = 44.0f;

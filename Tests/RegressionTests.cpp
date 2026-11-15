@@ -109,7 +109,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					presentation.active = false;
 					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
 						"Skipped opening retained a briefing voice");
-					// Connect a real existing clip to the radio channel without adding a new voice asset.
+					// 新しい音声アセットを追加せず、既存の実クリップを無線チャンネルへつなぐ
 					configured.radio[0].audio = configured.briefing[0].audio;
 					audio.Initialize(repository / L"Assets/Sound", configured);
 					Require(audio.GetLoadedSoundCount() == 22, "Radio voice clip was not decoded");
@@ -343,7 +343,7 @@ void TestFollowCameraLook() {
 	const auto before = camera.GetPosition();
 	camera.Update(std::numeric_limits<float>::infinity(), look);
 	Require(distance(before, camera.GetPosition()) == 0, "Invalid delta moved camera");
-	// 同じ姿勢のまま遠方へ移動してもビューの回転成分を変えない。
+	// 同じ姿勢のまま遠方へ移動してもビューの回転成分を変えない
 	AircraftCameraController distant;
 	distant.Initialize();
 	target.position = {0, 1500, 0};
@@ -435,7 +435,7 @@ void TestTargetCameraLook() {
 		"Automatic target orbit overrode manual input");
 	for (int frame = 0; frame < 120; ++frame) camera.Update(1 / 60.0f, hold);
 	Require(XMVectorGetX(direction(camera)) > 0.99f, "Auto orbit failed to resume after manual input");
-	// Target switch across the rear seam must take the short path.
+	// 後方の継ぎ目をまたぐ目標切り替えでは、短い回転経路を選ぶ
 	camera.SetLookTarget(XMFLOAT3{10, 1500, 5000});
 	for (int frame = 0; frame < 180; ++frame) camera.Update(1 / 60.0f, hold);
 	const auto before = direction(camera);
@@ -454,7 +454,7 @@ void TestTargetCameraLook() {
 	Require(separation(camera.GetPosition(), reference.GetPosition()) < 0.001f,
 		"Camera snap retained target orbit");
 	std::cout << "PASS: Z target orbit, release, manual priority, rear seam, reset and frame rates\n";
-	// Automatic mission focus works without input and temporarily overrides manual look.
+	// ミッションの自動注視は入力なしで動き、手動の見回しを一時的に上書きする
 	auto automatic = reference, noisy = reference;
 	automatic.SetLookTarget(XMFLOAT3{5000, 1500, 0}, true);
 	noisy.SetLookTarget(XMFLOAT3{5000, 1500, 0}, true);
@@ -778,7 +778,7 @@ void TestGpuTextures(const fs::path& fixture) {
 			submit();
 		}
 	}
-	// The default (unknown target) path must also retain HDR precision and generated mips.
+	// 既定（用途不明）の経路でも、HDR精度と生成したミップを維持する
 	DirectX::ScratchImage hdrImage;
 	ThrowIfFailed(hdrImage.Initialize2D(DXGI_FORMAT_R32G32B32A32_FLOAT, 16, 8, 1, 1));
 	const auto hdrPath = fixture / L"sky.hdr";
@@ -794,7 +794,7 @@ void TestGpuTextures(const fs::path& fixture) {
 		submit();
 	}
 	Texture noExtension;
-	// A resolution cap must preserve aspect ratio, rebuild mips, and have a distinct cache key.
+	// 解像度の上限は、縦横比を保ち、ミップを作り直し、独立したキャッシュキーを持つ
 	for (int load = 0; load < 2; ++load) {
 		auto limited = Texture::LoadCached(device.Get(), commands.Get(), png.wstring(),
 			{.targetFormat = DXGI_FORMAT_BC3_UNORM_SRGB, .maxDimension = 8});
@@ -916,14 +916,14 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 							"o Propeller\nv -1 0 -1\nv 1 0 -1\nv 0 1 -1\nf 4 5 6\n";
 	definition.playerAircraft.model = definition.enemyAircraft.model = model;
 	definition.playerAircraft.model = fixture / L"muzzles.dae";
-	// Same-material static parts may merge, while the existing propeller fixture stays independent.
+	// 同じマテリアルの静的な部品は統合してよいが、既存のプロペラは独立したままにする
 	definition.environment.skyTexture = definition.environment.oceanTexture =
 		definition.environment.oceanNormalTexture = definition.environment.oceanNormalTexture2 =
 			fixture / L"機体.png";
 	const HWND window = CreateWindowW(L"STATIC", L"SkyMission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0,
 		256, 256, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 	Require(window != nullptr, "Hidden test window could not be created");
-	// 必須モデルの失敗は、Rendererの破棄を経ても呼び出し元に届くこと。
+	// 必須モデルの失敗は、Rendererの破棄を経ても呼び出し元に届くこと
 	const auto invalidModel = fixture / L"invalid-model.obj";
 	std::ofstream(invalidModel) << "This file contains no mesh.\n";
 	for (const size_t modelIndex : {size_t(0), size_t(1), size_t(2), size_t(3)}) {

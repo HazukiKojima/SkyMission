@@ -1,7 +1,7 @@
 #include "FlightScene.h"
 namespace Game {
-	// 再挑戦で戻すシミュレーションと表示状態だけを明示する。
-	// 画面寸法、再挑戦用データ自体、外部のRenderer/Applicationは含めない。
+	// 再挑戦で戻すシミュレーションと表示状態だけを明示する
+	// 画面寸法、再挑戦用データ自体、外部のRenderer/Applicationは含めない
 	struct FlightScene::RestartState {
 		FlightMission mission;
 		CarrierMissileSystem carrierMissiles;

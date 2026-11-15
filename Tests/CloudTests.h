@@ -134,7 +134,7 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			context.TransitionResource(device.GetSceneDepth(), D3D12_RESOURCE_STATE_DEPTH_WRITE,
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			if (profile) {
-				CloudRenderPass{}.Record(frame); // warm up before the measured repetitions
+				CloudRenderPass{}.Record(frame); // 計測する繰り返しの前にウォームアップする
 				commands->EndQuery(timestamps.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
 				for (int repeat = 0; repeat < 8; ++repeat) CloudRenderPass{}.Record(frame);
 				commands->EndQuery(timestamps.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
@@ -197,7 +197,7 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			render(definition.environment.clouds, {0, 1145, 0}, {0, 1000, -8000}, L"ocean-flight-level.png", 12);
 			render(definition.environment.clouds, {0, 1145, 0}, {0, -1200, -4000}, L"ocean-flight-down.png", 12);
 			render(definition.environment.clouds, {0, 70, 0}, {0, 40, -3000}, L"ocean-low-level.png", 12);
-			// Fixed raised-cloud settings; capture a full turn below and inside the layer.
+			// 雲を高くした設定を固定し、雲層の下と内部で一周分を撮影する
 			for (unsigned level = 0; level < 2; ++level) {
 				std::array<double, 12> turnTimes{};
 				const DirectX::XMFLOAT3 eye = level == 0 ? DirectX::XMFLOAT3{0, 1500, 0} :
@@ -218,10 +218,10 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			}
 		}
 		auto clouds = definition.environment.clouds;
-		// Keep the dense interior fixtures at their authored altitude; the turn sweep uses live defaults.
+		// 密な雲の内部用フィクスチャは設計した高度のままにする。一周の走査は実際の既定値を使う
 		clouds.bottom = 1800;
 		clouds.top = 10500;
-		clouds.coverage = 0.34f; // Exercise the denser case as well as the sparse default mix.
+		clouds.coverage = 0.34f; // 疎な既定の配合だけでなく、密な場合も検証する
 		clouds.density = 0.0015f;
 		auto disabled = clouds;
 		disabled.enabled = false;
@@ -339,7 +339,7 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 		const auto elevated = render(clouds, {0, 7600, 0}, {0, 7600, -20000}, L"clouds-high-relief.png");
 		const auto elevatedClear = render(disabled, {0, 7600, 0}, {0, 7600, -20000}, L"clouds-high-relief-clear.png");
 		size_t highCloudPixels = 0;
-		// Rays above the horizon must see the upper cloud domain, not the lower cloud bank.
+		// 水平線より上のレイは、下層の雲ではなく上層の雲を見る
 		for (UINT row = 0; row < height / 2 - 2; ++row)
 			for (UINT column = 0; column < width; ++column) {
 				const auto offset = (size_t(row) * width + column) * 4;

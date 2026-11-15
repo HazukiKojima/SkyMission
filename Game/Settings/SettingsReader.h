@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <array>
 namespace Game {
-	// Missing fields retain defaults; malformed values always report the file and field.
+	// 欠けた項目は既定値のまま。不正な値は、必ずファイル名と項目名を報告する
 	class SettingsReader {
 	  private:
 		template <class F> auto Read(const std::string& key, F operation) const {
@@ -43,7 +43,7 @@ namespace Game {
 		void Array(const std::string& key, std::array<float, N>& value, float minimum = -1000000,
 			float maximum = 1000000) const {
 			if (!exists) return;
-			// REDox numeric arrays support up to three components; read larger arrays by pointer.
+			// REDoxの数値配列は最大3成分まで。それより大きい配列はポインタで読む
 			auto length = Read(key, [&] {
 				return reader.TryResolveArrayLength(path, key);
 			});

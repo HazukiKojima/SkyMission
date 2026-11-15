@@ -59,7 +59,7 @@ namespace Game {
 		if (XMVectorGetX(XMVector3LengthSq(direction)) < 0.0001f) return {0, 0, -1};
 		direction = XMVector3Normalize(direction);
 		if (const auto aim = SolveGunAim(position, velocity, target, speed, tuning.lifetimeSeconds)) {
-			// 発射時だけ予測位置へ狙いを寄せる。発射後の弾は誘導しない。
+			// 発射時だけ予測位置へ狙いを寄せる。発射後の弾は誘導しない
 			const float lead =
 				tuning.minimumLeadFraction + EnemyVariation(slot, shot, 41) * tuning.leadVariation;
 			direction = XMVector3Normalize(XMVectorLerp(direction, XMLoadFloat3(&aim->direction), lead));
@@ -90,7 +90,7 @@ namespace Game {
 			tuning.minimumSpreadDegrees + EnemyVariation(slot, shot, 97) * tuning.spreadRangeDegrees);
 		const auto offset = (right * std::cos(angle) + up * std::sin(angle)) * std::tan(spread);
 		std::array<XMFLOAT3, 2> directions;
-		// 中心を挟んだ2方向へ散らす。弾の進行方向は発射時に確定する。
+		// 中心を挟んだ2方向へ散らす。弾の進行方向は発射時に確定する
 		XMStoreFloat3(&directions[0], XMVector3Normalize(forward + offset));
 		XMStoreFloat3(&directions[1], XMVector3Normalize(forward - offset));
 		return directions;

@@ -110,7 +110,7 @@ namespace Engine {
 	}
 
 	bool Texture::DecodeAndProcessImage(const std::wstring& filePath, const TextureLoadOptions& options) {
-		// HDR decoding and float mip generation are expensive too; retain their processed DDS.
+		// HDRのデコードと浮動小数点のミップ生成も重いので、処理済みのDDSを保持する
 		const auto cachePath = GetDiskCachePath(filePath, options);
 		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath)) return true;
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options)) return false;
@@ -306,17 +306,14 @@ namespace Engine {
 	}
 
 	void Texture::UploadImage(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList) {
-		// GPU用テクスチャリソースを作成
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, static_cast<UINT>(m_meta.width),
 			static_cast<UINT>(m_meta.height), static_cast<UINT16>(m_meta.arraySize),
 			static_cast<UINT16>(m_meta.mipLevels));
 
-		// デフォルトヒープにテクスチャを確保
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_texture)));
 
-		// 転送用アップロードバッファを作成
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(
 			m_texture.Get(), 0, static_cast<UINT>(m_meta.mipLevels * m_meta.arraySize));
 
@@ -325,7 +322,6 @@ namespace Engine {
 		ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProps, D3D12_HEAP_FLAG_NONE, &uploadDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_uploadHeap)));
 
-		// サブリソース配列を作成してアップロード
 		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 		subresources.resize(m_meta.mipLevels * m_meta.arraySize);
 

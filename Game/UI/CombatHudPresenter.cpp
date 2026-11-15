@@ -80,7 +80,7 @@ namespace Game {
 					corner & 1 ? bounds.maximum.x : bounds.minimum.x,
 					corner & 2 ? bounds.maximum.y : bounds.minimum.y,
 					corner & 4 ? bounds.maximum.z : bounds.minimum.z, 1), XMLoadFloat4x4(&box.target.world)));
-			// 8頂点の各軸方向を一度ずつ結び、OBBの12辺を描く。
+			// 8頂点の各軸方向を一度ずつ結び、OBBの12辺を描く
 			for (int corner = 0; corner < 8; ++corner)
 				for (int axis : {1, 2, 4})
 					if (!(corner & axis))
@@ -503,12 +503,12 @@ namespace Game {
 		direction = XMLoadFloat3(&d);
 		m_arrowTarget = snapshot.selected;
 		m_arrowSeconds = snapshot.elapsedSeconds;
-		// 正面・真後ろでも基底が潰れないよう、視線に直交する軸を選ぶ。
+		// 正面・真後ろでも基底が潰れないよう、視線に直交する軸を選ぶ
 		const auto reference = std::abs(d.z) < 0.95f ? XMVectorSet(0, 0, 1, 0) : XMVectorSet(0, 1, 0, 0);
 		const auto side = XMVector3Normalize(XMVector3Cross(reference, direction));
 		const auto up = XMVector3Cross(direction, side);
 		// 敵の方位に合わせて中央の周囲を移動する。視線軸の近くでは
-		// 半径を縮め、正面を横切る際に反対側へ突然跳ばないようにする。
+		// 半径を縮め、正面を横切る際に反対側へ突然跳ばないようにする
 		const float radial = 110 * scale / std::max(0.35f, std::hypot(d.x, d.y));
 		const XMFLOAT2 anchor{view.width * 0.5f + d.x * radial, view.height * 0.5f - d.y * radial};
 		const auto projectArrow = [&](FXMVECTOR point) {
@@ -517,8 +517,8 @@ namespace Game {
 			const float perspective = 420 / (420 + p.z);
 			return XMFLOAT2{anchor.x + p.x * perspective * scale, anchor.y - p.y * perspective * scale};
 		};
-		// 細長い山形の後端を内側へ折り込み、稜線だけで薄い立体感を出す。
-		// 四角錐の底面や軸線は描かず、矢印として読める輪郭を優先する。
+		// 細長い山形の後端を内側へ折り込み、稜線だけで薄い立体感を出す
+		// 四角錐の底面や軸線は描かず、矢印として読める輪郭を優先する
 		const auto tip = projectArrow(direction * 64);
 		const auto left = projectArrow(direction * -42 + side * 17);
 		const auto right = projectArrow(direction * -42 - side * 17);
