@@ -640,7 +640,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 			simulatePursuit({5000, 1500, 0}, 1, turning, physicalPlayer);
 			simulatePursuit({0, 1500, 5000}, 2, turning, physicalPlayer);
 		}
-	// ミッションの機銖は、飛行操作を保ちながら繰り返しの通過で発射する
+	// ミッションの機銃は、飛行操作を保ちながら繰り返しの通過で発射する
 	for (bool turning : {false, true})
 		for (size_t slot = 0; slot < 6; ++slot)
 			simulatePursuit({(float(slot) - 2.5f) * 1500,

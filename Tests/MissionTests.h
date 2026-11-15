@@ -198,7 +198,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		}
 #endif
 		{
-			// 海への墨落では、敗北ムービーに切り替えず爆発を表示し続ける
+			// 海への墜落では、敗北ムービーに切り替えず爆発を表示し続ける
 			auto crash = initialized;
 			crash.ConfigureCinematics(definition.cinematics, [&](const std::string& id) {
 				return FlightScene::CinematicModel{resolveModel(id), 1};
@@ -655,7 +655,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			Require(maxAltitude - minAltitude > 1000 && maxDepth - minDepth > 2000,
 				"Patrol formation did not stagger altitude and approach distance");
 		}
-		// 近くの護衛機が拡大したプレイヤーへ撃つことで、機銖の命中を保証する
+		// 近くの護衛機が拡大したプレイヤーへ撃つことで、機銃の命中を保証する
 		{
 			auto aaScene = scene;
 			aaScene.RemoveObject(playerId);
