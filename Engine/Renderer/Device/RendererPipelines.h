@@ -9,15 +9,19 @@ namespace Engine {
 		GraphicsPipeline* GetOcean() const {
 			return m_ocean.get();
 		}
+
 		GraphicsPipeline* GetSky() const {
 			return m_sky.get();
 		}
+
 		GraphicsPipeline* GetRetroFilm() const {
 			return m_retroFilm.get();
 		}
+
 		GraphicsPipeline* GetModel() const {
 			return m_model.get();
 		}
+
 		GraphicsPipeline* GetClouds() const {
 			return m_clouds.get();
 		}

@@ -6,6 +6,7 @@ namespace Engine {
 	inline ComPtr<ID3D12Resource> CreateUploadBuffer(ID3D12Device* device, UINT64 size, UINT8** mappedData) {
 		ComPtr<ID3D12Resource> resource;
 		const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_UPLOAD);
+
 		const auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
 		ThrowIfFailed(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
 			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resource)));
@@ -28,6 +29,7 @@ namespace Engine {
 		ID3D12GraphicsCommandList* commands, const void* data, UINT64 size, D3D12_RESOURCE_STATES finalState,
 		ComPtr<ID3D12Resource>& upload) {
 		upload = CreateInitializedUploadBuffer(device, data, size);
+
 		ComPtr<ID3D12Resource> resource;
 		const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_DEFAULT);
 		const auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
@@ -35,6 +37,7 @@ namespace Engine {
 			D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&resource)));
 		// コピー時にCOMMONからCOPY_DESTへ自動的に遷移する
 		commands->CopyBufferRegion(resource.Get(), 0, upload.Get(), 0, size);
+
 		const auto barrier =
 			CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, finalState);
 		commands->ResourceBarrier(1, &barrier);

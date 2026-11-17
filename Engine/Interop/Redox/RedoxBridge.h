@@ -22,6 +22,7 @@ namespace Engine {
 		if (error) {
 			throw std::runtime_error("Failed to determine JSON file size.");
 		}
+
 		if (fileSize == 0 || fileSize > MaxJsonFileSize ||
 			fileSize > static_cast<std::uintmax_t>((std::numeric_limits<int>::max)())) {
 			throw std::runtime_error("JSON file is empty or exceeds the size limit.");
@@ -59,6 +60,7 @@ namespace Engine {
 		static FARPROC GetFunction(const char* entryPoint) {
 			HMODULE module = GetModule();
 			FARPROC function = ::GetProcAddress(module, entryPoint);
+
 			if (!function) {
 				throw std::runtime_error(std::string("Failed to find REDox entry point: ") + entryPoint);
 			}
@@ -74,6 +76,7 @@ namespace Engine {
 				}
 				return loaded;
 			}();
+
 			return module;
 		}
 	};
@@ -83,6 +86,7 @@ namespace Engine {
 	class RedoxDocument {
 	  public:
 		RedoxDocument() = default;
+
 		explicit RedoxDocument(const std::vector<char>& json) {
 			using CreateDocument = int(__cdecl*)(const unsigned char*, int, std::intptr_t*);
 			auto createDocument =
@@ -99,6 +103,7 @@ namespace Engine {
 		~RedoxDocument() {
 			Reset();
 		}
+
 		RedoxDocument(const RedoxDocument&) = delete;
 		RedoxDocument& operator=(const RedoxDocument&) = delete;
 
@@ -131,6 +136,7 @@ namespace Engine {
 			} catch (...) {
 				// デストラクタでは例外を送出せず、DLLを保持する
 			}
+
 			m_handle = 0;
 		}
 
@@ -146,6 +152,7 @@ namespace Engine {
 			: m_files(std::move(other.m_files)), m_documents(std::move(other.m_documents)) {
 			other.m_lastDocument = nullptr;
 		}
+
 		JsonDocumentCache& operator=(JsonDocumentCache&& other) noexcept {
 			if (this != &other) {
 				m_lastDocument = nullptr;
@@ -155,16 +162,19 @@ namespace Engine {
 			}
 			return *this;
 		}
+
 		const RedoxDocument& Get(const std::filesystem::path& jsonPath) {
 			// 多くの設定は、同じ絶対パスから複数の項目を続けて読む
 			// 相対パスは毎回解決し、作業ディレクトリの変更を反映する
 			if (jsonPath.is_absolute() && m_lastDocument && jsonPath == m_lastPath) return *m_lastDocument;
+
 			const std::filesystem::path key = Normalize(jsonPath);
 			auto found = m_documents.find(key);
 			if (found == m_documents.end()) {
 				const std::vector<char>& json = m_files.Read(key);
 				found = m_documents.emplace(key, RedoxDocument(json)).first;
 			}
+
 			if (jsonPath.is_absolute()) {
 				m_lastPath = jsonPath;
 				m_lastDocument = &found->second; // std::map insertions preserve references.

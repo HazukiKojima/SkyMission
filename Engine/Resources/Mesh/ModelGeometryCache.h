@@ -9,6 +9,7 @@ namespace Engine::ModelProcessing {
 		std::string name;
 		std::array<std::string, 5> textures; // ベースカラー、ディフューズ、メタルネス、ラフネス、法線の順
 	};
+
 	struct PreparedModelGeometry {
 		bool loadedFromCache = false;
 		std::array<std::vector<MeshGeometry>, 3> levels;

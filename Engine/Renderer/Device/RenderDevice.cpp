@@ -54,6 +54,7 @@ namespace Engine {
 		}
 #endif
 		ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_factory)));
+
 		HRESULT deviceResult = TryCreateHardwareDevice() ? S_OK : E_FAIL;
 
 		if (FAILED(deviceResult)) {
@@ -258,6 +259,7 @@ namespace Engine {
 
 	void RenderDevice::CreateSceneDepth() {
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+
 		// シーンの深度画像
 
 		CD3DX12_RESOURCE_DESC depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(
@@ -281,6 +283,7 @@ namespace Engine {
 			1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 		const float transparent[] = {0, 0, 0, 1}; // RGBは積分色、Aは残存透過率
 		const CD3DX12_CLEAR_VALUE clear(CloudFormat, transparent);
+
 		for (UINT frame = 0; frame < FrameCount; ++frame) {
 			ThrowIfFailed(m_device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear,
@@ -312,6 +315,7 @@ namespace Engine {
 			srv.ptr += m_srvDescriptorSize;
 			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, srv);
 			srv.ptr += m_srvDescriptorSize;
+
 			auto cloudSrv = colorSrv;
 			cloudSrv.Format = CloudFormat;
 			m_device->CreateShaderResourceView(m_cloudRenderTargets[i].Get(), &cloudSrv, srv);

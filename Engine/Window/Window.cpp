@@ -10,6 +10,7 @@ namespace Engine {
 		wc.lpfnWndProc = WindowProc;
 		wc.hInstance = hInstance;
 		wc.lpszClassName = L"DX12WindowClass";
+
 		if (!RegisterClassW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
 			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 		RECT rc{0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
@@ -26,6 +27,7 @@ namespace Engine {
 			DestroyWindow(m_hwnd);
 			ThrowIfFailed(error);
 		}
+
 		m_input.SetActive(GetForegroundWindow() == m_hwnd);
 	}
 
@@ -76,12 +78,14 @@ namespace Engine {
 	void Window::BeginCameraLook() {
 		// 標準のウィンドウ移動・サイズ変更が所有するキャプチャは奪わない
 		if (m_cameraMouseCaptured || GetCapture() != nullptr) return;
+
 		SetCapture(m_hwnd);
 		m_cameraMouseCaptured = GetCapture() == m_hwnd;
 	}
 
 	void Window::EndCameraLook() {
 		if (!m_cameraMouseCaptured) return;
+
 		m_cameraMouseCaptured = false;
 		if (GetCapture() == m_hwnd) ReleaseCapture();
 	}
@@ -90,6 +94,7 @@ namespace Engine {
 		// プロセス共通の入力登録を、別のWindowから解除しない
 		UINT count = 0;
 		if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1)) return;
+
 		std::vector<RAWINPUTDEVICE> registered(count), remove;
 		if (count &&
 			GetRegisteredRawInputDevices(registered.data(), &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
@@ -99,6 +104,7 @@ namespace Engine {
 				(device.usUsage == 0x06 || device.usUsage == 0x02))
 				remove.push_back({device.usUsagePage, device.usUsage, RIDEV_REMOVE, nullptr});
 		}
+
 		if (!remove.empty() &&
 			!RegisterRawInputDevices(remove.data(), static_cast<UINT>(remove.size()), sizeof(RAWINPUTDEVICE)))
 			Log("Window: raw input unregistration failed ({})\n", GetLastError());
@@ -109,9 +115,11 @@ namespace Engine {
 			DeactivateInput();
 			return;
 		}
+
 		UINT size = 0;
 		if (GetRawInputData(handle, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER)) == UINT(-1)) return;
 		if (size < sizeof(RAWINPUTHEADER)) return;
+
 		// GetRawInputDataの受信領域をDWORD境界にそろえる
 		std::vector<DWORD> storage((size + sizeof(DWORD) - 1) / sizeof(DWORD));
 		const UINT bytes = GetRawInputData(handle, RID_INPUT, storage.data(), &size, sizeof(RAWINPUTHEADER));
@@ -119,16 +127,19 @@ namespace Engine {
 			Log("Window: failed to read raw input packet ({})\n", GetLastError());
 			return;
 		}
+
 		const auto& raw = *reinterpret_cast<const RAWINPUT*>(storage.data());
 		if (raw.header.dwType == RIM_TYPEKEYBOARD &&
 			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWKEYBOARD)) {
 			// 全画面切り替えのEnterをゲーム側のスキップ操作に渡さない
 			if (raw.data.keyboard.VKey == VK_RETURN) {
 				const bool released = (raw.data.keyboard.Flags & RI_KEY_BREAK) != 0;
+
 				if (m_fullscreenEnterHeld) {
 					if (released) m_fullscreenEnterHeld = false;
 					return;
 				}
+
 				if (!released && !m_input.IsKeyDown(VK_RETURN) &&
 					(m_input.IsKeyDown(VK_LSHIFT) || m_input.IsKeyDown(VK_RSHIFT))) {
 					m_fullscreenEnterHeld = true;
@@ -136,6 +147,7 @@ namespace Engine {
 					return;
 				}
 			}
+
 			m_input.ProcessKeyboard(raw.header.hDevice, raw.data.keyboard);
 		} else if (raw.header.dwType == RIM_TYPEMOUSE &&
 			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWMOUSE)) {
@@ -157,6 +169,7 @@ namespace Engine {
 			self->m_hwnd = hwnd;
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
 		}
+
 		if (self) {
 			switch (message) {
 			case WM_CLOSE:
@@ -209,6 +222,7 @@ namespace Engine {
 			case WM_INPUT_DEVICE_CHANGE:
 				if (wParam == GIDC_REMOVAL) {
 					self->m_input.ForgetDevice(reinterpret_cast<HANDLE>(lParam));
+
 					if (!self->m_input.IsMiddleMouseDown()) self->EndCameraLook();
 				}
 				return 0;
@@ -225,6 +239,7 @@ namespace Engine {
 			case WM_SIZE:
 				self->m_width = LOWORD(lParam);
 				self->m_height = HIWORD(lParam);
+
 				if (self->m_onResize) self->m_onResize(self->m_width, self->m_height);
 				return 0;
 			case WM_DESTROY:

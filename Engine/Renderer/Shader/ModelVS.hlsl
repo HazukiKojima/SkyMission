@@ -47,6 +47,7 @@ PS_INPUT VS(VS_INPUT input)
     float3 localPosition = input.position;
     float3 localNormal = input.normal;
     float3 localTangent = input.tangent.xyz;
+
     if (nodeRotationEnabled != 0)
     {
         localPosition = nodeRotationPivot + RotateNodeVector(input.position - nodeRotationPivot);

@@ -20,6 +20,7 @@ namespace Engine {
 				nullSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 				nullSrv.Texture2D.MipLevels = 1;
 				device.GetDevice()->CreateShaderResourceView(nullptr, &nullSrv, handle);
+
 				const auto utf8 = path.u8string();
 				Log("RendererAssets: skipping missing texture {}\n",
 					std::string(reinterpret_cast<const char*>(utf8.data()), utf8.size()));
@@ -66,6 +67,7 @@ namespace Engine {
 			ReleaseUploadResources();
 			context->BeginFrame();
 		};
+
 		finishBatch();
 		for (const auto& asset : assets.models) {
 			const auto started = std::chrono::steady_clock::now();

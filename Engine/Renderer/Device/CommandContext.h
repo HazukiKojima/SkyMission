@@ -9,6 +9,7 @@ namespace Engine {
 		CommandContext() = default;
 		~CommandContext();
 		CommandContext(const CommandContext&) = delete;
+
 		CommandContext& operator=(const CommandContext&) = delete;
 
 		void Initialize(RenderDevice* renderDevice);
@@ -17,6 +18,7 @@ namespace Engine {
 		void EndFrame();
 		void MoveToNextFrame(RenderDevice* renderDevice);
 		void WaitForGpu();
+
 		// リサイズ後のインデックスに合わせるため、WaitForGpu後に呼ぶ
 		void SynchronizeFrameIndex(const RenderDevice& device) {
 			const UINT64 nextFenceValue = m_fenceValues[m_currentFrameIndex];
@@ -35,6 +37,7 @@ namespace Engine {
 		ID3D12GraphicsCommandList* GetCommandList() const {
 			return m_commandList.Get();
 		}
+
 		UINT GetFrameIndex() const {
 			return m_renderDevice->GetFrameIndex();
 		}

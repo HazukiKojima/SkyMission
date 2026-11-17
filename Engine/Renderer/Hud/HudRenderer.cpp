@@ -10,6 +10,7 @@ namespace Engine {
 		std::vector<uint8_t> CreateFontAtlas() {
 			const HDC dc = CreateCompatibleDC(nullptr);
 			if (!dc) throw std::runtime_error("Could not create HUD font DC");
+
 			BITMAPINFO info{};
 			info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 			info.bmiHeader.biWidth = HudFont::Width;
@@ -17,6 +18,7 @@ namespace Engine {
 			info.bmiHeader.biPlanes = 1;
 			info.bmiHeader.biBitCount = 32;
 			void* pixels = nullptr;
+
 			const auto bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
 			const auto font = CreateFontW(-36, 20, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
 				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH, L"Consolas");
@@ -30,22 +32,26 @@ namespace Engine {
 				DeleteDC(dc);
 				throw std::runtime_error("Could not create HUD font bitmap");
 			}
+
 			const auto oldBitmap = SelectObject(dc, bitmap);
 			const auto oldFont = SelectObject(dc, font);
 			std::memset(pixels, 0, HudFont::Width * HudFont::Height * 4);
 			SetTextColor(dc, RGB(255, 255, 255));
 			SetBkColor(dc, RGB(0, 0, 0));
 			SetBkMode(dc, TRANSPARENT);
+
 			for (unsigned glyph = 0; glyph < HudFont::GlyphCount; ++glyph) {
 				const bool ascii = glyph < HudFont::AsciiCount;
 				const wchar_t text =
 					wchar_t(ascii ? glyph + 32 : HudFont::Japanese[glyph - HudFont::AsciiCount]);
 				SelectObject(dc, ascii || text == L'▶' ? font : japaneseFont);
+
 				const int x = int(glyph % HudFont::Columns * HudFont::Cell);
 				const int y = int(glyph / HudFont::Columns * HudFont::Cell);
 				const RECT cell{x, y, x + LONG(HudFont::GlyphWidth(glyph)), y + LONG(HudFont::Cell)};
 				ExtTextOutW(dc, x + 2, y + 3, ETO_CLIPPED, &cell, &text, 1, nullptr);
 			}
+
 			GdiFlush();
 			std::vector<uint8_t> rgba(HudFont::Width * HudFont::Height * 4);
 			const auto* source = static_cast<const uint8_t*>(pixels);
@@ -53,6 +59,7 @@ namespace Engine {
 				rgba[i] = rgba[i + 1] = rgba[i + 2] = 255;
 				rgba[i + 3] = source[i];
 			}
+
 			for (unsigned y = HudFont::Height - 8; y < HudFont::Height; ++y)
 				for (unsigned x = HudFont::Width - 8; x < HudFont::Width; ++x)
 					rgba[(y * HudFont::Width + x) * 4 + 3] = 255;
@@ -62,15 +69,18 @@ namespace Engine {
 			DeleteObject(japaneseFont);
 			DeleteObject(bitmap);
 			DeleteDC(dc);
+
 			return rgba;
 		}
 	} // namespace
+
 	void HudRenderer::Initialize(RenderDevice& device, ID3D12GraphicsCommandList* commands) {
 		auto* gpu = device.GetDevice();
 		const auto pixels = CreateFontAtlas();
 		m_atlas.CreateFromRgba(gpu, commands, HudFont::Width, HudFont::Height, pixels);
 		m_atlas.CreateShaderResourceView(gpu, device.AllocateSrvDescriptor(&m_srv));
 		CD3DX12_DESCRIPTOR_RANGE range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
 		CD3DX12_ROOT_PARAMETER parameter;
 		parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_PIXEL);
 		CD3DX12_STATIC_SAMPLER_DESC sampler(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR,
@@ -98,6 +108,7 @@ namespace Engine {
 		desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+
 		auto& blend = desc.BlendState.RenderTarget[0];
 		blend.BlendEnable = TRUE;
 		blend.SrcBlend = D3D12_BLEND_SRC_ALPHA;
@@ -112,10 +123,12 @@ namespace Engine {
 		desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		desc.SampleDesc.Count = 1;
 		ThrowIfFailed(gpu->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&m_pipeline)));
+
 		for (UINT frame = 0; frame < RenderDevice::FrameCount; ++frame)
 			m_vertices[frame] =
 				CreateUploadBuffer(gpu, HudDrawList::MaxVertices * sizeof(HudVertex), &m_mapped[frame]);
 	}
+
 	void HudRenderer::Record(
 		RenderDevice& device, ID3D12GraphicsCommandList* commands, const HudDrawList& list) {
 		const auto& vertices = list.GetVertices();
@@ -129,6 +142,7 @@ namespace Engine {
 		ID3D12DescriptorHeap* heaps[] = {device.GetSrvDescriptorHeap()};
 		commands->SetDescriptorHeaps(1, heaps);
 		commands->SetGraphicsRootDescriptorTable(0, device.GetSrvGpuHandle(m_srv));
+
 		const D3D12_VERTEX_BUFFER_VIEW view{m_vertices[frame]->GetGPUVirtualAddress(),
 			UINT(vertices.size() * sizeof(HudVertex)), sizeof(HudVertex)};
 		commands->IASetVertexBuffers(0, 1, &view);

@@ -1,5 +1,6 @@
 #pragma once
 #include <DirectXMath.h>
+
 namespace Engine {
 	struct CloudSettings {
 		bool enabled = false;
@@ -13,5 +14,6 @@ namespace Engine {
 		unsigned steps = 48;
 		unsigned seed = 1945;
 	};
+
 	void ValidateCloudSettings(const CloudSettings& settings);
 } // namespace Engine

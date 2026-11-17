@@ -35,18 +35,23 @@ namespace Engine {
 		const GpuFrameTimings& GetGpuTimings() const {
 			return m_gpuProfiler.Latest();
 		}
+
 		const RenderStatistics& GetRenderStatistics() const {
 			return m_statistics;
 		}
+
 		size_t GetModelCapacity() const {
 			return m_constantBuffers.GetModelCapacity();
 		}
+
 		float GetOceanSize() const {
 			return m_frameUpdater.GetOceanSize();
 		}
+
 		const std::wstring& GetAdapterName() const {
 			return m_device->GetAdapterName();
 		}
+
 		std::shared_ptr<Model> GetModel(std::string_view id) const {
 			return m_assets.GetModel(id);
 		}

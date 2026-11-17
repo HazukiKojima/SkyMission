@@ -10,6 +10,7 @@ namespace Engine {
 		auto* device = frame.device;
 		auto& pipelines = frame.pipelines;
 		auto& constantBuffers = frame.constantBuffers;
+
 		if (assets.GetSkySphere() && assets.GetSkyTexture() && assets.GetSkyTexture()->GetResource()) {
 			commandList->SetGraphicsRootSignature(pipelines.GetSky()->GetRootSignature());
 			commandList->SetPipelineState(pipelines.GetSky()->GetPSO());
@@ -39,6 +40,7 @@ namespace Engine {
 		auto* device = frame.device;
 		auto& pipelines = frame.pipelines;
 		auto& constantBuffers = frame.constantBuffers;
+
 		if (!assets.GetOceanTexture() || !assets.GetOceanTexture()->IsLoaded() ||
 			!assets.GetOceanNormalTexture() || !assets.GetOceanNormalTexture()->IsLoaded() ||
 			!assets.GetOceanNormalTexture2() || !assets.GetOceanNormalTexture2()->IsLoaded() ||
@@ -75,11 +77,13 @@ namespace Engine {
 		auto& constantBuffers = frame.constantBuffers;
 		const auto& objects = scene.GetObjects();
 		const UINT frameIndex = frame.frameIndex;
+
 		if (pipelines.GetModel()) {
 			commandList->SetGraphicsRootSignature(pipelines.GetModel()->GetRootSignature());
 			commandList->SetPipelineState(pipelines.GetModel()->GetPSO());
 			ID3D12DescriptorHeap* modelHeaps[] = {device->GetSrvDescriptorHeap()};
 			commandList->SetDescriptorHeaps(_countof(modelHeaps), modelHeaps);
+
 			for (size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex) {
 				const SceneObject& object = objects[objectIndex];
 				const auto decision = decisions[objectIndex];
@@ -87,6 +91,7 @@ namespace Engine {
 					++statistics.culledObjects;
 					continue;
 				}
+
 				if (!object.model || !object.model->IsLoaded()) continue;
 
 				commandList->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
@@ -106,11 +111,13 @@ namespace Engine {
 		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(device->GetCloudRenderTarget(),
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		commands->ResourceBarrier(1, &barrier);
+
 		const D3D12_VIEWPORT viewport{
 			0, 0, float(device->GetCloudWidth()), float(device->GetCloudHeight()), 0, 1};
 		const D3D12_RECT scissor{0, 0, LONG(device->GetCloudWidth()), LONG(device->GetCloudHeight())};
 		commands->RSSetViewports(1, &viewport);
 		commands->RSSetScissorRects(1, &scissor);
+
 		const auto rtv = device->GetCloudRtvHandle();
 		commands->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
 		commands->SetGraphicsRootSignature(frame.pipelines.GetClouds()->GetRootSignature());
@@ -126,6 +133,7 @@ namespace Engine {
 		barrier = CD3DX12_RESOURCE_BARRIER::Transition(device->GetCloudRenderTarget(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		commands->ResourceBarrier(1, &barrier);
+
 		const D3D12_VIEWPORT full{0, 0, float(device->GetWidth()), float(device->GetHeight()), 0, 1};
 		const D3D12_RECT fullScissor{0, 0, LONG(device->GetWidth()), LONG(device->GetHeight())};
 		commands->RSSetViewports(1, &full);

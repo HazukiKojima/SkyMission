@@ -19,9 +19,11 @@ namespace Engine {
 			UINT slices = 64, UINT stacks = 32);
 		// 転送コマンドの GPU 完了後に呼ぶ
 		void ReleaseUploadResources();
+
 		ID3D12Resource* GetVertexBufferResource() const {
 			return m_vertexBuffer.Get();
 		}
+
 		ID3D12Resource* GetIndexBufferResource() const {
 			return m_indexBuffer.Get();
 		}

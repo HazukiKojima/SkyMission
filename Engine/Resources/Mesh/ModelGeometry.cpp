@@ -6,11 +6,13 @@
 #include <climits>
 #include <cmath>
 #include <limits>
+
 namespace Engine::ModelProcessing {
 	namespace {
 		struct MeshInstance {
 			const aiMesh* mesh;
 			aiMatrix4x4 transform;
+
 			bool isRotatingNode;
 		};
 
@@ -18,9 +20,11 @@ namespace Engine::ModelProcessing {
 		struct ModelNormalization {
 			aiVector3D minimum;
 			aiVector3D maximum;
+
 			float scale;
 			float groundOffset;
 			ModelOrigin origin;
+
 			DirectX::XMFLOAT3 Transform(const aiVector3D& position) const {
 				return {(position.x - (minimum.x + maximum.x) * 0.5f) * scale,
 					origin == ModelOrigin::BoundsCenter
@@ -29,11 +33,13 @@ namespace Engine::ModelProcessing {
 					(position.z - (minimum.z + maximum.z) * 0.5f) * scale};
 			}
 		};
+
 		MeshGeometry BuildMeshGeometry(
 			const MeshInstance& instance, const ModelNormalization& normalization) {
 			MeshGeometry result;
 			const aiMesh* sourceMesh = instance.mesh;
 			if (!sourceMesh->HasPositions() || !sourceMesh->HasFaces()) return result;
+
 			result.materialIndex = sourceMesh->mMaterialIndex;
 			auto& vertices = result.vertices;
 			vertices.reserve(sourceMesh->mNumVertices);
@@ -47,6 +53,7 @@ namespace Engine::ModelProcessing {
 				std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 			for (unsigned int vertexIndex = 0; vertexIndex < sourceMesh->mNumVertices; ++vertexIndex) {
 				const aiVector3D position = instance.transform * sourceMesh->mVertices[vertexIndex];
+
 				if (isRotatingNode) {
 					nodeRotationBoundsMin.x = std::min(nodeRotationBoundsMin.x, position.x);
 					nodeRotationBoundsMin.y = std::min(nodeRotationBoundsMin.y, position.y);
@@ -111,6 +118,7 @@ namespace Engine::ModelProcessing {
 			const aiMatrix4x4& parentTransform, bool parentIsNodeRotation,
 			const std::string& rotatingNodeName, std::vector<MeshInstance>& instances) {
 			const aiMatrix4x4 transform = parentTransform * node->mTransformation;
+
 			const bool isRotatingNode = parentIsNodeRotation ||
 				(!rotatingNodeName.empty() && node->mName.C_Str() == rotatingNodeName);
 			for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex) {
@@ -131,11 +139,13 @@ namespace Engine::ModelProcessing {
 			std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>>& positions) {
 			const auto transform = parent * node.mTransformation;
 			positions[node.mName.C_Str()].push_back(normalization.Transform(transform * aiVector3D()));
+
 			for (unsigned i = 0; i < node.mNumChildren; ++i)
 				CollectNodePositions(*node.mChildren[i], transform, normalization, positions);
 		}
 
 	} // namespace
+
 	std::vector<MeshGeometry> BuildModelGeometry(const aiScene& scene, const ModelLoadOptions& options,
 		std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>>& positions) {
 		std::vector<MeshInstance> meshInstances;
@@ -152,6 +162,7 @@ namespace Engine::ModelProcessing {
 			std::numeric_limits<float>::lowest());
 		for (const MeshInstance& instance : meshInstances) {
 			const aiMesh* mesh = instance.mesh;
+
 			for (unsigned int vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex) {
 				const aiVector3D position = instance.transform * mesh->mVertices[vertexIndex];
 				boundsMin.x = std::min(boundsMin.x, position.x);
@@ -169,12 +180,14 @@ namespace Engine::ModelProcessing {
 			Log("Model::Load - model has no valid dimensions\n");
 			return {};
 		}
+
 		const ModelNormalization normalization{
 			boundsMin, boundsMax, options.normalizedExtent / extent, options.groundOffset, options.origin};
 		CollectNodePositions(*scene.mRootNode, aiMatrix4x4(), normalization, positions);
 		std::vector<MeshGeometry> geometries;
 		for (const auto& instance : meshInstances) {
 			auto geometry = BuildMeshGeometry(instance, normalization);
+
 			if (!geometry.indices.empty()) geometries.push_back(std::move(geometry));
 		}
 
@@ -182,6 +195,7 @@ namespace Engine::ModelProcessing {
 
 		return geometries;
 	}
+
 	Bounds3 CalculateModelBounds(const std::vector<MeshGeometry>& geometries) {
 		Bounds3 bounds{
 			geometries.front().vertices.front().position, geometries.front().vertices.front().position};
@@ -196,13 +210,16 @@ namespace Engine::ModelProcessing {
 			}
 		return bounds;
 	}
+
 	float CalculateCullingRadius(const std::vector<MeshGeometry>& geometries, const Bounds3& bounds) {
 		float radius = 0;
 		const auto center = bounds.Center();
+
 		const auto distance = [](const DirectX::XMFLOAT3& a, const DirectX::XMFLOAT3& b) {
 			return std::sqrt(
 				(a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
 		};
+
 		for (const auto& geometry : geometries)
 			for (const auto& vertex : geometry.vertices)
 				radius = std::max(radius,

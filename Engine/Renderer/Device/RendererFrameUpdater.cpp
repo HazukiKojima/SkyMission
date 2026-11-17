@@ -18,6 +18,7 @@ namespace Engine {
 		DirectX::XMFLOAT3 cameraPosition;
 		float time;
 	};
+
 	RendererFrameUpdater::FrameViewData RendererFrameUpdater::BuildFrameView(
 		const Scene& scene, float elapsedTime) const {
 		using namespace DirectX;
@@ -35,6 +36,7 @@ namespace Engine {
 		const XMMATRIX view = camera.GetView();
 		const XMMATRIX proj = camera.GetProjection(oceanCornerDistance * kProjectionMargin);
 		const XMMATRIX mvp = world * view * proj;
+
 		// 遠方へ移動しても逆行列の平行移動成分で視線の精度を失わない
 		XMMATRIX relativeView = view;
 		relativeView.r[3] = XMVectorSet(0, 0, 0, 1);
@@ -52,11 +54,13 @@ namespace Engine {
 		CommandContext* context) {
 		const UINT index = context->GetFrameIndex();
 		buffers.EnsureModelCapacity(device, context, scene.GetObjects().size());
+
 		const auto frame = BuildFrameView(scene, elapsedTime);
 		m_drawDecisions =
 			BuildModelDrawDecisions(scene, frame.view, frame.projection, context->GetRenderHeight());
 		DirectX::XMStoreFloat4x4(&m_renderView.view, frame.view);
 		DirectX::XMStoreFloat4x4(&m_renderView.projection, frame.projection);
+
 		const auto& lighting = scene.GetEnvironment();
 		UpdateOceanConstants(frame, lighting, buffers.GetOceanData(index));
 		UpdateFogConstants(frame, lighting, buffers.GetOceanFogData(index));
@@ -67,6 +71,7 @@ namespace Engine {
 	void RendererFrameUpdater::UpdateOceanConstants(const FrameViewData& frame,
 		const SceneEnvironment& environment, OceanConstantBufferData* oceanData) const {
 		oceanData->mvp = frame.oceanMvp;
+
 		// うねり・法線・波模様を同じ時間倍率で動かす
 		constexpr float kOceanAnimationSpeed = 2.0f;
 		const float oceanTime = frame.time * kOceanAnimationSpeed;
@@ -75,20 +80,24 @@ namespace Engine {
 		oceanData->oceanOffset[0] = frame.cameraPosition.x;
 		oceanData->oceanOffset[1] = 0.0f;
 		oceanData->oceanOffset[2] = frame.cameraPosition.z;
+
 		oceanData->sunDirection = environment.sunDirection;
 		oceanData->sunIntensity = environment.sunIntensity;
 		oceanData->sunColor = environment.sunColor;
 		oceanData->ambientIntensity = environment.ambientIntensity;
 		oceanData->ambientColor = environment.ambientColor;
+
 		oceanData->oceanSize = m_oceanSettings.size;
 		oceanData->oceanWaveLength = m_oceanSettings.waveLength;
 		oceanData->oceanWaveSteepness = m_oceanSettings.waveSteepness;
 		oceanData->oceanNormalUvScale = m_oceanSettings.normalUvScale;
 		oceanData->oceanWavePatternUvScale = m_oceanSettings.wavePatternUvScale;
+
 		oceanData->oceanFogStartDistance = m_oceanSettings.fogStartDistance;
 		oceanData->oceanFogEndDistance = m_oceanSettings.fogEndDistance;
 		oceanData->oceanEdgeFadeStart = m_oceanSettings.edgeFadeStart;
 		oceanData->oceanEdgeFadeWidth = m_oceanSettings.edgeFadeWidth;
+
 		oceanData->oceanWaveHeightOffset = OceanGeometry::CalculateWaveHeight(frame.cameraPosition.x,
 			frame.cameraPosition.z, oceanTime, m_oceanSettings.waveLength, m_oceanSettings.waveSteepness);
 	}
@@ -96,16 +105,19 @@ namespace Engine {
 	void RendererFrameUpdater::UpdateFogConstants(const FrameViewData& frame,
 		const SceneEnvironment& environment, OceanFogConstantBufferData* oceanFog) const {
 		using namespace DirectX;
+
 		// CPUの行ベクトル用行列をHLSLへの転送時に転置する
 
 		XMStoreFloat4x4(&oceanFog->inverseViewProjection, XMMatrixTranspose(frame.inverseViewProjection));
 		oceanFog->cameraPosition = frame.cameraPosition;
 		oceanFog->padding0 = 0.0f;
+
 		oceanFog->sunDirection = environment.sunDirection;
 		oceanFog->sunIntensity = environment.sunIntensity;
 		oceanFog->sunColor = environment.sunColor;
 		oceanFog->ambientIntensity = environment.ambientIntensity;
 		oceanFog->ambientColor = environment.ambientColor;
+
 		oceanFog->oceanFogBottom = 0.0f;
 		oceanFog->oceanFogTop = m_oceanSettings.fogTop;
 		oceanFog->oceanFogDensity = m_oceanSettings.fogDensity;
@@ -114,6 +126,7 @@ namespace Engine {
 		oceanFog->oceanEdgeFadeStart = m_oceanSettings.edgeFadeStart;
 		oceanFog->oceanEdgeFadeWidth = m_oceanSettings.edgeFadeWidth;
 		oceanFog->padding1[0] = oceanFog->padding1[1] = 0.0f;
+
 		const auto& clouds = m_cloudSettings;
 		oceanFog->cloudLayer = {clouds.bottom, clouds.top, clouds.coverage, clouds.density};
 		oceanFog->cloudMotion = {
@@ -132,19 +145,23 @@ namespace Engine {
 		const SceneEnvironment& environment, const Scene& scene, RendererConstantBuffers& constantBuffers,
 		UINT frameIndex) const {
 		using namespace DirectX;
+
 		const auto& objects = scene.GetObjects();
 
 		for (size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex) {
 			if (!m_drawDecisions[objectIndex].visible) continue;
+
 			const SceneObject& object = objects[objectIndex];
 			ModelConstantBufferData* modelData = constantBuffers.GetModelData(frameIndex, objectIndex);
 			const XMMATRIX objectWorld = XMLoadFloat4x4(&object.worldTransform);
+
 			XMStoreFloat4x4(&modelData->mvp, XMMatrixTranspose(objectWorld * frame.view * frame.projection));
 			XMStoreFloat4x4(&modelData->world, XMMatrixTranspose(objectWorld));
 			modelData->time = frame.time;
 			modelData->padding[0] = modelData->padding[1] = modelData->padding[2] = 0.0f;
 			modelData->cameraPos = frame.cameraPosition;
 			modelData->pad2 = 0.0f;
+
 			modelData->sunDirection = environment.sunDirection;
 			modelData->sunIntensity = environment.sunIntensity;
 			modelData->sunColor = environment.sunColor;

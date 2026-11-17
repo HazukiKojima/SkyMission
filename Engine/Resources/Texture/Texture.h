@@ -35,6 +35,7 @@ namespace Engine {
 		ID3D12Resource* GetResource() const {
 			return m_texture.Get();
 		}
+
 		bool IsLoaded() const {
 			return m_texture != nullptr;
 		}

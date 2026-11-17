@@ -1,5 +1,6 @@
 #pragma once
 #include "../EngineCommon.h"
+
 namespace Engine {
 	enum class RootSignatureLayout { Textured, NodeRotation, PostProcess };
 	namespace RootBinding {
