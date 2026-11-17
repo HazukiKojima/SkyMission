@@ -8,6 +8,7 @@ namespace Game {
 		color.w *= alpha;
 		return color;
 	}
+
 	inline DirectX::XMFLOAT4 BlendEffectColor(
 		const DirectX::XMFLOAT4& cold, const DirectX::XMFLOAT4& hot, float factor) {
 		return {std::lerp(cold.x, hot.x, factor), std::lerp(cold.y, hot.y, factor),
@@ -36,6 +37,7 @@ namespace Game {
 		static constexpr size_t flashVertexBudget = 222;
 		static constexpr size_t tracerVertexBudget = 12;
 	};
+
 	// 時間は秒、距離はワールド単位、太さは1920x1080基準で指定する
 	struct ImpactEffectSettings {
 		static constexpr float lifetimeSeconds = 0.45f;
@@ -91,6 +93,7 @@ namespace Game {
 		static constexpr float lifetimeSeconds = CarrierEffectSettings::smokeLifetimeSeconds;
 		static constexpr size_t maxCount = CarrierEffectSettings::maxSmokeCount;
 	};
+
 	struct CombatEffectSettings {
 		static constexpr float maximumFrameSeconds = 0.25f;
 	};

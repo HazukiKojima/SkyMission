@@ -10,16 +10,19 @@
 
 namespace Game {
 	using namespace DirectX;
+
 	void CombatHudPresenter::Build(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		if (view.width == 0 || view.height == 0) return;
 		if (snapshot.cinematic.active) {
 			CinematicPresenter{m_tuning.ink}.Build(snapshot.cinematic, view, list);
+
 			if (snapshot.enemyRadio.clip >= 0 && snapshot.cinematic.radioLine < 0 && snapshot.cinematic.briefingLine < 0)
 				RadioCaptionPresenter{}.Build(snapshot.enemyRadio.caption, view, list,
 					view.height * snapshot.cinematic.text.barHeightFraction);
 			return;
 		}
+
 		RadarMapPresenter{}.Build(snapshot, view, list, m_tuning);
 		DrawFlightStatus(snapshot, view, list);
 		DrawGunSight(snapshot, view, list);
@@ -28,6 +31,7 @@ namespace Game {
 		DrawControls(snapshot, view, list);
 		DrawCombatGuide(snapshot, view, list);
 		DrawDebugCollisions(snapshot, view, list);
+
 		if (snapshot.cinematic.radioLine >= 0)
 			RadioCaptionPresenter{}.Build(snapshot.cinematic.radio, view, list);
 		else if (snapshot.enemyRadio.clip >= 0)
@@ -37,8 +41,10 @@ namespace Game {
 	void CombatHudPresenter::DrawCombatGuide(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		if (snapshot.result != CombatResult::Active) return;
+
 		std::string title, detail;
 		bool locked = false;
+
 		if (snapshot.missionPhase == MissionPhase::Patrol && snapshot.elapsedSeconds < 5 && !snapshot.enemies.empty()) {
 			title = m_text.Text("左クリックで射撃");
 			detail = m_text.Text("敵機に照準を合わせて撃墜せよ");
@@ -49,6 +55,7 @@ namespace Game {
 			detail = m_text.Text(locked ? "ロックオン完了" : "ロックオン後、右クリックで射撃");
 
 		} else return;
+
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		const float available = view.width - 80 * scale;
 		const float titleSize = std::min(50 * scale, available / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(title, 1)));
@@ -64,22 +71,28 @@ namespace Game {
 			list.Text({x + 2 * scale, y + 2 * scale}, text, size, {0, 0, 0, 1});
 			list.Text({x, y}, text, size, color);
 		};
+
 		draw(title, top + 18 * scale, titleSize, titleWidth, locked ? m_tuning.selected : XMFLOAT4{1, 1, 1, 1});
 		draw(detail, top + 32 * scale + titleSize, detailSize, detailWidth, m_settings.color);
 	}
+
 	void CombatHudPresenter::DrawDebugCollisions(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 #if defined(_DEBUG)
 		if (!snapshot.debugCollisionsEnabled) return;
+
 		const HudProjector projector(view);
+
 		for (const auto& box : snapshot.debugCollisions) {
 			XMFLOAT3 corners[8];
 			const auto& bounds = box.target.bounds;
+
 			for (int corner = 0; corner < 8; ++corner)
 				XMStoreFloat3(&corners[corner], XMVector3TransformCoord(XMVectorSet(
 					corner & 1 ? bounds.maximum.x : bounds.minimum.x,
 					corner & 2 ? bounds.maximum.y : bounds.minimum.y,
 					corner & 4 ? bounds.maximum.z : bounds.minimum.z, 1), XMLoadFloat4x4(&box.target.world)));
+
 			// 8頂点の各軸方向を一度ずつ結び、OBBの12辺を描く
 			for (int corner = 0; corner < 8; ++corner)
 				for (int axis : {1, 2, 4})
@@ -87,6 +100,7 @@ namespace Game {
 						if (const auto line = projector.ProjectClippedSegment(corners[corner], corners[corner | axis]))
 							list.Line(line->head, line->tail, 2, box.color);
 		}
+
 		list.Text({24, 20}, "F3 COLLISION | PLAYER: GREEN  ENEMY: RED  CARRIER DECK: YELLOW", 18,
 			{1, 1, 1, 1});
 #else
@@ -108,15 +122,18 @@ namespace Game {
 			controls.push_back(m_text.Text("右クリック：ミサイル (ロック後)"));
 
 		float width = Engine::HudDrawList::MeasureTextWidth(m_text.Text("操作方法"), fontSize);
+
 		for (const auto text : controls)
 			width = std::max(width,
 				Engine::HudDrawList::MeasureTextWidth("- ", fontSize) +
 					Engine::HudDrawList::MeasureTextWidth(text, fontSize));
+
 		// 画面右下から配置し、縦横比が変わっても端からの余白を維持する
 		const float x = view.width - m_tuning.layout.controlsRightMargin * scale - width;
 		float y = view.height - m_tuning.layout.controlsBottomMargin * scale - fontSize -
 			lineHeight * float(controls.size());
 		list.Text({x, y}, m_text.Text("操作方法"), fontSize, m_settings.color);
+
 		for (const auto text : controls) {
 			y += lineHeight;
 			list.Text({x, y}, "- " + std::string(text), fontSize, m_settings.color);
@@ -135,9 +152,11 @@ namespace Game {
 		const auto drawStatus = [&](float y, std::string_view text) {
 			list.Text({radar.statusOrigin.x, radar.statusOrigin.y + y * scale}, text, fontSize, color);
 		};
+
 		const auto drawLabel = [&](float x, float y, std::string_view text) {
 			list.Text({offsetX + x * scale, offsetY + y * scale}, text, fontSize, color);
 		};
+
 		const auto drawFlightValue = [&](float x, bool pointsRight, std::string_view label, float value) {
 			const float top = m_tuning.layout.flightPanelTop, width = m_tuning.layout.flightPanelWidth,
 						height = m_tuning.layout.flightPanelHeight,
@@ -145,6 +164,7 @@ namespace Game {
 			const auto point = [&](float dx, float dy) {
 				return XMFLOAT2{offsetX + (x + dx) * scale, offsetY + (top + dy) * scale};
 			};
+
 			const float left = pointsRight ? 0.0f : tipWidth;
 			const float right = pointsRight ? width - tipWidth : width;
 			const XMFLOAT2 outline[] = {point(left, 0), point(right, 0),
@@ -158,6 +178,7 @@ namespace Game {
 			drawLabel(x + right - m_tuning.layout.flightValuePadding - textWidth,
 				top + (height - m_settings.fontSize) * 0.5f, text);
 		};
+
 		drawFlightValue(m_tuning.layout.speedPanelX, true, m_text.Text("速度 km/h"),
 			snapshot.playerSpeedMetersPerSecond * 3.6f);
 		drawFlightValue(
@@ -173,11 +194,13 @@ namespace Game {
 			list.Text({(view.width - textWidth) * 0.5f, offsetY + m_tuning.layout.fireWarningY * scale},
 				warning, fontSize, m_tuning.alert);
 		}
+
 		if (snapshot.result != CombatResult::Active &&
 			(snapshot.result != CombatResult::Victory || snapshot.allDownSeconds <= 0)) {
 			drawLabel(m_tuning.layout.resultPosition[0], m_tuning.layout.resultPosition[1],
 				snapshot.result == CombatResult::Victory ? m_text.Text("任務達成") : m_text.Text("自機撃墜"));
 		}
+
 		if (snapshot.playerHitSeconds > 0) {
 			const auto& d = snapshot.playerHitDirection;
 			const auto& f = snapshot.forward;
@@ -202,18 +225,21 @@ namespace Game {
 		const float lineWidth = std::max(1.0f, m_settings.lineWidth * scale);
 		const auto color = m_settings.color;
 		const HudProjector projector(view);
+
 		// 照準は弾道予測とは独立し、機関砲の軸に追従する
 		XMFLOAT3 sightWorldPosition;
 		XMStoreFloat3(&sightWorldPosition,
 			XMLoadFloat3(&snapshot.muzzle) +
 				XMLoadFloat3(&snapshot.forward) * CombatSnapshot::gunSightDistance);
 		const auto sightProjection = projector.Project(sightWorldPosition);
+
 		if (sightProjection.visible) {
 			list.Line({sightProjection.pixel.x - 12 * scale, sightProjection.pixel.y},
 				{sightProjection.pixel.x + 12 * scale, sightProjection.pixel.y}, lineWidth, color);
 			list.Line({sightProjection.pixel.x, sightProjection.pixel.y - 12 * scale},
 				{sightProjection.pixel.x, sightProjection.pixel.y + 12 * scale}, lineWidth, color);
 		}
+
 		// 選択した敵に命中するよう、照準を予測位置へ合わせる
 		// 予測位置には敵の移動と、自機から引き継ぐ弾速の補正を含む
 		const auto leadPoint = snapshot.lockState == LockState::Locked &&
@@ -222,12 +248,14 @@ namespace Game {
 			: std::nullopt;
 		if (leadPoint) {
 			const auto impact = projector.Project(*leadPoint);
+
 			if (impact.visible) {
 				const auto centerPixel = impact.pixel;
 				const auto sightColor = color;
 				list.Circle(centerPixel, 34 * scale, 1, lineWidth, sightColor);
 				list.Circle(centerPixel, 25 * scale, 1, lineWidth, sightColor);
 				list.Circle(centerPixel, 5 * scale, 1, lineWidth, sightColor);
+
 				for (int i = 0; i < 12; ++i) {
 					const float angle = XM_2PI * i / 12;
 					const float x = std::cos(angle);
@@ -237,6 +265,7 @@ namespace Game {
 							centerPixel.y + y * (i % 3 == 0 ? 40 : 37) * scale},
 						lineWidth, sightColor);
 				}
+
 				for (const XMFLOAT2 axis : {XMFLOAT2{1, 0}, XMFLOAT2{-1, 0}, XMFLOAT2{0, 1}, XMFLOAT2{0, -1}})
 					list.Line({centerPixel.x + axis.x * 10 * scale, centerPixel.y + axis.y * 10 * scale},
 						{centerPixel.x + axis.x * 23 * scale, centerPixel.y + axis.y * 23 * scale}, lineWidth,
@@ -257,9 +286,11 @@ namespace Game {
 		const auto drawLabel = [&](float x, float y, std::string_view text) {
 			list.Text({offsetX + x * scale, offsetY + y * scale}, text, fontSize, color);
 		};
+
 		for (const auto& enemy : snapshot.enemies) {
 			const auto projected = projector.Project(enemy.center);
 			const bool selected = enemy.id == snapshot.selected;
+
 			if (selected) DrawEnemyDirection(enemy.center, snapshot, view, list);
 			if (projected.visible) {
 				const auto centerPixel = projected.pixel;
@@ -267,6 +298,7 @@ namespace Game {
 					(selected ? m_tuning.layout.selectedEnemyRadius : m_tuning.layout.enemyRadius) * scale;
 				const float corner = radius * 0.4f;
 				const float frameWidth = selected ? lineWidth * 1.5f : lineWidth;
+
 				// 選択枠だけを毎秒2回明滅させ、暗い瞬間も位置を追える濃さを残す
 				const float pulse = 0.5f + 0.5f * std::cos(snapshot.elapsedSeconds * XM_2PI * 2);
 				const auto frameColor =
@@ -277,6 +309,7 @@ namespace Game {
 						list.Line(a, {a.x - x * corner, a.y}, frameWidth, frameColor);
 						list.Line(a, {a.x, a.y - y * corner}, frameWidth, frameColor);
 					}
+
 				if (selected) {
 					const auto distance = int(XMVectorGetX(
 						XMVector3Length(XMLoadFloat3(&enemy.center) - XMLoadFloat3(&snapshot.muzzle))));
@@ -302,6 +335,7 @@ namespace Game {
 				}
 			}
 		}
+
 		if (snapshot.selected == Engine::InvalidObjectId) {
 			m_arrowTarget = Engine::InvalidObjectId;
 			m_arrowSeconds = -1;
@@ -331,6 +365,7 @@ namespace Game {
 		const auto drawStatus = [&](float y, std::string_view text) {
 			list.Text({radar.statusOrigin.x, radar.statusOrigin.y + y * scale}, text, fontSize, color);
 		};
+
 		const auto drawLabel = [&](float rightEdge, float y, std::string_view text) {
 			const float right = view.width - (1920 - rightEdge) * scale;
 			const float width = Engine::HudDrawList::MeasureTextWidth(text, fontSize);
@@ -340,6 +375,7 @@ namespace Game {
 		{
 			const auto phase = snapshot.missionPhase;
 			std::string objective;
+
 			switch (phase) {
 			case MissionPhase::Patrol:
 				objective = m_text.Text("1/3：哨戒機をすべて撃墜せよ");
@@ -360,6 +396,7 @@ namespace Game {
 				objective = m_text.Text("任務失敗");
 				break;
 			}
+
 			drawLabel(m_tuning.layout.missionX,
 				m_tuning.layout.missionY + 0 * m_tuning.layout.missionLineHeight, objective);
 			drawLabel(m_tuning.layout.missionX,
@@ -379,15 +416,18 @@ namespace Game {
 						m_tuning.layout.missionY + 3 * m_tuning.layout.missionLineHeight,
 						m_text.Text("敵編隊長機が出現。撃墜して任務を完了せよ"));
 			}
+
 			if (snapshot.result == CombatResult::Active && phase == MissionPhase::CarrierAttack &&
 				snapshot.carrierPresent && !snapshot.deckDisabled &&
 				snapshot.selected != Engine::InvalidObjectId) {
 				DrawEnemyDirection(snapshot.objectivePosition, snapshot, view, list);
 				const auto marker = projector.Project(snapshot.objectivePosition);
+
 				if (marker.visible) {
 					const float radius = m_tuning.layout.carrierMarkerRadius * scale;
 					const auto frameColor =
 						snapshot.lockState == LockState::Locked ? m_tuning.alert : m_tuning.selected;
+
 					// 母艦は六角形で囲み、敵機の四隅枠と区別する
 					for (int i = 0; i < 6; ++i) {
 						const float angle = XM_2PI * float(i) / 6;
@@ -398,6 +438,7 @@ namespace Game {
 								marker.pixel.y + std::sin(nextAngle) * radius},
 							lineWidth * 1.5f, frameColor);
 					}
+
 					list.Text(
 						{marker.pixel.x + radius + m_tuning.layout.markerTextGap * scale, marker.pixel.y},
 						m_text.Text("敵空母"), fontSize, color);
@@ -412,9 +453,11 @@ namespace Game {
 				} else
 					DrawOffscreenIndicator(marker, color, view, list);
 			}
+
 			if (snapshot.result == CombatResult::Active &&
 				(phase == MissionPhase::FinalFighters || phase == MissionPhase::Commander)) {
 				const auto marker = projector.Project(snapshot.objectivePosition);
+
 				if (marker.visible) {
 					list.Circle(marker.pixel, m_tuning.layout.combatAreaMarkerRadius * scale, 1,
 						lineWidth * 2, color);
@@ -424,9 +467,11 @@ namespace Game {
 				} else
 					DrawOffscreenIndicator(marker, color, view, list);
 			}
+
 			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active &&
 				snapshot.selected != Engine::InvalidObjectId) {
 				std::string lock = m_text.Text("敵空母：照準を合わせてロック");
+
 				if (snapshot.lockState == LockState::Locked)
 					lock = m_text.Text("敵空母：ロック完了");
 				else if (snapshot.lockState == LockState::Acquiring)
@@ -443,8 +488,10 @@ namespace Game {
 					bomb << m_text.Text("再装填 ") << std::fixed << std::setprecision(1)
 						 << snapshot.missileCooldownSeconds << m_text.Text("秒");
 				drawStatus(m_tuning.layout.missileStatusY, bomb.str());
+
 				if (snapshot.missileImpactPoint) {
 					const auto impact = projector.Project(*snapshot.missileImpactPoint);
+
 					if (impact.visible) {
 						const float r = m_tuning.layout.impactMarkerRadius * scale;
 						list.Line({impact.pixel.x - r, impact.pixel.y}, {impact.pixel.x + r, impact.pixel.y},
@@ -468,7 +515,9 @@ namespace Game {
 		const auto worldDirection = XMLoadFloat3(&target) - XMLoadFloat3(&snapshot.muzzle);
 		const auto cameraDirection = XMVector3TransformNormal(worldDirection, XMLoadFloat4x4(&view.view));
 		const float distance = XMVectorGetX(XMVector3Length(cameraDirection));
+
 		if (!std::isfinite(distance) || distance < 0.001f) return;
+
 		auto direction = cameraDirection / distance;
 		XMFLOAT3 d;
 		XMStoreFloat3(&d, direction);
@@ -476,6 +525,7 @@ namespace Game {
 			snapshot.elapsedSeconds >= m_arrowSeconds;
 		if (!continuing) m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
 		const bool behind = d.z < 0;
+
 		if (behind) {
 			// 後方は方位角を展開して旋回方向を示し、奥行きによる矢印の潰れを防ぐ
 			// 真後ろ付近では直前の旋回側を保持し、左右の微小な変化では反転させない
@@ -488,9 +538,11 @@ namespace Game {
 			XMStoreFloat3(&d, direction);
 		} else
 			m_rearTurnSide = d.x < 0 ? -1.0f : 1.0f;
+
 		// 方向変更時は中央の周囲を連続して回す。左右の座標を直接切り替えない
 		const float lateral = std::hypot(d.x, d.y);
 		const float desiredAngle = lateral > 0.001f ? std::atan2(d.y, d.x) : m_arrowAngle;
+
 		if (continuing) {
 			const float dt = std::clamp(snapshot.elapsedSeconds - m_arrowSeconds, 0.0f, 0.1f);
 			const float difference = std::remainder(desiredAngle - m_arrowAngle, XM_2PI);
@@ -503,10 +555,12 @@ namespace Game {
 		direction = XMLoadFloat3(&d);
 		m_arrowTarget = snapshot.selected;
 		m_arrowSeconds = snapshot.elapsedSeconds;
+
 		// 正面・真後ろでも基底が潰れないよう、視線に直交する軸を選ぶ
 		const auto reference = std::abs(d.z) < 0.95f ? XMVectorSet(0, 0, 1, 0) : XMVectorSet(0, 1, 0, 0);
 		const auto side = XMVector3Normalize(XMVector3Cross(reference, direction));
 		const auto up = XMVector3Cross(direction, side);
+
 		// 敵の方位に合わせて中央の周囲を移動する。視線軸の近くでは
 		// 半径を縮め、正面を横切る際に反対側へ突然跳ばないようにする
 		const float radial = 110 * scale / std::max(0.35f, std::hypot(d.x, d.y));
@@ -517,6 +571,7 @@ namespace Game {
 			const float perspective = 420 / (420 + p.z);
 			return XMFLOAT2{anchor.x + p.x * perspective * scale, anchor.y - p.y * perspective * scale};
 		};
+
 		// 細長い山形の後端を内側へ折り込み、稜線だけで薄い立体感を出す
 		// 四角錐の底面や軸線は描かず、矢印として読める輪郭を優先する
 		const auto tip = projectArrow(direction * 64);
@@ -534,6 +589,7 @@ namespace Game {
 		list.Line(tip, ridge, lineWidth, ridgeColor);
 		list.Line(ridge, left, lineWidth, ridgeColor);
 		list.Line(ridge, right, lineWidth, ridgeColor);
+
 		if (behind) {
 			const std::string_view label = m_text.Text("後方");
 			const float labelSize = 24 * scale;
@@ -542,6 +598,7 @@ namespace Game {
 				label, labelSize, arrowColor);
 		}
 	}
+
 	void CombatHudPresenter::DrawOffscreenIndicator(const HudProjection& projection, XMFLOAT4 tint,
 		const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080) *
@@ -550,10 +607,12 @@ namespace Game {
 
 		if (projection.visible || !std::isfinite(projection.pixel.x) || !std::isfinite(projection.pixel.y))
 			return;
+
 		const float centerX = view.width * 0.5f;
 		const float centerY = view.height * 0.5f;
 		float deltaX = projection.pixel.x - centerX;
 		float deltaY = projection.pixel.y - centerY;
+
 		if (std::hypot(deltaX, deltaY) < 0.001f) deltaY = 1;
 		const float ratio = 1 /
 			std::max(std::abs(deltaX) / std::max(1.0f, centerX - 50 * scale),

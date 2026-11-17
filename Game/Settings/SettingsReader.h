@@ -33,36 +33,45 @@ namespace Game {
 				value = values->front();
 			}
 		}
+
 		template <class T> void Integer(const std::string& key, T& value, unsigned maximum) const {
 			float number = static_cast<float>(value);
 			Number(key, number, 1, static_cast<float>(maximum));
 			Require(std::floor(number) == number, key, "expected an integer");
 			value = static_cast<T>(number);
 		}
+
 		template <size_t N>
 		void Array(const std::string& key, std::array<float, N>& value, float minimum = -1000000,
 			float maximum = 1000000) const {
 			if (!exists) return;
+
 			// REDoxの数値配列は最大3成分まで。それより大きい配列はポインタで読む
 			auto length = Read(key, [&] {
 				return reader.TryResolveArrayLength(path, key);
 			});
+
 			if (!length) return;
+
 			Require(*length == N, key, "unexpected array length");
+
 			for (size_t i = 0; i < N; ++i)
 				Number((key.starts_with("/") ? key : "/" + key) + "/" + std::to_string(i), value[i], minimum,
 					maximum);
 		}
+
 		void Vector(const std::string& key, DirectX::XMFLOAT3& value) const {
 			std::array<float, 3> v{value.x, value.y, value.z};
 			Array(key, v);
 			value = {v[0], v[1], v[2]};
 		}
+
 		void Color(const std::string& key, DirectX::XMFLOAT4& value) const {
 			std::array<float, 4> v{value.x, value.y, value.z, value.w};
 			Array(key, v, 0, 1);
 			value = {v[0], v[1], v[2], v[3]};
 		}
+
 		void Text(const std::string& key, std::string& value) const {
 			if (!exists) return;
 			if (auto text = Read(key, [&] {
@@ -72,6 +81,7 @@ namespace Game {
 				value = *text;
 			}
 		}
+
 		void Require(bool valid, const std::string& key, const char* reason) const {
 			if (!valid) throw std::runtime_error(path.string() + ": " + key + ": " + reason);
 		}

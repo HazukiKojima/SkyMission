@@ -12,22 +12,27 @@ namespace Game {
 		float age = 0;
 		std::uint64_t sequence = 0;
 	};
+
 	struct GunSmoke {
 		DirectX::XMFLOAT3 position{};
 		DirectX::XMFLOAT3 velocity{};
 		float age = 0;
 	};
+
 	struct RocketTrailSample {
 		DirectX::XMFLOAT3 position{};
 		float age = 0;
 	};
+
 	struct RocketExhaust {
 		DirectX::XMFLOAT3 position{}, direction{0, 0, -1};
 	};
+
 	struct ImpactEffect {
 		DirectX::XMFLOAT3 position{};
 		float age = 0;
 		DirectX::XMFLOAT3 velocity{};
+
 		// メッシュの法線ではなく、入射方向の逆を金属片の散乱基準に使う
 		DirectX::XMFLOAT3 direction{0, 0, -1};
 	};

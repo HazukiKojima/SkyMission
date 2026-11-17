@@ -3,14 +3,17 @@
 
 void TestRenderOptimizationMath() {
 	using namespace DirectX;
+
 	Require(OceanGeometry::GridResolution == 257, "Ocean LOD grid budget changed");
 	const float size = 10000000;
 	float previous = -size;
+
 	for (int i = 0; i < OceanGeometry::GridResolution; ++i) {
 		const float value = OceanGeometry::GridCoordinate(i, size);
 		Require(std::isfinite(value) && value > previous, "Ocean distance grid is not strictly increasing");
 		previous = value;
 	}
+
 	Require(std::abs(OceanGeometry::GridCoordinate(0, size) + size / 2) < 1 &&
 			std::abs(OceanGeometry::GridCoordinate(256, size) - size / 2) < 1 &&
 			OceanGeometry::GridCoordinate(128, size) == 0,
@@ -18,6 +21,7 @@ void TestRenderOptimizationMath() {
 	Require(OceanGeometry::GridCoordinate(129, size) <
 			(OceanGeometry::GridCoordinate(256, size) - OceanGeometry::GridCoordinate(255, size)) / 20,
 		"Ocean must retain much greater density around the camera");
+
 	// 実際の高さ場を測る。優勢なうねりは、風上方向よりも
 	// 風と直角の方向で大きく変化が小さいことを確かめる。各波頂の一致は求めない
 	const XMFLOAT2 wind{0.85749293f, 0.51449576f};
@@ -25,6 +29,7 @@ void TestRenderOptimizationMath() {
 	const auto height = [](float x, float z) {
 		return OceanGeometry::CalculateWaveHeight(x, z, 17, 20000, 0.003f);
 	};
+
 	for (unsigned z = 0; z < 16; ++z)
 		for (unsigned x = 0; x < 16; ++x) {
 			const float px = float(x) * 4321 - 32000, pz = float(z) * 4321 - 32000;
@@ -35,6 +40,7 @@ void TestRenderOptimizationMath() {
 			alongEnergy += double(along) * along;
 			acrossEnergy += double(across) * across;
 		}
+
 	Require(alongEnergy > 0 && acrossEnergy < alongEnergy * 0.12,
 		"Ocean swell lost its prevailing wind direction");
 	const Bounds3 bounds{{-1, -1, -1}, {1, 1, 1}};
@@ -42,6 +48,7 @@ void TestRenderOptimizationMath() {
 	XMStoreFloat4x4(
 		&world, XMMatrixScaling(2, 3, 4) * XMMatrixRotationY(0.6f) * XMMatrixTranslation(10, 2, 30));
 	const auto sphere = WorldCullingSphere(bounds, std::sqrt(3.0f), world);
+
 	for (float x : {-1.0f, 1.0f})
 		for (float y : {-1.0f, 1.0f})
 			for (float z : {-1.0f, 1.0f}) {
@@ -50,6 +57,7 @@ void TestRenderOptimizationMath() {
 				Require(
 					distance <= sphere.Radius + 0.001f, "World culling sphere clips scaled/rotated bounds");
 			}
+
 	Require(SelectModelLod(300, 3) == 0 && SelectModelLod(120, 3) == 1 && SelectModelLod(50, 3) == 2 &&
 			SelectModelLod(10, 1) == 0,
 		"Projected-size LOD selection is broken");
@@ -58,12 +66,15 @@ void TestRenderOptimizationMath() {
 
 void TestRenderVisibility(const std::shared_ptr<Model>& model) {
 	using namespace DirectX;
+
 	Scene scene;
+
 	for (const auto position : {XMFLOAT3{0, 0, 50}, XMFLOAT3{0, 0, -50}, XMFLOAT3{300, 0, 50}}) {
 		XMFLOAT4X4 matrix;
 		XMStoreFloat4x4(&matrix, XMMatrixTranslation(position.x, position.y, position.z));
 		scene.AddObject(model, matrix);
 	}
+
 	const auto projection = XMMatrixPerspectiveFovLH(XM_PIDIV4, 16.0f / 9, 1, 1000);
 	const auto decisions = BuildModelDrawDecisions(scene, XMMatrixIdentity(), projection, 720);
 	Require(decisions.size() == 3 && decisions[0].visible && !decisions[1].visible && !decisions[2].visible,

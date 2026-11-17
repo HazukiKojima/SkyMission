@@ -5,6 +5,7 @@
 
 void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	using namespace Game;
+
 	Engine::JsonAssetReader reader;
 	const auto missing = LoadCinematicSettings(reader, fixture / L"no-opening.json");
 	Require(missing.durationSeconds == 5, "Missing opening configuration lost defaults");
@@ -68,6 +69,7 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Require(briefingController.GetPresentation().briefingLine == -1,
 		"Empty briefing did not bypass conversation");
 	const auto invalid = fixture / L"opening-invalid.json";
+
 	for (const auto json :
 		{"{\"cutSeconds\":2}", "{\"verticalFovDegrees\":180}", "{\"cameraStartOffsetMeters\":[0,1]}",
 			"{\"title\":7}", "{broken", R"({"formationOffsets":[]})", R"({"formationOffsets":[[0,1]]})",
@@ -84,11 +86,14 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		} catch (const std::exception& error) {
 			rejected = std::string(error.what()).find("opening-invalid.json") != std::string::npos;
 		}
+
 		Require(rejected, "Invalid opening JSON did not identify its source");
 	}
+
 	for (const auto& json : {std::string("{\"formationOffsets\":[") +
 				 [] {
 					 std::string entries;
+
 					 for (int i = 0; i < 33; ++i)
 						 entries += (i ? "," : "") + std::string("[0,0,0]");
 					 return entries;
@@ -97,6 +102,7 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 			 std::string("{\"briefing\":[") +
 				 [] {
 					 std::string entries;
+
 					 for (int i = 0; i < 65; ++i)
 						 entries += (i ? "," : "") + std::string("{}");
 					 return entries;
@@ -111,17 +117,21 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		} catch (const std::exception& error) {
 			rejected = std::string(error.what()).find("opening-invalid.json") != std::string::npos;
 		}
+
 		Require(rejected, "Opening collection/text limits were not validated with source context");
 	}
+
 	const auto settings = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/opening.json");
 	Require(settings.radio.size() == 1 && settings.radio[0].caption.speaker == "指揮官" &&
 		settings.radio[0].caption.text == "敵機4機、接近！直ちに迎撃せよ！" && fs::exists(settings.radio[0].audio),
 		"Opening radio caption or voice configuration was lost");
 	for (const auto& text : {settings.radio[0].caption.speaker, settings.radio[0].caption.text, std::string("≪≫")}) {
 		std::string_view remaining = text;
+
 		while (!remaining.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
 			"Radio caption uses an unsupported glyph");
 	}
+
 	CinematicController radioController;
 	radioController.Start(settings);
 	Require(radioController.GetPresentation().radioLine == -1, "Radio began during the movie");
@@ -168,6 +178,7 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	controller.Start(settings);
 	controller.Update(std::numeric_limits<float>::quiet_NaN(), false);
 	Require(controller.GetPresentation().elapsedSeconds == 0, "Invalid delta advanced opening time");
+
 	for (const auto size :
 		{DirectX::XMUINT2{1920, 1080}, DirectX::XMUINT2{2560, 1080}, DirectX::XMUINT2{800, 600}}) {
 		Engine::RenderView view;
@@ -177,17 +188,20 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		list.Reset(size.x, size.y);
 		CinematicPresenter{}.Build(controller.GetPresentation(), view, list);
 		Require(!list.GetVertices().empty(), "Opening overlay was empty");
+
 		for (const auto& vertex : list.GetVertices())
 			Require(std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y) &&
 					std::abs(vertex.position.x) <= 1.001f && std::abs(vertex.position.y) <= 1.001f,
 				"Opening overlay escaped the viewport");
 		for (const auto& text : {settings.title, settings.subtitle, std::string("Enter：スキップ")}) {
 			std::string_view remaining = text;
+
 			while (!remaining.empty())
 				Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
 					"Opening label uses an unsupported glyph");
 		}
 	}
+
 	for (int line = 0; line < 3; ++line) {
 		auto presentation = controller.GetPresentation();
 		presentation.briefingLine = line;
@@ -199,10 +213,12 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		list.Reset(view.width, view.height);
 		CinematicPresenter{}.Build(presentation, view, list);
 		Require(list.GetVertices().size() > 6, "Briefing lost its background or subtitles");
+
 		for (const auto& vertex : list.GetVertices())
 			Require(std::abs(vertex.position.x) <= 1.001f && std::abs(vertex.position.y) <= 1.001f,
 				"Briefing subtitle escaped the viewport");
 	}
+
 	std::string_view briefing = "敵母艦と護衛機を確認。基地を襲った部隊の発進元だ。基地は現在も攻撃を受けてお"
 								"り、増援は出せない。君、一機で護衛機を排除し、母艦を撃沈せよ。";
 	while (!briefing.empty())
@@ -221,14 +237,17 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		CinematicPresenter{}.Build(presentation, view, enemy);
 		Require(friendly.GetVertices().size() == enemy.GetVertices().size(), "Radio side changed layout");
 		bool differentColor = false;
+
 		for (size_t i = 0; i < enemy.GetVertices().size(); ++i) {
 			const auto& vertex = enemy.GetVertices()[i];
 			Require(std::abs(vertex.position.x) <= 1.001f && std::abs(vertex.position.y) <= 1.001f,
 				"Radio subtitle escaped a narrow viewport");
 			differentColor |= vertex.color.x != friendly.GetVertices()[i].color.x;
 		}
+
 		Require(differentColor, "Enemy radio did not use its own color");
 	}
+
 	const auto middle = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/midMission.json");
 	const auto reinforcements = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/reinforcements.json");
 	Require(reinforcements.TotalDuration() == 9.25f && reinforcements.briefing.empty() &&
@@ -242,9 +261,11 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		"Carrier command caption or voice asset was not configured");
 	for (const auto& text : {middle.radio[0].caption.speaker, middle.radio[0].caption.text}) {
 		std::string_view remaining = text;
+
 		while (!remaining.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
 			"Carrier command used an unsupported glyph");
 	}
+
 	CinematicController carrierVoice;
 	carrierVoice.Start(middle, "midMission");
 	carrierVoice.EnableBriefing();
@@ -263,15 +284,19 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		carrierVoice.TakeCompletion() == CinematicCompletion::Skipped, "Follow-up radio lost the preceding cinematic completion");
 	carrierVoice.Update(5, false);
 	Require(carrierVoice.GetPresentation().radioLine == -1, "Gameplay-only command did not expire");
+
 	for (const auto* id : {"patrolEncouragement", "patrolComplete", "carrierHit", "carrierComplete", "finalRally", "finalEncouragement"}) {
 		const auto command = LoadCinematicSettings(reader, repository / L"Assets/Cinematics" / (std::string(id) + ".json"));
 		Require(command.radio.size() == 1 && fs::exists(command.radio[0].audio), "Patrol command voice was missing");
+
 		for (const auto& text : {command.radio[0].caption.speaker, command.radio[0].caption.text}) {
 			std::string_view remaining = text;
+
 			while (!remaining.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
 				"Patrol command used an unsupported Japanese glyph");
 		}
 	}
+
 	Require(reinforcements.radio.size() == 2 && reinforcements.radio[0].caption.side == "friendly" &&
 		reinforcements.radio[1].caption.side == "enemy" && fs::exists(reinforcements.radio[1].audio),
 		"Reinforcement warning or English enemy voice was missing");
@@ -284,10 +309,12 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	for (const auto& entry : reinforcements.radio) {
 		for (const auto& text : {entry.caption.text, entry.caption.speaker}) {
 			std::string_view remaining = text;
+
 			while (!remaining.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(remaining)) != unsigned('?' - 32),
 				"New story dialogue has an unsupported glyph");
 		}
 	}
+
 	const auto ending = LoadCinematicSettings(reader, repository / L"Assets/Cinematics/ending.json");
 	Require(ending.radio.size() == 1 && fs::exists(ending.radio[0].audio) && ending.TotalDuration() == 7,
 		"Final mission completion voice was not configured");
@@ -299,6 +326,7 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	CinematicController timeline;
 	auto multi = middle;
 	multi.shots = {CinematicShotSettings{}, CinematicShotSettings{}};
+
 	for (auto& shot : multi.shots) shot.durationSeconds = 2;
 	timeline.Start(multi, "midMission");
 	timeline.Update(2.1f, false);
@@ -318,6 +346,7 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	timeline.Start(middle);
 	timeline.Update(10, false);
 	Require(!timeline.GetPresentation().active, "Large frame did not finish the complete shot sequence");
+
 	for (const auto* json : {R"({"radio":[{"speaker":"C","text":"Incoming","side":"invalid"}]})",
 		 R"({"radio":[{"speaker":"C","text":"Incoming","durationSeconds":-1}]})",
 		 R"({"radio":[{"speaker":"C","text":"Incoming","startSeconds":-1,"durationSeconds":2}]})",
@@ -331,8 +360,10 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		} catch (const std::exception& error) {
 			rejected = std::string(error.what()).find("opening-invalid.json") != std::string::npos;
 		}
+
 		Require(rejected, "Invalid shot definition was accepted or lost its path");
 	}
+
 	std::cout
 		<< "PASS: cinematic defaults, JSON, subtitles, timelines, shot crossings and completion events\n";
 }

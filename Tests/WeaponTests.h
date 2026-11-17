@@ -4,6 +4,7 @@
 
 void TestHostileProjectileOrientation() {
 	using namespace DirectX;
+
 	for (const XMFLOAT3 modelForward : {XMFLOAT3{0, 1, 0}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 0, -1}})
 		for (const XMFLOAT3 velocity : {XMFLOAT3{1000, 0, 0}, XMFLOAT3{-1000, 0, 0}, XMFLOAT3{0, 1000, 0},
 				 XMFLOAT3{0, -1000, 0}, XMFLOAT3{0, 0, 1000}, XMFLOAT3{0, 0, -1000}, XMFLOAT3{600, 300, -800},
@@ -24,15 +25,18 @@ void TestHostileProjectileOrientation() {
 					"Hostile projectile model pointed sideways relative to its velocity");
 				projectiles.Update(scene, 0.01f);
 			}
+
 			Require(!projectiles.FireSingle(scene, {0, 1000, 0}, {}, AttackSource::AntiAircraft, 8),
 				"Stationary projectile created an invalid orientation");
 		}
+
 	std::cout << "PASS: hostile bullet orientation across axes, reverse directions and flight updates\n";
 }
 
 // RegressionTests.cppのRequireと共通のGPU初期化環境を使用する
 void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	using namespace DirectX;
+
 	RawInputState raw;
 	const auto mouse1 = reinterpret_cast<HANDLE>(std::uintptr_t(101));
 	const auto mouse2 = reinterpret_cast<HANDLE>(std::uintptr_t(102));
@@ -41,6 +45,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		packet.usButtonFlags = flags;
 		raw.ProcessMouse(device, packet, 1920, 1080);
 	};
+
 	mouse(mouse1, RI_MOUSE_LEFT_BUTTON_DOWN);
 	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Inactive mouse fired");
 	raw.SetActive(true);
@@ -71,11 +76,13 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		packet.Flags = flags;
 		raw.ProcessKeyboard(keyboard, packet);
 	};
+
 	key(RI_KEY_MAKE);
 	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "F key still fired");
 	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Held F still fired");
 	key(RI_KEY_BREAK);
 	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "F break did not stop firing");
+
 	mouse(mouse1, RI_MOUSE_LEFT_BUTTON_DOWN);
 	Require(WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Left mouse did not fire");
 	Require(WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Held left mouse did not keep firing");
@@ -113,11 +120,14 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 			} catch (const std::invalid_argument&) {
 				rejected = true;
 			}
+
 			Require(rejected, "Invalid weapon numeric setting accepted");
 		}
 	}
+
 	for (bool duplicate : {false, true}) {
 		auto bad = settings;
+
 		if (duplicate)
 			bad.muzzleNames[1] = bad.muzzleNames[0];
 		else
@@ -128,8 +138,10 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		} catch (const std::invalid_argument&) {
 			rejected = true;
 		}
+
 		Require(rejected, "Duplicate muzzle or capacity below volley accepted");
 	}
+
 	const auto badWeaponPath = fixture / L"bad-weapon.json";
 	const auto badPlayerPath = fixture / L"bad-player.json";
 	const auto playerPath = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json";
@@ -141,6 +153,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 			   << reader.Resolve(playerPath, "modelImport").generic_string() << "\",\"weapon\":\""
 			   << badWeaponPath.generic_string() << "\"}";
 	}
+
 	const auto writeWeapon = [&](float capacity, float speed, const fs::path& ammunition) {
 		std::ofstream weapon(badWeaponPath);
 		weapon << "{\"muzzleL1\":\"GunMuzzle_L1\",\"muzzleL2\":\"GunMuzzle_L2\","
@@ -149,6 +162,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 			   << capacity << ",\"muzzleSpeed\":" << speed << ",\"ammunition\":\""
 			   << ammunition.generic_string() << "\"}";
 	};
+
 	const auto rejectConfig = [&](const std::string& field, const fs::path& source) {
 		bool rejected = false;
 		try {
@@ -162,8 +176,10 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 			rejected = message.find(field) != std::string::npos &&
 				message.find(source.filename().string()) != std::string::npos;
 		}
+
 		Require(rejected, "Invalid JSON configuration did not identify its field and source");
 	};
+
 	writeWeapon(4.5f, 900, "unused");
 	rejectConfig("maxProjectiles", badWeaponPath);
 	writeWeapon(128, 0, "unused");
@@ -182,6 +198,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		std::ofstream(badAmmo) << "{\"model\":\"unused.fbx\",\"modelImport\":\"" << badImport.generic_string()
 							   << "\",\"modelForward\":\"+Y\"}";
 	}
+
 	writeWeapon(128, 900, badAmmo);
 	rejectConfig("normalizedExtent", badAmmo);
 
@@ -205,6 +222,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		file << "</node></visual_scene></library_visual_scenes><scene><instance_visual_scene "
 				"url=\"#Scene\"/></scene></COLLADA>";
 	};
+
 	writeNodes(false);
 	const HWND window = CreateWindowW(L"STATIC", L"Weapon regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0, 64,
 		64, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
@@ -229,6 +247,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 			"Repress bypassed cooldown");
 		gun.Configure(settings, *model);
 		size_t total = 0;
+
 		for (int i = 0; i < 60; ++i)
 			total += gun.Update({true}, 1.0f / 60.0f).size();
 		Require(total == 10, "Continuous fire depends on frame rate");
@@ -280,6 +299,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 					.aircraftVelocity = {},
 					.ageSeconds = 0});
 		Require(projectiles.GetCount() == settings.maxProjectiles, "Projectile cap did not prevent overflow");
+
 		for (int i = 0; i <= static_cast<int>(std::ceil(settings.lifetime / 0.25f)); ++i)
 			projectiles.Update(scene, 0.25f);
 		Require(projectiles.GetCount() == 0 && scene.GetObjects().empty(),
@@ -357,6 +377,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		} catch (const std::invalid_argument&) {
 			rejected = true;
 		}
+
 		Require(rejected, "Duplicate model muzzle was accepted");
 		auto missingSettings = settings;
 		missingSettings.muzzleNames[0] = "not-exported";
@@ -366,10 +387,12 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		} catch (const std::invalid_argument&) {
 			rejected = true;
 		}
+
 		Require(rejected, "Missing model muzzle was accepted");
 		context.EndFrame();
 		context.WaitForGpu();
 	}
+
 	writeNodes(false);
 	DestroyWindow(window);
 	std::cout << "PASS: left mouse firing, weapon settings, empty/duplicate nodes, timing, velocity, "

@@ -10,6 +10,7 @@
 namespace Engine {
 	class JsonAssetReader;
 }
+
 namespace Game {
 	struct CinematicRadioEntry {
 		RadioCaption caption;
@@ -17,17 +18,20 @@ namespace Game {
 		float startSeconds = 0;
 		float durationSeconds = 3.6f;
 	};
+
 	struct CinematicBriefingEntry {
 		std::array<std::string, 2> lines;
 		std::filesystem::path audio;
 		float fallbackSeconds = 5;
 	};
+
 	struct CinematicAudioSettings {
 		std::filesystem::path bgm = L"../Sound/Opening/空襲BGM.wav";
 		float bgmVolume = 0.12f;
 		float briefingVolume = 0.4f;
 		float flightVolumeScale = 0.4f;
 	};
+
 	struct CinematicShotSettings {
 		// "model"は別の編隊を描画し、"carrier"はミッションの母艦を撮影する
 		std::string target = "model";
@@ -49,6 +53,7 @@ namespace Game {
 		std::string subtitle = "正面より接近";
 		void Validate() const;
 	};
+
 	struct CinematicSettings : CinematicShotSettings {
 		std::vector<CinematicBriefingEntry> briefing{
 			{{"敵母艦と護衛機を確認。", "基地を襲った部隊の発進元だ。"},
@@ -65,11 +70,13 @@ namespace Game {
 		float cutSeconds = 3.8f;
 		float fadeInStartSeconds = 4;
 		float fadeInSeconds = 0.7f;
+
 		// 空なら従来の編隊紹介→戦闘視点。指定時は順にカットを再生する
 		std::vector<CinematicShotSettings> shots;
 		void Validate() const;
 		float TotalDuration() const;
 	};
+
 	CinematicSettings LoadCinematicSettings(
 		const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 } // namespace Game

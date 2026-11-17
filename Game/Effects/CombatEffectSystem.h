@@ -12,9 +12,11 @@ namespace Game {
 		void Configure(const EffectSettings& settings) {
 			m_settings = settings;
 		}
+
 		const EffectSettings& GetSettings() const {
 			return m_settings;
 		}
+
 		// 経過秒数を進め、寿命を終えた演出を除去する
 		void Update(float deltaSeconds);
 		void SpawnGunShot(const GunShotEvent& shot);
@@ -30,6 +32,7 @@ namespace Game {
 		void SpawnExplosion(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity);
 		void SpawnExplosion(
 			const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale);
+
 		// 内部の演出状態への参照。更新・生成操作で内容が変わるため描画するフレーム内で使う
 		const CombatEffectSnapshot& GetSnapshot() const {
 			return m_snapshot;

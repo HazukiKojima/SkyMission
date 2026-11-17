@@ -11,6 +11,7 @@ namespace Game {
 			if (!std::isfinite(value) || value < 0.0f)
 				throw std::invalid_argument(std::string("Invalid flight parameter: ") + name);
 		};
+
 		finiteNonnegative(p.initialSpeed, "initialSpeed");
 		finiteNonnegative(p.minimumSpeed, "minimumSpeed");
 		finiteNonnegative(p.maximumSpeed, "maximumSpeed");
@@ -35,6 +36,7 @@ namespace Game {
 		finiteNonnegative(p.criticalAngleRadians, "criticalAngleRadians");
 		finiteNonnegative(p.turnDrag, "turnDrag");
 		finiteNonnegative(p.flightPathResponse, "flightPathResponse");
+
 		// 離陸用にminimumSpeed未満の初速を許し、maximumSpeed超過は拒否する
 		if (p.minimumSpeed <= 0.0f || p.maximumSpeed <= p.minimumSpeed || p.initialSpeed > p.maximumSpeed ||
 			p.liftReferenceSpeed <= 0.0f || p.stallSpeed > p.maximumSpeed ||

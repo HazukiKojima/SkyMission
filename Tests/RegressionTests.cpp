@@ -22,6 +22,7 @@
 
 using namespace Engine;
 using namespace Game;
+
 namespace fs = std::filesystem;
 
 void Require(bool condition, const char* description) {
@@ -61,6 +62,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 				if (initializeComFirst) {
 					ThrowIfFailed(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
 				}
+
 				// 他スレッドのMTAから暗黙に参加している場合も、呼び出し前の状態と比較する
 				originalApartmentResult = CoGetApartmentType(&originalApartment, &originalQualifier);
 				{
@@ -77,6 +79,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 						audio.SetSuspended(false);
 						audio.UpdateEnemyRadio({});
 					}
+
 					audio.Update({.flying = true, .gunFiring = true}, 0);
 					audio.Update({.flying = true,
 									 .missileLaunches = 2,
@@ -109,6 +112,7 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					presentation.active = false;
 					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
 						"Skipped opening retained a briefing voice");
+
 					// 新しい音声アセットを追加せず、既存の実クリップを無線チャンネルへつなぐ
 					configured.radio[0].audio = configured.briefing[0].audio;
 					audio.Initialize(repository / L"Assets/Sound", configured);
@@ -155,16 +159,19 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
 						"Switching cinematic IDs reused a previous briefing clip");
 					std::map<std::string, CinematicSettings> patrolCommands;
+
 					for (const auto* id : {"patrolEncouragement", "patrolComplete", "midMission"})
 						patrolCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
 					audio.Initialize(repository / L"Assets/Sound", patrolCommands);
 					Require(audio.GetLoadedSoundCount() == 22, "The three new commander voice assets were not decoded");
 					std::map<std::string, CinematicSettings> impactCommands;
+
 					for (const auto* id : {"carrierHit", "carrierComplete"})
 						impactCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
 					audio.Initialize(repository / L"Assets/Sound", impactCommands);
 					Require(audio.GetLoadedSoundCount() == 21, "Carrier impact and completion voices were not decoded");
 					std::map<std::string, CinematicSettings> finaleCommands;
+
 					for (const auto* id : {"reinforcements", "finalRally", "finalEncouragement", "ending"})
 						finaleCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
 					audio.Initialize(repository / L"Assets/Sound", finaleCommands);
@@ -190,7 +197,9 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					audio.ResetPlayback();
 					audio.Update({.flying = true, .gunFiring = true, .missileLaunches = 1}, 0);
 				}
+
 				apartmentResult = CoGetApartmentType(&apartment, &qualifier);
+
 				if (initializeComFirst) {
 					CoUninitialize();
 				}
@@ -199,18 +208,21 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 			}
 		});
 		worker.join();
+
 		if (workerError) std::rethrow_exception(workerError);
 		Require(apartmentResult == originalApartmentResult &&
 				(FAILED(apartmentResult) ||
 					(apartment == originalApartment && qualifier == originalQualifier)),
 			"CombatAudio changed caller COM ownership or left COM initialized");
 	}
+
 	std::cout << "PASS: audio initialization, repeated playback, reinitialization and COM ownership\n";
 }
 
 void TestFlightAndScene() {
 	AircraftFlightParameters parameters;
 	ValidateFlightParameters(parameters);
+
 	for (const auto member :
 		{&AircraftFlightParameters::liftReferenceSpeed, &AircraftFlightParameters::minimumSpeed}) {
 		auto invalid = parameters;
@@ -239,6 +251,7 @@ void TestFlightAndScene() {
 
 		Require(rejected, "Nonfinite/negative flight parameter was accepted");
 	}
+
 	auto invalid = parameters;
 	invalid.criticalAngleRadians = invalid.stallAngleRadians;
 	bool rejected = false;
@@ -251,6 +264,7 @@ void TestFlightAndScene() {
 	Require(rejected, "Equal stall/critical angles were accepted");
 	AircraftFlightModel flight;
 	flight.SetFlightParameters(parameters);
+
 	for (int i = 0; i < 180; ++i)
 		flight.Update({.pitch = 0.3f, .turn = 0.5f}, 1.0f / 60.0f);
 	Require(std::isfinite(flight.GetSpeed()), "Flight integration produced NaN");
@@ -285,6 +299,7 @@ void TestFlightAndScene() {
 
 void TestFollowCameraLook() {
 	using namespace DirectX;
+
 	AircraftCameraController reference;
 	reference.Initialize();
 	AircraftCameraTarget target{{0, 1500, 0}, {0, 0, -1}, {0, 0, -1}, false, 500, 1500};
@@ -293,6 +308,7 @@ void TestFollowCameraLook() {
 	const auto distance = [](XMFLOAT3 a, XMFLOAT3 b) {
 		return XMVectorGetX(XMVector3Length(XMLoadFloat3(&a) - XMLoadFloat3(&b)));
 	};
+
 	Engine::InputSnapshot look;
 	look.active = true;
 	look.middleMouseDown = true;
@@ -317,13 +333,16 @@ void TestFollowCameraLook() {
 	const float releaseOffset = distance(camera.GetPosition(), reference.GetPosition());
 	Require(releaseOffset > 1 && releaseOffset < initialOffset && releaseOffset > initialOffset * 0.5f,
 		"Middle-button release snapped camera or did not start smooth return");
+
 	auto slowFrames = camera, fastFrames = camera;
+
 	for (int i = 0; i < 30; ++i)
 		slowFrames.Update(1 / 30.0f);
 	for (int i = 0; i < 120; ++i)
 		fastFrames.Update(1 / 120.0f);
 	Require(distance(slowFrames.GetPosition(), fastFrames.GetPosition()) < 0.05f,
 		"Look return depended on frame rate");
+
 	for (int i = 0; i < 180; ++i) {
 		target.position.z -= 10;
 		target.heading = target.forward = {0.5f, 0, -0.8660254f};
@@ -332,8 +351,10 @@ void TestFollowCameraLook() {
 		reference.Update(1 / 60.0f);
 		camera.Update(1 / 60.0f);
 	}
+
 	Require(distance(camera.GetPosition(), reference.GetPosition()) < 0.05f,
 		"Released camera did not return to moving aircraft's default view");
+
 	look.mouseDeltaY = 1000000;
 	camera.Update(1 / 60.0f, look);
 	XMFLOAT4X4 view;
@@ -343,6 +364,7 @@ void TestFollowCameraLook() {
 	const auto before = camera.GetPosition();
 	camera.Update(std::numeric_limits<float>::infinity(), look);
 	Require(distance(before, camera.GetPosition()) == 0, "Invalid delta moved camera");
+
 	// 同じ姿勢のまま遠方へ移動してもビューの回転成分を変えない
 	AircraftCameraController distant;
 	distant.Initialize();
@@ -352,23 +374,27 @@ void TestFollowCameraLook() {
 	distant.Update(10);
 	XMFLOAT4X4 nearbyView;
 	XMStoreFloat4x4(&nearbyView, distant.GetView());
+
 	for (int step = 0; step < 20; ++step) {
 		target.position = {2000000.0f + step * 13.7f, 1500, -2000000.0f - step * 7.3f};
 		distant.SetFollowTarget(target);
 		distant.Update(1 / 144.0f);
 		XMFLOAT4X4 distantView;
 		XMStoreFloat4x4(&distantView, distant.GetView());
+
 		for (int row = 0; row < 3; ++row)
 			for (int column = 0; column < 3; ++column)
 				Require(std::abs(distantView.m[row][column] - nearbyView.m[row][column]) < 1e-5f,
 					"Camera rotation jitters during distant translation");
 	}
+
 	std::cout << "PASS: Middle-button orbit, bomb/camera independence, smooth return, moving follow and frame-rate "
 				 "stability\n";
 }
 
 void TestTargetCameraLook() {
 	using namespace DirectX;
+
 	AircraftCameraController reference;
 	reference.Initialize();
 	reference.SetFollowTarget({{0, 1500, 0}, {0, 0, -1}, {0, 0, -1}, false, 500, 1500});
@@ -379,19 +405,23 @@ void TestTargetCameraLook() {
 	const auto direction = [](const AircraftCameraController& camera) {
 		XMFLOAT4X4 view;
 		XMStoreFloat4x4(&view, camera.GetView());
+
 		for (const auto& row : view.m)
 			for (float value : row) Require(std::isfinite(value), "Target camera produced invalid view");
 		return XMVectorSet(view._13, view._23, view._33, 0);
 	};
+
 	const auto separation = [](XMFLOAT3 a, XMFLOAT3 b) {
 		return XMVectorGetX(XMVector3Length(XMLoadFloat3(&a) - XMLoadFloat3(&b)));
 	};
+
 	for (const XMFLOAT3 point : {XMFLOAT3{0, 1500, -5000}, {5000, 1500, 0},
 		{-5000, 1500, 0}, {0, 1500, 5000}, {0, 5000, -5000}, {0, -2000, -5000}}) {
 		auto camera = reference;
 		camera.SetLookTarget(point);
 		camera.Update(1 / 60.0f, hold);
 		const auto first = camera.GetPosition();
+
 		for (int frame = 0; frame < 180; ++frame) camera.Update(1 / 60.0f, hold);
 		const auto expected = XMVector3Normalize(XMLoadFloat3(&point) - XMVectorSet(0, 1500, 0, 0));
 		Require(XMVectorGetX(XMVector3Dot(direction(camera), expected)) > 0.99f,
@@ -410,19 +440,25 @@ void TestTargetCameraLook() {
 		Require(separation(released.GetPosition(), missing.GetPosition()) < 0.001f &&
 			separation(released.GetPosition(), unfocused.GetPosition()) < 0.001f,
 			"Missing target/focus loss did not return like key release");
+
 		for (int frame = 0; frame < 180; ++frame) released.Update(1 / 60.0f, {});
 		Require(separation(released.GetPosition(), reference.GetPosition()) < 0.05f,
 			"Target camera failed to return to standard view");
 	}
+
 	XMFLOAT3 previous{};
+
 	for (int fps : {30, 60, 120}) {
 		auto camera = reference;
 		camera.SetLookTarget(XMFLOAT3{5000, 2500, 0});
+
 		for (int frame = 0; frame < fps; ++frame) camera.Update(1.0f / fps, hold);
+
 		if (fps != 30) Require(separation(previous, camera.GetPosition()) < 0.05f,
 			"Automatic target orbit depended on frame rate");
 		previous = camera.GetPosition();
 	}
+
 	auto camera = reference;
 	camera.SetLookTarget(XMFLOAT3{5000, 1500, 0});
 	auto manual = hold;
@@ -435,8 +471,10 @@ void TestTargetCameraLook() {
 		"Automatic target orbit overrode manual input");
 	for (int frame = 0; frame < 120; ++frame) camera.Update(1 / 60.0f, hold);
 	Require(XMVectorGetX(direction(camera)) > 0.99f, "Auto orbit failed to resume after manual input");
+
 	// 後方の継ぎ目をまたぐ目標切り替えでは、短い回転経路を選ぶ
 	camera.SetLookTarget(XMFLOAT3{10, 1500, 5000});
+
 	for (int frame = 0; frame < 180; ++frame) camera.Update(1 / 60.0f, hold);
 	const auto before = direction(camera);
 	camera.SetLookTarget(XMFLOAT3{-10, 1500, 5000});
@@ -449,19 +487,23 @@ void TestTargetCameraLook() {
 		camera.Update(1 / 60.0f, hold);
 		direction(camera);
 	}
+
 	camera.SnapToFollowTarget();
 	camera.Update(1 / 60.0f, hold);
 	Require(separation(camera.GetPosition(), reference.GetPosition()) < 0.001f,
 		"Camera snap retained target orbit");
 	std::cout << "PASS: Z target orbit, release, manual priority, rear seam, reset and frame rates\n";
+
 	// ミッションの自動注視は入力なしで動き、手動の見回しを一時的に上書きする
 	auto automatic = reference, noisy = reference;
 	automatic.SetLookTarget(XMFLOAT3{5000, 1500, 0}, true);
 	noisy.SetLookTarget(XMFLOAT3{5000, 1500, 0}, true);
+
 	for (int frame = 0; frame < 120; ++frame) {
 		automatic.Update(1 / 60.0f);
 		noisy.Update(1 / 60.0f, manual);
 	}
+
 	Require(separation(automatic.GetPosition(), noisy.GetPosition()) < 0.001f &&
 		XMVectorGetX(direction(automatic)) > 0.99f,
 		"Automatic focus required Z or allowed manual interference");
@@ -470,6 +512,7 @@ void TestTargetCameraLook() {
 	XMStoreFloat4x4(&zoomProjection, automatic.GetCamera().GetProjection());
 	Require(zoomProjection._22 > baseProjection._22 * 1.1f, "Automatic focus did not zoom in");
 	automatic.SetLookTarget(std::nullopt);
+
 	for (int frame = 0; frame < 180; ++frame) automatic.Update(1 / 60.0f);
 	XMStoreFloat4x4(&zoomProjection, automatic.GetCamera().GetProjection());
 	Require(std::abs(zoomProjection._22 - baseProjection._22) < 0.001f &&
@@ -491,6 +534,7 @@ void TestRawInput() {
 		packet.MakeCode = code;
 		state.ProcessKeyboard(device, packet);
 	};
+
 	const auto mouse = [&](HANDLE device, USHORT buttons, LONG dx, LONG dy,
 						   USHORT flags = MOUSE_MOVE_RELATIVE) {
 		RAWMOUSE packet{};
@@ -500,6 +544,7 @@ void TestRawInput() {
 		packet.lLastY = dy;
 		state.ProcessMouse(device, packet, 1920, 1080);
 	};
+
 	key(keyboard1, 'W');
 	Require(!state.ConsumeFrame().IsKeyDown('W'), "Inactive raw keyboard packet was accepted");
 	state.SetActive(true);
@@ -510,6 +555,7 @@ void TestRawInput() {
 	key(keyboard2, 'W');
 	key(keyboard1, 'W', RI_KEY_BREAK);
 	Require(state.ConsumeFrame().IsKeyDown('W'), "One keyboard's break cleared another keyboard's held key");
+
 	state.ForgetDevice(keyboard2);
 	Require(!state.ConsumeFrame().IsKeyDown('W'), "Unplugged keyboard left a stuck key");
 	key(keyboard1, VK_CONTROL);
@@ -533,6 +579,7 @@ void TestRawInput() {
 	mouse(mouse1, RI_MOUSE_MIDDLE_BUTTON_DOWN, 0, 0);
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_DOWN, 3, -2);
 	mouse(mouse1, 0, 4, 5);
+
 	// マウス以外のデバイス削除で、蓄積した移動量を消さない
 	state.ForgetDevice(keyboard2);
 	mouse(mouse1, RI_MOUSE_RIGHT_BUTTON_UP, 2, 0);
@@ -590,23 +637,28 @@ void TestRawInput() {
 		Require(GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) != UINT(-1),
 			"Raw registration query failed");
 		std::vector<RAWINPUTDEVICE> devices(count);
+
 		if (count)
 			Require(GetRegisteredRawInputDevices(devices.data(), &count, sizeof(RAWINPUTDEVICE)) != UINT(-1),
 				"Raw registration retrieval failed");
 		return devices;
 	};
+
 	auto first = std::make_unique<Window>(64, 64, L"Raw Input test (hidden)", GetModuleHandleW(nullptr));
 	{
 		Window second(64, 64, L"Raw Input test 2 (hidden)", GetModuleHandleW(nullptr));
 		first.reset(); // 一つ目の破棄後も二つ目の入力登録を維持する
 		UINT matching = 0;
+
 		for (const auto& device : registrations())
 			if (device.hwndTarget == second.GetHandle()) {
 				Require((device.dwFlags & RIDEV_INPUTSINK) == 0, "Raw input is receiving background events");
 				++matching;
 			}
+
 		Require(matching == 2, "Window did not register foreground keyboard and mouse input");
 		Require(!second.ConsumeInput().active, "Hidden unfocused window exposes active input");
+
 		// タイトルバーの移動・サイズ変更が使うキャプチャを入力処理で解除しない
 		SetCapture(second.GetHandle());
 		Require(GetCapture() == second.GetHandle(), "Native mouse capture could not be established");
@@ -654,8 +706,10 @@ void TestRawInput() {
 	for (const auto& device : registrations())
 		Require(device.hwndTarget == nullptr, "Destroyed window retained raw input registration");
 	MSG message{};
+
 	while (PeekMessageW(&message, nullptr, WM_QUIT, WM_QUIT, PM_REMOVE)) {
 	}
+
 	std::cout << "PASS: Raw Input make/break, modifiers, multiple devices, drag, focus loss, registration "
 				 "lifetime, camera/native capture, resize, maximize, restore and close\n";
 }
@@ -717,6 +771,7 @@ void RequireDefaultBufferContent(ID3D12Device* device, ID3D12GraphicsCommandList
 
 void TestGpuTextures(const fs::path& fixture) {
 	ComPtr<ID3D12Debug> debug;
+
 	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) debug->EnableDebugLayer();
 	ComPtr<IDXGIFactory4> factory;
 	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
@@ -758,6 +813,7 @@ void TestGpuTextures(const fs::path& fixture) {
 		DirectX::SaveToWICFile(*pixels, DirectX::WIC_FLAGS_NONE, GUID_ContainerFormatPng, png.c_str()));
 	const auto extensionless = fixture / L"拡張子なし";
 	fs::copy_file(png, extensionless, fs::copy_options::overwrite_existing);
+
 	for (const auto format : {DXGI_FORMAT_BC3_UNORM_SRGB, DXGI_FORMAT_BC4_UNORM, DXGI_FORMAT_BC5_UNORM}) {
 		const TextureLoadOptions options{
 			.useSrgb = format == DXGI_FORMAT_BC3_UNORM_SRGB, .generateMipmaps = true, .targetFormat = format};
@@ -770,6 +826,7 @@ void TestGpuTextures(const fs::path& fixture) {
 				desc.MipLevels == 5 && desc.Format == format, "Mip generation/compression order is broken");
 			submit();
 		}
+
 		{
 			Texture cached;
 			Require(cached.LoadFromFile(device.Get(), commands.Get(), png.wstring(), options),
@@ -778,11 +835,13 @@ void TestGpuTextures(const fs::path& fixture) {
 			submit();
 		}
 	}
+
 	// 既定（用途不明）の経路でも、HDR精度と生成したミップを維持する
 	DirectX::ScratchImage hdrImage;
 	ThrowIfFailed(hdrImage.Initialize2D(DXGI_FORMAT_R32G32B32A32_FLOAT, 16, 8, 1, 1));
 	const auto hdrPath = fixture / L"sky.hdr";
 	ThrowIfFailed(DirectX::SaveToHDRFile(*hdrImage.GetImage(0, 0, 0), hdrPath.c_str()));
+
 	for (int load = 0; load < 2; ++load) {
 		Texture sky;
 		Require(sky.LoadFromFile(device.Get(), commands.Get(), hdrPath.wstring()),
@@ -793,7 +852,9 @@ void TestGpuTextures(const fs::path& fixture) {
 			"HDR cache changed dimensions, mip levels or float precision");
 		submit();
 	}
+
 	Texture noExtension;
+
 	// 解像度の上限は、縦横比を保ち、ミップを作り直し、独立したキャッシュキーを持つ
 	for (int load = 0; load < 2; ++load) {
 		auto limited = Texture::LoadCached(device.Get(), commands.Get(), png.wstring(),
@@ -804,6 +865,7 @@ void TestGpuTextures(const fs::path& fixture) {
 			"Texture cap or capped disk cache lost dimensions/mips");
 		submit();
 	}
+
 	auto fullSize = Texture::LoadCached(
 		device.Get(), commands.Get(), png.wstring(), {.targetFormat = DXGI_FORMAT_BC3_UNORM_SRGB});
 	Require(fullSize && fullSize->GetResource()->GetDesc().Width == 16,
@@ -870,7 +932,9 @@ void TestGpuTextures(const fs::path& fixture) {
 	// 作業ディレクトリに依存せず、実行ファイルの隣からシェーダーを読み込む
 	const auto executable = ExecutableDirectory();
 	const char* vs = "float4 main(float3 p:POSITION,float2 uv:TEXCOORD):SV_POSITION{return float4(p,1);}";
+
 	const char* ps = "float4 main():SV_TARGET{return float4(1,1,1,1);}";
+
 	for (const auto& stage : {std::pair{vs, L"BasicVS.cso"}, std::pair{ps, L"BasicPS.cso"}}) {
 		ComPtr<ID3DBlob> blob;
 		ThrowIfFailed(D3DCompile(stage.first, std::strlen(stage.first), nullptr, nullptr, nullptr, "main",
@@ -885,6 +949,7 @@ void TestGpuTextures(const fs::path& fixture) {
 	fs::current_path(previous);
 
 	ComPtr<ID3D12InfoQueue> messages;
+
 	if (SUCCEEDED(device.As(&messages))) {
 		for (UINT64 i = 0; i < messages->GetNumStoredMessages(); ++i) {
 			SIZE_T size = 0;
@@ -892,6 +957,7 @@ void TestGpuTextures(const fs::path& fixture) {
 			std::vector<char> bytes(size);
 			auto* message = reinterpret_cast<D3D12_MESSAGE*>(bytes.data());
 			ThrowIfFailed(messages->GetMessage(i, message, &size));
+
 			if (message->Severity == D3D12_MESSAGE_SEVERITY_ERROR ||
 				message->Severity == D3D12_MESSAGE_SEVERITY_CORRUPTION)
 				throw std::runtime_error(message->pDescription);
@@ -916,6 +982,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 							"o Propeller\nv -1 0 -1\nv 1 0 -1\nv 0 1 -1\nf 4 5 6\n";
 	definition.playerAircraft.model = definition.enemyAircraft.model = model;
 	definition.playerAircraft.model = fixture / L"muzzles.dae";
+
 	// 同じマテリアルの静的な部品は統合してよいが、既存のプロペラは独立したままにする
 	definition.environment.skyTexture = definition.environment.oceanTexture =
 		definition.environment.oceanNormalTexture = definition.environment.oceanNormalTexture2 =
@@ -923,9 +990,11 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	const HWND window = CreateWindowW(L"STATIC", L"SkyMission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0,
 		256, 256, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 	Require(window != nullptr, "Hidden test window could not be created");
+
 	// 必須モデルの失敗は、Rendererの破棄を経ても呼び出し元に届くこと
 	const auto invalidModel = fixture / L"invalid-model.obj";
 	std::ofstream(invalidModel) << "This file contains no mesh.\n";
+
 	for (const size_t modelIndex : {size_t(0), size_t(1), size_t(2), size_t(3)}) {
 		auto invalidDefinition = definition.BuildRendererDefinition();
 		auto& asset = invalidDefinition.models[modelIndex];
@@ -942,8 +1011,10 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 				message.find("Failed to load required model '" + asset.id + "': ") != std::string::npos &&
 				message.find(expectedPath) != std::string::npos;
 		}
+
 		Require(rejected, "Required model failure did not report its asset ID and UTF-8 path");
 	}
+
 	std::cout
 		<< "PASS: missing player/ammunition and invalid enemy models reject initialization with ID/path\n";
 	{
@@ -967,6 +1038,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 			definition.enemyAircraft.flightParameters, definition.enemyAIParameters);
 		scene.ConfigurePlayerWeapon(definition.playerWeapon, renderer.GetModel(AmmunitionModelId));
 		std::vector<Engine::ObjectId> shipIds;
+
 		for (const auto& ship : definition.ships) {
 			const auto shipModel = renderer.GetModel(ship.asset.id);
 			Require(shipModel && shipModel->IsLoaded(), "Real ship FBX did not load");
@@ -976,18 +1048,22 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 				"Ship LODs did not reduce triangles");
 			shipIds.push_back(scene.AddObject(shipModel, ship.BuildTransform()));
 		}
+
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
 		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles +
 			CarrierMissileSystem::RequiredModelCapacity(definition.mission.bombReloadSeconds));
 		const auto reserved = renderer.GetModelCapacity();
 		Engine::HudDrawList hud;
 		Game::CombatHudPresenter presenter;
+
 		for (int i = 0; i < 6; ++i) {
 			scene.Update({}, 0.05f, {}, {.weapon = {true}, .missilePressCount = i == 0 ? 2u : 0u});
+
 			if (scene.GetCombatSnapshot().firedVolleys > 0) {
 				Require(!scene.GetEffectSnapshot().gunFlashes.empty(),
 					"FlightScene did not forward gun shot effects");
 				const auto& player = scene.GetObjects().front();
+
 				for (const auto& flash : scene.GetEffectSnapshot().gunFlashes) {
 					const auto local = player.model->FindNodePosition(
 						definition.playerWeapon.gun.muzzleNames[flash.muzzleIndex]);
@@ -1000,12 +1076,14 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 						"Real-asset muzzle flash did not follow the aircraft transform");
 				}
 			}
+
 			const auto view = renderer.UpdateFrameConstants(scene.GetRenderScene(), i / 60.0f);
 			hud.Reset(view.width, view.height);
 			CombatEffectPresenter{}.Build(scene.GetEffectSnapshot(), view, hud);
 			presenter.Build(scene.GetCombatSnapshot(), view, hud);
 			renderer.Render(64, 64, scene.GetRenderScene(), &hud);
 		}
+
 		Require(scene.GetProjectileCount() >= 12, "Scene did not integrate continuous weapon fire");
 		const auto& timing = renderer.GetGpuTimings();
 		Require(timing.valid && std::isfinite(timing.TotalMs()) && timing.TotalMs() > 0,
@@ -1022,6 +1100,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 					std::memcmp(&found->worldTransform, &expected, sizeof(expected)) == 0,
 				"Simulation changed a static ship transform");
 		}
+
 		Require(
 			renderer.GetModelCapacity() == reserved, "Firing grew GPU constant buffers despite reservation");
 
@@ -1038,6 +1117,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		scene.RemoveObject(scene.GetObjects()[0].id);
 		Require(scene.GetEffectSnapshot().gunFlashes.empty(), "Player removal retained muzzle flashes");
 		const auto remainingProjectiles = scene.GetProjectileCount();
+
 		for (int i = 0; i < 14; ++i)
 			scene.Update({}, 0.25f, {}, {{true}});
 		Require(
@@ -1068,6 +1148,7 @@ int wmain(int argc, wchar_t** argv) {
 		const fs::path fixture = argv[2];
 		fs::create_directories(fixture);
 		TestGameplaySettings(argv[1], fixture);
+
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--json-review") {
 			TestPathsAndJson(argv[1], fixture);
 			TestAIParameters(argv[1], fixture);
@@ -1078,6 +1159,7 @@ int wmain(int argc, wchar_t** argv) {
 			CoUninitialize();
 			return 0;
 		}
+
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--opening-review") {
 			TestCinematic(argv[1], fixture);
 			TestEnemyRadio();
@@ -1086,6 +1168,7 @@ int wmain(int argc, wchar_t** argv) {
 			CoUninitialize();
 			return 0;
 		}
+
 		if (argc == 4 && std::wstring_view(argv[3]) == L"--mission-review") {
 			TestCinematic(argv[1], fixture);
 			TestEnemyRadio();
@@ -1101,12 +1184,14 @@ int wmain(int argc, wchar_t** argv) {
 			CoUninitialize();
 			return 0;
 		}
+
 		if (argc == 4) {
 			TestCloudSettings(argv[1], fixture);
 			TestCloudRendering(argv[1], fixture, 1920, 1080, true);
 			CoUninitialize();
 			return 0;
 		}
+
 		TestFlightAndScene();
 		TestCinematic(argv[1], fixture);
 		TestCombatAudioLifecycle(argv[1], fixture);

@@ -5,6 +5,7 @@
 
 void TestGunFireEffects() {
 	using namespace DirectX;
+
 	GunSettings settings;
 	settings.muzzleNames = {"L1", "L2", "R1", "R2"};
 	settings.muzzleSpeed = 1000;
@@ -26,15 +27,18 @@ void TestGunFireEffects() {
 				.aircraftVelocity = {20, 0, 0},
 				.ageSeconds = age});
 	};
+
 	Require(fire(0.01f), "Gun effect volley failed");
 	auto shots = bullets.TakeShotEvents();
 	Require(shots.size() == 4 && bullets.TakeShotEvents().empty(), "Gun notifications were lost or replayed");
+
 	for (size_t index = 0; index < shots.size(); ++index) {
 		Require(shots[index].muzzleIndex == index && shots[index].position.x == muzzles[index].x &&
 				shots[index].position.y == 20 && shots[index].age == 0.01f &&
 				shots[index].aircraftVelocity.x == 20,
 			"Gun notification lost muzzle transform, velocity or frame age");
 	}
+
 	auto tracers = bullets.TakeTracers();
 	Require(tracers.size() == 2 && std::abs(tracers[0].tail.x + 3) < 0.001f &&
 			std::abs(tracers[1].tail.x - 3) < 0.001f,
@@ -131,9 +135,11 @@ void TestGunFireEffects() {
 		CombatEffectSystem effects;
 		unsigned emitted = 0;
 		const int frames = int(std::round(1 / dt));
+
 		for (int frame = 0; frame < frames; ++frame) {
 			effects.Update(dt);
 			const float end = (frame + 1) * dt;
+
 			while (emitted < 10 && emitted * 0.1f < end - 1e-6f) {
 				for (size_t muzzle = 0; muzzle < 4; ++muzzle)
 					effects.SpawnGunShot({muzzle, {float(emitted), 20, 0}, {40, 0, 0}, {0, 0, -1},
@@ -141,10 +147,13 @@ void TestGunFireEffects() {
 				++emitted;
 			}
 		}
+
 		Require(emitted == 10 && effects.GetSnapshot().gunSmoke.size() == 12,
 			"Gun smoke density changed with FPS");
 	}
+
 	CombatEffectSystem effects;
+
 	for (size_t index = 0; index < 70; ++index)
 		effects.SpawnGunShot({index % 4, {float(index), 0, 0}, {40, 0, 0}, {0, 0, -1}, 0.25f, index});
 	const auto& snapshot = effects.GetSnapshot();
@@ -174,6 +183,7 @@ void TestGunFireEffects() {
 
 void TestGunSegmentClipping() {
 	using namespace DirectX;
+
 	Engine::RenderView view;
 	view.width = 800;
 	view.height = 600;
@@ -184,16 +194,19 @@ void TestGunSegmentClipping() {
 		"Screen edge discarded entire tracer");
 	Require(!projector.ProjectClippedSegment({100, 0, 10}, {200, 0, 10}), "Offscreen segment was accepted");
 	Require(!projector.ProjectClippedSegment({0, 0, -10}, {1, 1, -20}), "Rear tracer was projected");
+
 	for (const auto segment : {std::pair{XMFLOAT3{1, 0, 10}, XMFLOAT3{0, 0, -10}},
 			 std::pair{XMFLOAT3{0, 0, 0.1f}, XMFLOAT3{1, 1, 10}},
 			 std::pair{XMFLOAT3{-100, 0, 10}, XMFLOAT3{100, 0, 10}}}) {
 		const auto clipped = projector.ProjectClippedSegment(segment.first, segment.second);
 		Require(clipped.has_value(), "Visible clipped segment was lost");
+
 		for (auto point : {clipped->head, clipped->tail})
 			Require(std::isfinite(point.x) && std::isfinite(point.y) && point.x >= 0 && point.x <= 800 &&
 					point.y >= 0 && point.y <= 600,
 				"Clipped segment produced oversized or nonfinite screen coordinates");
 	}
+
 	Require(!projector.ProjectClippedSegment({std::numeric_limits<float>::quiet_NaN(), 0, 1}, {}),
 		"Nonfinite tracer was projected");
 	std::cout << "PASS: tracer screen edges, rear camera, near plane and finite clipping\n";

@@ -16,6 +16,7 @@ namespace Game {
 			: from;
 		const float dot = std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f);
 		auto rotation = XMMatrixIdentity();
+
 		if (dot < -0.9999f) {
 			const auto reference =
 				std::abs(modelForward.y) < 0.9f ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);

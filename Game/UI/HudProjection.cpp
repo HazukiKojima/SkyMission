@@ -11,6 +11,7 @@ namespace Game {
 
 	HudProjection HudProjector::Project(const DirectX::XMFLOAT3& point) const {
 		using namespace DirectX;
+
 		const auto clip =
 			XMVector4Transform(XMVectorSet(point.x, point.y, point.z, 1), XMLoadFloat4x4(&m_viewProjection));
 		const float w = XMVectorGetW(clip);
@@ -29,7 +30,9 @@ namespace Game {
 	std::optional<HudSegmentProjection> HudProjector::ProjectClippedSegment(
 		const DirectX::XMFLOAT3& head, const DirectX::XMFLOAT3& tail) const {
 		using namespace DirectX;
+
 		if (m_width == 0 || m_height == 0) return std::nullopt;
+
 		const auto matrix = XMLoadFloat4x4(&m_viewProjection);
 		const auto headClip = XMVector3Transform(XMLoadFloat3(&head), matrix);
 		const auto tailClip = XMVector3Transform(XMLoadFloat3(&tail), matrix);
@@ -37,6 +40,7 @@ namespace Game {
 		XMFLOAT4 b;
 		XMStoreFloat4(&a, headClip);
 		XMStoreFloat4(&b, tailClip);
+
 		// 透視除算の前に6面と正のwで切り、背面から伸びる巨大な線を防ぐ
 		const float headDistances[] = {
 			a.w + a.x, a.w - a.x, a.w + a.y, a.w - a.y, a.z, a.w - a.z, a.w - 1e-5f};
@@ -44,19 +48,24 @@ namespace Game {
 			b.w + b.x, b.w - b.x, b.w + b.y, b.w - b.y, b.z, b.w - b.z, b.w - 1e-5f};
 		float enter = 0;
 		float exit = 1;
+
 		for (size_t plane = 0; plane < std::size(headDistances); ++plane) {
 			const float from = headDistances[plane];
 			const float to = tailDistances[plane];
+
 			if (!std::isfinite(from) || !std::isfinite(to) || (from < 0 && to < 0)) return std::nullopt;
 			if ((from < 0) != (to < 0)) {
 				const float fraction = from / (from - to);
+
 				if (from < 0)
 					enter = std::max(enter, fraction);
 				else
 					exit = std::min(exit, fraction);
 			}
 		}
+
 		if (enter > exit) return std::nullopt;
+
 		const auto toPixel = [&](float fraction) {
 			const auto clip = XMVectorLerp(headClip, tailClip, fraction);
 			const float w = std::max(XMVectorGetW(clip), 1e-5f);

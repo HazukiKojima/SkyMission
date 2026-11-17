@@ -4,9 +4,11 @@
 
 void TestEnemyRadio() {
 	using namespace Game;
+
 	const std::array<Engine::ObjectId, 1> survivors{42};
 	EnemyRadioController radio;
 	std::array<bool, EnemyRadioClips.size()> heard{};
+
 	for (int kill = 0; kill < 7; ++kill) {
 		radio.NotifyDestroyed(100 + kill, survivors);
 		radio.Update(0, survivors, false);
@@ -21,13 +23,16 @@ void TestEnemyRadio() {
 		heard[reaction.clip] = true;
 		radio.Update(4, survivors, false);
 	}
+
 	Require(std::all_of(heard.begin(), heard.end(), [](bool value) { return value; }),
 		"Enemy radio did not use all eleven voice clips");
 	for (const auto& clip : EnemyRadioClips) {
 		std::string_view text = clip.text;
+
 		while (!text.empty()) Require(Engine::HudFont::Glyph(Engine::HudFont::Next(text)) != unsigned('?' - 32),
 			"Enemy Japanese subtitle contains an unsupported glyph");
 	}
+
 	radio.NotifyDestroyed(1, {});
 	radio.Update(0, {}, false);
 	Require(radio.GetPresentation().clip >= 0, "Final enemy did not call out");
@@ -37,6 +42,7 @@ void TestEnemyRadio() {
 	radio.Update(0, survivors, false);
 	radio.Update(4, {}, false);
 	Require(radio.GetPresentation().clip == -1, "Missing wingman remained queued");
+
 	for (int kill = 0; kill < 50; ++kill) radio.NotifyDestroyed(100 + kill, survivors);
 	radio.Update(0, survivors, false);
 	const auto serial = radio.GetPresentation().serial;

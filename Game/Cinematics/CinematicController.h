@@ -8,6 +8,7 @@ namespace Game {
 	class CinematicController {
 	  public:
 		void Start(const CinematicSettings& settings, const std::string& id = "opening");
+
 		// カメラの切り替えや戦闘の一時停止なしで、プレイ中に時間指定の会話を開始する
 		void StartRadio(const CinematicSettings& settings, const std::string& id);
 		void StopRadio();
@@ -17,6 +18,7 @@ namespace Game {
 		const CinematicPresentation& GetPresentation() const {
 			return m_presentation;
 		}
+
 		CinematicPose GetPose() const;
 		const CinematicShotSettings& GetCurrentShot() const;
 		std::optional<CinematicCompletion> TakeCompletion();

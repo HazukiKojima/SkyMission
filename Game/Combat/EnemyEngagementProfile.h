@@ -26,6 +26,7 @@ namespace Game {
 		Engine::ObjectId enemy, const EnemyAITuning& tuning = {}) {
 		if (playerLock == LockState::Locked && selected == enemy && enemy != Engine::InvalidObjectId)
 			return {};
+
 		// 非ロック機は再攻撃を早めて射撃機会を増やす。回避距離・旋回上限・命中精度は維持する
 		return {.cruiseSpeedScale = tuning.unlockedCruiseSpeedScale,
 			.passDistanceScale = tuning.unlockedPassDistanceScale,

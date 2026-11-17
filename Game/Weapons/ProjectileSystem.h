@@ -25,24 +25,30 @@ namespace Game {
 		void ConfigureEffects(const EffectSettings& settings) {
 			m_effectSettings = settings;
 		}
+
 		void Configure(const GunSettings& settings, std::shared_ptr<Engine::Model> model,
 			const DirectX::XMFLOAT3& modelForward);
+
 		// dtは秒。命中・寿命切れ・海面到達した弾をSceneからも取り除く
 		void Update(Engine::Scene& scene, float dt, std::span<const CollisionTarget> targets = {});
 		bool FireSingle(Engine::Scene& scene, const DirectX::XMFLOAT3& position,
 			const DirectX::XMFLOAT3& velocity, AttackSource source, float damage);
+
 		// ageSecondsはフレーム末までに弾が経過した秒数。新規弾もその時間だけ進めて衝突判定する
 		// muzzlesはモデル座標、forwardとaircraftVelocityはワールド座標系
 		bool FireVolley(Engine::Scene& scene, const GunVolley& volley);
+
 		// 未取得の命中通知を返して内部キューを空にする。同じ通知は二度取得できない
 		std::vector<HitEvent> TakeHits() {
 			auto hits = std::move(m_hits);
 			m_hits.clear();
 			return hits;
 		}
+
 		size_t GetCount() const {
 			return m_projectiles.size();
 		}
+
 		// 発射通知と曳光線も取得時に消費する。演出側への引き渡しは1フレームに一度行う
 		std::vector<GunShotEvent> TakeShotEvents();
 		std::vector<GunTracerSegment> TakeTracers();
@@ -58,6 +64,7 @@ namespace Game {
 			AttackSource source = AttackSource::Player;
 			float damage = 0;
 		};
+
 		static void Advance(Projectile& projectile, float dt);
 		void AddTracer(const Projectile& projectile, const DirectX::XMFLOAT3& head);
 		bool MoveAndCollide(Projectile& projectile, float duration, float frameOffset, float frameSeconds,

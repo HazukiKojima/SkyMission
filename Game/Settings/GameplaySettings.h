@@ -18,6 +18,7 @@ namespace Game {
 			r.Number("/feedback/allDownSeconds", allDownSeconds, 0, 10000);
 		}
 	};
+
 	struct AircraftAnimationSettings {
 		float propellerAngularSpeedPerSpeed = 0.06f;
 
@@ -73,6 +74,7 @@ namespace Game {
 				"CameraSettings", "inconsistent settings");
 		}
 	};
+
 	struct EnemyGunTuning {
 		float damage = 2.0f;
 		float lifetimeSeconds = 3.0f;
@@ -109,6 +111,7 @@ namespace Game {
 				minimumSpreadDegrees + spreadRangeDegrees < 45, "EnemyGunTuning", "inconsistent settings");
 		}
 	};
+
 	struct EnemyAITuning {
 		float safeDistanceScale = 1.42f;
 		float safeDistanceSlotStep = 0.06f;
@@ -268,6 +271,7 @@ namespace Game {
 			r.Require(defenseOuterRadius > defenseInnerRadius, "EnemyAITuning", "inconsistent settings");
 		}
 	};
+
 	struct MissileSettings {
 		float turnRateDegreesPerSecond = 90.0f;
 		float releaseSideOffsetMeters = 14.0f;
@@ -285,6 +289,7 @@ namespace Game {
 			r.Integer("ammoCount", ammoCount, 16);
 		}
 	};
+
 	struct CinematicTextSettings {
 		float textScale = 1.0f;
 		float briefingFontSize = 48.0f;
@@ -313,6 +318,7 @@ namespace Game {
 			r.Require(textScale <= 4, "CinematicTextSettings", "inconsistent settings");
 		}
 	};
+
 	struct AudioSettings {
 		float flightVolume = 0.18f;
 		float gunVolume = 0.42f;
@@ -358,6 +364,7 @@ namespace Game {
 			r.Text("battleBgmFile", battleBgmFile);
 		}
 	};
+
 	struct HudLayoutSettings {
 		float controlsFontSize = 36.0f;
 		float controlsLineHeight = 48.0f;
@@ -378,6 +385,7 @@ namespace Game {
 		float flightValuePadding = 12.0f;
 		float healthStatusY = 108.0f;
 		float fireWarningY = 330.0f;
+
 		// 幅1920の基準レイアウトにおける、ミッション文の右端
 		float missionX = 1872.0f;
 		float missionY = 16.0f;

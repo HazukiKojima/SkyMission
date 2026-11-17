@@ -5,6 +5,7 @@
 
 namespace Game {
 	using namespace DirectX;
+
 	namespace {
 		void DrawImpactSmoke(const ImpactEffect& impact, EffectDrawContext& context) {
 			// 入射方向の逆を基準にして、金属片を機体の外側へ散らす
@@ -21,6 +22,7 @@ namespace Game {
 				context.DrawCloud(location, radius, random.Sample(seed) * XM_2PI + ageSeconds * 0.7f, seed,
 					color, EffectClipMode::CenterVisible);
 			};
+
 			// 小さな灰色の煙を残し、火球にはしない
 			for (unsigned i = 0; i < context.Settings().impact.smokeCount; ++i) {
 				const auto offset = tangent * (random.Sample(i + 2) - 0.5f) * ageSeconds * 9 +
@@ -40,6 +42,7 @@ namespace Game {
 			const float ageSeconds = impact.age;
 			const auto origin = XMLoadFloat3(&impact.position);
 			const auto inherited = XMLoadFloat3(&impact.velocity);
+
 			if (ageSeconds < context.Settings().impact.flashSeconds) {
 				const float flash = 1 - ageSeconds / context.Settings().impact.flashSeconds;
 				context.DrawGlow(origin + inherited * ageSeconds, context.Settings().impact.flashOuterRadius,
@@ -53,6 +56,7 @@ namespace Game {
 
 		void DrawImpactFragments(const ImpactEffect& impact, EffectDrawContext& context) {
 			const float scale = context.GetScale();
+
 			// 入射方向の逆を基準にして、金属片を機体の外側へ散らす
 			const float ageSeconds = impact.age;
 			const auto origin = XMLoadFloat3(&impact.position);
@@ -63,10 +67,12 @@ namespace Game {
 			const auto tangent = XMVector3Normalize(XMVector3Cross(normal, reference));
 			const auto bitangent = XMVector3Cross(normal, tangent);
 			const EffectRandom random(impact.position);
+
 			for (int i = 0; i < context.Settings().impact.fragmentCount; ++i) {
 				const float lifetimeSeconds = context.Settings().impact.fragmentMinLifetime +
 					random.Sample(i + 32) * context.Settings().impact.fragmentLifetimeRange;
 				if (ageSeconds >= lifetimeSeconds) continue;
+
 				const float angle = random.Sample(i + 52) * XM_2PI;
 				const float outward = 0.2f + random.Sample(i + 72) * 0.8f;
 				const auto direction = XMVector3Normalize(
@@ -85,9 +91,11 @@ namespace Game {
 						0, 0);
 					return origin + inheritedDisplacement + fragmentDisplacement + gravityDisplacement;
 				};
+
 				const auto segment = context.ProjectSegment(positionAt(ageSeconds),
 					positionAt(std::max(0.0f, ageSeconds - (0.012f + random.Sample(i + 112) * 0.024f))));
 				if (!segment) continue;
+
 				const float heat = 1 - ageSeconds / lifetimeSeconds;
 				const float width = std::max(1.1f, scale * (1.8f + random.Sample(i + 132) * 2.2f));
 				context.DrawStreak(*segment, width * 2,

@@ -9,6 +9,7 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 	const auto write = [&](const std::string& text) {
 		std::ofstream(file) << text;
 	};
+
 	const auto rejects = [&](const std::string& json, auto load) {
 		write(json);
 		bool rejected = false;
@@ -17,8 +18,10 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 		} catch (const std::exception& error) {
 			rejected = std::string(error.what()).find("gameplay-settings.json") != std::string::npos;
 		}
+
 		if (!rejected) throw std::runtime_error("Invalid tuning accepted or missing source context: " + json);
 	};
+
 	CameraSettings camera;
 	camera.Load(reader, fixture / L"missing-camera.json");
 	Require(camera.followDistance == 240, "Missing tuning lost camera defaults");

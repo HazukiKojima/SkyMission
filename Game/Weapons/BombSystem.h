@@ -13,15 +13,18 @@ namespace Game {
 		void Update(Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& deck);
 		bool TryDrop(Engine::Scene& scene, const DirectX::XMFLOAT3& aircraftPosition,
 			const DirectX::XMFLOAT3& aircraftVelocity);
+
 		// 機体の下方へ投下位置をずらし、機体速度を引き継いだ初期状態を作る
 		static BombFlight ReleaseFlight(DirectX::XMFLOAT3 position, const DirectX::XMFLOAT3& velocity);
 		static size_t RequiredModelCapacity(float reloadSeconds);
 		float GetCooldownSeconds() const {
 			return m_cooldownSeconds;
 		}
+
 		size_t GetCount() const {
 			return m_bombs.size();
 		}
+
 		// 命中と外れ着弾の通知はいずれも取得時に消費する
 		std::vector<HitEvent> TakeHits();
 		std::vector<DirectX::XMFLOAT3> TakeMissImpacts();
@@ -32,6 +35,7 @@ namespace Game {
 			BombFlight flight;
 			float remainingSeconds = BombTuning::lifetimeSeconds;
 		};
+
 		std::shared_ptr<Engine::Model> m_model;
 		DirectX::XMFLOAT3 m_modelForward{1, 0, 0};
 		float m_reloadSeconds = 10;

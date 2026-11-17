@@ -10,13 +10,16 @@
 
 void TestEnemyGunBehavior() {
 	using namespace DirectX;
+
 	std::array<EnemyGunPattern, 6> patterns;
 	std::array<float, 6> cooldown{}, firstShot;
 	std::array<unsigned, 6> shots{};
 	firstShot.fill(-1);
+
 	for (int frame = 0; frame < 1800; ++frame)
 		for (size_t slot = 0; slot < patterns.size(); ++slot) {
 			cooldown[slot] = std::max(0.0f, cooldown[slot] - 1 / 60.0f);
+
 			if (patterns[slot].Update(1 / 60.0f, slot) && cooldown[slot] <= 0) {
 				if (firstShot[slot] < 0) firstShot[slot] = frame / 60.0f;
 				++shots[slot];
@@ -24,6 +27,7 @@ void TestEnemyGunBehavior() {
 				patterns[slot].NotifyShot();
 			}
 		}
+
 	for (auto count : shots)
 		Require(count >= 5 && count < 45, "Enemy gun lacked burst pauses or stopped attacking");
 	const auto times = std::minmax_element(firstShot.begin(), firstShot.end());
@@ -97,6 +101,7 @@ void TestEnemyEngagementProfile() {
 		float cooldown = 0;
 		unsigned shots = 0;
 		constexpr float dt = 1.0f / 120;
+
 		for (int frame = 0; frame < 60 * 120; ++frame) {
 			cooldown = std::max(0.0f, cooldown - dt);
 			const bool ready = pattern.Update(dt * profile.burstTempoScale, 0) && cooldown <= 0;
@@ -111,6 +116,7 @@ void TestEnemyEngagementProfile() {
 		}
 		return shots;
 	};
+
 	Require(countShots(aggressive) > countShots(normal) * 1.15f,
 		"Unlocked enemy did not produce more attack opportunities over repeated bursts");
 	std::cout << "PASS: player-lock engagement profiles, unchanged accuracy and more aggressive bursts\n";
@@ -118,6 +124,7 @@ void TestEnemyEngagementProfile() {
 
 void TestEnemyCombatAI() {
 	using namespace DirectX;
+
 	AircraftFlightModel aircraft;
 	aircraft.SetPosition({0, 300, 0});
 	AircraftAIParameters p;
@@ -125,12 +132,15 @@ void TestEnemyCombatAI() {
 	AircraftAITarget target{{0, 300, -600}, {0, 0, -60}, forward};
 	AircraftAIController controller;
 	bool fired = false, warnedBeforeLaunch = false;
+
 	for (int i = 0; i < 400; ++i) {
 		const auto decision = controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, true);
+
 		if (i < 299) Require(!decision.fire, "Enemy launched during opening grace");
 		warnedBeforeLaunch |= decision.locking && !decision.fire;
 		fired |= decision.fire;
 	}
+
 	Require(fired && warnedBeforeLaunch, "Enemy missile did not warn before lock completion");
 	const auto interrupted = controller.ReadCombatInput(aircraft, target, forward, 0.01f, p, 0, true, false);
 	Require(!interrupted.fire && !interrupted.locking && interrupted.lockProgress == 0,
@@ -142,10 +152,12 @@ void TestEnemyCombatAI() {
 	AircraftAIController recover;
 	const auto settle = [&](AircraftAIController& ai, AircraftAITarget t) {
 		AircraftAIDecision result;
+
 		for (int i = 0; i < 10; ++i)
 			result = ai.ReadCombatInput(aircraft, t, forward, 0.1f, p, 0, true);
 		return result;
 	};
+
 	controller.NotifyWeaponFired();
 	controller.ReadCombatInput(aircraft, target, forward, 0.1f, p, 0, true);
 	Require(controller.GetMode() == AircraftCombatMode::Attack, "Shot interrupted attack run");
@@ -153,8 +165,10 @@ void TestEnemyCombatAI() {
 	const AircraftAITarget close{{280, 300, -100}, {}, forward};
 	bool finishedPass = false;
 	float fixedTurn = 0;
+
 	for (int i = 0; i < 95; ++i) {
 		const auto d = pass.ReadCombatInput(aircraft, close, forward, 0.1f, p, 0, true);
+
 		if (i == 0) fixedTurn = d.flight.turn;
 		if (i < 60)
 			Require(pass.GetMode() == AircraftCombatMode::Disengage && d.flight.turn == fixedTurn &&
@@ -162,15 +176,19 @@ void TestEnemyCombatAI() {
 				"Pass did not hold its selected exit direction");
 		finishedPass |= pass.GetMode() == AircraftCombatMode::Reengage;
 	}
+
 	Require(finishedPass, "Straight pass exceeded nine seconds");
 	AircraftAIController minimumPass;
 	minimumPass.ReadCombatInput(aircraft, close, forward, 0.1f, p, 0, true);
 	const AircraftAITarget separated{{0, 300, -5000}, {}, forward};
+
 	for (int i = 0; i < 29; ++i) {
 		minimumPass.ReadCombatInput(aircraft, separated, forward, 0.1f, p, 0, true);
 		Require(minimumPass.GetMode() == AircraftCombatMode::Disengage, "Pass ended before three seconds");
 	}
+
 	aircraft.SetPosition({0, 300, -1500});
+
 	for (int i = 0; i < 25; ++i)
 		minimumPass.ReadCombatInput(aircraft, separated, forward, 0.1f, p, 0, true);
 	Require(minimumPass.GetMode() != AircraftCombatMode::Disengage, "Separated pass did not turn back");
@@ -179,9 +197,11 @@ void TestEnemyCombatAI() {
 	reentry.ReadCombatInput(aircraft, close, forward, 0.1f, p, 0, true);
 	const AircraftAITarget behind{{0, 300, 5000}, {}, forward};
 	AircraftAIDecision burst;
+
 	for (int i = 0; i < 90 && reentry.GetMode() != AircraftCombatMode::Reengage; ++i)
 		burst = reentry.ReadCombatInput(aircraft, behind, {0, 0, 1}, 0.1f, p, 0, true);
 	Require(burst.flight.highGTurn, "Distant reentry did not use a short high-G burst");
+
 	for (int i = 0; i < 41; ++i)
 		burst = reentry.ReadCombatInput(aircraft, behind, {0, 0, 1}, 0.1f, p, 0, true);
 	Require(!burst.flight.highGTurn, "Reentry kept high G beyond its initial burst");
@@ -195,22 +215,28 @@ void TestEnemyCombatAI() {
 		AircraftAIController circling;
 		const AircraftAITarget lateral{{5000, 300, 0}, {}, forward};
 		bool escaped = false;
+
 		for (int frame = 0; frame < 80; ++frame) {
 			circling.ReadCombatInput(aircraft, lateral, {1, 0, 0}, 0.1f, p, 0, true);
 			escaped |= circling.GetMode() == AircraftCombatMode::Disengage;
 		}
+
 		Require(escaped, "Continuous pursuit turn never yielded to a straight leg");
 		bool reentryEnded = false;
+
 		for (int frame = 0; frame < 30; ++frame) {
 			reentry.ReadCombatInput(aircraft, behind, {0, 0, 1}, 0.1f, p, 0, true);
 			reentryEnded |= reentry.GetMode() == AircraftCombatMode::Disengage;
 		}
+
 		Require(reentryEnded, "Reengagement circled indefinitely without a new straight leg");
 	}
+
 	const auto avoiding = collision.ReadCombatInput(
 		aircraft, {{0, 300, -100}, {0, 0, 60}, {0, 0, 1}}, forward, 0.1f, p, 0, true);
 	Require(avoiding.flight.highGTurn && std::abs(avoiding.flight.turn) > 0.1f && !avoiding.fire,
 		"Imminent collision did not override straight flight");
+
 	// 同じ配置でも、パイロットの選択はバラつきつつ再現可能にする
 	{
 		AircraftFlightModel formationAircraft;
@@ -219,6 +245,7 @@ void TestEnemyCombatAI() {
 		std::array<AircraftAIDecision, 6> exits;
 		const AircraftAITarget nearby{{280, 1500, -100}, {}, forward};
 		const AircraftAITarget farBehind{{0, 1500, 5000}, {}, forward};
+
 		for (size_t i = 0; i < pilots.size(); ++i)
 			exits[i] = pilots[i].ReadCombatInput(formationAircraft, nearby, forward, 0.1f, p, i, true);
 		Require(exits[1].flight.pitch > 0 && exits[4].flight.pitch < 0,
@@ -230,16 +257,20 @@ void TestEnemyCombatAI() {
 		Require(repeated.flight.pitch == exits[4].flight.pitch && repeated.flight.yaw == exits[4].flight.yaw,
 			"Pilot style changed across identical starts");
 		std::array<float, 6> turns{};
+
 		for (int frame = 0; frame < 100; ++frame)
 			for (size_t i = 0; i < pilots.size(); ++i) {
 				pilots[i].ReadCombatInput(formationAircraft, farBehind, {0, 0, 1}, 0.1f, p, i, true);
+
 				if (turns[i] == 0 && pilots[i].GetMode() == AircraftCombatMode::Reengage)
 					turns[i] = frame * 0.1f;
 			}
+
 		const auto range = std::minmax_element(turns.begin(), turns.end());
 		Require(*range.first > 0 && *range.second - *range.first > 0.5f,
 			"Pilot styles turned back at the same time");
 	}
+
 	{
 		AircraftFlightParameters fastFlight;
 		fastFlight.initialSpeed = 700;
@@ -258,16 +289,19 @@ void TestEnemyCombatAI() {
 				departure.flight.highGTurn,
 			"Head-on attack continued straight at the player instead of bypassing early");
 		AircraftAIDecision afterBurst;
+
 		for (int i = 0; i < 21; ++i)
 			afterBurst = bypass.ReadCombatInput(approaching, headOn, forward, 0.1f, spacing, 0, true);
 		Require(!afterBurst.flight.highGTurn, "Spacing break sustained a high-G orbit");
 	}
+
 	AircraftAIController defense;
 	aircraft.SetPosition({13000, 300, 0});
 	const XMFLOAT3 home{0, 0, 0};
 	auto d = defense.ReadCombatInput(aircraft, target, forward, 0.1f, p, 0, true, true, home);
 	Require(defense.GetMode() == AircraftCombatMode::ReturnToCarrier && !d.locking && d.lockProgress == 0,
 		"Defense boundary did not reset lock and start return");
+
 	aircraft.SetPosition({10000, 300, 0});
 	defense.ReadCombatInput(aircraft, target, forward, 0.1f, p, 0, true, true, home);
 	Require(defense.GetMode() == AircraftCombatMode::ReturnToCarrier, "Return hysteresis released early");
@@ -278,6 +312,7 @@ void TestEnemyCombatAI() {
 	aircraft.SetHeading({-1, 0, 0});
 	AircraftAIController returningGun, returningMissile;
 	bool returnShot = false;
+
 	for (int i = 0; i < 40; ++i) {
 		const AircraftAITarget inward{{11000, 300, 0}, {}, {-1, 0, 0}};
 		const auto gun =
@@ -288,11 +323,13 @@ void TestEnemyCombatAI() {
 			returningMissile.ReadCombatInput(aircraft, inward, {-1, 0, 0}, 0.1f, p, 0, true, true, home);
 		Require(!missile.fire, "Returning missile bypassed lock acquisition");
 	}
+
 	Require(returnShot, "Returning gun ignored a safe firing opportunity");
 	aircraft.SetPosition({0, 50, 0});
 	const auto recovery = settle(recover, target);
 	Require(recover.GetMode() == AircraftCombatMode::Recover && recovery.flight.pitch > 0,
 		"Low altitude did not trigger climb");
+
 	// 高高度の回避では降下を促し、高高度の目標そのものへの追従は許可する
 	aircraft.SetPosition({0, 2500, 0});
 	aircraft.SetHeading({0, 0, -1});
@@ -316,6 +353,7 @@ void TestAIParameters(const fs::path& repository, const fs::path& fixture) {
 		std::ifstream stream(path);
 		return std::string(std::istreambuf_iterator<char>(stream), {});
 	};
+
 	const auto original = text(enemy / L"aiParameters.json");
 	std::ofstream aircraft(aircraftPath);
 	aircraft << "{\"visualScale\":20,\"model\":" << std::quoted((enemy / L"F4U4Corsair.fbx").generic_string())
@@ -330,6 +368,7 @@ void TestAIParameters(const fs::path& repository, const fs::path& fixture) {
 			.retroFilm = assets / L"Environment/retroFilm.json",
 			.bomb = assets / L"Ammunition/Bomb/ammunition.json"});
 	};
+
 	std::ofstream(aiPath) << original;
 	const auto valid = load().enemyAIParameters;
 	Require(valid.tailDistance == 4500 && valid.disengageDistance == 3000 && valid.flankDistance == 2000 &&
@@ -350,8 +389,10 @@ void TestAIParameters(const fs::path& repository, const fs::path& fixture) {
 		} catch (const std::runtime_error&) {
 			rejected = true;
 		}
+
 		Require(rejected, "Invalid tail-pursuit setting was accepted");
 	};
+
 	for (const std::string field : {"tailDistance", "flankDistance", "pursuitPredictionSeconds",
 			 "maximumDisengageSeconds", "repositionSeconds"})
 		for (const std::string value : {"0", "-1", "1e39"})
@@ -364,6 +405,7 @@ void TestAIParameters(const fs::path& repository, const fs::path& fixture) {
 
 void TestCombatMath() {
 	using namespace DirectX;
+
 	InputSnapshot rKey;
 	rKey.active = true;
 	rKey.keys['R'] = true;
@@ -472,6 +514,7 @@ void TestCombatMath() {
 
 void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 	using namespace DirectX;
+
 	const auto assets = repository / L"Assets";
 	const auto definition = FlightSceneLoader{}.Load({.environment = assets / L"Environment/environment.json",
 		.playerAircraft = assets / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
@@ -480,16 +523,19 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		.bomb = assets / L"Ammunition/Bomb/ammunition.json"});
 	const std::array<DirectX::XMFLOAT3, 3> initialPositions = {
 		{{-4500, 1200, -14500}, {7000, 1800, -16000}, {-13000, 1600, 7000}}};
+
 	// 実機の飛行モデルで通過・再接近・反復攻撃と距離帯を測定する
 	const auto simulatePursuit = [&](DirectX::XMFLOAT3 start, size_t slot, bool turning, bool physicalPlayer,
 									 bool missionGun = false) {
 		const float battleSpeed = definition.playerAircraft.flightParameters.initialSpeed;
 		auto ai = definition.enemyAIParameters;
+
 		if (missionGun) {
 			ai.aimAngleDegrees = 10;
 			ai.aimHoldSeconds = 0.08f;
 			ai.openingGraceSeconds += EnemyVariation(slot, 0, 79) * 1.5f;
 		}
+
 		AircraftFlightModel fighter;
 		fighter.SetFlightParameters(definition.enemyAircraft.flightParameters);
 		fighter.SetPosition(start);
@@ -509,6 +555,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		float breakSeconds = 0, maximumBreak = 0, cooldown = 0, closest = 100000;
 		unsigned shots = 0, rearEntries = 0;
 		bool wasRear = false;
+
 		for (int frame = 0; frame < 7200; ++frame) {
 			const float seconds = frame / 60.0f;
 			const float angle = turning ? seconds * 0.22f : 0;
@@ -518,17 +565,21 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 									  : XMFLOAT3{0, 1500, -battleSpeed * seconds};
 			target.velocity = {battleSpeed * std::sin(angle), 0, -battleSpeed * std::cos(angle)};
 			target.forward = {std::sin(angle), 0, -std::cos(angle)};
+
 			if (physicalPlayer) target = {player.GetPosition(), player.GetVelocity(), player.GetForward()};
 			const auto position = fighter.GetPosition();
 			const auto delta = XMLoadFloat3(&target.position) - XMLoadFloat3(&position);
 			const float distance = XMVectorGetX(XMVector3Length(delta));
 			XMFLOAT3 direction;
 			XMStoreFloat3(&direction, XMVector3Normalize(delta));
+
 			if (missionGun) {
 				const CombatTarget gunTarget{1, target.position, target.velocity};
+
 				if (const auto aim = SolveGunAim(position, fighter.GetVelocity(), gunTarget, 1800, 5))
 					direction = aim->direction;
 			}
+
 			cooldown = std::max(0.0f, cooldown - 1 / 60.0f);
 			const bool allowed = missionGun || slot % 3 != static_cast<size_t>(seconds / 6) % 3;
 			const bool gunWindow = !missionGun || gunPattern.Update(1 / 60.0f, slot);
@@ -552,14 +603,18 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 					conservative.NotifyWeaponFired();
 				}
 			}
+
 			const bool rear = distance <= definition.enemyAIParameters.attackDistance &&
 				XMVectorGetX(XMVector3Dot(XMLoadFloat3(&direction), XMLoadFloat3(&target.forward))) >= 0.5f;
 			if (rear) {
 				if (firstRear < 0) firstRear = seconds;
 				rearSeconds += 1 / 60.0f;
+
 				if (!wasRear) ++rearEntries;
 			}
+
 			wasRear = rear;
+
 			if (decision.locking) {
 				if (!wasLocking) ++acquisitions;
 				Require(distance >= (missionGun ? 2200.0f : definition.enemyAIParameters.disengageDistance) &&
@@ -567,13 +622,17 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 					"Enemy locked outside its medium-range attack window");
 				if (firstLock < 0) firstLock = seconds;
 			}
+
 			wasLocking = decision.locking;
+
 			if (decision.fire) {
 				++shots;
 				cooldown = missionGun ? gunPattern.Interval(0.22f, slot) : 3.0f;
+
 				if (missionGun) gunPattern.NotifyShot();
 				controller.NotifyWeaponFired();
 			}
+
 			if (controller.GetMode() == AircraftCombatMode::Disengage) {
 				if (!wasPassing) ++passes;
 				wasPassing = true;
@@ -583,8 +642,10 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				breakSeconds = 0;
 				wasPassing = false;
 			}
+
 			closeRun = distance < 3000 ? closeRun + 1 / 60.0f : 0;
 			maximumCloseRun = std::max(maximumCloseRun, closeRun);
+
 			if (seconds > 30 && distance >= definition.enemyAIParameters.disengageDistance &&
 				distance <= definition.enemyAIParameters.reengageDistance + (missionGun ? 1000.0f : 0.0f))
 				bandSeconds += 1 / 60.0f;
@@ -594,6 +655,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				distantSeconds += 1 / 60.0f;
 			closest = std::min(closest, distance);
 			fighter.Update(decision.flight, 1 / 60.0f);
+
 			if (physicalPlayer) {
 				const auto f = player.GetForward(), playerPosition = player.GetPosition();
 				AircraftInput input;
@@ -606,11 +668,13 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 					-1.0f, 1.0f);
 				player.Update(input, 1 / 60.0f);
 			}
+
 			const auto updated = fighter.GetPosition();
 			Require(std::isfinite(updated.x) && std::isfinite(updated.y) && std::isfinite(updated.z) &&
 					updated.y > 0,
 				"Combat AI produced a non-finite position or entered the sea");
 		}
+
 		std::cout << "PASS: attack runs physical=" << physicalPlayer << " turn=" << turning
 				  << " gun=" << missionGun << " acquisitions=" << acquisitions << " slot=" << slot
 				  << " first rear=" << firstRear << " lock=" << firstLock
@@ -619,27 +683,32 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				  << " close seconds=" << closeSeconds << " passes=" << passes
 				  << " close run=" << maximumCloseRun << " far seconds=" << distantSeconds
 				  << " break=" << maximumBreak << " closest=" << closest << '\n';
+
 		Require(firstLock >= 0 && firstLock <= 45, "No attack opportunity within 45 seconds");
 		Require(shots >= (missionGun ? 2u : 1u) && acquisitions >= 2 && passes >= 2 && bandSeconds > 45 &&
 				distantSeconds < 10,
 			"Fighter did not repeat medium-range attack runs");
 		Require(maximumBreak <= 9.02f, "Straight pass exceeded nine seconds");
 		Require(maximumCloseRun < 10, "Fighter remained in close combat for ten seconds");
+
 		if (missionGun)
 			Require(
 				shots < conservativeShots, "Burst guns did not reduce the previous excessive firing rate");
 		if (missionGun)
 			Require(closest > 300, "Mission fighter rammed through the player during repeated attacks");
 	};
+
 	for (bool physicalPlayer : {false, true})
 		for (bool turning : {false, true}) {
 			for (size_t slot = 0; slot < initialPositions.size(); ++slot)
 				simulatePursuit(initialPositions[slot], slot, turning, physicalPlayer);
+
 			// 初期配置だけでなく、前方・側方・後方の接近からも確認する
 			simulatePursuit({0, 1500, -5000}, 0, turning, physicalPlayer);
 			simulatePursuit({5000, 1500, 0}, 1, turning, physicalPlayer);
 			simulatePursuit({0, 1500, 5000}, 2, turning, physicalPlayer);
 		}
+
 	// ミッションの機銃は、飛行操作を保ちながら繰り返しの通過で発射する
 	for (bool turning : {false, true})
 		for (size_t slot = 0; slot < 6; ++slot)
@@ -647,6 +716,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 								1500 + std::array<float, 6>{150, 650, -250, 1000, 350, -100}[slot],
 								-5500 - std::array<float, 6>{-600, 1000, -1300, 500, -200, 1500}[slot]},
 				slot, turning, true, true);
+
 	// 6機が同じ初期位置からでも、異なる旋回地点を選ぶ
 	for (bool turning : {false, true}) {
 		std::array<AircraftFlightModel, 6> planes;
@@ -654,22 +724,27 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		std::array<XMFLOAT3, 6> turnPoints{};
 		std::array<float, 6> turnTimes{};
 		std::array<unsigned, 6> passes{};
+
 		for (auto& plane : planes) {
 			plane.SetFlightParameters(definition.enemyAircraft.flightParameters);
 			plane.SetPosition({0, 1500, -5000});
 			plane.SetHeading({0, 0, 1});
 		}
+
 		AircraftFlightModel player;
 		player.SetFlightParameters(definition.playerAircraft.flightParameters);
 		player.SetPosition({0, 1500, 0});
+
 		for (int frame = 0; frame < 3600; ++frame) {
 			const AircraftAITarget target{player.GetPosition(), player.GetVelocity(), player.GetForward()};
+
 			for (size_t i = 0; i < planes.size(); ++i) {
 				const auto position = planes[i].GetPosition();
 				XMFLOAT3 direction;
 				XMStoreFloat3(
 					&direction, XMVector3Normalize(XMLoadFloat3(&target.position) - XMLoadFloat3(&position)));
 				const CombatTarget gunTarget{1, target.position, target.velocity};
+
 				if (const auto aim = SolveGunAim(position, planes[i].GetVelocity(), gunTarget, 1800, 5))
 					direction = aim->direction;
 				const auto before = controllers[i].GetMode();
@@ -682,8 +757,10 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 						turnTimes[i] = frame / 60.0f;
 					}
 				}
+
 				planes[i].Update(decision.flight, 1 / 60.0f);
 			}
+
 			const auto forward = player.GetForward(), position = player.GetPosition();
 			AircraftInput input;
 			input.autoLevelRoll = true;
@@ -697,14 +774,18 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				-1.0f, 1.0f);
 			player.Update(input, 1 / 60.0f);
 		}
+
 		float closestTurnPoints = 100000;
+
 		for (size_t i = 0; i < planes.size(); ++i) {
 			Require(passes[i] >= 2, "Independent aircraft stopped reengaging");
+
 			for (size_t j = i + 1; j < planes.size(); ++j)
 				closestTurnPoints = std::min(closestTurnPoints,
 					XMVectorGetX(
 						XMVector3Length(XMLoadFloat3(&turnPoints[i]) - XMLoadFloat3(&turnPoints[j]))));
 		}
+
 		const auto times = std::minmax_element(turnTimes.begin(), turnTimes.end());
 		Require(closestTurnPoints > 750 && *times.second - *times.first > 1.5f,
 			"Aircraft turn locations or timing clustered despite independent exit routes");
@@ -712,6 +793,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				  << " closest=" << closestTurnPoints << " time spread=" << *times.second - *times.first
 				  << '\n';
 	}
+
 	// 逃げるプレイヤーが、迎撃機を無限に引き離し続けてはいけない
 	{
 		AircraftFlightModel fighter;
@@ -720,6 +802,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		fighter.SetHeading({1, 0, 0});
 		AircraftAIController ai;
 		bool returned = false;
+
 		for (int frame = 0; frame < 7200; ++frame) {
 			const auto pos = fighter.GetPosition();
 			const AircraftAITarget target{{30000 + frame * 10.0f, 1500, 0}, {600, 0, 0}, {1, 0, 0}};
@@ -734,8 +817,10 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				returned = true;
 			fighter.Update(d.flight, 1 / 60.0f);
 		}
+
 		Require(returned, "Defending fighter did not physically return inside eight kilometers");
 	}
+
 	const auto cubePath = fixture / L"combat-box.obj";
 	std::ofstream(cubePath)
 		<< "v -1 -1 -1\nv 1 -1 -1\nv 1 1 -1\nv -1 1 -1\nv -1 -1 1\nv 1 -1 1\nv 1 1 1\nv -1 1 1\n"
@@ -802,6 +887,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 					definition.enemyAIParameters, 100, "SECOND");
 				encouragement.Update({}, 0.25f, {}, {{true}});
 				Require(encouragement.GetCombatSnapshot().enemies.size() == 2, "Second patrol fixture was not shot down");
+
 				for (int frame = 0; frame < 80 &&
 					encouragement.GetCombatSnapshot().cinematic.cinematicId != "patrolEncouragement"; ++frame)
 					encouragement.Update({}, 0.25f);
@@ -810,10 +896,12 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 					"Second patrol kill did not lead to encouragement after enemy chatter");
 				const auto serial = encouragement.GetCombatSnapshot().cinematic.playbackSerial;
 				encouragement.UpdateCinematicBriefing(CinematicVoiceStatus::Finished, 0.01f);
+
 				for (int frame = 0; frame < 20; ++frame) encouragement.Update({}, 0.25f);
 				Require(encouragement.GetCombatSnapshot().cinematic.playbackSerial == serial,
 					"Patrol encouragement repeated");
 			}
+
 			{
 				auto transition = scene;
 				DirectX::XMFLOAT4X4 shipTransform;
@@ -841,6 +929,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				Require(command.cinematic.cinematicId == "midMission" && command.cinematic.radioLine == 0,
 					"Carrier order did not follow the praise and pause");
 			}
+
 			scene.Update({}, 0.25f, {}, {{true}});
 			const auto& state = scene.GetCombatSnapshot();
 			Require(state.enemies.empty() && state.hitCount == 1 && state.hitSeconds == 1.1f &&
@@ -937,6 +1026,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		context.EndFrame();
 		context.WaitForGpu();
 	}
+
 	DestroyWindow(window);
 	std::cout << "PASS: model bounds, damage/defeat/target invalidation, nearest collision, lifetime and "
 				 "straight assisted fire\n";
@@ -944,6 +1034,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 
 void TestHudRendering(const fs::path& fixture) {
 	using namespace DirectX;
+
 	const HWND window = CreateWindowW(L"STATIC", L"HUD regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0, 64,
 		64, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 	Require(window != nullptr, "HUD test window failed");
@@ -958,6 +1049,7 @@ void TestHudRendering(const fs::path& fixture) {
 		context.EndFrame();
 		context.WaitForGpu();
 		renderer.ReleaseUploadResources();
+
 		for (const auto size : {XMFLOAT2{800, 600}, XMFLOAT2{1920, 1080}, XMFLOAT2{2560, 1080}}) {
 			const UINT width = UINT(size.x);
 			const UINT height = UINT(size.y);
@@ -992,6 +1084,7 @@ void TestHudRendering(const fs::path& fixture) {
 				CombatEffectPresenter{}.Build(effects, view, list);
 				CombatHudPresenter{}.Build(snapshot, view, list);
 			};
+
 			buildFrame();
 			const auto requireFlightText = [&](float right, std::string_view text) {
 				const float scale = std::min(float(width) / 1920, float(height) / 1080);
@@ -1007,11 +1100,13 @@ void TestHudRendering(const fs::path& fixture) {
 						std::abs(a.position.y - b.position.y) < 0.00001f && a.uv.x == b.uv.x &&
 						a.uv.y == b.uv.y;
 				};
+
 				const auto& vertices = list.GetVertices();
 				Require(std::search(vertices.begin(), vertices.end(), expected.GetVertices().begin(),
 							expected.GetVertices().end(), sameVertex) != vertices.end(),
 					"Flight HUD conversion, rounding or right alignment failed");
 			};
+
 			requireFlightText(312, "360");
 			requireFlightText(1808, "1543");
 			snapshot.playerSpeedMetersPerSecond = 0;
@@ -1025,11 +1120,13 @@ void TestHudRendering(const fs::path& fixture) {
 			Require(ProjectHudPoint({0, 0, 100}, view).visible && ProjectHudPoint({0, 0, -100}, view).behind,
 				"HUD projection front/rear failed");
 			const auto baseVertices = list.GetVertices().size();
+
 			for (float age : {0.0f, 0.2f, 0.9f, 2.0f, 3.4f}) {
 				effects.explosions = {{{0, 0, 250}, {}, age, 22}};
 				buildFrame();
 				Require(list.GetVertices().size() > baseVertices, "Explosion phase was invisible");
 			}
+
 			effects.explosions = {{{0, 0, -250}, {}, 0.2f, 22}};
 			buildFrame();
 			Require(list.GetVertices().size() == baseVertices, "Rear explosion was drawn");
@@ -1037,6 +1134,7 @@ void TestHudRendering(const fs::path& fixture) {
 			effects.impacts.assign(64, {{0, 0, 250}, 0});
 			effects.gunSmoke.assign(GunEffectSettings::maxSmokeCount, {{0, 0, 100}, {20, 0, 0}, 0.1f});
 			effects.gunTracers.assign(GunEffectSettings::maxTracerCount, {{30, 10, 250}, {10, 0, 200}});
+
 			for (size_t muzzle = 0; muzzle < 4; ++muzzle)
 				effects.gunFlashes.push_back({muzzle, {float(muzzle) * 5, 0, 100}, {0, 0, 1}, 0.02f, muzzle});
 			list.Reset(view.width, view.height);
@@ -1059,11 +1157,13 @@ void TestHudRendering(const fs::path& fixture) {
 			effects.gunSmoke.clear();
 			effects.gunTracers.clear();
 			effects.gunFlashes.clear();
+
 			for (float age : {0.0f, 0.04f, 0.2f, 0.42f}) {
 				effects.impacts = {{{0, 0, 100}, age}};
 				buildFrame();
 				Require(list.GetVertices().size() > baseVertices, "Impact phase was invisible");
 			}
+
 			effects.impacts = {{{0, 0, 100}, 0.08f}};
 			buildFrame();
 			Require(list.GetVertices().size() > baseVertices, "Visible impact did not produce sparks");
@@ -1073,11 +1173,13 @@ void TestHudRendering(const fs::path& fixture) {
 			effects.impacts.front().position.z = 100;
 			snapshot.selected = 3;
 			buildFrame();
+
 			for (const auto& vertex : list.GetVertices())
 				Require(std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y),
 					"HUD projection generated NaN");
 			effects.explosions = {{{-25, 0, 250}, {}, 0.2f, 22}};
 			snapshot.selected = 1;
+
 			// 両解像度の読み戻し画像に発射演出を含め、照準との重なりを確認する
 			for (size_t muzzle = 0; muzzle < 4; ++muzzle) {
 				const float x = -18 + float(muzzle) * 12;
@@ -1085,6 +1187,7 @@ void TestHudRendering(const fs::path& fixture) {
 				effects.gunSmoke.push_back({{x, -10, 90}, {20, 0, 0}, 0.15f});
 				effects.gunTracers.push_back({{x + 3, -5, 170}, {x, -10, 100}});
 			}
+
 			buildFrame();
 
 			buildFrame();
@@ -1131,19 +1234,23 @@ void TestHudRendering(const fs::path& fixture) {
 				const float scale = std::min(float(width) / 1920, float(height) / 1080);
 				const float offsetX = (width - 1920 * scale) * 0.5f;
 				const float offsetY = (height - 1080 * scale) * 0.5f;
+
 				for (UINT y = 0; y < height; ++y) {
 					const auto* row = static_cast<const uint8_t*>(mapped) + footprint.Offset +
 						size_t(y) * footprint.Footprint.RowPitch;
 					std::memcpy(pixels->pixels + y * pixels->rowPitch, row, size_t(width) * 4);
+
 					for (UINT x = 0; x < width; ++x)
 						if (row[x * 4] > 80 && row[x * 4 + 1] > 60 && row[x * 4 + 2] > 40 &&
 							row[x * 4] >= row[x * 4 + 1] && row[x * 4 + 1] >= row[x * 4 + 2]) {
 							++parchment;
+
 							if (x > offsetX + 100 * scale && x < offsetX + 215 * scale &&
 								y > offsetY + 372 * scale && y < offsetY + 414 * scale)
 								++englishInk;
 						}
 				}
+
 				const CD3DX12_RANGE noWrites(0, 0);
 				readback->Unmap(0, &noWrites);
 				Require(parchment > 100, "HUD did not produce parchment-colored pixels");
@@ -1151,6 +1258,7 @@ void TestHudRendering(const fs::path& fixture) {
 				const auto path = fixture / ("hud-" + std::to_string(width) + std::string(suffix) + ".png");
 				ThrowIfFailed(SaveToWICFile(*pixels, WIC_FLAGS_NONE, GUID_ContainerFormatPng, path.c_str()));
 			};
+
 			saveFrame("");
 			buildFrame();
 			saveFrame("-lock");
@@ -1199,6 +1307,7 @@ void TestHudRendering(const fs::path& fixture) {
 			saveFrame("-mission-commander");
 		}
 	}
+
 	DestroyWindow(window);
 	std::cout << "PASS: native HUD/radar, projection, GPU readback, 800x600/1920x1080/2560x1080 and resize\n";
 }

@@ -73,10 +73,12 @@ namespace Game {
 			r.Array("altitudeOffsetsMeters", altitudeOffsetsMeters);
 			r.Require(deckHalfThicknessFraction <= 1, "deckHalfThicknessFraction", "must be at most 1");
 		}
+
 		void Validate() const {
 			if (patrolCount < 1 || patrolCount > 8 || finalFighterCount < 1 || finalFighterCount > 8 ||
 				maxHostileProjectiles < 4 || maxHostileProjectiles > 512)
 				throw std::invalid_argument("Mission aircraft/projectile counts outside valid ranges");
+
 			for (float value : {carrierHealth, bombDamage, bombReloadSeconds, carrierMissileSpeed,
 					 commanderHealthMultiplier, enemyGunSpeed, enemyGunInterval, commanderGunInterval,
 					 aaRange, aaInterval, deckHeightFraction, deckWidthFraction, deckLengthFraction})
@@ -97,34 +99,44 @@ namespace Game {
 			if (!std::isfinite(carrierHealth) || carrierHealth <= 0)
 				throw std::invalid_argument("Carrier health must be positive and finite");
 		}
+
 		float GetCarrierHealth() const {
 			return m_carrierHealth;
 		}
+
 		float GetCarrierMaxHealth() const {
 			return m_carrierMaxHealth;
 		}
+
 		MissionPhase GetPhase() const {
 			return m_phase;
 		}
+
 		bool IsDeckDisabled() const {
 			return m_carrierHealth <= 0;
 		}
+
 		// 母艦攻撃フェーズ中の有効なダメージだけ適用し、適用した場合にtrueを返す
 		bool ApplyCarrierDamage(float damage) {
 			if (m_phase != MissionPhase::CarrierAttack || IsDeckDisabled() || !std::isfinite(damage) ||
 				damage <= 0)
 				return false;
+
 			m_carrierHealth = std::max(0.0f, m_carrierHealth - damage);
 			return true;
 		}
+
 		void ConfirmDeckHit() {
 			ApplyCarrierDamage(m_carrierHealth);
 		}
+
 		// 1回の呼び出しで最大1段階進め、フェーズが変化した場合にtrueを返す
 		// 完了・失敗は終端状態。自機撃墜は敵残数より優先して失敗へ移る
 		bool Advance(size_t remainingAircraft, bool playerAlive) {
 			if (m_phase == MissionPhase::Complete || m_phase == MissionPhase::Failed) return false;
+
 			const auto before = m_phase;
+
 			if (!playerAlive)
 				m_phase = MissionPhase::Failed;
 			else if (m_phase == MissionPhase::Patrol && remainingAircraft == 0)

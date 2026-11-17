@@ -10,9 +10,11 @@ namespace Game {
 		void ConfigureSettings(const MissileSettings& settings) {
 			m_settings = settings;
 		}
+
 		void Configure(
 			float reloadSeconds, std::shared_ptr<Engine::Model> model, const DirectX::XMFLOAT3& modelForward);
 		void ConfigureFlight(float speed, float damage);
+
 		// 次の弾の発射位置と初速を返す。再装填中は装填後の左側を予測する
 		CarrierMissileFlight BuildLaunchFlight(const DirectX::XMFLOAT3& position,
 			const DirectX::XMFLOAT3& velocity, const DirectX::XMFLOAT3& forward) const;
@@ -22,16 +24,21 @@ namespace Game {
 		unsigned GetCapacity() const {
 			return m_settings.ammoCount;
 		}
+
 		unsigned GetAmmo() const {
 			return m_ammo;
 		}
+
 		float GetCooldownSeconds() const {
 			return m_cooldownSeconds;
 		}
+
 		size_t GetCount() const {
 			return m_missiles.size();
 		}
+
 		static size_t RequiredModelCapacity(float reloadSeconds, const MissileSettings& settings = {});
+
 		// 通知は取り出すと消費される
 		std::vector<HitEvent> TakeHits();
 		std::vector<DirectX::XMFLOAT3> TakeMissImpacts();
@@ -49,6 +56,7 @@ namespace Game {
 			float remainingSeconds = CarrierMissileFlight::lifetimeSeconds;
 			float smokeSeconds = 0;
 		};
+
 		MissileSettings m_settings;
 		float m_missileSpeed = 6000;
 		float m_missileDamage = 150;

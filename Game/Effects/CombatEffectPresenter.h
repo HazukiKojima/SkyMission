@@ -10,6 +10,7 @@ namespace Game {
 		void Configure(const EffectSettings& settings) {
 			m_settings = settings;
 		}
+
 		// 呼び出し側で初期化した描画リストに追記し、照準より先に描く
 		void Build(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
 			Engine::HudDrawList& list) const;

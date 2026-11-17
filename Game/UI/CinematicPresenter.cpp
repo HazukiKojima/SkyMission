@@ -7,9 +7,11 @@ namespace Game {
 	void CinematicPresenter::Build(const CinematicPresentation& presentation, const Engine::RenderView& view,
 		Engine::HudDrawList& list) const {
 		if (!presentation.active || view.width == 0 || view.height == 0) return;
+
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		const auto& textSettings = presentation.text;
 		const float textScale = scale * textSettings.textScale;
+
 		if (presentation.briefingLine >= 0) {
 			const auto& text = presentation.briefingLines;
 			list.FilledRect({0, 0}, {float(view.width), float(view.height)}, {0, 0, 0, 1});
@@ -19,15 +21,18 @@ namespace Game {
 				(view.height - 120 * scale) / (1 + textSettings.lineSpacing),
 				(view.width - 120 * scale) / std::max(1.0f, widest)});
 			const float spacing = size * textSettings.lineSpacing;
+
 			for (int row = 0; row < 2; ++row)
 				list.Text({(view.width - Engine::HudDrawList::MeasureTextWidth(text[row], size)) * 0.5f,
 							  (view.height - size - spacing) * 0.5f + row * spacing},
 					text[row], size, m_ink);
 			return;
 		}
+
 		const float barHeight = view.height * textSettings.barHeightFraction;
 		list.FilledRect({0, 0}, {float(view.width), barHeight}, {0, 0, 0, 1});
 		list.FilledRect({0, view.height - barHeight}, {float(view.width), barHeight}, {0, 0, 0, 1});
+
 		if (presentation.formationShot) {
 			const float titleSize = std::min(textSettings.titleFontSize * textScale,
 				(view.width - 96 * scale) /
@@ -40,6 +45,7 @@ namespace Game {
 			list.Text({48 * scale, view.height - barHeight - textSettings.subtitleBottomOffset * textScale},
 				presentation.subtitle, subtitleSize, m_ink);
 		}
+
 		// フェードは映像と紹介文に重ね、スキップ案内は暗転中も読めるよう最後に描く
 		if (presentation.fadeOpacity > 0)
 			list.FilledRect(

@@ -18,16 +18,19 @@
 
 namespace Game {
 	struct FlightSceneDefinition;
+
 	// 飛行・AI・武器・任務・カメラを統合し、描画用Sceneと表示用スナップショットを更新する
 	class FlightScene {
 	  public:
 		void StartNewMission() { Restart(0); EnableOpeningBriefing(); }
+
 		// 初期化・設定
 		// 必須アセットと設定をまとめて渡し、完成したミッションだけを返す
 		static FlightScene CreateMission(const FlightSceneDefinition& definition,
 			const std::function<std::shared_ptr<Engine::Model>(const std::string&)>& resolveModel, UINT width,
 			UINT height, float farZ);
 		void Initialize(float aspect, float nearZ, float farZ);
+
 		// 本番開始時に有効化する。個別構成のテストでは呼ばずに直接戦闘できる
 		void EnableOpening(const CinematicSettings& settings, std::shared_ptr<Engine::Model> model,
 			float visualScale, float farZ);
@@ -37,6 +40,7 @@ namespace Game {
 			std::shared_ptr<Engine::Model> model;
 			float scale = 1;
 		};
+
 		using CinematicModelResolver = std::function<CinematicModel(const std::string&)>;
 		void ConfigureCinematics(const std::map<std::string, CinematicSettings>& definitions,
 			CinematicModelResolver resolve, float farZ);
@@ -44,12 +48,14 @@ namespace Game {
 		std::optional<CinematicCompletion> TakeCinematicCompletion() {
 			return m_cinematic.TakeCompletion();
 		}
+
 		void ConfigureCombat(const CombatSettings& settings);
 		void ConfigureMission(const MissionSettings& settings, std::shared_ptr<Engine::Model> enemyModel,
 			float enemyScale, const AircraftFlightParameters& flight, const AircraftAIParameters& ai);
 		void RegisterMissionShip(Engine::ObjectId id, bool carrier) {
 			m_mission.RegisterShip(m_scene, id, carrier);
 		}
+
 		void ConfigurePlayerWeapon(
 			const WeaponDefinition& definition, std::shared_ptr<Engine::Model> ammunition);
 		void ConfigureEnemyWeapons(const WeaponDefinition& definition, const MissionSettings& settings,
@@ -59,12 +65,15 @@ namespace Game {
 		void SetEnvironment(const Engine::SceneEnvironment& environment) {
 			m_scene.SetEnvironment(environment);
 		}
+
 		void SetPlayerAircraftPosition(const DirectX::XMFLOAT3& position) {
 			m_player.SetPosition(position);
 		}
+
 		void SetPlayerAircraftVisualScale(float scale) {
 			m_playerVisualScale = scale;
 		}
+
 		void SetPlayerAircraftFlightParameters(const AircraftFlightParameters& parameters) {
 			m_player.SetFlightParameters(parameters);
 		}
@@ -78,10 +87,12 @@ namespace Game {
 		Engine::ObjectId AddObject(std::shared_ptr<Engine::Model> model) {
 			return m_scene.AddObject(std::move(model));
 		}
+
 		Engine::ObjectId AddObject(
 			std::shared_ptr<Engine::Model> model, const DirectX::XMFLOAT4X4& transform) {
 			return m_scene.AddObject(std::move(model), transform);
 		}
+
 		void RemoveObject(Engine::ObjectId id);
 
 		// フレーム更新
@@ -95,24 +106,30 @@ namespace Game {
 		const CombatSnapshot& GetCombatSnapshot() const {
 			return m_combat;
 		}
+
 		const CombatEffectSnapshot& GetEffectSnapshot() const {
 			return m_effects.GetSnapshot();
 		}
+
 		const Engine::Scene& GetRenderScene() const {
 			return m_cinematic.GetPresentation().active && m_cinematic.GetPresentation().formationShot
 				&& m_cinematic.GetCurrentShot().target == "model"
 				? m_cinematicScene.GetScene()
 				: m_scene;
 		}
+
 		const std::vector<Engine::SceneObject>& GetObjects() const {
 			return m_scene.GetObjects();
 		}
+
 		size_t GetProjectileCount() const {
 			return m_projectiles.GetCount();
 		}
+
 		size_t GetCarrierMissileCount() const {
 			return m_carrierMissiles.GetCount();
 		}
+
 		size_t GetHostileProjectileCount() const {
 			return m_hostileProjectiles.GetCount();
 		}

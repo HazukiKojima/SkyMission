@@ -9,6 +9,7 @@ namespace Game {
 		const CombatSettings& combat;
 		bool weaponConfigured;
 	};
+
 	// 最終的な対象一覧・捕捉状態からHUD用の飛行情報と照準を組み立てる
 	// シミュレーションやTargetingSystemは変更しない
 	void BuildCombatSnapshot(CombatSnapshot& snapshot, const CombatSnapshotInput& input);

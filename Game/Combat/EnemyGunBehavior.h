@@ -26,7 +26,9 @@ namespace Game {
 					EnemyVariation(slot, 0, 11) * tuning.initialDelayRangeSeconds;
 				m_initialized = true;
 			}
+
 			m_remaining -= std::min(dt, 0.25f);
+
 			if (m_remaining <= 0) {
 				m_burst = !m_burst;
 				const float variation = EnemyVariation(slot, ++m_sequence, 23);
@@ -35,12 +37,15 @@ namespace Game {
 			}
 			return m_burst;
 		}
+
 		uint32_t GetShotIndex() const {
 			return m_shots;
 		}
+
 		void NotifyShot() {
 			++m_shots;
 		}
+
 		float Interval(float base, size_t slot) const {
 			return base * (0.85f + EnemyVariation(slot, m_shots, 37) * 0.4f);
 		}
@@ -55,20 +60,26 @@ namespace Game {
 		const DirectX::XMFLOAT3& velocity, const CombatTarget& target, float speed, size_t slot,
 		uint32_t shot, const EnemyGunTuning& tuning = {}) {
 		using namespace DirectX;
+
 		auto direction = XMLoadFloat3(&target.center) - XMLoadFloat3(&position);
+
 		if (XMVectorGetX(XMVector3LengthSq(direction)) < 0.0001f) return {0, 0, -1};
+
 		direction = XMVector3Normalize(direction);
+
 		if (const auto aim = SolveGunAim(position, velocity, target, speed, tuning.lifetimeSeconds)) {
 			// 発射時だけ予測位置へ狙いを寄せる。発射後の弾は誘導しない
 			const float lead =
 				tuning.minimumLeadFraction + EnemyVariation(slot, shot, 41) * tuning.leadVariation;
 			direction = XMVector3Normalize(XMVectorLerp(direction, XMLoadFloat3(&aim->direction), lead));
 		}
+
 		const float yaw =
 			XMConvertToRadians((EnemyVariation(slot, shot, 53) * 2 - 1) * tuning.yawErrorDegrees);
 		const float pitch =
 			XMConvertToRadians((EnemyVariation(slot, shot, 67) * 2 - 1) * tuning.pitchErrorDegrees);
 		auto right = XMVector3Cross(direction, XMVectorSet(0, 1, 0, 0));
+
 		if (XMVectorGetX(XMVector3LengthSq(right)) < 0.0001f) right = XMVectorSet(1, 0, 0, 0);
 		direction =
 			XMVector3TransformNormal(direction, XMMatrixRotationAxis(XMVector3Normalize(right), pitch));
@@ -77,11 +88,14 @@ namespace Game {
 		XMStoreFloat3(&result, XMVector3Normalize(direction));
 		return result;
 	}
+
 	inline std::array<DirectX::XMFLOAT3, 2> SpreadEnemyGunDirections(
 		const DirectX::XMFLOAT3& center, size_t slot, uint32_t shot, const EnemyGunTuning& tuning = {}) {
 		using namespace DirectX;
+
 		const auto forward = XMVector3Normalize(XMLoadFloat3(&center));
 		auto right = XMVector3Cross(forward, XMVectorSet(0, 1, 0, 0));
+
 		if (XMVectorGetX(XMVector3LengthSq(right)) < 0.0001f) right = XMVectorSet(1, 0, 0, 0);
 		right = XMVector3Normalize(right);
 		const auto up = XMVector3Normalize(XMVector3Cross(right, forward));
@@ -90,6 +104,7 @@ namespace Game {
 			tuning.minimumSpreadDegrees + EnemyVariation(slot, shot, 97) * tuning.spreadRangeDegrees);
 		const auto offset = (right * std::cos(angle) + up * std::sin(angle)) * std::tan(spread);
 		std::array<XMFLOAT3, 2> directions;
+
 		// 中心を挟んだ2方向へ散らす。弾の進行方向は発射時に確定する
 		XMStoreFloat3(&directions[0], XMVector3Normalize(forward + offset));
 		XMStoreFloat3(&directions[1], XMVector3Normalize(forward - offset));

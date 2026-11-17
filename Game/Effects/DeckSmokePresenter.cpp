@@ -6,8 +6,10 @@ namespace Game {
 	void CombatEffectPresenter::DrawDeckSmoke(
 		const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const {
 		using namespace DirectX;
+
 		for (const auto& smoke : snapshot.deckSmoke) {
 			if (!context.HasVertexBudget(6)) break;
+
 			const auto location = XMLoadFloat3(&smoke.position) +
 				XMVectorSet(smoke.age * context.Settings().deck.driftSpeed,
 					smoke.age * context.Settings().deck.riseSpeed, 0, 0);

@@ -7,8 +7,10 @@ namespace fs = std::filesystem;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+
 int main(int argc, char** argv) try {
     if (argc != 2) throw std::runtime_error("Usage: CacheChecks output-directory");
+
     const auto originalDirectory = fs::current_path();
     struct RestoreDirectory { fs::path value; ~RestoreDirectory() { fs::current_path(value); } } restore{originalDirectory};
     const auto fixture = fs::absolute(argv[1]) / "cache-checks";
