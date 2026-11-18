@@ -16,6 +16,7 @@ namespace Engine {
 		constexpr uint64_t kTextureProcessingVersion = 2;
 		constexpr uint64_t kFnvOffsetBasis = 14695981039346656037ULL;
 		constexpr uint64_t kFnvPrime = 1099511628211ULL;
+
 		bool IsBlockCompressedFormat(DXGI_FORMAT format) {
 			return DirectX::IsCompressed(format);
 		}
@@ -25,6 +26,7 @@ namespace Engine {
 			const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 			std::error_code error;
 			const auto fileSize = std::filesystem::file_size(filePath, error);
+
 			if (error) return {};
 
 			const auto lastWriteTime = std::filesystem::last_write_time(filePath, error);
@@ -40,6 +42,7 @@ namespace Engine {
 			}
 
 			uint64_t hash = kFnvOffsetBasis;
+
 			auto mix = [&hash](uint64_t value) {
 				for (int byteIndex = 0; byteIndex < 8; ++byteIndex) {
 					hash ^= value & 0xff;
@@ -47,6 +50,7 @@ namespace Engine {
 					value >>= 8;
 				}
 			};
+
 			for (wchar_t character : normalizedPath.wstring()) {
 				mix(static_cast<uint64_t>(towlower(character)));
 			}
@@ -58,6 +62,7 @@ namespace Engine {
 			mix(useSrgb ? 1 : 0);
 			mix(generateMipmaps ? 1 : 0);
 			mix(invertNormalGreen ? 1 : 0);
+
 			if (maxDimension != 0) mix(maxDimension);
 
 			error.clear();
@@ -73,6 +78,7 @@ namespace Engine {
 		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 		std::error_code error;
 		std::filesystem::path normalizedPath = std::filesystem::absolute(filePath, error);
+
 		if (error) {
 			normalizedPath = filePath;
 		}
@@ -104,18 +110,21 @@ namespace Engine {
 	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
 		const std::wstring& filePath, const TextureLoadOptions& options) {
 		if (!DecodeAndProcessImage(filePath, options)) return false;
+
 		UploadImage(device, cmdList);
 		m_image.Release();
 		return true;
 	}
 
 	bool Texture::DecodeAndProcessImage(const std::wstring& filePath, const TextureLoadOptions& options) {
-		// HDR decoding and float mip generation are expensive too; retain their processed DDS.
+		// HDRのデコードと浮動小数点のミップ生成も重いので、処理済みのDDSを保持する
 		const auto cachePath = GetDiskCachePath(filePath, options);
 		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath)) return true;
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options)) return false;
+
 		CorrectNormalGreen(options.invertNormalGreen);
 		if (!ResizeToLimit(options.maxDimension)) return false;
+
 		// BC圧縮形式はミップ生成に非対応のため、生成後に圧縮する
 		if (!GenerateMipChain(options.generateMipmaps) || !ConvertFormat(options.targetFormat, filePath))
 			return false;
@@ -126,8 +135,10 @@ namespace Engine {
 	bool Texture::TryLoadDiskCache(
 		const std::filesystem::path& cachePath, DXGI_FORMAT targetFormat, const std::wstring& source) {
 		if (cachePath.empty()) return false;
+
 		std::error_code error;
 		if (!std::filesystem::exists(cachePath, error) || error) return false;
+
 		const HRESULT hr =
 			DirectX::LoadFromDDSFile(cachePath.c_str(), DirectX::DDS_FLAGS_NONE, &m_meta, m_image);
 		if (FAILED(hr) || (targetFormat != DXGI_FORMAT_UNKNOWN && m_meta.format != targetFormat)) {
@@ -174,6 +185,7 @@ namespace Engine {
 				DXGI_FORMAT_R8G8B8A8_UNORM, decompressed);
 			if (FAILED(hr)) {
 				Log("Texture decompression failed (HR: 0x{:08X})\n", static_cast<unsigned long>(hr));
+
 				return false;
 			}
 
@@ -187,12 +199,14 @@ namespace Engine {
 		const size_t extent = std::max(m_meta.width, m_meta.height);
 		if (maxDimension == 0 || extent <= maxDimension) return true;
 		if (m_meta.dimension != DirectX::TEX_DIMENSION_TEXTURE2D) return false;
+
 		const size_t width = std::max<size_t>(1, m_meta.width * maxDimension / extent);
 		const size_t height = std::max<size_t>(1, m_meta.height * maxDimension / extent);
 		DirectX::ScratchImage resized;
 		const auto hr = DirectX::Resize(m_image.GetImages(), m_image.GetImageCount(), m_meta, width, height,
 			DirectX::TEX_FILTER_DEFAULT, resized);
 		if (FAILED(hr)) return false;
+
 		m_image = std::move(resized);
 		m_meta = m_image.GetMetadata();
 		return true;
@@ -203,6 +217,7 @@ namespace Engine {
 			(m_meta.format == DXGI_FORMAT_R8G8B8A8_UNORM || m_meta.format == DXGI_FORMAT_B8G8R8A8_UNORM)) {
 			for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
 				const DirectX::Image* image = &m_image.GetImages()[imageIndex];
+
 				for (size_t y = 0; y < image->height; ++y) {
 					uint8_t* row = image->pixels + y * image->rowPitch;
 					for (size_t x = 0; x < image->width; ++x) {
@@ -222,6 +237,7 @@ namespace Engine {
 				DirectX::TEX_FILTER_DEFAULT, 0, mipmappedImage);
 			if (FAILED(hr)) {
 				Log("Texture mip generation failed (HR: 0x{:08X})\n", static_cast<unsigned long>(hr));
+
 				return false;
 			}
 
@@ -236,6 +252,7 @@ namespace Engine {
 		if (targetFormat != DXGI_FORMAT_UNKNOWN && m_meta.format != targetFormat) {
 			const DXGI_FORMAT sourceFormat = m_meta.format;
 			DirectX::ScratchImage convertedImage;
+
 			if (IsBlockCompressedFormat(targetFormat)) {
 				DirectX::TEX_COMPRESS_FLAGS compressionFlags = DirectX::TEX_COMPRESS_PARALLEL;
 				if (targetFormat == DXGI_FORMAT_BC7_UNORM || targetFormat == DXGI_FORMAT_BC7_UNORM_SRGB) {
@@ -272,10 +289,12 @@ namespace Engine {
 			if (reconstructNormalZ) {
 				for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
 					const DirectX::Image* image = &m_image.GetImages()[imageIndex];
+
 					for (size_t y = 0; y < image->height; ++y) {
 						uint8_t* row = image->pixels + y * image->rowPitch;
 						for (size_t x = 0; x < image->width; ++x) {
 							uint8_t* pixel = row + x * 4;
+
 							const float normalX = pixel[0] / 127.5f - 1.0f;
 							const float normalY = pixel[1] / 127.5f - 1.0f;
 							const float normalZ =
@@ -306,17 +325,14 @@ namespace Engine {
 	}
 
 	void Texture::UploadImage(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList) {
-		// GPU用テクスチャリソースを作成
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, static_cast<UINT>(m_meta.width),
 			static_cast<UINT>(m_meta.height), static_cast<UINT16>(m_meta.arraySize),
 			static_cast<UINT16>(m_meta.mipLevels));
 
-		// デフォルトヒープにテクスチャを確保
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_texture)));
 
-		// 転送用アップロードバッファを作成
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(
 			m_texture.Get(), 0, static_cast<UINT>(m_meta.mipLevels * m_meta.arraySize));
 
@@ -325,7 +341,6 @@ namespace Engine {
 		ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProps, D3D12_HEAP_FLAG_NONE, &uploadDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_uploadHeap)));
 
-		// サブリソース配列を作成してアップロード
 		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 		subresources.resize(m_meta.mipLevels * m_meta.arraySize);
 
@@ -379,6 +394,7 @@ namespace Engine {
 		subresource.RowPitch = image->rowPitch;
 		subresource.SlicePitch = image->slicePitch;
 		UpdateSubresources(cmdList, m_texture.Get(), m_uploadHeap.Get(), 0, 0, 1, &subresource);
+
 		D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		cmdList->ResourceBarrier(1, &barrier);
@@ -392,6 +408,7 @@ namespace Engine {
 			throw std::invalid_argument("Invalid RGBA texture dimensions or byte count");
 		ThrowIfFailed(m_image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
 		m_meta = m_image.GetMetadata();
+
 		const auto* image = m_image.GetImage(0, 0, 0);
 		for (UINT row = 0; row < height; ++row)
 			std::memcpy(image->pixels + row * image->rowPitch, pixels.data() + size_t(row) * width * 4,

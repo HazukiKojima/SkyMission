@@ -3,6 +3,7 @@
 
 void TestBombSystem() {
 	using namespace DirectX;
+
 	const auto model = std::make_shared<Model>();
 	Scene scene;
 	BombSystem bombs;
@@ -21,9 +22,11 @@ void TestBombSystem() {
 			std::abs(world._43 - advanced.position.z) < 0.001f,
 		"Bomb system lost inherited velocity or gravity");
 	const float cooldown = bombs.GetCooldownSeconds();
+
 	for (float invalid : {0.0f, -1.0f, std::numeric_limits<float>::quiet_NaN()})
 		bombs.Update(scene, invalid, std::nullopt);
 	Require(bombs.GetCooldownSeconds() == cooldown, "Invalid delta advanced bomb reload");
+
 	for (int i = 0; i < 39; ++i)
 		bombs.Update(scene, 0.25f, std::nullopt);
 	Require(bombs.GetCooldownSeconds() == 0 && bombs.TryDrop(scene, {0, 1000, 0}, {}),
@@ -36,6 +39,7 @@ void TestBombSystem() {
 	CollisionTarget deck{77, {{-10, -1, -10}, {10, 1, 10}}, {0, 50, 0}, {}};
 	XMStoreFloat4x4(&deck.world, XMMatrixRotationY(0.7f) * XMMatrixTranslation(0, 50, 0));
 	deckBombs.TryDrop(deckScene, {0, 100, 0}, {});
+
 	for (int i = 0; i < 20; ++i)
 		deckBombs.Update(deckScene, 0.25f, deck);
 	const auto hits = deckBombs.TakeHits();
@@ -50,6 +54,7 @@ void TestBombSystem() {
 	BombSystem seaBombs;
 	seaBombs.Configure(1, model, {1, 0, 0});
 	seaBombs.TryDrop(seaScene, {0, 20, 0}, {});
+
 	for (int i = 0; i < 10; ++i)
 		seaBombs.Update(seaScene, 0.25f, std::nullopt);
 	Require(seaBombs.GetCount() == 0 && seaScene.GetObjects().empty() &&

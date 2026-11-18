@@ -8,11 +8,14 @@ namespace Engine {
 		static constexpr int GridResolution = 257;
 		static float GridCoordinate(int index, float size);
 		void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize);
+
 		// 転送コマンドの GPU 完了後に呼ぶ
 		void ReleaseUploadResources();
+
 		ID3D12Resource* GetVertexBufferResource() const {
 			return m_vertexBuffer->GetResource();
 		}
+
 		ID3D12Resource* GetIndexBufferResource() const {
 			return m_indexBuffer.Get();
 		}
@@ -20,9 +23,11 @@ namespace Engine {
 		D3D12_VERTEX_BUFFER_VIEW GetVertexView() const {
 			return m_vertexBuffer->GetView();
 		}
+
 		const D3D12_INDEX_BUFFER_VIEW& GetIndexView() const {
 			return m_indexBufferView;
 		}
+
 		UINT GetIndexCount() const {
 			return m_indexCount;
 		}

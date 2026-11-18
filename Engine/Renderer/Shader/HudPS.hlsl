@@ -4,6 +4,7 @@ float Hash(float2 p)
 {
     return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
 }
+
 float Noise(float2 p)
 {
     float2 cell = floor(p), f = frac(p);
@@ -11,6 +12,7 @@ float Noise(float2 p)
     return lerp(lerp(Hash(cell), Hash(cell + float2(1, 0)), f.x),
         lerp(Hash(cell + float2(0, 1)), Hash(cell + 1), f.x), f.y);
 }
+
 float Turbulence(float2 p)
 {
     float value = 0, weight = 0.55;
@@ -22,6 +24,7 @@ float Turbulence(float2 p)
     }
     return value;
 }
+
 float4 PS(float4 position : SV_POSITION, float2 uv : TEXCOORD0, float4 color : COLOR0) : SV_TARGET
 {
     if (uv.x < -0.5)
@@ -34,6 +37,7 @@ float4 PS(float4 position : SV_POSITION, float2 uv : TEXCOORD0, float4 color : C
         float density = smoothstep(0, 0.38, shape) * smoothstep(0.15, 0.72, n);
         float light = saturate(0.65 - p.y * 0.25 + (n - 0.5) * 0.7);
         float3 tint = color.rgb * (0.5 + light * 0.8);
+
         if (color.r > 0.8)
         {
             float heat = saturate((n - 0.25) * 1.8);

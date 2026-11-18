@@ -17,6 +17,7 @@ namespace Game {
 			bool accelerate = false;
 			bool decelerate = false;
 		};
+
 		static AircraftInput MapInput(const KeyboardState& keys);
 		AircraftInput ReadInput(const Engine::InputSnapshot& input) const;
 	};

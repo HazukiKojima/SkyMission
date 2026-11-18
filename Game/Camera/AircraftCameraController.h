@@ -22,6 +22,7 @@ namespace Game {
 		void Configure(const CameraSettings& settings) {
 			m_settings = settings;
 		}
+
 		AircraftCameraController() = default;
 		~AircraftCameraController() = default;
 
@@ -32,11 +33,13 @@ namespace Game {
 		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
 		void SetFollowTarget(const AircraftCameraTarget& target);
-		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す。
+
+		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す
 		void SetLookTarget(std::optional<DirectX::XMFLOAT3> target, bool automatic = false) {
 			m_lookTarget = target;
 			m_automaticLook = automatic && target.has_value();
 		}
+
 		// 初回と暗転中の切替に使い、追従開始時の補間移動を画面に出さない
 		void SnapToFollowTarget();
 
@@ -46,9 +49,11 @@ namespace Game {
 		const Engine::Camera& GetCamera() const {
 			return m_camera;
 		}
+
 		DirectX::XMMATRIX GetView() const {
 			return m_camera.GetView();
 		}
+
 		DirectX::XMFLOAT3 GetPosition() const {
 			return m_position;
 		}
@@ -79,6 +84,7 @@ namespace Game {
 		float m_zoomScale = 1;
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followViewDirection = {0.0f, 0.0f, -1.0f};
+
 		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする
 
 		CameraSettings m_settings;

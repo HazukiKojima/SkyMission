@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+
 namespace Engine {
 	struct OceanSettings {
 		float size;
@@ -37,11 +38,13 @@ namespace Engine {
 		RetroFilmParameters retroFilm;
 		CloudSettings clouds;
 	};
+
 	struct ModelAssetDefinition {
 		std::string id;
 		std::filesystem::path file;
 		ModelLoadOptions options;
 	};
+
 	struct RendererDefinition {
 		RenderEnvironmentDefinition environment;
 		std::vector<ModelAssetDefinition> models;

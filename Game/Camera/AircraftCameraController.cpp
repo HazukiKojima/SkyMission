@@ -43,6 +43,7 @@ namespace Game {
 		XMStoreFloat3(&right, r);
 
 		float moveSpeed = m_settings.moveSpeed * deltaSeconds;
+
 		if (input.IsKeyDown('W')) {
 			m_position.x += forward.x * moveSpeed;
 			m_position.y += forward.y * moveSpeed;
@@ -71,6 +72,7 @@ namespace Game {
 			m_yaw += static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity;
 			m_pitch -= static_cast<float>(input.mouseDeltaY) * m_settings.mouseSensitivity;
 		}
+
 		const float pitchLimit = XM_PIDIV2 - 0.01f;
 		m_pitch = std::clamp(m_pitch, -pitchLimit, pitchLimit);
 
@@ -95,18 +97,22 @@ namespace Game {
 		m_camera.SetVerticalFov(m_baseFovY * m_zoomScale);
 		UpdateFollowPosition(deltaSeconds);
 	}
+
 	void AircraftCameraController::SnapToFollowTarget() {
 		m_lookTarget.reset();
 		m_automaticLook = false;
 		m_zoomScale = 1;
 		m_camera.SetVerticalFov(m_baseFovY);
+
 		if (!m_following) return;
+
 		m_lookYaw = 0;
 		m_lookPitch = 0;
 		UpdateFollowOrientation(0, true);
 		UpdateFollowPosition(0, true);
 		UpdateView();
 	}
+
 	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
 		if (input.active && input.middleMouseDown && !m_automaticLook) {
 			m_lookYaw = std::remainder(
@@ -116,16 +122,19 @@ namespace Game {
 					-m_settings.lookPitchLimit, m_settings.lookPitchLimit);
 		} else {
 			float targetYaw = 0, targetPitch = 0;
+
 			if ((m_automaticLook || input.IsKeyDown('Z')) && m_lookTarget) {
 				const auto& point = *m_lookTarget;
-				// doubleで差と距離を求め、極端な座標でも角度の計算を有限に保つ。
+
+				// doubleで差と距離を求め、極端な座標でも角度の計算を有限に保つ
 				const double dx = double(point.x) - m_followTarget.x;
 				const double dy = double(point.y) - m_followTarget.y;
 				const double dz = double(point.z) - m_followTarget.z;
 				const double horizontal = std::hypot(dx, dz);
 				const double distance = std::hypot(horizontal, dy);
+
 				if (std::isfinite(distance) && distance > 0.001) {
-					// 真上・真下ではヨーを維持し、水平角の不定による反転を避ける。
+					// 真上・真下ではヨーを維持し、水平角の不定による反転を避ける
 					targetYaw = horizontal > 0.001
 						? std::remainder(float(std::atan2(dx, -dz)) - m_followCameraYaw, XM_2PI)
 						: m_lookYaw;
@@ -133,7 +142,8 @@ namespace Game {
 						-m_settings.lookPitchLimit, m_settings.lookPitchLimit);
 				}
 			}
-			// 自動注視と標準視点への復帰で同じ時間基準の補間を使う。
+
+			// 自動注視と標準視点への復帰で同じ時間基準の補間を使う
 			const float decay = std::exp(-m_settings.lookReturnRate * deltaSeconds);
 			const float blend = 1.0f - decay;
 			m_lookYaw = std::remainder(m_lookYaw +
@@ -141,8 +151,10 @@ namespace Game {
 			m_lookPitch += (targetPitch - m_lookPitch) * blend;
 		}
 	}
+
 	void AircraftCameraController::UpdateFollowOrientation(float deltaSeconds, bool snap) {
 		XMVECTOR followDirection = XMVector3Normalize(XMLoadFloat3(&m_followHeading));
+
 		if (!m_followPitchInputActive) {
 			const XMVECTOR forward = XMLoadFloat3(&m_followForward);
 			const XMVECTOR horizontalForward =
@@ -166,6 +178,7 @@ namespace Game {
 		const float pitchBlend = yawBlend;
 		m_followCameraPitch += (targetPitch - m_followCameraPitch) * pitchBlend;
 	}
+
 	void AircraftCameraController::UpdateFollowPosition(float deltaSeconds, bool snap) {
 		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
 		const float orbitYaw = m_followCameraYaw + m_lookYaw;
@@ -184,7 +197,8 @@ namespace Game {
 			target - smoothedDirection * followDistance + worldUp * m_settings.followHeight;
 		const XMVECTOR desiredLookAt =
 			target + smoothedDirection * m_settings.lookAheadMeters + worldUp * m_settings.followLookHeight;
-		// 大きなワールド座標同士の減算で視線が揺れないよう、相対オフセットから求める。
+
+		// 大きなワールド座標同士の減算で視線が揺れないよう、相対オフセットから求める
 		XMStoreFloat3(&m_followViewDirection,
 			smoothedDirection * (followDistance + m_settings.lookAheadMeters) +
 				worldUp * (m_settings.followLookHeight - m_settings.followHeight));
@@ -195,10 +209,12 @@ namespace Game {
 
 	void AircraftCameraController::UpdateView() {
 		XMVECTOR pos = XMLoadFloat3(&m_position);
+
 		if (m_following) {
 			m_camera.LookTo(m_position, m_followViewDirection);
 			return;
 		}
+
 		XMVECTOR lookDir =
 			XMVectorSet(cosf(m_pitch) * sinf(m_yaw), sinf(m_pitch), cosf(m_pitch) * cosf(m_yaw), 0.0f);
 		XMVECTOR target = pos + XMVector3Normalize(lookDir);

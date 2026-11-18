@@ -9,6 +9,7 @@ void TestHudTypography() {
 	list.Text({100, 100}, "速度 1122", 48, Game::HudStyle::Ink);
 	Require(list.GetVertices().size() == 42, "UTF-8 HUD text was rendered per byte");
 	float right = 0;
+
 	for (const auto& vertex : list.GetVertices())
 		right = std::max(right, (vertex.position.x + 1) * 960);
 	Require(std::abs(right - 100 - Engine::HudDrawList::MeasureTextWidth("速度 1122", 48)) < 0.001f,
@@ -27,6 +28,7 @@ void TestHudTypography() {
 			Require(vertex.uv.x >= 0 && vertex.uv.x <= 1 && vertex.uv.y >= 0 && vertex.uv.y <= 1,
 				"Invalid UTF-8 escaped the atlas");
 	}
+
 	std::string_view labels = "敵機接近照準速度高度北機体ロケット使用可秒任務達成自機撃墜R：再挑戦被弾ミサイ"
 							  "ル接近目標なし射程外命中全目標撃墜▶ホイール押込選択中の敵機を注視";
 	while (!labels.empty()) {
@@ -34,9 +36,11 @@ void TestHudTypography() {
 		Require(character < 128 || Engine::HudFont::Glyph(character) >= Engine::HudFont::AsciiCount,
 			"A Japanese UI label is missing from the font atlas repertoire");
 	}
+
 	list.Reset(1920, 1080);
 	list.FilledRect({10, 20}, {100, 50}, Game::HudStyle::Ink);
 	Require(list.GetVertices().size() == 6, "Filled rectangle did not produce one quad");
+
 	for (const auto& vertex : list.GetVertices())
 		Require(vertex.uv.x == Engine::HudFont::SolidUv.x && vertex.uv.y == Engine::HudFont::SolidUv.y,
 			"HUD shape UV no longer points to the shared solid texel");
@@ -52,17 +56,20 @@ void TestHudTypography() {
 	DirectX::XMStoreFloat4x4(
 		&view.projection, DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, 1920.0f / 1080, 1, 10000));
 	Game::CombatHudPresenter{}.Build(snapshot, view, list);
+
 	for (const auto& vertex : list.GetVertices()) {
 		const float x = (vertex.position.x + 1) * 960, y = (1 - vertex.position.y) * 540;
 		Require(
 			x > 16 && x < 1904 && y > 16 && y < 1064, "Flight HUD retained the weathered screen-edge frame");
 	}
+
 	snapshot.forward = {0, 0, 1};
 	snapshot.enemies = {{1, {0, 0, 1000}, {}, "ENEMY 01", 100, {0, 0, 1}}};
 	snapshot.selected = 1;
 	snapshot.hitSeconds = snapshot.playerHitSeconds = 0.1f;
 	snapshot.playerHitDirection = {1, 0, 0};
 	snapshot.destroyedSeconds = snapshot.allDownSeconds = 1;
+
 	for (auto result : {Game::CombatResult::Active, Game::CombatResult::Victory, Game::CombatResult::Defeat})
 		for (auto phase :
 			{Game::MissionPhase::Patrol, Game::MissionPhase::CarrierAttack, Game::MissionPhase::Commander}) {
@@ -71,9 +78,12 @@ void TestHudTypography() {
 			snapshot.lockState = Game::LockState::Locked;
 			list.Reset(view.width, view.height);
 			Game::CombatHudPresenter{}.Build(snapshot, view, list);
+
 			for (size_t i = 0; i < list.GetVertices().size(); i += 6) {
 				const auto uv = list.GetVertices()[i].uv;
+
 				if (uv.x == Engine::HudFont::SolidUv.x && uv.y == Engine::HudFont::SolidUv.y) continue;
+
 				const auto column =
 					unsigned(std::lround(uv.x * Engine::HudFont::Width)) / Engine::HudFont::Cell;
 				const auto row =
@@ -83,6 +93,7 @@ void TestHudTypography() {
 					"A built-in HUD label uses an unsupported glyph");
 			}
 		}
+
 	{
 		Game::CombatSnapshot guide;
 		guide.enemies = {{1, {0, 0, 1000}, {}, "ENEMY", 100}};
@@ -93,6 +104,7 @@ void TestHudTypography() {
 				return vertex.color.x == 0.015f && vertex.color.y == 0.025f && vertex.color.z == 0.04f && vertex.color.w == 0.78f;
 			});
 		};
+
 		guide.elapsedSeconds = 4.99f;
 		Require(hasGuide(), "Initial shooting guide disappeared before five seconds");
 		guide.elapsedSeconds = 5;
@@ -111,6 +123,7 @@ void TestHudTypography() {
 		guide.result = Game::CombatResult::Defeat;
 		Require(!hasGuide(), "Shooting guide remained after defeat");
 	}
+
 	// 母艦は敵機一覧に含めなくても、画面内に六角形の目標枠を描く
 	snapshot = {};
 	snapshot.missionPhase = Game::MissionPhase::CarrierAttack;
@@ -121,12 +134,15 @@ void TestHudTypography() {
 	list.Reset(view.width, view.height);
 	Game::CombatHudPresenter{}.Build(snapshot, view, list);
 	size_t carrierFrameVertices = 0;
+
 	for (const auto& vertex : list.GetVertices()) {
 		const auto selected = Game::HudStyle::Selected;
+
 		if (vertex.color.x == selected.x && vertex.color.y == selected.y &&
 			vertex.color.z == selected.z && vertex.color.w == selected.w)
 			++carrierFrameVertices;
 	}
+
 	Require(carrierFrameVertices == 36, "Carrier marker did not render six outline edges");
 #if defined(_DEBUG)
 	{
@@ -140,6 +156,7 @@ void TestHudTypography() {
 			list.Reset(view.width, view.height);
 			Game::CombatHudPresenter{}.Build(debug, view, list);
 			size_t vertices = 0;
+
 			for (const auto& vertex : list.GetVertices()) {
 				Require(std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y),
 					"Collision overlay produced invalid projected coordinates");
@@ -147,6 +164,7 @@ void TestHudTypography() {
 			}
 			return vertices;
 		};
+
 		Require(countLines() == 72, "Collision OBB did not render exactly twelve edges");
 		debug.debugCollisionsEnabled = false;
 		Require(countLines() == 0, "Disabled collision overlay still drew boxes");

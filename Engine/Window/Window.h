@@ -9,6 +9,7 @@ namespace Engine {
 		Window(UINT width, UINT height, const wchar_t* title, HINSTANCE hInstance);
 		~Window();
 		Window(const Window&) = delete;
+
 		Window& operator=(const Window&) = delete;
 
 		InputSnapshot ConsumeInput();
@@ -17,14 +18,15 @@ namespace Engine {
 		HWND GetHandle() const {
 			return m_hwnd;
 		}
+
 		UINT GetWidth() const {
 			return m_width;
 		}
+
 		UINT GetHeight() const {
 			return m_height;
 		}
 
-		// リサイズイベントのコールバック登録
 		void SetOnResize(std::function<void(UINT, UINT)> cb) {
 			m_onResize = cb;
 		}

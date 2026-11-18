@@ -12,7 +12,7 @@ namespace Engine {
 		bool generateMipmaps = true;
 		bool invertNormalGreen = false;
 		DXGI_FORMAT targetFormat = DXGI_FORMAT_UNKNOWN;
-		UINT maxDimension = 0; // 0 preserves source resolution.
+		UINT maxDimension = 0; // 0は元の解像度を維持する
 	};
 
 	class Texture {
@@ -35,6 +35,7 @@ namespace Engine {
 		ID3D12Resource* GetResource() const {
 			return m_texture.Get();
 		}
+
 		bool IsLoaded() const {
 			return m_texture != nullptr;
 		}

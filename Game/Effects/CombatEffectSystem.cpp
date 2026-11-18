@@ -23,6 +23,7 @@ namespace Game {
 
 	void CombatEffectSystem::Update(float deltaSeconds) {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0) return;
+
 		const float step = std::min(deltaSeconds, CombatEffectSettings::maximumFrameSeconds);
 		AdvanceEffects(m_snapshot.gunFlashes, step, m_settings.gun.flashLifetimeSeconds);
 		AdvanceEffects(m_snapshot.gunSmoke, step, m_settings.gun.smokeLifetimeSeconds);
@@ -36,10 +37,12 @@ namespace Game {
 	void CombatEffectSystem::SpawnGunShot(const GunShotEvent& shot) {
 		if (shot.muzzleIndex >= GunEffectSettings::maxFlashCount || !std::isfinite(shot.age) || shot.age < 0)
 			return;
+
 		auto found =
 			std::find_if(m_snapshot.gunFlashes.begin(), m_snapshot.gunFlashes.end(), [&](const auto& flash) {
 				return flash.muzzleIndex == shot.muzzleIndex;
 			});
+
 		// 低FPSで閃光の寿命をまたいでも、最新の発射を一度は画面に出す
 		const GunMuzzleFlash flash{shot.muzzleIndex, shot.position, shot.direction,
 			std::min(shot.age, m_settings.gun.flashLifetimeSeconds * 0.5f), shot.sequence};
@@ -74,9 +77,11 @@ namespace Game {
 
 	void CombatEffectSystem::SpawnRocketSmoke(const DirectX::XMFLOAT3& position, float age) {
 		if (!std::isfinite(age) || age < 0 || age >= m_settings.rocket.smokeLifetimeSeconds) return;
+
 		AddBoundedEffect(
 			m_snapshot.rocketSmoke, RocketTrailSample{position, age}, RocketEffectSettings::maxSmokeCount);
 	}
+
 	void CombatEffectSystem::SpawnCarrierExplosion(const DirectX::XMFLOAT3& position) {
 		AddExplosion({position, {}, 0, m_settings.carrier.explosionRadius});
 	}
@@ -105,6 +110,7 @@ namespace Game {
 	void CombatEffectSystem::SpawnExplosion(
 		const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale) {
 		using namespace DirectX;
+
 		ExplosionEffect explosion{
 			{aircraft.worldTransform._41, aircraft.worldTransform._42, aircraft.worldTransform._43},
 			velocity};
@@ -120,6 +126,7 @@ namespace Game {
 					m_settings.explosion.minRadius, m_settings.explosion.maxRadius);
 			}
 		}
+
 		AddExplosion(explosion);
 	}
 

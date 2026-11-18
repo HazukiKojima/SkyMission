@@ -5,6 +5,7 @@
 
 void TestRadarMap() {
 	using namespace DirectX;
+
 	for (const XMFLOAT2 size : {XMFLOAT2{800, 600}, XMFLOAT2{1920, 1080}, XMFLOAT2{2560, 1080}}) {
 		Engine::RenderView view;
 		view.width = unsigned(size.x);
@@ -13,10 +14,12 @@ void TestRadarMap() {
 		const auto approximately = [](float a, float b) {
 			return std::abs(a - b) < 0.001f;
 		};
+
 		Require(approximately(layout.origin.x, 48 * layout.scale) &&
 				approximately(layout.origin.y + layout.size, size.y - 48 * layout.scale),
 			"Radar is not anchored to the actual lower-left viewport corner");
 		const XMFLOAT3 player{12000, 3000, -18000};
+
 		for (const XMFLOAT2 direction : {XMFLOAT2{0, -1}, XMFLOAT2{1, 0}, XMFLOAT2{0, 1}, XMFLOAT2{-1, 0}}) {
 			for (float distance : {0.0f, 5000.0f, 10000.0f, 20000.0f}) {
 				const auto point = Game::RadarMapPresenter::Project(
@@ -29,6 +32,7 @@ void TestRadarMap() {
 					"Radar cardinal direction, horizontal range or outer-edge clamping failed");
 			}
 		}
+
 		// 実際の左手座標系カメラを北へ向け、画面とレーダーの左右が一致することを確認する
 		Engine::Camera northCamera;
 		northCamera.Initialize(XM_PIDIV4, size.x / size.y, 1, 20000);
@@ -36,6 +40,7 @@ void TestRadarMap() {
 		auto northView = view;
 		XMStoreFloat4x4(&northView.view, northCamera.GetView());
 		XMStoreFloat4x4(&northView.projection, northCamera.GetProjection());
+
 		for (float side : {-1.0f, 1.0f}) {
 			const XMFLOAT3 contact{player.x + side * 1000, player.y, player.z - 5000};
 			const auto screen = Game::ProjectHudPoint(contact, northView);
@@ -44,6 +49,7 @@ void TestRadarMap() {
 				screen.visible && (screen.pixel.x - size.x * 0.5f) * (radar.pixel.x - layout.center.x) > 0,
 				"Radar horizontal placement is mirrored against the game camera");
 		}
+
 		const auto diagonal =
 			Game::RadarMapPresenter::Project({player.x + 10000, player.y, player.z - 10000}, player, layout);
 		Require(diagonal.outside &&
@@ -63,11 +69,13 @@ void TestRadarMap() {
 			list.Reset(view.width, view.height);
 			Game::RadarMapPresenter{}.Build(snapshot, view, list);
 		};
+
 		const auto sameVertex = [](const Engine::HudVertex& a, const Engine::HudVertex& b) {
 			return a.position.x == b.position.x && a.position.y == b.position.y && a.uv.x == b.uv.x &&
 				a.uv.y == b.uv.y && a.color.x == b.color.x && a.color.y == b.color.y &&
 				a.color.z == b.color.z && a.color.w == b.color.w;
 		};
+
 		build();
 		const auto baseline = list.GetVertices();
 		snapshot.enemies.front().velocity = {900, 500, 0};
@@ -81,11 +89,13 @@ void TestRadarMap() {
 		snapshot.playerHeading = {1, 0, 0};
 		build();
 		float left = layout.center.x, right = layout.center.x;
+
 		for (auto vertex = list.GetVertices().end() - 18; vertex != list.GetVertices().end(); ++vertex) {
 			const float pixelX = (vertex->position.x + 1) * size.x * 0.5f;
 			left = std::min(left, pixelX);
 			right = std::max(right, pixelX);
 		}
+
 		Require(layout.center.x - left > right - layout.center.x,
 			"Positive-X aircraft heading did not point toward radar left");
 		Require(std::equal(baseline.begin(), baseline.end() - 18, list.GetVertices().begin(), sameVertex) &&
@@ -121,6 +131,7 @@ void TestRadarMap() {
 					vertex.position.y >= -1.01f && vertex.position.y <= 1.01f,
 				"Radar escaped the viewport");
 	}
+
 	Engine::RenderView zero;
 	Engine::HudDrawList empty;
 	empty.Reset(0, 0);

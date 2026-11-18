@@ -12,12 +12,14 @@
 #include <cwctype>
 #include <limits>
 #include "Engine/StartupTiming.h"
+
 namespace Engine {
 	using namespace ModelProcessing;
 	namespace {
 		std::filesystem::path ResolveMaterialTexture(const aiMaterial* material, aiTextureType type,
 			const std::filesystem::path& modelDirectory, const ModelLoadOptions& options) {
 			aiString texturePath;
+
 			if (material->GetTexture(type, 0, &texturePath) != AI_SUCCESS || texturePath.length == 0 ||
 				texturePath.C_Str()[0] == '*') {
 				return {};
@@ -34,6 +36,7 @@ namespace Engine {
 		}
 
 	} // namespace
+
 	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 		const std::wstring& filePath, const ModelLoadOptions& options) {
 		for (auto& meshes : m_lodMeshes)
@@ -55,11 +58,13 @@ namespace Engine {
 		auto prepared = PrepareModelGeometry(modelPath, options);
 		m_sourceMeshCount = prepared.levels[0].size();
 		if (prepared.levels[0].empty()) return false;
+
 		m_nodePositions = std::move(prepared.nodePositions);
 		m_localBounds = prepared.bounds;
 		m_cullingRadius = prepared.cullingRadius;
 		StartupTiming timing("model.materials_and_upload");
 		InitializeFallbackTextures(device, commandList);
+
 		const auto modelDirectory = modelPath.parent_path();
 		return CreateMeshes(prepared, options, modelDirectory, device, commandList, renderDevice);
 	}
@@ -72,6 +77,7 @@ namespace Engine {
 			std::vector<ModelVertex> vertices;
 			std::vector<uint32_t> indices;
 		};
+
 		std::array<std::vector<Batch>, 3> batches;
 		std::vector<TextureDescriptorSet> textureDescriptorSets;
 		std::unordered_map<unsigned, Mesh> materials;
@@ -79,16 +85,19 @@ namespace Engine {
 			auto& geometry = prepared.levels[0][geometryIndex];
 			const auto materialIndex = geometry.materialIndex;
 			auto [material, inserted] = materials.try_emplace(materialIndex);
+
 			if (inserted) {
 				if (materialIndex < prepared.materials.size())
 					LoadMaterialTextures(material->second, prepared.materials[materialIndex], modelDirectory,
 						options, device, commandList);
 				AssignMaterialDescriptors(material->second, device, renderDevice, textureDescriptorSets);
 			}
+
 			for (unsigned lod = 0; lod < m_lodCount; ++lod) {
 				const unsigned level = m_lodCount - 1 - lod;
 				auto& data = prepared.levels[level][geometryIndex];
 				if (data.indices.empty()) continue;
+
 				auto& list = batches[level];
 				auto batch = list.end();
 				if (options.mergeStaticMeshes && !geometry.isRotatingNode)
@@ -96,6 +105,7 @@ namespace Engine {
 						return !item.mesh.isRotatingNode &&
 							item.mesh.textureSrvIndex == material->second.textureSrvIndex;
 					});
+
 				if (batch == list.end()) {
 					Mesh mesh = material->second;
 					mesh.isRotatingNode = geometry.isRotatingNode;
@@ -104,11 +114,13 @@ namespace Engine {
 					list.push_back({std::move(mesh), {}, {}});
 					batch = std::prev(list.end());
 				}
+
 				const auto offset = static_cast<uint32_t>(batch->vertices.size());
 				for (auto index : data.indices)
 					batch->indices.push_back(index + offset);
 				batch->vertices.insert(batch->vertices.end(), data.vertices.begin(), data.vertices.end());
 			}
+
 			std::vector<ModelVertex>().swap(geometry.vertices);
 			std::vector<uint32_t>().swap(geometry.indices);
 			for (unsigned level = 1; level < m_lodCount; ++level) {
@@ -116,6 +128,7 @@ namespace Engine {
 				std::vector<uint32_t>().swap(prepared.levels[level][geometryIndex].indices);
 			}
 		}
+
 		std::vector<ModelVertex> vertices;
 		std::vector<uint32_t> indices;
 		size_t vertexCount = 0, indexCount = 0;
@@ -124,6 +137,7 @@ namespace Engine {
 				vertexCount += batch.vertices.size();
 				indexCount += batch.indices.size();
 			}
+
 		if (vertexCount > UINT_MAX / sizeof(ModelVertex) || indexCount > UINT_MAX / sizeof(uint32_t))
 			throw std::runtime_error("Combined model buffers exceed D3D12 view limits");
 		vertices.reserve(vertexCount);
@@ -142,9 +156,12 @@ namespace Engine {
 				std::vector<uint32_t>().swap(batch.indices);
 				m_lodMeshes[level].push_back(std::move(mesh));
 			}
+
 			if (m_lodMeshes[level].empty() && level > 0) m_lodMeshes[level] = m_lodMeshes[level - 1];
 		}
+
 		if (!IsLoaded()) return false;
+
 		UploadGeometry(device, commandList, vertices.data(), vertices.size() * sizeof(ModelVertex),
 			indices.data(), indices.size() * sizeof(uint32_t));
 		Log("Model batches {}, triangles {}/{}/{}\n", GetMeshCount(), GetTriangleCount(0),
@@ -178,6 +195,7 @@ namespace Engine {
 				return set.diffuse == diffuseTexture && set.metallic == metallicTexture &&
 					set.roughness == roughnessTexture && set.normal == normalTexture;
 			});
+
 		if (descriptorSet != sets.end()) {
 			mesh.textureSrvIndex = descriptorSet->srvIndex;
 		} else {
@@ -239,9 +257,11 @@ namespace Engine {
 			aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_NORMALS};
 		for (size_t type = 0; type < std::size(types); ++type) {
 			if (source.textures[type].empty()) continue;
+
 			const aiString path(source.textures[type]);
 			materialData.AddProperty(&path, AI_MATKEY_TEXTURE(types[type], 0));
 		}
+
 		const aiMaterial* material = &materialData;
 		aiString materialName;
 		material->Get(AI_MATKEY_NAME, materialName);
@@ -283,6 +303,7 @@ namespace Engine {
 					.targetFormat = format,
 					.maxDimension = options.maxTextureDimension});
 		};
+
 		mesh.metallicTexture =
 			loadScalarMap(aiTextureType_METALNESS, options.metallicSuffix, DXGI_FORMAT_BC4_UNORM);
 		mesh.roughnessTexture =
@@ -322,6 +343,7 @@ namespace Engine {
 			DirectX::XMFLOAT3 axis;
 			UINT enabled;
 		};
+
 		static_assert(sizeof(NodeRotationConstants) == RootBinding::NodeRotationDwords * sizeof(UINT));
 
 		for (const Mesh& mesh : m_lodMeshes[std::min(lod, m_lodCount - 1)]) {

@@ -29,6 +29,7 @@ void TestCombatEffectLifetime() {
 		hit.position.x = static_cast<float>(i);
 		effects.SpawnImpact(hit, velocity);
 	}
+
 	Require(
 		snapshot.impacts.size() == ImpactEffectSettings::maxCount && snapshot.impacts.front().position.x == 1,
 		"Impact limit did not replace oldest entry");

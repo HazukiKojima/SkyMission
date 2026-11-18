@@ -50,7 +50,8 @@ float FilmGrain(float2 pixel, float time, float luminance)
         lerp(Hash(grainCell + float2(0, 1) + frame * 23.0f),
             Hash(grainCell + float2(1, 1) + frame * 23.0f), grainBlend.x), grainBlend.y);
     float noise = lerp(fineNoise, coarseNoise, 0.4f);
-    // Film grain is more visible in the midtones/shadows than in bright highlights.
+
+    // フィルムの粒子は、明るいハイライトよりも中間調と影で目立つ
     float exposureWeight = lerp(1.0f, 0.45f, smoothstep(0.15f, 0.85f, luminance));
     return (noise - 0.5f) * grainStrength * exposureWeight;
 }
@@ -105,12 +106,14 @@ float FilmScratch(float2 pixel, float time)
         float position = frac(pixel.x / scratchSpacing);
         float width = lerp(minimumScratchWidth, maximumScratchWidth, Hash(float2(column, frame + 7.3f)));
         float center = lerp(0.18f, 0.82f, Hash(float2(column, frame + 31.4f)));
-        // Subpixel scratches need a pixel-sized feather; otherwise the line can miss every pixel.
+
+        // サブピクセルの傷には、ピクセル大のぼかしが必要。ないと線がどのピクセルにも掛からないことがある
         float softness = max(scratchSoftness, 0.6f / max(scratchSpacing, 1.0f));
         float scratchAmount = 1.0f - smoothstep(width, width + softness, abs(position - center));
         float verticalCell = pixel.y / 180.0f;
         float verticalBlend = frac(verticalCell);
         verticalBlend = verticalBlend * verticalBlend * (3 - 2 * verticalBlend);
+
         float wear = lerp(Hash(float2(column + floor(verticalCell), frame + 13.1f)),
             Hash(float2(column + floor(verticalCell) + 1, frame + 13.1f)), verticalBlend);
         float verticalFade = lerp(minimumVerticalFade, 1.0f, smoothstep(0.2f, 0.8f, wear));

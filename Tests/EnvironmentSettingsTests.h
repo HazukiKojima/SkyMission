@@ -19,6 +19,7 @@ void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture
 		std::ifstream file(path);
 		return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
 	};
+
 	const auto originalOcean = read(assets / L"Environment/Ocean/Ocean.json");
 	const auto originalSky = read(assets / L"Environment/Sky/sky.json");
 	const auto load = [&]() {
@@ -28,6 +29,7 @@ void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture
 			.retroFilm = assets / L"Environment/retroFilm.json",
 			.bomb = assets / L"Ammunition/Bomb/ammunition.json"});
 	};
+
 	const auto replace = [](std::string text, const std::string& field, const std::string& value) {
 		const auto key = text.find(char(34) + field + char(34));
 		Require(key != std::string::npos, "Environment fixture field missing");
@@ -37,6 +39,7 @@ void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture
 		text.replace(begin, end - begin, " " + value);
 		return text;
 	};
+
 	const auto reject = [&](bool ocean, const std::string& field, const std::string& value) {
 		std::ofstream(oceanPath) << (ocean ? replace(originalOcean, field, value) : originalOcean);
 		std::ofstream(skyPath) << (!ocean ? replace(originalSky, field, value) : originalSky);
@@ -48,8 +51,10 @@ void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture
 			rejected = message.find(field) != std::string::npos &&
 				message.find(ocean ? "ocean.json" : "sky.json") != std::string::npos;
 		}
+
 		Require(rejected, "Invalid environment value did not report field and source file");
 	};
+
 	for (const auto& field :
 		{"size", "waveLength", "normalUvScale", "wavePatternUvScale", "edgeFadeWidth", "fogTop"})
 		reject(true, field, "0");
@@ -67,6 +72,7 @@ void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture
 	std::ofstream(oceanPath) << replace(replace(originalOcean, "waveSteepness", "0"), "fogDensity", "0");
 	std::ofstream(skyPath) << originalSky;
 	Require(load().environment.ocean.fogDensity == 0, "Valid flat water or disabled fog was rejected");
+
 	for (float invalid :
 		{0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()}) {
 		bool rejected = false;
@@ -75,8 +81,10 @@ void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture
 		} catch (const std::invalid_argument&) {
 			rejected = true;
 		}
+
 		Require(rejected, "CPU wave calculation accepted invalid wavelength");
 	}
+
 	Require(std::isfinite(OceanGeometry::CalculateWaveHeight(1, 1, 1, 100, 0)),
 		"Flat ocean wave height was not finite");
 	std::cout << "PASS: environment ranges, JSON field/path diagnostics and CPU wavelength guard"

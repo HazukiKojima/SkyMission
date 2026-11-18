@@ -37,6 +37,7 @@ namespace Engine {
 	  public:
 		void Record(const FrameContext& frame) const;
 	};
+
 	class CloudRenderPass {
 	  public:
 		void Record(const FrameContext& frame) const;

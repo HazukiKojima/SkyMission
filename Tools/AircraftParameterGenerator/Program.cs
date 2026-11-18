@@ -47,6 +47,7 @@ static void WriteGeneratedFile(string path, string content)
 {
     string outputPath = Path.GetFullPath(path);
     Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+
     if (File.Exists(outputPath) && File.ReadAllText(outputPath) == content)
     {
         return;
@@ -67,10 +68,12 @@ static class CppGenerator
         source.AppendLine("#include <type_traits>");
         source.AppendLine();
         source.AppendLine($"static_assert(std::is_standard_layout_v<{qualifiedName}>);");
+
         for (int index = 0; index < fields.Count; index++)
         {
             source.AppendLine($"static_assert(offsetof({qualifiedName}, {fields[index].Name}) == {fields[index].Offset} * sizeof(float));");
         }
+
         source.AppendLine($"static_assert(sizeof({qualifiedName}) == {fields.Sum(field => field.Length)} * sizeof(float));");
         return source.ToString();
     }
@@ -88,28 +91,35 @@ static class CSharpGenerator
         source.AppendLine($"    public const int FieldCount = {fields.Sum(field => field.Length)};");
         source.AppendLine("    public static readonly string[] FieldNames =");
         source.AppendLine("    {");
+
         foreach (Field field in fields)
         {
             source.AppendLine($"        \"{field.Name}\",");
         }
+
         source.AppendLine("    };");
         source.AppendLine("    public static readonly int[] FieldLengths =");
         source.AppendLine("    {");
+
         foreach (Field field in fields)
         {
             source.AppendLine($"        {field.Length},");
         }
+
         source.AppendLine("    };");
         source.AppendLine();
+
         foreach (Field field in fields)
         {
             source.AppendLine(field.Length == 1
                 ? $"    public float {field.Name} {{ get; set; }}"
                 : $"    public float[] {field.Name} {{ get; set; }} = new float[{field.Length}];");
         }
+
         source.AppendLine();
         source.AppendLine("    public float[] ToFloatArray() => new float[]");
         source.AppendLine("    {");
+
         foreach (Field field in fields)
         {
             for (int index = 0; index < field.Length; index++)
@@ -119,6 +129,7 @@ static class CSharpGenerator
                     : $"        {field.Name}[{index}],");
             }
         }
+
         source.AppendLine("    };");
         source.AppendLine("}");
         return source.ToString();
@@ -132,6 +143,7 @@ static class CppStructParser
     public static IReadOnlyList<Field> ParseFloatFields(string source, string structName)
     {
         List<string> tokens = Tokenize(source);
+
         for (int index = 0; index < tokens.Count - 2; index++)
         {
             if (tokens[index] != "struct" || tokens[index + 1] != structName)
@@ -140,6 +152,7 @@ static class CppStructParser
             }
 
             index += 2;
+
             if (tokens[index] != "{")
             {
                 throw new FormatException($"Expected '{{' after struct {structName}.");
@@ -148,45 +161,57 @@ static class CppStructParser
             var fields = new List<Field>();
             var names = new HashSet<string>(StringComparer.Ordinal);
             index++;
+
             while (index < tokens.Count && tokens[index] != "}")
             {
                 string type = tokens[index++];
+
                 if (index >= tokens.Count)
                 {
                     throw new FormatException($"Unexpected end of struct {structName}.");
                 }
+
                 string field = tokens[index++];
                 int length = 1;
+
                 if (index < tokens.Count && tokens[index] == "[")
                 {
                     index++;
+
                     if (index >= tokens.Count || !int.TryParse(tokens[index++], out length) || length <= 0 ||
                         index >= tokens.Count || tokens[index++] != "]")
                     {
                         throw new FormatException($"Field '{field}' must use a positive fixed array length.");
                     }
                 }
+
                 if (type != "float")
                 {
                     throw new FormatException($"Unsupported C++ type '{type}' for field '{field}'. Only float is supported.");
                 }
+
                 if (!IsIdentifier(field) || !names.Add(field))
                 {
                     throw new FormatException($"Invalid or duplicate field name '{field}'.");
                 }
+
                 if (index < tokens.Count && tokens[index] == "=")
                 {
                     index++;
+
                     if (index >= tokens.Count || !IsFloatLiteral(tokens[index]))
                     {
                         throw new FormatException($"Field '{field}' must use a numeric float initializer.");
                     }
+
                     index++;
                 }
+
                 if (index >= tokens.Count || tokens[index] != ";")
                 {
                     throw new FormatException($"Expected ';' after field '{field}'.");
                 }
+
                 index++;
                 fields.Add(new Field(field, length, fields.Sum(item => item.Length)));
             }
@@ -204,41 +229,53 @@ static class CppStructParser
     private static List<string> Tokenize(string source)
     {
         var tokens = new List<string>();
+
         for (int index = 0; index < source.Length;)
         {
             char current = source[index];
+
             if (char.IsWhiteSpace(current))
             {
                 index++;
                 continue;
             }
+
             if (current == '/' && index + 1 < source.Length && source[index + 1] == '/')
             {
                 index += 2;
+
                 while (index < source.Length && source[index] != '\n') index++;
                 continue;
             }
+
             if (current == '/' && index + 1 < source.Length && source[index + 1] == '*')
             {
                 int end = source.IndexOf("*/", index + 2, StringComparison.Ordinal);
+
                 if (end < 0) throw new FormatException("Unterminated C++ block comment.");
+
                 index = end + 2;
                 continue;
             }
+
             if (char.IsLetter(current) || current == '_')
             {
                 int start = index++;
+
                 while (index < source.Length && (char.IsLetterOrDigit(source[index]) || source[index] == '_')) index++;
                 tokens.Add(source[start..index]);
                 continue;
             }
+
             if (char.IsDigit(current) || current == '-' && index + 1 < source.Length && char.IsDigit(source[index + 1]))
             {
                 int start = index++;
+
                 while (index < source.Length && (char.IsLetterOrDigit(source[index]) || source[index] is '.' or '+' or '-')) index++;
                 tokens.Add(source[start..index]);
                 continue;
             }
+
             tokens.Add(current.ToString());
             index++;
         }

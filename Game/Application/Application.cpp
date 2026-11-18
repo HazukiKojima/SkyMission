@@ -21,7 +21,6 @@ namespace Game {
 
 	Application::~Application() {}
 
-	// アプリケーション初期化処理
 	void Application::Initialize() {
 		StartupTiming timing("application.window_and_json");
 		const auto startupTime = std::chrono::steady_clock::now();
@@ -54,22 +53,28 @@ namespace Game {
 			} comScope;
 			m_renderer->Initialize(hwnd, width, height, assets.BuildRendererDefinition());
 		});
-		// DXGI may send window messages during swap-chain creation, so keep the UI thread pumping.
+
+		// スワップチェーン作成中にDXGIがウィンドウメッセージを送るため、UIスレッドで処理し続ける
 		while (loading.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
 			MSG message{};
+
 			while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
 				TranslateMessage(&message);
 				DispatchMessageW(&message);
 			}
+
 			MsgWaitForMultipleObjectsEx(0, nullptr, 16, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 		}
-		loading.get(); // Propagate initialization errors after the worker has stopped.
+
+		loading.get(); // ワーカー停止後に、初期化エラーを呼び出し元へ伝播する
 		m_window->SetLoading(false);
+
 		if (!m_window->GetHandle()) return;
 		if (width != m_window->GetWidth() || height != m_window->GetHeight()) {
 			if (m_window->GetWidth() && m_window->GetHeight())
 				m_renderer->Resize(m_window->GetWidth(), m_window->GetHeight());
 		}
+
 		m_windowTitle = L"SkyMission | GPU: " + m_renderer->GetAdapterName();
 		SetWindowTextW(m_window->GetHandle(), m_windowTitle.c_str());
 
@@ -85,6 +90,7 @@ namespace Game {
 
 	void Application::InitializeFlightScene(const FlightSceneDefinition& assets) {
 		m_captureShipModels.clear();
+
 		for (const auto& ship : assets.ships)
 			m_captureShipModels.push_back(m_renderer->GetModel(ship.asset.id));
 		m_hudPresenter.Configure(assets.hud);
@@ -116,9 +122,7 @@ namespace Game {
 	}
 
 	void Application::ConfigureResizeHandling() {
-		// ウィンドウリサイズ時のコールバックを設定
 		m_window->SetOnResize([this](UINT w, UINT h) {
-			// 最小化などで幅/高さが0のときは処理しない
 			if (w == 0 || h == 0) return;
 
 			m_renderer->Resize(w, h);
@@ -129,10 +133,10 @@ namespace Game {
 		});
 	}
 
-	// メインループ（メッセージ処理と更新/描画）
 	int Application::Run() {
 		MSG msg = {};
 		bool suspended = false;
+
 		while (msg.message != WM_QUIT) {
 			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 				TranslateMessage(&msg);
@@ -152,6 +156,7 @@ namespace Game {
 					suspended = false;
 					m_combatAudio.SetSuspended(false);
 				}
+
 				Update();
 				Render();
 			}
@@ -167,10 +172,12 @@ namespace Game {
 		float deltaSeconds = dt.count();
 		m_fpsTimer += deltaSeconds;
 		++m_fpsFrameCount;
+
 		if (m_fpsTimer >= 0.25f) {
 			const float fps = static_cast<float>(m_fpsFrameCount) / m_fpsTimer;
 			std::wstring title = m_windowTitle + L" | FPS: " + std::to_wstring(static_cast<int>(fps + 0.5f));
 			const auto& gpu = m_renderer->GetGpuTimings();
+
 			if (gpu.valid)
 				title +=
 					std::format(L" | GPU {:.2f} ms (Sea {:.2f}, Models {:.2f}, Clouds {:.2f}, Post {:.2f})",
@@ -185,9 +192,11 @@ namespace Game {
 		if (m_scene) {
 			const InputSnapshot input = m_window->ConsumeInput();
 			m_combatAudio.SetSuspended(!input.active);
+
 			if (m_screen == Screen::Title || m_screen == Screen::Clear) {
 				if (input.active && input.WasKeyPressed(VK_RETURN)) {
 					m_combatAudio.ResetPlayback();
+
 					if (m_screen == Screen::Clear) {
 						m_screen = Screen::Title;
 					} else {
@@ -196,12 +205,14 @@ namespace Game {
 						m_captureMode = 0;
 					}
 				}
+
 				if (m_screen != Screen::Playing) {
 					m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 					BuildMenuHud();
 					return;
 				}
-				// 開始のEnterをオープニングのスキップ操作として再利用しない。
+
+				// 開始のEnterをオープニングのスキップ操作として再利用しない
 				m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 				m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
 				m_hudPresenter.Build(m_scene->GetCombatSnapshot(),
@@ -213,13 +224,16 @@ namespace Game {
 				m_captureMode = (m_captureMode + 1) % 3;
 				Log("Capture view: {} (0=normal, 1=environment+ships, 2=environment)\n", m_captureMode);
 			}
+
 			auto combat = CombatController{}.ReadInput(input);
+
 			if (m_scene->GetCombatSnapshot().result == CombatResult::Victory) combat.retry = false;
 			const float simulationSeconds =
 				m_scene->GetCombatSnapshot().cinematic.active && !input.active ? 0 : deltaSeconds;
 			const bool endingWasActive = m_scene->GetCombatSnapshot().cinematic.active &&
 				m_scene->GetCombatSnapshot().cinematic.cinematicId == "ending";
 			m_scene->Update(m_aircraftController.ReadInput(input), simulationSeconds, input, combat);
+
 			if (endingWasActive && !m_scene->GetCombatSnapshot().cinematic.active &&
 				m_scene->GetCombatSnapshot().result == CombatResult::Victory) {
 				m_screen = Screen::Clear;
@@ -229,15 +243,19 @@ namespace Game {
 				BuildMenuHud();
 				return;
 			}
+
 			const auto& combatState = m_scene->GetCombatSnapshot();
+
 			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();
 			const auto voice = m_combatAudio.UpdateCinematic(combatState.cinematic);
 			m_combatAudio.UpdateEnemyRadio(combatState.enemyRadio);
 			m_scene->UpdateCinematicBriefing(voice, input.active ? deltaSeconds : 0);
 			m_combatAudio.Update(combatState.audio, combatState.hitCount, false, false, deltaSeconds);
 			const auto view = m_renderer->UpdateFrameConstants(PrepareCaptureScene(), m_elapsedTime);
+
 			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
 			m_hud.Reset(view.width, view.height);
+
 			if (m_captureMode == 0) {
 				if (!m_scene->GetCombatSnapshot().cinematic.active)
 					m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);
@@ -255,6 +273,7 @@ namespace Game {
 			m_hud.Text({(width - HudDrawList::MeasureTextWidth(text, size)) * 0.5f, y},
 				text, size, {1, 1, 1, 1});
 		};
+
 		centered(m_screen == Screen::Title ? "SkyMission" : "ミッションクリア",
 			height * 0.4f, 48 * scale);
 		centered(m_screen == Screen::Title ? "エンターキーでスタート" : "エンターでタイトルに戻る",
@@ -263,23 +282,27 @@ namespace Game {
 
 	const Engine::Scene& Application::PrepareCaptureScene() {
 		const auto& source = m_scene->GetRenderScene();
+
 		if (m_captureMode == 0) return source;
-		// Build a render-only scene; gameplay objects, damage and mission state stay intact.
+
+		// 描画専用のシーンを作る。ゲーム内オブジェクト、被害、ミッション状態は変更しない
 		m_captureScene = Engine::Scene{};
 		m_captureScene.SetCamera(source.GetCamera());
 		m_captureScene.SetEnvironment(source.GetEnvironment());
+
 		if (m_captureMode == 1) {
 			for (const auto& object : m_scene->GetObjects()) {
 				if (std::find(m_captureShipModels.begin(), m_captureShipModels.end(), object.model) ==
 					m_captureShipModels.end()) continue;
+
 				const auto id = m_captureScene.AddObject(object.model, object.worldTransform);
+
 				if (auto* copy = m_captureScene.FindObject(id)) copy->nodeRotationRadians = object.nodeRotationRadians;
 			}
 		}
 		return m_captureScene;
 	}
 
-	// 描画処理（レンダリングコマンド発行）
 	void Application::Render() {
 		const auto& scene = m_captureMode == 0 ? m_scene->GetRenderScene() : m_captureScene;
 		m_renderer->Render(m_window->GetWidth(), m_window->GetHeight(), scene,

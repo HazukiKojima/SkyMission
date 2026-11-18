@@ -25,6 +25,7 @@ namespace Game {
 
 		// 経過時間を制限し、最大1/60秒刻みで挙動を安定させる
 		float remainingSeconds = std::min(deltaSeconds, kMaximumFrameSeconds);
+
 		while (remainingSeconds > 0.0f) {
 			const float step = std::min(remainingSeconds, kPhysicsStepSeconds);
 			remainingSeconds -= step;
@@ -103,18 +104,21 @@ namespace Game {
 		const float levelRoll = std::cos(m_pitch) < 0.0f ? XM_PI : 0.0f;
 		const float currentRoll = m_roll;
 		float turnRollBase = levelRoll;
+
 		if (pitchInputActive) turnRollBase = std::cos(currentRoll) < 0.0f ? XM_PI : 0.0f;
 		const float turnDirection = OrientationSign(turnRollBase);
 		const float turnBank = std::clamp(
 			-m_turnControl * turnDirection * m_flightParameters.maximumBankRadians * state.turnSpeedFactor,
 			-m_flightParameters.maximumBankRadians, m_flightParameters.maximumBankRadians);
 		float targetRoll = levelRoll;
+
 		if (turnInputActive)
 			targetRoll = turnRollBase + turnBank;
 		else if (pitchInputActive)
 			targetRoll = currentRoll;
 		const float rollResponse =
 			turnInputActive ? m_flightParameters.rollInputResponse : m_flightParameters.rollLevelRate;
+
 		// 旋回中は目標バンクへ追従し、入力がないときは水平姿勢へ戻す
 		const float rollDifference = std::remainder(targetRoll - m_roll, XM_2PI);
 		const float nearLevelingFactor = state.autoRollCorrection
@@ -136,6 +140,7 @@ namespace Game {
 				(bankYawRate + m_yawControl * m_flightParameters.yawRateRadians) * state.angleControl *
 					state.turnSpeedFactor * state.highGTurnFactor * deltaSeconds,
 			XM_2PI);
+
 		// 制御角から姿勢用の正規化クォータニオンを生成する
 		XMStoreFloat4(
 			&m_attitude, XMQuaternionNormalize(XMQuaternionRotationRollPitchYaw(m_pitch, m_yaw, m_roll)));
@@ -158,6 +163,7 @@ namespace Game {
 		const XMFLOAT3 forwardValue = GetForwardForAttitude();
 		const XMVECTOR aircraftForward = XMLoadFloat3(&forwardValue);
 		const XMVECTOR up = XMLoadFloat3(&state.liftUp);
+
 		// 迎角と速度に応じた揚力を求め、推力・重力・飛行経路補正と合成する
 		const float angleLift = AngleResponse(state.angleOfAttack, m_flightParameters, 0.0f);
 		const float speedRatio = state.speed / m_flightParameters.liftReferenceSpeed;
@@ -172,6 +178,7 @@ namespace Game {
 			XMVectorSet(0.0f, -m_flightParameters.gravity, 0.0f, 0.0f) +
 			aircraftForward * (m_throttleControl * m_flightParameters.acceleration) + flightPathAcceleration;
 		XMStoreFloat3(&acceleration, totalAcceleration);
+
 		// バンク旋回とハイG入力は抗力を増加させる
 		drag = m_flightParameters.drag + m_flightParameters.turnDrag * state.bankLoad * state.bankLoad +
 			m_flightParameters.highGDrag * state.highGIntensity * state.turnIntent;
@@ -182,6 +189,7 @@ namespace Game {
 		XMVECTOR velocity = XMLoadFloat3(&m_velocity) + XMLoadFloat3(&acceleration) * deltaSeconds;
 		velocity *= std::exp(-drag * deltaSeconds);
 		const float updatedSpeed = XMVectorGetX(XMVector3Length(velocity));
+
 		// 速度上限を守り、下限を割った場合は直前の機首方向へ戻す
 		if (updatedSpeed > m_flightParameters.maximumSpeed) {
 			velocity = XMVector3Normalize(velocity) * m_flightParameters.maximumSpeed;
@@ -236,6 +244,7 @@ namespace Game {
 		XMFLOAT3 forward = GetForward();
 		forward.y = 0.0f;
 		const XMVECTOR horizontalForward = XMLoadFloat3(&forward);
+
 		if (XMVectorGetX(XMVector3LengthSq(horizontalForward)) > 0.0001f) {
 			XMFLOAT3 heading;
 			XMStoreFloat3(&heading, XMVector3Normalize(horizontalForward));

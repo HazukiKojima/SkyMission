@@ -179,6 +179,7 @@ public static unsafe class REDoxApi
     public static int MyRedoxGetRetroFilmParametersFromDocument(nint handle, float* output, int outputCapacity)
     {
         if (handle == 0 || output == null || outputCapacity != 52) return InvalidArguments;
+
         lock (DocumentLock)
         {
             return Documents.TryGetValue(handle, out ParsedJsonDocument? document)
@@ -193,6 +194,7 @@ public static unsafe class REDoxApi
         try
         {
             REDox.DElement root = document.RootElement;
+
             if (root.ValueKind != JsonValueKind.Object ||
                 !TryGetObject(root, "colorGrading", out REDox.DElement colorGrading) ||
                 !TryGetObject(colorGrading, "blackLift", out REDox.DElement blackLift) ||
@@ -225,6 +227,7 @@ public static unsafe class REDoxApi
                 AppendNumber(scratch, "intensity", values, ref index) && AppendNumber(flicker, "fps", values, ref index) &&
                 AppendNumber(flicker, "amplitude", values, ref index) && AppendArray(root, "overlayColor", 3, values, ref index);
             if (!valid || index != parameterCount - 2) return InvalidValue;
+
             values[index++] = 0.0f;
             values[index++] = 0.0f;
             values.CopyTo(new Span<float>(output, outputCapacity));
@@ -279,6 +282,7 @@ public static unsafe class REDoxApi
     {
         if (jsonUtf8 == null || jsonLength <= 0 || output == null || outputCapacity != layout.ValueCount)
             return InvalidArguments;
+
         JsonDocument document;
         try { document = JsonDocument.Parse(new ReadOnlySpan<byte>(jsonUtf8, jsonLength)); }
         catch { return InvalidJson; }
@@ -289,6 +293,7 @@ public static unsafe class REDoxApi
                 // エラー時に呼び出し元の出力を途中まで書き換えない
                 Span<float> values = outputCapacity <= 256 ? stackalloc float[outputCapacity] : new float[outputCapacity];
                 int result = layout.Read(document, values);
+
                 if (result > 0) values.CopyTo(new Span<float>(output, outputCapacity));
                 return result;
             }
@@ -300,6 +305,7 @@ public static unsafe class REDoxApi
         nint handle, float* output, int outputCapacity, NumericParameterLayout layout)
     {
         if (handle == 0 || output == null || outputCapacity != layout.ValueCount) return InvalidArguments;
+
         try
         {
             lock (DocumentLock)
@@ -318,6 +324,7 @@ public static unsafe class REDoxApi
     {
         if (handle == 0 || keyUtf8 == null || keyLength <= 0 || output == null || outputCapacity <= 0)
             return InvalidArguments;
+
         try
         {
             ReadOnlySpan<byte> key = new(keyUtf8, keyLength);
@@ -334,22 +341,31 @@ public static unsafe class REDoxApi
     private static int ReadFloatArray(JsonDocument document, ReadOnlySpan<byte> key, float* output, int outputCapacity)
     {
         int lookup = FindValue(document, key, out REDox.DElement value);
+
         if (lookup < 0) return lookup;
+
         Span<float> values = outputCapacity <= 256 ? stackalloc float[outputCapacity] : new float[outputCapacity];
+
         if (value.ValueKind == JsonValueKind.Number)
         {
             if (!value.TryGetSingle(out float number) || !float.IsFinite(number)) return InvalidValue;
+
             values[0] = number;
             values[..1].CopyTo(new Span<float>(output, outputCapacity));
             return 1;
         }
+
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() > outputCapacity) return InvalidValue;
+
         int index = 0;
+
         foreach (REDox.DElement element in value.EnumerateArray())
         {
             if (!element.TryGetSingle(out float number) || !float.IsFinite(number)) return InvalidValue;
+
             values[index++] = number;
         }
+
         values[..index].CopyTo(new Span<float>(output, outputCapacity));
         return index;
     }
@@ -360,6 +376,7 @@ public static unsafe class REDoxApi
     {
         if (handle == 0 || keyUtf8 == null || keyLength <= 0 || output == null || outputCapacity <= 0)
             return InvalidArguments;
+
         try
         {
             ReadOnlySpan<byte> key = new(keyUtf8, keyLength);
@@ -376,12 +393,18 @@ public static unsafe class REDoxApi
     private static int ReadString(JsonDocument document, ReadOnlySpan<byte> key, byte* output, int outputCapacity)
     {
         int lookup = FindValue(document, key, out REDox.DElement value);
+
         if (lookup < 0) return lookup;
         if (value.ValueKind != JsonValueKind.String) return InvalidValue;
+
         string? result = value.GetString();
+
         if (result == null) return InvalidValue;
+
         int requiredLength = Encoding.UTF8.GetByteCount(result);
+
         if (requiredLength > outputCapacity) return InvalidValue;
+
         Encoding.UTF8.GetBytes(result.AsSpan(), new Span<byte>(output, outputCapacity));
         return requiredLength;
     }
@@ -390,12 +413,16 @@ public static unsafe class REDoxApi
     private static int FindValue(JsonDocument document, ReadOnlySpan<byte> key, out REDox.DElement value)
     {
         value = document.RootElement;
+
         if (key[0] != (byte)'/')
             return value.TryGetProperty(key, out value) ? 0 : InvalidSchema;
+
         string path = Encoding.UTF8.GetString(key);
+
         foreach (string encoded in path[1..].Split('/'))
         {
             string part = encoded.Replace("~1", "/").Replace("~0", "~");
+
             if (value.ValueKind == JsonValueKind.Object)
             {
                 if (!value.TryGetProperty(part, out value)) return InvalidSchema;
@@ -404,7 +431,9 @@ public static unsafe class REDoxApi
             {
                 if (!int.TryParse(part, out int index) || index < 0 || index >= value.GetArrayLength())
                     return InvalidValue;
+
                 int current = 0;
+
                 foreach (REDox.DElement element in value.EnumerateArray())
                     if (current++ == index) { value = element; break; }
             }
@@ -417,12 +446,15 @@ public static unsafe class REDoxApi
     public static int MyRedoxGetArrayLengthFromDocument(nint handle, byte* keyUtf8, int keyLength)
     {
         if (handle == 0 || keyUtf8 == null || keyLength <= 0) return InvalidArguments;
+
         try
         {
             lock (DocumentLock)
             {
                 if (!Documents.TryGetValue(handle, out ParsedJsonDocument? document)) return InvalidArguments;
+
                 int lookup = FindValue(document.Document, new ReadOnlySpan<byte>(keyUtf8, keyLength), out var value);
+
                 if (lookup < 0) return lookup;
                 return value.ValueKind == JsonValueKind.Array ? value.GetArrayLength() : InvalidValue;
             }
@@ -484,12 +516,14 @@ public static unsafe class REDoxApi
                 }
 
                 int index = 0;
+
                 foreach (var element in value.EnumerateArray())
                 {
                     if (!element.TryGetSingle(out output[index]) || !float.IsFinite(output[index]))
                     {
                         return InvalidValue;
                     }
+
                     index++;
                 }
                 return index;

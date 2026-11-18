@@ -11,11 +11,14 @@ namespace Game {
 		if (!std::isfinite(reloadSeconds) || reloadSeconds < 1 ||
 			reloadSeconds > BombTuning::lifetimeSeconds || !model)
 			throw std::invalid_argument("Bomb requires a model and reload interval in [1,120]");
+
 		const auto forward = XMLoadFloat3(&modelForward);
 		const float length = XMVectorGetX(XMVector3Length(forward));
+
 		if (!std::isfinite(length) || length < 0.001f)
 			throw std::invalid_argument("Bomb modelForward must be finite and nonzero");
 		if (!m_bombs.empty()) throw std::logic_error("Cannot configure active bombs");
+
 		m_model = std::move(model);
 		XMStoreFloat3(&m_modelForward, XMVector3Normalize(forward));
 		m_reloadSeconds = reloadSeconds;
@@ -37,6 +40,7 @@ namespace Game {
 
 	bool BombSystem::TryDrop(Engine::Scene& scene, const XMFLOAT3& position, const XMFLOAT3& velocity) {
 		if (!m_model || m_cooldownSeconds > 0) return false;
+
 		const auto flight = ReleaseFlight(position, velocity);
 		m_bombs.push_back({scene.AddObject(m_model,
 							   BuildProjectileTransform(flight.position, flight.velocity, m_modelForward)),
@@ -47,6 +51,7 @@ namespace Game {
 
 	void BombSystem::Update(Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& deck) {
 		if (!std::isfinite(dt) || dt <= 0) return;
+
 		dt = std::min(dt, 0.25f);
 		m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
 		std::erase_if(m_bombs, [&](Bomb& bomb) {
@@ -55,6 +60,7 @@ namespace Game {
 			const float valid = seaTime ? std::min(dt, *seaTime) : dt;
 			bomb.flight.Advance(valid);
 			bomb.remainingSeconds -= dt;
+
 			if (deck) {
 				if (const auto contact = IntersectMovingTarget(start, bomb.flight.position, *deck, 0, 1)) {
 					XMFLOAT3 point;
@@ -71,11 +77,13 @@ namespace Game {
 					return true;
 				}
 			}
+
 			if (bomb.flight.position.y <= 0.001f || bomb.remainingSeconds <= 0) {
 				m_missImpacts.push_back(bomb.flight.position);
 				scene.RemoveObject(bomb.id);
 				return true;
 			}
+
 			if (auto* object = scene.FindObject(bomb.id))
 				object->worldTransform =
 					BuildProjectileTransform(bomb.flight.position, bomb.flight.velocity, m_modelForward);
@@ -88,6 +96,7 @@ namespace Game {
 		m_hits.clear();
 		return hits;
 	}
+
 	std::vector<XMFLOAT3> BombSystem::TakeMissImpacts() {
 		auto impacts = std::move(m_missImpacts);
 		m_missImpacts.clear();

@@ -3,16 +3,19 @@
 
 void TestPreparedModelCache(const fs::path& repository, const fs::path& fixture) {
 	using namespace Engine::ModelProcessing;
+
 	const auto source = fixture / (L"prepared-model-" + std::to_wstring(GetTickCount64()) + L".fbx");
 	fs::copy_file(repository / L"Assets/Aircraft/N1K2JShidenKai/N1K2JShidenKai.fbx", source);
 	const auto directory = fs::temp_directory_path() / L"SkyMissionModelCache";
 	const auto files = [&] {
 		std::vector<fs::path> paths;
 		std::error_code error;
+
 		for (const auto& entry : fs::directory_iterator(directory, error))
 			if (entry.path().extension() == L".geometry") paths.push_back(entry.path());
 		return paths;
 	};
+
 	const auto previous = files();
 	ModelLoadOptions options;
 	options.rotatingNodeName = "Propeller";
@@ -33,6 +36,7 @@ void TestPreparedModelCache(const fs::path& repository, const fs::path& fixture)
 					0,
 			"Prepared cache changed muzzle/node positions");
 	}
+
 	for (size_t i = 0; i < first.materials.size(); ++i)
 		Require(first.materials[i].name == second.materials[i].name &&
 				first.materials[i].textures == second.materials[i].textures,
@@ -54,6 +58,7 @@ void TestPreparedModelCache(const fs::path& repository, const fs::path& fixture)
 				"Prepared cache changed vertices, topology, material assignment or propeller animation");
 		}
 	}
+
 	const auto current = files();
 	const auto created = std::find_if(current.begin(), current.end(), [&](const auto& path) {
 		return std::find(previous.begin(), previous.end(), path) == previous.end();

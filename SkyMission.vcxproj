@@ -623,4 +623,28 @@
     <None Include="Assets\Sound\audio.json" />
     <None Include="Assets\UI\labels.json" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Input\RawInputState.cpp" />
+    <ClCompile Include="Engine\Interop\Redox\RedoxBridge.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\GpuFrameProfiler.cpp" />
+    <ClCompile Include="Engine\Renderer\Device\RenderVisibility.cpp" />
+    <ClCompile Include="Engine\ExecutablePath.cpp" />
+    <ClCompile Include="Game\Aircraft\ValidateFlightParameters.cpp" />
+    <ClCompile Include="Game\Combat\EnemyGunBehavior.cpp" />
+    <ClCompile Include="Game\Combat\EnemyRadio.cpp" />
+    <ClCompile Include="Game\Combat\MissionState.cpp" />
+    <ClCompile Include="Game\Settings\GameplaySettings.cpp" />
+    <ClCompile Include="Game\Settings\SettingsReader.cpp" />
+    <ClCompile Include="Game\Settings\UiTextSettings.cpp" />
+    <ClCompile Include="Game\Effects\CombatEffectSettings.cpp" />
+    <ClCompile Include="Game\Weapons\BombFlight.cpp" />
+    <ClCompile Include="Game\UI\RadioCaptionPresenter.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\StartupTiming.cpp" />
+    <ClCompile Include="Engine\Resources\Buffer\BufferUtilities.cpp" />
+    <ClCompile Include="Engine\Renderer\Hud\HudFont.cpp" />
+    <ClCompile Include="Game\Weapons\ProjectilePose.cpp" />
+    <ClCompile Include="Game\Weapons\WeaponDefinition.cpp" />
+  </ItemGroup>
 </Project>

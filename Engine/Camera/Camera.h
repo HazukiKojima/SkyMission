@@ -10,23 +10,29 @@ namespace Engine {
 		void Initialize(float fovY = DirectX::XM_PIDIV4, float aspect = 16.0f / 9.0f, float nearZ = 0.1f,
 			float farZ = 1000.0f);
 		void OnResize(UINT width, UINT height);
+
 		void SetVerticalFov(float fovY) {
 			m_fovY = fovY;
 			UpdateProjection();
 		}
+
 		void LookAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target);
 		void LookTo(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& direction);
+
 		DirectX::XMMATRIX GetView() const {
 			return m_view;
 		}
+
 		DirectX::XMMATRIX GetProjection() const {
 			return m_proj;
 		}
+
 		// 遠クリップだけを差し替えた行列を返す。保持している射影設定は変更しない
 		DirectX::XMMATRIX GetProjection(float farZ) const {
 			return farZ > m_nearZ ? DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, farZ)
 								  : m_proj;
 		}
+
 		DirectX::XMFLOAT3 GetPosition() const {
 			return m_position;
 		}

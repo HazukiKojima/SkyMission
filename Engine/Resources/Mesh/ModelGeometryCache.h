@@ -4,11 +4,12 @@
 #include <filesystem>
 
 namespace Engine::ModelProcessing {
-	// Material names and original references only; texture lookup/decoding still runs on every load.
+	// マテリアル名と元の参照だけ。テクスチャの探索とデコードは毎回行う
 	struct PreparedMaterial {
 		std::string name;
-		std::array<std::string, 5> textures; // base color, diffuse, metalness, roughness, normals
+		std::array<std::string, 5> textures; // ベースカラー、ディフューズ、メタルネス、ラフネス、法線の順
 	};
+
 	struct PreparedModelGeometry {
 		bool loadedFromCache = false;
 		std::array<std::vector<MeshGeometry>, 3> levels;

@@ -5,7 +5,7 @@
 
 namespace {
 	namespace Binding = Engine::RootBinding;
-	// ルートシグネチャを生成するヘルパー
+
 	// srvCount: ルートテーブル内のSRV数
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRootSignatureWithSrvCount(ID3D12Device* device,
 		UINT srvCount, D3D12_TEXTURE_ADDRESS_MODE addressMode, Engine::RootSignatureLayout layout) {
@@ -18,6 +18,7 @@ namespace {
 			0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 		// ノード回転を使うモデルのみ、頂点シェーダーのb1に回転定数を追加する
 		const bool nodeRotation = layout == Engine::RootSignatureLayout::NodeRotation;
+
 		if (nodeRotation)
 			rootParams[Binding::NodeRotation].InitAsConstants(
 				Binding::NodeRotationDwords, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
@@ -64,7 +65,6 @@ namespace {
 		return rootSignature;
 	}
 
-	// グラフィックスパイプラインステートを生成するヘルパー
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device* device,
 		ID3D12RootSignature* rootSignature, ID3DBlob* vertexShader, ID3DBlob* pixelShader,
 		const Engine::PipelineOptions& options) {
@@ -89,7 +89,6 @@ namespace {
 
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-		// ラスタライザ設定
 		CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
 
 		// Assimpでモデルの座標系と巻き順を左手座標系へ変換済み
@@ -97,7 +96,6 @@ namespace {
 
 		psoDesc.RasterizerState = rasterizerDesc;
 
-		// ブレンド設定
 		CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
 		if (options.alphaBlend) {
 			blendDesc.RenderTarget[0].BlendEnable = TRUE;
@@ -142,6 +140,7 @@ namespace Engine {
 			device, options.srvCount, options.addressMode, options.rootLayout);
 		const auto directory = ShaderDirectory();
 		ComPtr<ID3DBlob> vertexShader, pixelShader;
+
 		const auto loadShader = [&](const std::wstring& path, ID3DBlob** blob) {
 			const auto absolute = directory / std::filesystem::path(path);
 			const HRESULT result = D3DReadFileToBlob(absolute.c_str(), blob);
@@ -154,6 +153,7 @@ namespace Engine {
 
 			ThrowIfFailed(result);
 		};
+
 		loadShader(options.vs, &vertexShader);
 		loadShader(options.ps, &pixelShader);
 		m_pso = CreatePipelineState(

@@ -20,6 +20,7 @@ namespace Engine {
 				nullSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 				nullSrv.Texture2D.MipLevels = 1;
 				device.GetDevice()->CreateShaderResourceView(nullptr, &nullSrv, handle);
+
 				const auto utf8 = path.u8string();
 				Log("RendererAssets: skipping missing texture {}\n",
 					std::string(reinterpret_cast<const char*>(utf8.data()), utf8.size()));
@@ -59,13 +60,14 @@ namespace Engine {
 		assert(m_oceanNormalTexture2SrvIndex == m_oceanTextureSrvIndex + 2);
 		m_skyTexture =
 			LoadTexture(*device, *context, assets.environment.skyTexture, {}, m_skyTextureSrvIndex);
-		// Submit bounded batches so upload heaps do not accumulate across all models.
+		// 全モデル分のアップロードヒープを溜めないよう、上限付きのバッチで送信する
 		const auto finishBatch = [&]() {
 			context->EndFrame();
 			context->WaitForGpu();
 			ReleaseUploadResources();
 			context->BeginFrame();
 		};
+
 		finishBatch();
 		for (const auto& asset : assets.models) {
 			const auto started = std::chrono::steady_clock::now();

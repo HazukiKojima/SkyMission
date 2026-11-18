@@ -15,9 +15,12 @@ internal sealed class ParsedJsonDocument(JsonDocument document) : IDisposable
         {
             values = new float[layout.ValueCount];
             int result = layout.Read(Document, values);
+
             if (result < 0) return result;
+
             _parameters.Add(layout, values);
         }
+
         values.AsSpan().CopyTo(output);
         return values.Length;
     }

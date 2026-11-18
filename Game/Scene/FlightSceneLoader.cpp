@@ -15,6 +15,7 @@
 
 namespace Game {
 	using namespace Engine;
+
 	namespace {
 
 		ModelLoadOptions LoadModelOptions(
@@ -26,6 +27,7 @@ namespace Game {
 					std::u8string(reinterpret_cast<const char8_t*>(value.data()), value.size()))
 					.wstring();
 			};
+
 			ModelLoadOptions options{.rotatingNodeName = reader.ResolveString(path, "propellerName"),
 				.textureDirectory = wide("textureDirectory"),
 				.baseColorStemSuffix = wide("baseColorStemSuffix"),
@@ -55,6 +57,7 @@ namespace Game {
 				.modelImport = LoadModelOptions(reader, path)};
 			if (!std::isfinite(aircraft.visualScale) || aircraft.visualScale <= 0)
 				throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
+
 			aircraft.animation.Load(reader, path);
 			ValidateFlightParameters(aircraft.flightParameters);
 			return aircraft;
@@ -62,12 +65,14 @@ namespace Game {
 
 		DirectX::XMFLOAT3 LoadModelForward(const JsonAssetReader& reader, const std::filesystem::path& path) {
 			const auto axis = reader.ResolveString(path, "modelForward");
+
 			if (axis == "+X") return {1, 0, 0};
 			if (axis == "-X") return {-1, 0, 0};
 			if (axis == "+Y") return {0, 1, 0};
 			if (axis == "-Y") return {0, -1, 0};
 			if (axis == "+Z") return {0, 0, 1};
 			if (axis == "-Z") return {0, 0, -1};
+
 			throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
 		}
 
@@ -78,16 +83,19 @@ namespace Game {
 				const auto text = path.u8string();
 				return std::string(reinterpret_cast<const char*>(text.data()), text.size());
 			};
+
 			WeaponDefinition definition;
 			definition.sourcePath = weaponPath;
 			try {
 				const char* muzzleKeys[] = {"muzzleL1", "muzzleL2", "muzzleR1", "muzzleR2"};
+
 				for (size_t i = 0; i < 4; ++i)
 					definition.gun.muzzleNames[i] = reader.ResolveString(weaponPath, muzzleKeys[i]);
 				definition.gun.fireInterval = reader.ResolveFloat(weaponPath, "fireInterval");
 				definition.gun.muzzleSpeed = reader.ResolveFloat(weaponPath, "muzzleSpeed");
 				definition.gun.lifetime = reader.ResolveFloat(weaponPath, "lifetime");
 				const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
+
 				if (!std::isfinite(capacity) || capacity < 4 || std::floor(capacity) != capacity ||
 					capacity > static_cast<float>(std::numeric_limits<int>::max() / 2))
 					throw std::invalid_argument(
@@ -97,6 +105,7 @@ namespace Game {
 			} catch (const std::exception& error) {
 				throw std::runtime_error(pathText(weaponPath) + ": " + error.what());
 			}
+
 			const auto ammoPath = reader.Resolve(weaponPath, "ammunition");
 			try {
 				definition.ammunition = {
@@ -123,15 +132,20 @@ namespace Game {
 				throw std::runtime_error(path.string() + ": " + error.what());
 			}
 		}
+
 		std::map<std::string, CinematicSettings> LoadCinematics(
 			const JsonAssetReader& reader, const std::filesystem::path& directory) {
 			const auto manifest = directory / L"cinematics.json";
+
 			if (!std::filesystem::exists(manifest))
 				return {{"opening", LoadCinematicSettings(reader, directory / L"opening.json")}};
+
 			std::map<std::string, CinematicSettings> result;
+
 			for (const auto* id : {"opening", "midMission", "reinforcements", "ending", "defeat", "patrolEncouragement", "patrolComplete", "carrierHit", "carrierComplete", "finalRally", "finalEncouragement"}) {
 				if (reader.TryResolveString(manifest, id)) {
 					const auto path = reader.Resolve(manifest, id);
+
 					if (!std::filesystem::is_regular_file(path))
 						throw std::runtime_error(
 							manifest.string() + ": missing cinematic '" + id + "': " + path.string());
@@ -207,6 +221,7 @@ namespace Game {
 		void RequireEnvironment(
 			const std::filesystem::path& path, const std::string& field, bool valid, const char* reason) {
 			if (valid) return;
+
 			const auto text = path.u8string();
 			throw std::runtime_error("JSON '" +
 				std::string(reinterpret_cast<const char*>(text.data()), text.size()) + "', field '" + field +
@@ -297,6 +312,7 @@ namespace Game {
 	} // namespace
 	DirectX::XMFLOAT4X4 ShipDefinition::BuildTransform() const {
 		using namespace DirectX;
+
 		XMFLOAT4X4 transform;
 		XMStoreFloat4x4(&transform,
 			XMMatrixScaling(size, size, size) *
@@ -310,23 +326,30 @@ namespace Game {
 		const JsonAssetReader& reader, const std::filesystem::path& path) {
 		try {
 			const float count = reader.ResolveFloat(path, "shipCount");
+
 			if (!std::isfinite(count) || count < 0 || count > 1024 || std::floor(count) != count)
 				throw std::runtime_error("shipCount must be an integer in [0,1024]");
+
 			const float textureLimit = reader.ResolveFloat(path, "maxTextureDimension");
+
 			if (!std::isfinite(textureLimit) || textureLimit < 4 || textureLimit > 16384 ||
 				std::floor(textureLimit) != textureLimit)
 				throw std::runtime_error("maxTextureDimension must be an integer in [4,16384]");
+
 			std::vector<ShipDefinition> ships;
+
 			for (int i = 1; i <= static_cast<int>(count); ++i) {
 				const auto prefix = "ship" + std::to_string(i);
 				const auto vector = [&](const char* suffix) {
 					const auto key = prefix + suffix;
 					const auto values = reader.ResolveFloatArray(path, key);
+
 					if (values.size() != 3 || !std::isfinite(values[0]) || !std::isfinite(values[1]) ||
 						!std::isfinite(values[2]))
 						throw std::runtime_error(key + " must contain three finite numbers");
 					return DirectX::XMFLOAT3{values[0], values[1], values[2]};
 				};
+
 				ShipDefinition ship;
 				ship.asset.id = prefix;
 				ship.asset.file = reader.Resolve(path, prefix + "Model");
@@ -338,15 +361,19 @@ namespace Game {
 				ship.rotationDegrees = vector("RotationDegrees");
 				ship.size = reader.ResolveFloat(path, prefix + "Size");
 				ship.waterlineOffset = reader.ResolveFloat(path, prefix + "WaterlineOffset");
+
 				if (!std::isfinite(ship.size) || ship.size <= 0)
 					throw std::runtime_error(prefix + "Size must be positive and finite");
 				if (!std::isfinite(ship.waterlineOffset))
 					throw std::runtime_error(prefix + "WaterlineOffset must be finite");
+
 				const auto transform = ship.BuildTransform();
+
 				for (const auto& row : transform.m)
 					for (float value : row)
 						if (!std::isfinite(value))
 							throw std::runtime_error(prefix + " transform exceeds finite range");
+
 				ships.push_back(std::move(ship));
 			}
 			return ships;
@@ -354,21 +381,25 @@ namespace Game {
 			throw std::runtime_error(path.string() + ": " + error.what());
 		}
 	}
+
 	FlightSceneDefinition FlightSceneLoader::Load(const SceneSourcePaths& paths) const {
 		JsonDocumentCache documents;
 		JsonAssetReader reader(documents);
 		JsonParametersLoader parameters(documents);
 
 		MissionSettings mission;
+
 		if (!paths.mission.empty()) {
 			try {
 				const auto count = [&](const char* key, size_t maximum) {
 					const float value = reader.ResolveFloat(paths.mission, key);
+
 					if (!std::isfinite(value) || value < 1 || value > float(maximum) ||
 						std::floor(value) != value)
 						throw std::invalid_argument(std::string(key) + " must be an integer within range");
 					return static_cast<size_t>(value);
 				};
+
 				mission.patrolCount = count("patrolCount", 8);
 				mission.finalFighterCount = count("finalFighterCount", 8);
 				mission.maxHostileProjectiles = count("maxHostileProjectiles", 512);
@@ -392,6 +423,7 @@ namespace Game {
 				throw std::runtime_error(paths.mission.string() + ": " + error.what());
 			}
 		}
+
 		const auto assetsRoot = paths.environment.parent_path().parent_path();
 		CameraSettings camera;
 		camera.Load(reader, assetsRoot / L"Camera/aircraftCamera.json");

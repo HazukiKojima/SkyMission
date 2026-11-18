@@ -20,7 +20,8 @@ namespace Engine {
 
 	float OceanGeometry::GridCoordinate(int index, float size) {
 		const float t = float(index) / (GridResolution - 1) * 2 - 1;
-		// Continuous distance LOD: dense near the camera, sparse towards the horizon, no patch seams.
+
+		// 距離に応じた連続的なLOD。カメラ付近は密、水平線に向かうほど疎にし、パッチの継ぎ目を作らない
 		return std::copysign(std::expm1(std::abs(t) * 5.5f) / std::expm1(5.5f), t) * size * 0.5f;
 	}
 

@@ -1,7 +1,7 @@
 #include "FlightScene.h"
 namespace Game {
-	// 再挑戦で戻すシミュレーションと表示状態だけを明示する。
-	// 画面寸法、再挑戦用データ自体、外部のRenderer/Applicationは含めない。
+	// 再挑戦で戻すシミュレーションと表示状態だけを明示する
+	// 画面寸法、再挑戦用データ自体、外部のRenderer/Applicationは含めない
 	struct FlightScene::RestartState {
 		FlightMission mission;
 		CarrierMissileSystem carrierMissiles;
@@ -28,6 +28,7 @@ namespace Game {
 		CombatEffectSystem effects;
 		size_t enemySequence;
 	};
+
 	void FlightScene::SaveInitialState() {
 		m_initialState = std::make_shared<const RestartState>(RestartState{.mission = m_mission,
 			.carrierMissiles = m_carrierMissiles,
@@ -55,6 +56,7 @@ namespace Game {
 			.effects = m_effects,
 			.enemySequence = m_enemySequence});
 	}
+
 	void FlightScene::Restart(float dt) {
 		const auto& initial = *m_initialState;
 		m_mission = initial.mission;
@@ -105,6 +107,7 @@ namespace Game {
 		m_combat.enemyRadio = {};
 		m_cinematic = {};
 		m_combat.cinematic = {};
+
 		if (m_openingEnabled) StartOpening();
 	}
 } // namespace Game

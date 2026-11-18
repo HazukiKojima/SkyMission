@@ -81,25 +81,29 @@ float OceanHorizonFog(float3 rayOrigin, float3 rayDirection, float maxDistance)
 
     fogEnter = max(fogEnter, oceanFogStartDistance);
     fogExit = min(fogExit, min(maxDistance, oceanFogEndDistance));
+
     // 霧を通る区間だけ積分し、区間がなければ初期値のゼロを返す
     float fogAmount = 0.0f;
     if (intersectsFog && fogExit > fogEnter)
     {
 
-        // Density is a product of cubic smoothsteps. Four-point Gauss-Legendre
-        // integrates the degree-six polynomial on the unclamped interval.
+        // 密度は3次スムーズステップの積。4点のガウス＝ルジャンドル求積で、
+        // クランプ前の区間における6次多項式を積分する
         float horizontalSpeed = max(abs(rayDirection.x), abs(rayDirection.z));
         fogEnter = max(fogEnter, oceanFogStartDistance / max(horizontalSpeed, 1e-6f));
+
         float midpoint = (fogEnter + fogExit) * 0.5f;
         float halfLength = max((fogExit - fogEnter) * 0.5f, 0.0f);
         static const float nodes[4] = {-0.8611363116f, -0.3399810436f, 0.3399810436f, 0.8611363116f};
         static const float weights[4] = {0.3478548451f, 0.6521451549f, 0.6521451549f, 0.3478548451f};
+
         float opticalDepth = 0.0f;
         [unroll] for (int i = 0; i < 4; ++i)
         {
             float t = midpoint + halfLength * nodes[i];
             opticalDepth += OceanFogDensityAt(rayOrigin + rayDirection * t) * weights[i];
         }
+
         opticalDepth *= oceanFogDensity * halfLength;
 
         float horizonMask = pow(1.0f - saturate(abs(rayDirection.y)), 4.0f);
@@ -112,6 +116,7 @@ float3 SampleSceneSkyAbove(float2 uv, float pixelHeight, float3 fallback)
 {
     float3 skyColor = fallback;
     bool foundSky = false;
+
     // 最初に見つけた空の色を保持し、見つからなければ代替色を使う
     [unroll] for (int i = 0; i < 8; ++i)
     {

@@ -4,6 +4,7 @@ struct Output
     float2 uv : TEXCOORD0;
     float4 color : COLOR0;
 };
+
 Output VS(float2 position : POSITION, float2 uv : TEXCOORD0, float4 color : COLOR0)
 {
     Output result;

@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 struct aiScene;
 namespace Engine::ModelProcessing {
 	struct ModelVertex {

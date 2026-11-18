@@ -43,20 +43,25 @@ namespace Game {
 	std::optional<EffectDrawContext::ProjectedBillboard> EffectDrawContext::ProjectBillboard(
 		DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode) const {
 		using namespace DirectX;
+
 		XMFLOAT3 center;
 		XMFLOAT3 edge;
 		XMStoreFloat3(&center, position);
 		XMStoreFloat3(&edge, position + XMLoadFloat3(&m_cameraRight) * radius);
 		const auto projectedCenter = m_projector.Project(center);
 		const auto projectedEdge = m_projector.Project(edge);
+
 		if (projectedCenter.behind || projectedEdge.behind) return std::nullopt;
+
 		const float pixels = std::hypot(
 			projectedEdge.pixel.x - projectedCenter.pixel.x, projectedEdge.pixel.y - projectedCenter.pixel.y);
 		const auto point = projectedCenter.pixel;
+
 		if (clipMode == EffectClipMode::CenterVisible) {
 			if (!projectedCenter.visible) return std::nullopt;
 			return ProjectedBillboard{point, std::min(pixels, float(m_view.height))};
 		}
+
 		// 爆発の中心が画面外でも、火球や煙の一部が見える間は描画する
 		if (point.x + pixels < 0 || point.y + pixels < 0 || point.x - pixels > m_view.width ||
 			point.y - pixels > m_view.height)
@@ -84,6 +89,7 @@ namespace Game {
 		DirectX::XMStoreFloat3(&tailPosition, tail);
 		const auto headProjection = m_projector.Project(headPosition);
 		const auto tailProjection = m_projector.Project(tailPosition);
+
 		if (!headProjection.visible || !tailProjection.visible) return std::nullopt;
 		return ProjectedEffectSegment{headProjection.pixel, tailProjection.pixel};
 	}

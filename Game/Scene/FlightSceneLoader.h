@@ -13,6 +13,7 @@
 namespace Engine {
 	class JsonAssetReader;
 }
+
 namespace Game {
 	inline constexpr const char* PlayerModelId = "player";
 	inline constexpr const char* EnemyModelId = "enemy";
@@ -24,6 +25,7 @@ namespace Game {
 		std::filesystem::path mission;
 		std::filesystem::path bomb;
 	};
+
 	struct AircraftDefinition {
 		AircraftAnimationSettings animation;
 		std::filesystem::path model;
@@ -31,6 +33,7 @@ namespace Game {
 		AircraftFlightParameters flightParameters;
 		Engine::ModelLoadOptions modelImport;
 	};
+
 	struct ShipDefinition {
 		Engine::ModelAssetDefinition asset;
 		DirectX::XMFLOAT3 position{}, rotationDegrees{};
@@ -38,6 +41,7 @@ namespace Game {
 		float waterlineOffset = 0;
 		DirectX::XMFLOAT4X4 BuildTransform() const;
 	};
+
 	std::vector<ShipDefinition> LoadShipDefinitions(
 		const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	struct FlightSceneDefinition {
@@ -68,6 +72,7 @@ namespace Game {
 			return result;
 		}
 	};
+
 	class FlightSceneLoader {
 	  public:
 		FlightSceneDefinition Load(const SceneSourcePaths& paths) const;

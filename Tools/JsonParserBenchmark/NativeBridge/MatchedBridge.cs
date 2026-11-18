@@ -26,28 +26,39 @@ public static unsafe class MatchedBridge
         internal int Read(Span<float> output)
         {
             string[] fields = GeneratedAircraftAIParameters.FieldNames;
+
             if (output.Length != fields.Length) return -1;
             if (!_cache.TryGetValue(fields, out float[]? values))
             {
                 var root = Document.RootElement;
+
                 if (root.ValueKind != JsonValueKind.Object) return -3;
+
                 values = new float[fields.Length];
                 Span<byte> seen = stackalloc byte[GeneratedAircraftAIParameters.FieldCount];
                 seen.Clear();
                 int found = 0;
+
                 foreach (var property in root.EnumerateObject())
                 {
                     if (!Indices.TryGetValue(property.Name, out int index) || seen[index] != 0) continue;
+
                     var value = property.Value;
+
                     if (value.ValueKind != JsonValueKind.Number ||
                         !value.TryGetSingle(out float number) || !float.IsFinite(number)) return -5;
+
                     values[index] = number;
                     seen[index] = 1;
+
                     if (++found == fields.Length) break;
                 }
+
                 if (found != fields.Length) return -5;
+
                 _cache.Add(fields, values);
             }
+
             values.AsSpan().CopyTo(output);
             return 0;
         }
@@ -63,6 +74,7 @@ public static unsafe class MatchedBridge
     public static int CreateUtf8(byte* input, int length, nint* output)
     {
         if (input == null || length <= 0 || output == null) return -1;
+
         *output = 0;
         JsonDocument document;
         try
@@ -93,6 +105,7 @@ public static unsafe class MatchedBridge
         lock (Gate)
         {
             if (!Documents.Remove(handle, out State? state)) return -1;
+
             state.Dispose();
         }
         return 0;
@@ -102,6 +115,7 @@ public static unsafe class MatchedBridge
     public static int ReadAi(nint handle, float* output, int capacity)
     {
         if (output == null || capacity != GeneratedAircraftAIParameters.FieldCount) return -1;
+
         try
         {
             lock (Gate)
@@ -114,6 +128,7 @@ public static unsafe class MatchedBridge
     public static int ReadNumber(nint handle, byte* key, int length, float* output)
     {
         if (key == null || length <= 0 || output == null) return -1;
+
         try
         {
             lock (Gate)
@@ -121,6 +136,7 @@ public static unsafe class MatchedBridge
                 if (!Documents.TryGetValue(handle, out State? state)) return -1;
                 if (!state.Document.RootElement.TryGetProperty(new ReadOnlySpan<byte>(key, length), out var value)) return -3;
                 if (value.ValueKind != JsonValueKind.Number || !value.TryGetSingle(out float number) || !float.IsFinite(number)) return -5;
+
                 *output = number;
                 return 0;
             }

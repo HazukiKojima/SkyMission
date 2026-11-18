@@ -47,6 +47,7 @@ namespace Engine {
 		m_hudRenderer.Initialize(*m_device, commands);
 		m_context->EndFrame();
 		m_context->WaitForGpu();
+
 		// 初期転送のGPU完了後に転送用リソースを解放する
 		m_assets.ReleaseUploadResources();
 		m_oceanGeometry.ReleaseUploadResources();
@@ -74,6 +75,7 @@ namespace Engine {
 
 	void Renderer::Render(UINT width, UINT height, const Scene& runtimeScene, const HudDrawList* hud) {
 		if (width == 0 || height == 0) return;
+
 		m_context->BeginFrame();
 
 		auto cmd = m_context->GetCommandList();
@@ -108,6 +110,7 @@ namespace Engine {
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::CloudsEnd);
 		RecordRetroFilmPass();
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::PostProcessEnd);
+
 		if (hud) m_hudRenderer.Record(*m_device, cmd, *hud);
 
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::HudEnd);
@@ -125,10 +128,12 @@ namespace Engine {
 
 	void Renderer::RecordScenePass(const Scene& scene) {
 		auto cmd = m_context->GetCommandList();
+
 		// 画面クリア
 		auto rtv = m_device->GetSceneRtvHandle();
 		const float clearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+
 		auto dsv = m_device->GetDsvHandle();
 		cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, &dsv);

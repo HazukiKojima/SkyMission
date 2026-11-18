@@ -18,6 +18,7 @@ namespace Engine {
 		void ReleaseUploadResources() {
 			m_upload.Reset();
 		}
+
 		ID3D12Resource* GetResource() const {
 			return m_buffer.Get();
 		}

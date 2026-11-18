@@ -9,6 +9,7 @@ namespace Engine {
 		RedoxDocument transient;
 		const auto& document = AcquireDocument(path, transient);
 		using GetLength = int(__cdecl*)(std::intptr_t, const unsigned char*, int);
+
 		const auto getLength =
 			reinterpret_cast<GetLength>(RedoxModule::GetFunction("MyRedoxGetArrayLengthFromDocument"));
 		const int result = getLength(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
@@ -19,9 +20,11 @@ namespace Engine {
 				"': expected an array (REDox " + std::to_string(result) + ")");
 		return static_cast<size_t>(result);
 	}
+
 	namespace {
 		using RedoxGetString = int(__cdecl*)(std::intptr_t, const unsigned char*, int, unsigned char*, int);
 		using RedoxGetFloatArray = int(__cdecl*)(std::intptr_t, const unsigned char*, int, float*, int);
+
 		std::string FieldContext(const std::filesystem::path& path, const std::string& key) {
 			const auto utf8 = path.u8string();
 			return "JSON '" + std::string(reinterpret_cast<const char*>(utf8.data()), utf8.size()) +

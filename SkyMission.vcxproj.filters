@@ -616,9 +616,6 @@
     <ClCompile Include="Game\Weapons\BombSystem.cpp"><Filter>Game\Weapons</Filter></ClCompile>
     <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp"><Filter>Game\Effects</Filter></ClCompile>
     <ClCompile Include="Game\Effects\DeckSmokePresenter.cpp"><Filter>Game\Effects</Filter></ClCompile>
-    <Filter Include="Assets\Ammunition\Bomb">
-      <UniqueIdentifier>{2a93f544-e658-41be-bd07-95c6bb82c230}</UniqueIdentifier>
-    </Filter>
     <None Include="Assets\Ammunition\Bomb\ammunition.json"><Filter>Assets\Ammunition\Bomb</Filter></None>
   </ItemGroup>
   <ItemGroup>
@@ -694,128 +691,71 @@
     <None Include="Engine\Renderer\Shader\CirrusClouds.hlsli"><Filter>Engine\Renderer\Shader</Filter></None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Precompiled.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClInclude Include="Engine\Precompiled.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RenderVisibility.h">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h">
-      <Filter>Engine\Renderer\Device</Filter>
-    </ClInclude>
-    <None Include="Engine\Renderer\Shader\OceanFog.hlsli">
-      <Filter>Engine\Renderer\Shader</Filter>
-    </None>
-    <ClInclude Include="Engine\StartupTiming.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <None Include="Assets\Environment\Clouds.json">
-      <Filter>Assets\Environment</Filter>
-    </None>
-    <Filter Include="Game\Cinematics">
-      <UniqueIdentifier>{a8df75ab-9ee0-4f9c-bb50-35f9b3297728}</UniqueIdentifier>
-    </Filter>
-    <ClCompile Include="Game\Cinematics\CinematicSettings.cpp">
-      <Filter>Game\Cinematics</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Cinematics\CinematicController.cpp">
-      <Filter>Game\Cinematics</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Cinematics\CinematicScene.cpp">
-      <Filter>Game\Cinematics</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Scene\FlightSceneCinematic.cpp">
-      <Filter>Game\Scene</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\UI\CinematicPresenter.cpp">
-      <Filter>Game\UI</Filter>
-    </ClCompile>
-    <ClInclude Include="Game\Cinematics\CinematicSettings.h">
-      <Filter>Game\Cinematics</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Cinematics\CinematicTypes.h">
-      <Filter>Game\Cinematics</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Cinematics\CinematicController.h">
-      <Filter>Game\Cinematics</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Cinematics\CinematicScene.h">
-      <Filter>Game\Cinematics</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\UI\CinematicPresenter.h">
-      <Filter>Game\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\UI\RadioCaptionPresenter.h">
-      <Filter>Game\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Combat\EnemyRadio.h">
-      <Filter>Game\Combat</Filter>
-    </ClInclude>
-    <ClInclude Include="Tests\CinematicTests.h">
-      <Filter>Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Combat\EnemyEngagementProfile.h">
-      <Filter>Game\Combat</Filter>
-    </ClInclude>
-    <ClInclude Include="Tests\CinematicVisualTests.h">
-      <Filter>Tests</Filter>
-    </ClInclude>
-    <Filter Include="Assets\Cinematics">
-      <UniqueIdentifier>{47fbfbd9-e0ee-4018-a1a1-e73e2abf74fd}</UniqueIdentifier>
-    </Filter>
-    <None Include="Assets\Cinematics\opening.json">
-      <Filter>Assets\Cinematics</Filter>
-    </None>
-    <None Include="Assets\Cinematics\cinematics.json">
-      <Filter>Assets\Cinematics</Filter>
-    </None>
-    <None Include="Assets\Cinematics\midMission.json">
-      <Filter>Assets\Cinematics</Filter>
-    </None>
-    <None Include="Assets\Cinematics\ending.json">
-      <Filter>Assets\Cinematics</Filter>
-    </None>
-    <None Include="Assets\Cinematics\defeat.json">
-      <Filter>Assets\Cinematics</Filter>
-    </None>
-    <ClInclude Include="Tests\GameplaySettingsTests.h">
-      <Filter>Tests</Filter>
-    </ClInclude>
-    <Filter Include="Game\Settings">
-      <UniqueIdentifier>{5af2ffe0-9c9c-4558-80dd-48cfb3fa0f6f}</UniqueIdentifier>
-    </Filter>
-    <ClInclude Include="Game\Settings\SettingsReader.h">
-      <Filter>Game\Settings</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Settings\GameplaySettings.h">
-      <Filter>Game\Settings</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Settings\UiTextSettings.h">
-      <Filter>Game\Settings</Filter>
-    </ClInclude>
-    <Filter Include="Assets\Camera">
-      <UniqueIdentifier>{cade4919-15fd-4aee-8148-df2defe4dcf9}</UniqueIdentifier>
-    </Filter>
-    <None Include="Assets\Camera\aircraftCamera.json">
-      <Filter>Assets\Camera</Filter>
-    </None>
-    <Filter Include="Assets\Effects">
-      <UniqueIdentifier>{152c59da-f007-450f-bbb9-d5865e0d509e}</UniqueIdentifier>
-    </Filter>
-    <None Include="Assets\Effects\combatEffects.json">
-      <Filter>Assets\Effects</Filter>
-    </None>
-    <None Include="Assets\Combat\enemyWeapon.json">
-      <Filter>Assets\Combat</Filter>
-    </None>
-    <None Include="Assets\Sound\audio.json">
-      <Filter>Assets\Sound</Filter>
-    </None>
-    <None Include="Assets\UI\labels.json">
-      <Filter>Assets\UI</Filter>
-    </None>
+    <Filter Include="Assets\Ammunition\Bomb"><UniqueIdentifier>{4da847f6-6aa6-5f48-b4a9-5aa64e562bf5}</UniqueIdentifier></Filter>
+    <Filter Include="Game\Cinematics"><UniqueIdentifier>{969b3c38-1e19-5f53-8a6a-e3c2e762e469}</UniqueIdentifier></Filter>
+    <Filter Include="Assets\Cinematics"><UniqueIdentifier>{fa84145b-2e6c-5135-8a4f-8a2ab22df725}</UniqueIdentifier></Filter>
+    <Filter Include="Game\Settings"><UniqueIdentifier>{ba01c4a8-b3b1-581e-9387-10ca520a88da}</UniqueIdentifier></Filter>
+    <Filter Include="Assets\Camera"><UniqueIdentifier>{61a24252-ce08-5da1-ba39-37a510844d37}</UniqueIdentifier></Filter>
+    <Filter Include="Assets\Effects"><UniqueIdentifier>{02b1efd7-b719-5e54-ad5f-8484959052cf}</UniqueIdentifier></Filter>
+    <ClCompile Include="Engine\Precompiled.cpp"><Filter>Engine</Filter></ClCompile>
+    <ClInclude Include="Engine\Precompiled.h"><Filter>Engine</Filter></ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\RenderVisibility.h"><Filter>Engine\Renderer\Device</Filter></ClInclude>
+    <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h"><Filter>Engine\Renderer\Device</Filter></ClInclude>
+    <None Include="Engine\Renderer\Shader\OceanFog.hlsli"><Filter>Engine\Renderer\Shader</Filter></None>
+    <ClInclude Include="Engine\StartupTiming.h"><Filter>Engine</Filter></ClInclude>
+    <None Include="Assets\Environment\Clouds.json"><Filter>Assets\Environment</Filter></None>
+    <ClCompile Include="Game\Cinematics\CinematicSettings.cpp"><Filter>Game\Cinematics</Filter></ClCompile>
+    <ClCompile Include="Game\Cinematics\CinematicController.cpp"><Filter>Game\Cinematics</Filter></ClCompile>
+    <ClCompile Include="Game\Cinematics\CinematicScene.cpp"><Filter>Game\Cinematics</Filter></ClCompile>
+    <ClCompile Include="Game\Scene\FlightSceneCinematic.cpp"><Filter>Game\Scene</Filter></ClCompile>
+    <ClCompile Include="Game\UI\CinematicPresenter.cpp"><Filter>Game\UI</Filter></ClCompile>
+    <ClInclude Include="Game\Cinematics\CinematicSettings.h"><Filter>Game\Cinematics</Filter></ClInclude>
+    <ClInclude Include="Game\Cinematics\CinematicTypes.h"><Filter>Game\Cinematics</Filter></ClInclude>
+    <ClInclude Include="Game\Cinematics\CinematicController.h"><Filter>Game\Cinematics</Filter></ClInclude>
+    <ClInclude Include="Game\Cinematics\CinematicScene.h"><Filter>Game\Cinematics</Filter></ClInclude>
+    <ClInclude Include="Game\UI\CinematicPresenter.h"><Filter>Game\UI</Filter></ClInclude>
+    <ClInclude Include="Game\UI\RadioCaptionPresenter.h"><Filter>Game\UI</Filter></ClInclude>
+    <ClInclude Include="Game\Combat\EnemyRadio.h"><Filter>Game\Combat</Filter></ClInclude>
+    <ClInclude Include="Tests\CinematicTests.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="Game\Combat\EnemyEngagementProfile.h"><Filter>Game\Combat</Filter></ClInclude>
+    <ClInclude Include="Tests\CinematicVisualTests.h"><Filter>Tests</Filter></ClInclude>
+    <None Include="Assets\Cinematics\opening.json"><Filter>Assets\Cinematics</Filter></None>
+    <None Include="Assets\Cinematics\cinematics.json"><Filter>Assets\Cinematics</Filter></None>
+    <None Include="Assets\Cinematics\midMission.json"><Filter>Assets\Cinematics</Filter></None>
+    <None Include="Assets\Cinematics\ending.json"><Filter>Assets\Cinematics</Filter></None>
+    <None Include="Assets\Cinematics\defeat.json"><Filter>Assets\Cinematics</Filter></None>
+    <ClInclude Include="Tests\GameplaySettingsTests.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="Game\Settings\SettingsReader.h"><Filter>Game\Settings</Filter></ClInclude>
+    <ClInclude Include="Game\Settings\GameplaySettings.h"><Filter>Game\Settings</Filter></ClInclude>
+    <ClInclude Include="Game\Settings\UiTextSettings.h"><Filter>Game\Settings</Filter></ClInclude>
+    <None Include="Assets\Camera\aircraftCamera.json"><Filter>Assets\Camera</Filter></None>
+    <None Include="Assets\Effects\combatEffects.json"><Filter>Assets\Effects</Filter></None>
+    <None Include="Assets\Combat\enemyWeapon.json"><Filter>Assets\Combat</Filter></None>
+    <None Include="Assets\Sound\audio.json"><Filter>Assets\Sound</Filter></None>
+    <None Include="Assets\UI\labels.json"><Filter>Assets\UI</Filter></None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Input\RawInputState.cpp"><Filter>Engine\Input</Filter></ClCompile>
+    <ClCompile Include="Engine\Interop\Redox\RedoxBridge.cpp"><Filter>Engine\Interop\Redox</Filter></ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\GpuFrameProfiler.cpp"><Filter>Engine\Renderer\Device</Filter></ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RenderVisibility.cpp"><Filter>Engine\Renderer\Device</Filter></ClCompile>
+    <ClCompile Include="Engine\ExecutablePath.cpp"><Filter>Engine</Filter></ClCompile>
+    <ClCompile Include="Game\Aircraft\ValidateFlightParameters.cpp"><Filter>Game\Aircraft</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\EnemyGunBehavior.cpp"><Filter>Game\Combat</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\EnemyRadio.cpp"><Filter>Game\Combat</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\MissionState.cpp"><Filter>Game\Combat</Filter></ClCompile>
+    <ClCompile Include="Game\Settings\GameplaySettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
+    <ClCompile Include="Game\Settings\SettingsReader.cpp"><Filter>Game\Settings</Filter></ClCompile>
+    <ClCompile Include="Game\Settings\UiTextSettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
+    <ClCompile Include="Game\Effects\CombatEffectSettings.cpp"><Filter>Game\Effects</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\BombFlight.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\UI\RadioCaptionPresenter.cpp"><Filter>Game\UI</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\StartupTiming.cpp"><Filter>Engine</Filter></ClCompile>
+    <ClCompile Include="Engine\Resources\Buffer\BufferUtilities.cpp"><Filter>Engine\Resources\Buffer</Filter></ClCompile>
+    <ClCompile Include="Engine\Renderer\Hud\HudFont.cpp"><Filter>Engine\Renderer\Hud</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\ProjectilePose.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\WeaponDefinition.cpp"><Filter>Game\Weapons</Filter></ClCompile>
   </ItemGroup>
 </Project>

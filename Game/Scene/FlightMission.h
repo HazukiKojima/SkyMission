@@ -11,6 +11,7 @@ namespace Game {
 		void ConfigureText(const UiTextSettings& text) {
 			m_text = text;
 		}
+
 		enum class SquadronKind { Patrol, Fighters, Commander };
 		struct AircraftSpawn {
 			std::shared_ptr<Engine::Model> model;
@@ -41,6 +42,7 @@ namespace Game {
 		bool ApplyCarrierDamage(float damage) {
 			return m_mission.ApplyCarrierDamage(damage);
 		}
+
 		void ConfirmDeckHit() {
 			m_mission.ConfirmDeckHit();
 		}
@@ -50,29 +52,37 @@ namespace Game {
 		MissionPhase GetPhase() const {
 			return m_mission.GetPhase();
 		}
+
 		bool IsDeckDisabled() const {
 			return m_mission.IsDeckDisabled();
 		}
+
 		std::optional<DirectX::XMFLOAT3> GetCarrierCenter(Engine::Scene& scene) const;
 		std::optional<DirectX::XMFLOAT3> GetDefenseCenter(Engine::Scene& scene) {
 			if (auto center = GetCarrierCenter(scene)) m_defenseCenter = center;
 			return m_defenseCenter;
 		}
+
 		float GetCarrierHealth() const {
 			return m_mission.GetCarrierHealth();
 		}
+
 		float GetCarrierMaxHealth() const {
 			return m_mission.GetCarrierMaxHealth();
 		}
+
 		const MissionSettings& GetSettings() const {
 			return m_missionSettings;
 		}
+
 		Engine::ObjectId GetCarrierId() const {
 			return m_carrierId;
 		}
+
 		float GetMessageSeconds() const {
 			return m_missionMessageSeconds;
 		}
+
 		const DirectX::XMFLOAT3& GetAirCombatPosition() const {
 			return m_airCombatPosition;
 		}
@@ -95,7 +105,8 @@ namespace Game {
 		AircraftFlightParameters m_missionEnemyFlight;
 		AircraftAIParameters m_missionEnemyAI;
 		float m_missionEnemyScale = 1;
-		// -1: 未撃破。撃破を確認したフレームの次から4秒を計測する。
+
+		// -1: 未撃破。撃破を確認したフレームの次から4秒を計測する
 		float m_reinforcementElapsedSeconds = -1;
 
 		// 母艦・護衛艦と表示用の状態
