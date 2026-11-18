@@ -24,6 +24,8 @@ $redox = if ($RedoxDll) { [IO.Path]::GetFullPath($RedoxDll) } else {
 if (!(Test-Path -LiteralPath $redox)) { throw 'Build Debug x64 once to publish REDoxWrapper.dll before running these tests.' }
 Copy-Item -LiteralPath $redox -Destination $build
 Copy-Item -LiteralPath (Join-Path $assimp 'bin\Debug\assimp-vc142-mtd.dll') -Destination $build
+
+# 本体のソースを列挙してテストも同じ実装でビルドする
 $sources = @(Get-ChildItem -LiteralPath (Join-Path $repository 'Engine') -Filter '*.cpp' -Recurse |
     Where-Object Name -ne 'Application.cpp' | ForEach-Object FullName)
 $sources += @(Get-ChildItem -LiteralPath (Join-Path $repository 'Game') -Filter '*.cpp' -Recurse |

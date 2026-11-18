@@ -20,6 +20,7 @@ namespace Game {
 	}
 
 	bool EffectDrawContext::HasVertexBudget(size_t requiredVertices) const {
+		// HUDと優先する発射演出の予約分を残して容量を判定する
 		return m_list.GetVertices().size() + requiredVertices <= Engine::HudDrawList::MaxVertices -
 			EffectDrawSettings::hudReservedVertices - m_additionalReservedVertices;
 	}

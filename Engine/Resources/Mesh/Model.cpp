@@ -305,6 +305,7 @@ namespace Engine {
 					.maxDimension = options.maxTextureDimension});
 		}
 
+		// 金属度と粗さは色変換しない単一成分として読む
 		const auto loadScalarMap = [&](aiTextureType type, const std::wstring& suffix, DXGI_FORMAT format) {
 			auto path = ResolveMaterialTexture(material, type, modelDirectory, options);
 			if (path.empty())
@@ -323,6 +324,7 @@ namespace Engine {
 		mesh.roughnessTexture =
 			loadScalarMap(aiTextureType_DIFFUSE_ROUGHNESS, options.roughnessSuffix, DXGI_FORMAT_BC4_UNORM);
 
+		// 法線画像は参照情報と命名規則の順に探す
 		std::filesystem::path normalPath =
 			ResolveMaterialTexture(material, aiTextureType_NORMALS, modelDirectory, options);
 		if (normalPath.empty()) {

@@ -9,6 +9,8 @@ extern "C" void WINAPI LauncherEntry() {
 	DWORD end = length;
 
 	while (end && path[end - 1] != L'\\') --end;
+
+	// ランチャーと同じ場所のRuntime内にあるゲームを起動する
 	constexpr wchar_t suffix[] = L"Runtime\\SkyMission.exe";
 
 	if (!length || length >= 32768 || end + sizeof(suffix) / sizeof(wchar_t) >= 32768)
@@ -25,6 +27,8 @@ extern "C" void WINAPI LauncherEntry() {
 	}
 
 	CloseHandle(process.hThread);
+
+	// ゲームの終了コードをそのままランチャーの終了コードにする
 	WaitForSingleObject(process.hProcess, INFINITE);
 	DWORD code = 1;
 	GetExitCodeProcess(process.hProcess, &code);

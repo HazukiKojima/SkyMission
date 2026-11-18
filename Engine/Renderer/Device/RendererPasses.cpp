@@ -25,6 +25,7 @@ namespace Engine {
 					constantBuffers.GetOceanResource(frame.frameIndex)->GetGPUVirtualAddress());
 			}
 
+			// 空の球体を現在のフレーム定数で描く
 			auto skyView = assets.GetSkySphere()->GetVertexBufferView();
 			auto& skyIndexView = assets.GetSkySphere()->GetIndexBufferView();
 			commandList->IASetVertexBuffers(0, 1, &skyView);
@@ -62,6 +63,7 @@ namespace Engine {
 				constantBuffers.GetOceanResource(frame.frameIndex)->GetGPUVirtualAddress());
 		}
 
+		// 海面メッシュをテクスチャとフレーム定数で描く
 		auto view = geometry.GetVertexView();
 		commandList->IASetVertexBuffers(0, 1, &view);
 		commandList->IASetIndexBuffer(&geometry.GetIndexView());
@@ -156,6 +158,8 @@ namespace Engine {
 		commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 		commandList->SetGraphicsRootDescriptorTable(
 			RootBinding::TextureTable, device->GetSrvGpuHandle(device->GetSceneColorSrvIndex()));
+
+		// フィルムと霧の定数を別々に渡して画面全体を合成する
 		const UINT frameIndex = frame.frameIndex;
 		commandList->SetGraphicsRootConstantBufferView(
 			RootBinding::FrameConstants, constantBuffers.GetFilmResource(frameIndex)->GetGPUVirtualAddress());

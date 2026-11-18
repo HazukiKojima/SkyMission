@@ -52,6 +52,7 @@ namespace Engine {
 
 		m_indexCount = static_cast<UINT>(indices.size());
 
+		// 生成した頂点とインデックスのGPU転送を記録する
 		const UINT64 vertexBytes = vertices.size() * sizeof(Vertex);
 		const UINT64 indexBytes = indices.size() * sizeof(uint32_t);
 		m_vertexBuffer = CreateStaticBuffer(device, commands, vertices.data(), vertexBytes,

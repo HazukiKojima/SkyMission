@@ -98,6 +98,8 @@ namespace Game {
 
 		for (const auto& ship : assets.ships)
 			m_captureShipModels.push_back(m_renderer->GetModel(ship.asset.id));
+
+		// 読み込んだ設定を表示と演出へ反映して任務シーンを作る
 		m_hudPresenter.Configure(assets.hud);
 		m_hudPresenter.ConfigureTuning(assets.ui);
 		m_hudPresenter.ConfigureText(assets.text);

@@ -125,7 +125,7 @@ namespace Engine {
 		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath)) return true;
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options)) return false;
 
-		// 圧縮前に画像を補正する
+		// 形式変換の前に法線と画像サイズを補正する
 		CorrectNormalGreen(options.invertNormalGreen);
 		if (!ResizeToLimit(options.maxDimension)) return false;
 
@@ -294,6 +294,8 @@ namespace Engine {
 				(sourceFormat == DXGI_FORMAT_R8G8_UNORM || sourceFormat == DXGI_FORMAT_R8G8_SNORM ||
 					sourceFormat == DXGI_FORMAT_R16G16_UNORM || sourceFormat == DXGI_FORMAT_R16G16_SNORM ||
 					sourceFormat == DXGI_FORMAT_BC5_UNORM || sourceFormat == DXGI_FORMAT_BC5_SNORM);
+
+			// 2成分の法線画像をRGBAへ展開した場合はZ成分を復元する
 			if (reconstructNormalZ) {
 				for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
 					const DirectX::Image* image = &m_image.GetImages()[imageIndex];

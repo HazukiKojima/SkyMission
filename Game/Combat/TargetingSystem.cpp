@@ -77,6 +77,7 @@ namespace Game {
 			}
 		}
 
+		// 切替順が入力配列の並びに依存しないようID順にそろえる
 		std::sort(candidates.begin(), candidates.end(), [](const auto* left, const auto* right) {
 			return left->id < right->id;
 		});

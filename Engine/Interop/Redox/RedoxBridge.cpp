@@ -60,6 +60,7 @@ namespace Engine {
 	}
 
 	HMODULE RedoxModule::GetModule() {
+		// DLLは一度だけ読み込み、文書より長く保持する
 		static HMODULE module = [] {
 			HMODULE loaded = ::LoadLibraryW(L"REDoxWrapper.dll");
 			if (!loaded) {

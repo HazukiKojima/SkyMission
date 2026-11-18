@@ -315,6 +315,7 @@ namespace Game {
 
 		voice->SetVolume(volume);
 
+		// 再生状態が変わったときだけバッファを入れ直す
 		if (playing == m_loopPlaying[index]) return;
 
 		StopVoice(voice);
@@ -339,6 +340,7 @@ namespace Game {
 
 		if (clip.samples.empty()) return;
 
+		// 再生中の音を止めず、空いているボイスで鳴らす
 		for (auto* voice : m_voices) {
 			if (!voice) continue;
 
@@ -382,6 +384,7 @@ namespace Game {
 	}
 
 	CinematicVoiceStatus CombatAudio::UpdateCinematic(const CinematicPresentation& opening) {
+		// 演出の切替や再開始では前の音声を止めて再生位置を戻す
 		if (m_activeCinematicId != opening.cinematicId || m_activePlaybackSerial != opening.playbackSerial) {
 			StopVoice(m_briefingVoice);
 			StopVoice(m_loops[3]);
@@ -473,6 +476,7 @@ namespace Game {
 	}
 
 	void CombatAudio::UpdateWarning(bool flying, bool lockWarning, bool missileWarning, float deltaSeconds) {
+		// 飛行中はミサイル警告をロック警告より優先する
 		int warning = kNoWarning;
 
 		if (flying) {
@@ -483,6 +487,7 @@ namespace Game {
 			}
 		}
 
+		// 警告が切り替わったら待ち時間をリセットしてすぐに鳴らす
 		if (warning != m_warningKind) {
 			StopVoice(m_warningVoice);
 			m_warningKind = warning;

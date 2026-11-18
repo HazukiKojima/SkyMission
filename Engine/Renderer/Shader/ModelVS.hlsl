@@ -57,6 +57,7 @@ PS_INPUT VS(VS_INPUT input)
         localTangent = RotateNodeVector(input.tangent.xyz);
     }
 
+    // 回転後の位置と表面方向を描画用の座標へ変換する
     output.position = mul(float4(localPosition, 1.0f), mvp);
     output.texcoord = input.texcoord;
     output.worldPos = mul(float4(localPosition, 1.0f), world).xyz;

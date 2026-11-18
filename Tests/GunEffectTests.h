@@ -28,6 +28,7 @@ void TestGunFireEffects() {
 				.ageSeconds = age});
 	};
 
+	// 発射通知が一度だけ消費されることを確かめる
 	Require(fire(0.01f), "Gun effect volley failed");
 	auto shots = bullets.TakeShotEvents();
 	Require(shots.size() == 4 && bullets.TakeShotEvents().empty(), "Gun notifications were lost or replayed");
@@ -189,6 +190,8 @@ void TestGunSegmentClipping() {
 	view.height = 600;
 	XMStoreFloat4x4(&view.view, XMMatrixIdentity());
 	XMStoreFloat4x4(&view.projection, XMMatrixPerspectiveFovLH(XM_PIDIV2, 4.0f / 3, 1, 1000));
+
+	// 画面の端と背面をまたぐ線分の投影を確認する
 	const HudProjector projector(view);
 	Require(projector.ProjectClippedSegment({0, 0, 10}, {100, 0, 10}).has_value(),
 		"Screen edge discarded entire tracer");

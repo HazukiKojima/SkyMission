@@ -76,6 +76,7 @@ namespace Engine {
 	void CommandContext::WaitForGpu() {
 		if (!m_targetQueue || !m_fence) return;
 
+		// キューの末尾に完了通知を置いて投入済みの処理を待つ
 		ThrowIfFailed(m_targetQueue->Signal(m_fence.Get(), m_fenceValues[m_currentFrameIndex]));
 		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_currentFrameIndex], m_fenceEvent));
 		WaitForSingleObject(m_fenceEvent, INFINITE);

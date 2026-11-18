@@ -26,6 +26,8 @@ namespace Game {
 		template <class T> void Integer(const std::string& key, T& value, unsigned maximum) const {
 			float number = static_cast<float>(value);
 			Number(key, number, 1, static_cast<float>(maximum));
+
+			// 整数へ変換する前に小数部がないことを確認する
 			Require(std::floor(number) == number, key, "expected an integer");
 			value = static_cast<T>(number);
 		}

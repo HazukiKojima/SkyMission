@@ -187,8 +187,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     // 映写機の微弱な明滅
     color *= FilmFlicker(time);
 
-    // フィルム粒子
-    // 粒子は現像後の画面全体に載せ、雲の上でも質感を連続させる
+    // 粒子を雲の上にも重ね、画面全体の質感をそろえる
     color += FilmGrain(pixel, time, saturate(luminance));
 
     // フィルム上の埃と傷

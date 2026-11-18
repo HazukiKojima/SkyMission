@@ -8,6 +8,7 @@ if (args.Length == 0 || args.Length % 5 != 0)
 
 try
 {
+    // 並列ビルドによる生成ファイルの同時更新を防ぐ
     using var generationMutex = new Mutex(false, "AircraftParameterGenerator");
     try
     {
@@ -48,6 +49,7 @@ static void WriteGeneratedFile(string path, string content)
     string outputPath = Path.GetFullPath(path);
     Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
+    // 内容が同じ場合は更新日時を変えず再ビルドを抑える
     if (File.Exists(outputPath) && File.ReadAllText(outputPath) == content)
     {
         return;
@@ -142,6 +144,7 @@ static class CppStructParser
 {
     public static IReadOnlyList<Field> ParseFloatFields(string source, string structName)
     {
+        // コメントを除いた宣言から構造体の配置を抽出する
         List<string> tokens = Tokenize(source);
 
         for (int index = 0; index < tokens.Count - 2; index++)
@@ -162,6 +165,7 @@ static class CppStructParser
             var names = new HashSet<string>(StringComparer.Ordinal);
             index++;
 
+            // floatと固定長配列だけを生成対象として受け付ける
             while (index < tokens.Count && tokens[index] != "}")
             {
                 string type = tokens[index++];

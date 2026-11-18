@@ -388,6 +388,7 @@ namespace Game {
 	}
 
 	FlightSceneDefinition FlightSceneLoader::Load(const SceneSourcePaths& paths) const {
+		// 一度のシーン読み込みで同じJSON文書を共有する
 		JsonDocumentCache documents;
 		JsonAssetReader reader(documents);
 		JsonParametersLoader parameters(documents);
@@ -429,6 +430,7 @@ namespace Game {
 			}
 		}
 
+		// 共通の設定を読み込んでシーン定義へまとめる
 		const auto assetsRoot = paths.environment.parent_path().parent_path();
 		CameraSettings camera;
 		camera.Load(reader, assetsRoot / L"Camera/aircraftCamera.json");

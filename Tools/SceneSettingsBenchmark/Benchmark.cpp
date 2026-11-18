@@ -99,6 +99,7 @@ bool ReadField(const Json& value, int count, std::vector<float>& values) {
 }
 
 int NativeParameters(Handle h, const std::string& kind, float* output, int capacity) {
+    // 本番と同じく文書ごとに検証済みの配置結果を保持する
     auto& doc = documents.at(h);
     auto cached = doc.cache.find(kind);
 

@@ -435,6 +435,7 @@ void TestCombatMath() {
 	raw.SetActive(true);
 	Require(!raw.ConsumeFrame().WasKeyPressed(VK_TAB), "Focus regain restored a Tab edge");
 
+	// 静止と相対運動の迎撃解を比較する
 	CombatTarget target{1, {0, 0, -900}, {}, "ENEMY 01", 100};
 	const auto aim = SolveGunAim({}, {}, target, 900, 3);
 	Require(aim && std::abs(aim->seconds - 1) < 0.001f && aim->direction.z < -0.999f,
@@ -454,6 +455,7 @@ void TestCombatMath() {
 	Require(IsWithinAngle({0, 0, -1}, {0.02f, 0, -1}, 3) && !IsWithinAngle({0, 0, -1}, {0.1f, 0, -1}, 3),
 		"Assist angle boundary failed");
 
+	// 対象切替とロックの取得から喪失までを通して検証する
 	std::vector<CombatTarget> targets{
 		{3, {200, 0, -900}, {}, "3", 100}, {1, {0, 0, -900}, {}, "1", 100}, {2, {0, 0, 900}, {}, "2", 100}};
 	TargetingSystem targeting;
@@ -500,6 +502,7 @@ void TestCombatMath() {
 			replacement.GetSelected() == Engine::InvalidObjectId, "All enemies destroyed retained a target");
 	}
 
+	// 高速な弾道と動く箱の交差を検証する
 	CollisionTarget box{4, {{-1, -1, -1}, {1, 1, 1}}, {0, 10, -50}, {}};
 	XMStoreFloat4x4(&box.world, XMMatrixRotationY(0.7f) * XMMatrixTranslation(0, 10, -50));
 	Require(IntersectMovingTarget({0, 10, 0}, {0, 10, -100}, box, 0, 1).has_value(),

@@ -6,6 +6,7 @@ import sys
 repo, output = map(pathlib.Path, sys.argv[1:])
 entries = []
 
+# 生成済みのメタデータから配置順を読み取る
 for kind in ("AircraftAI", "AircraftFlight", "Ocean", "Sky"):
 
     source = (repo / f"External/REDoxWrapper/Generated/Generated{kind}Parameters.cs").read_text(encoding="utf-8-sig")
@@ -16,6 +17,8 @@ for kind in ("AircraftAI", "AircraftFlight", "Ocean", "Sky"):
     entries.append((kind, list(zip(names, lengths))))
 
 source = (repo / "External/REDoxWrapper/REDoxApi.cs").read_text(encoding="utf-8-sig")
+
+# フィルム設定だけは本番の読み出し順から配置を抽出する
 body = source.split("bool valid =", 1)[1].split("if (!valid", 1)[0]
 parents = {"root": "", "colorGrading": "/colorGrading", "blackLift": "/colorGrading/blackLift", "highlight": "/colorGrading/highlight"}
 retro = []

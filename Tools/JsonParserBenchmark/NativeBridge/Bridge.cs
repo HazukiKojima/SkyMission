@@ -82,6 +82,7 @@ public static unsafe class Bridge
         {
             if (!Documents.TryGetValue(handle, out Document? document)) return -1;
 
+            // 両パーサーで同じ生成済みフィールド順に値を取得する
             int index = 0;
 
             foreach (string field in GeneratedAircraftAIParameters.FieldNames)

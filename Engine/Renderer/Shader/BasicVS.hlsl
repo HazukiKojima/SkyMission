@@ -84,6 +84,7 @@ PS_INPUT VS(VS_INPUT input)
         steepness *= 0.72f;
     }
 
+    // 重ねた波の接線から法線を求めてピクセルシェーダーへ渡す
     float3 normal = normalize(cross(binormal, tangent));
 
     float3 worldPos = pos;

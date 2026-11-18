@@ -20,6 +20,7 @@ void TestCloudSettings(const fs::path& repository, const fs::path& fixture) {
 		Require(rejected, "Invalid cloud settings accepted");
 	};
 
+	// 設定項目を一つずつ壊して検証漏れを調べる
 	auto invalid = settings;
 	invalid.top = invalid.bottom;
 	reject(invalid);
@@ -80,6 +81,7 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			ThrowIfFailed(device.GetCommandQueue()->GetTimestampFrequency(&frequency));
 		}
 
+		// 雲の手前に置く遮蔽物で深度の合成を確認する
 		const auto quad = fixture / L"cloud-occluder.obj";
 		std::ofstream(quad) << "v -1 -1 0\nv 1 -1 0\nv 1 1 0\nv -1 1 0\nf 1 2 3\nf 1 3 4\nf 1 3 2\nf 1 4 3\n";
 		context.BeginFrame();

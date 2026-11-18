@@ -13,6 +13,8 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 		.enemyAircraft = root / L"Aircraft/F4U4Corsair/F4U4Corsair.json",
 		.retroFilm = root / L"Environment/retroFilm.json",
 		.ships = root / L"Ships/ships.json"});
+
+	// 本番の描画パスを非表示ウィンドウで動かして画像を検証する
 	const HWND window = CreateWindowW(L"STATIC", L"Opening capture (hidden)", WS_OVERLAPPEDWINDOW, 0, 0, 1280,
 		720, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 	Require(window != nullptr, "Opening capture window failed");

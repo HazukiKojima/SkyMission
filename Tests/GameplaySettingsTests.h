@@ -10,6 +10,7 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 		std::ofstream(file) << text;
 	};
 
+	// 不正設定の例外に元ファイルの情報が含まれるか調べる
 	const auto rejects = [&](const std::string& json, auto load) {
 		write(json);
 		bool rejected = false;

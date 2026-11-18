@@ -17,6 +17,7 @@ void TestCarrierMissileFlight() {
 }
 
 void TestMissionRules() {
+	// 任務の順序と終端状態への遷移を確認する
 	MissionState mission;
 	mission.ApplyCarrierDamage(100);
 	Require(!mission.IsDeckDisabled(), "Deck hit before carrier phase advanced mission");

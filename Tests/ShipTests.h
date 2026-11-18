@@ -16,6 +16,7 @@ void TestShips(const fs::path& repository, const fs::path& fixture) {
 			"Ship transform lost position or waterline offset");
 	}
 
+	// 元ファイルと分離した設定で寸法と喫水を検証する
 	const auto path = fixture / L"ships.json";
 	const auto write = [&](const char* size, const char* position, const char* rotation = "[0,0,0]",
 						   const char* waterline = "-10") {

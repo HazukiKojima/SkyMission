@@ -45,6 +45,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float metallic = saturate(gMetallic.Sample(gSampler, input.texcoord).r);
     float roughness = clamp(gRoughness.Sample(gSampler, input.texcoord).r, 0.04f, 1.0f);
 
+    // 法線画像のZを復元し、接空間からワールド空間へ変換する
     float3 N = SafeNormalize(input.normal);
     float3 T = SafeNormalize(input.tangent.xyz - N * dot(input.tangent.xyz, N));
     float3 B = SafeNormalize(cross(N, T)) * input.tangent.w;
@@ -61,6 +62,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float NdotH = saturate(dot(N, H));
     float VdotH = saturate(dot(V, H));
 
+    // 金属度と粗さから鏡面反射と拡散反射を求める
     float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo.rgb, metallic);
     float3 F = FresnelSchlick(VdotH, F0);
     float D = DistributionGGX(NdotH, roughness);

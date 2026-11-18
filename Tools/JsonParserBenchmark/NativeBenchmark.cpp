@@ -442,6 +442,7 @@ int wmain(int argc, wchar_t** argv) {
 								 }});
 			}
 
+			// 各パーサーの結果が一致することを確認してから計測する
 			const double expected = tasks.back().action();
 
 			for (auto& task : tasks) {
@@ -464,6 +465,7 @@ int wmain(int argc, wchar_t** argv) {
 				continue;
 			}
 
+			// 実行順を巡回させ、計測順による偏りを抑える
 			for (int sample = 0; sample < kSamples; ++sample) {
 				for (int position = 0; position < int(tasks.size()); ++position) {
 					auto& task = tasks[(position + sample + run + caseIndex) % tasks.size()];

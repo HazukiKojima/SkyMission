@@ -101,6 +101,7 @@ namespace Engine {
 		oceanData->oceanEdgeFadeStart = m_oceanSettings.edgeFadeStart;
 		oceanData->oceanEdgeFadeWidth = m_oceanSettings.edgeFadeWidth;
 
+		// カメラ位置の波高を渡して海面の高さを補正する
 		oceanData->oceanWaveHeightOffset = OceanGeometry::CalculateWaveHeight(frame.cameraPosition.x,
 			frame.cameraPosition.z, oceanTime, m_oceanSettings.waveLength, m_oceanSettings.waveSteepness);
 	}
@@ -129,6 +130,7 @@ namespace Engine {
 		oceanFog->oceanEdgeFadeWidth = m_oceanSettings.edgeFadeWidth;
 		oceanFog->padding1[0] = oceanFog->padding1[1] = 0.0f;
 
+		// 雲の設定をシェーダーと共有する4成分の配置へ詰める
 		const auto& clouds = m_cloudSettings;
 		oceanFog->cloudLayer = {clouds.bottom, clouds.top, clouds.coverage, clouds.density};
 		oceanFog->cloudMotion = {

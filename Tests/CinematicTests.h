@@ -9,6 +9,8 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Engine::JsonAssetReader reader;
 	const auto missing = LoadCinematicSettings(reader, fixture / L"no-opening.json");
 	Require(missing.durationSeconds == 5, "Missing opening configuration lost defaults");
+
+	// 設定の省略と部分指定で既定値が残ることを確かめる
 	const auto partial = fixture / L"opening-partial.json";
 	std::ofstream(partial) << "{\"flightSpeedMetersPerSecond\":210}";
 	Require(LoadCinematicSettings(reader, partial).flightSpeedMetersPerSecond == 210,
@@ -16,6 +18,8 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Require(missing.briefing.size() == 3 && missing.formationOffsets.size() == 4 &&
 			missing.originOffsetMeters.z == -5000 && missing.audio.bgmVolume == 0.12f,
 		"Missing opening configuration changed legacy content");
+
+	// 文章と日本語の相対音声パスを含む設定を読み込む
 	const auto configured = fixture / L"opening-data.json";
 	std::ofstream(configured) << R"({"briefing":[
 		{"lines":["First","Second"],"audio":"../音声/会話.wav","fallbackSeconds":0.5},

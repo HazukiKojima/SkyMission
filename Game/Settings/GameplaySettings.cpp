@@ -130,6 +130,8 @@ namespace Game {
 		r.Number("unlockedAttackRangeScale", unlockedAttackRangeScale, 0.000001f, 1000000);
 		r.Number("unlockedBurstTempoScale", unlockedBurstTempoScale, 0.000001f, 1000000);
 		r.Number("unlockedShotIntervalScale", unlockedShotIntervalScale, 0.000001f, 1000000);
+
+		// 個体ごとの行動差と再進入経路を読み込む
 		r.Array("stylePassDelay", stylePassDelay, -10, 10);
 		r.Array("styleTurnScale", styleTurnScale, 0.000001f, 10);
 		r.Array("styleClimb", styleClimb, -10, 10);
@@ -138,6 +140,8 @@ namespace Game {
 		r.Array("passLegsMeters", passLegsMeters, 1);
 		r.Array("reentryLanesMeters", reentryLanesMeters);
 		r.Array("directionChangesRadians", directionChangesRadians);
+
+		// 各値の範囲に加えて時間と防衛半径の大小関係を確認する
 		r.Require(maximumPassSeconds >= minimumPassSeconds, "EnemyAITuning", "inconsistent settings");
 		r.Require(defenseOuterRadius > defenseInnerRadius, "EnemyAITuning", "inconsistent settings");
 	}
@@ -184,6 +188,8 @@ namespace Game {
 		r.Number("warningVolume", warningVolume, 0, 1);
 		r.Number("missileWarningIntervalSeconds", missileWarningIntervalSeconds, 0.000001f, 1000000);
 		r.Number("lockWarningIntervalSeconds", lockWarningIntervalSeconds, 0.000001f, 1000000);
+
+		// 音量とは別に再生する音声ファイルを読み込む
 		r.Text("flightFile", flightFile);
 		r.Text("gunFile", gunFile);
 		r.Text("launchFile", launchFile);
@@ -204,6 +210,7 @@ namespace Game {
 		r.Array("/layout/hitPosition", hitPosition, 0, 10000);
 		r.Array("/layout/allDownPosition", allDownPosition, 0, 10000);
 
+		// 操作説明と計器の配置を読み込む
 		r.Number("/layout/controlsFontSize", controlsFontSize, 0, 10000);
 		r.Number("/layout/controlsLineHeight", controlsLineHeight, 0, 10000);
 		r.Number("/layout/controlsRightMargin", controlsRightMargin, 0, 10000);
@@ -228,6 +235,8 @@ namespace Game {
 		r.Number("/layout/missionLineHeight", missionLineHeight, 0, 10000);
 		r.Number("/layout/missileStatusY", missileStatusY, 0, 10000);
 		r.Number("/layout/lockStatusY", lockStatusY, 0, 10000);
+
+		// 照準や目標マーカーの寸法を読み込む
 		r.Number("/layout/carrierMarkerRadius", carrierMarkerRadius, 0, 10000);
 		r.Number("/layout/combatAreaMarkerRadius", combatAreaMarkerRadius, 0, 10000);
 		r.Number("/layout/impactMarkerRadius", impactMarkerRadius, 0, 10000);
@@ -240,6 +249,7 @@ namespace Game {
 		r.Number("/layout/markerLabelGap", markerLabelGap, 0, 10000);
 		r.Number("/layout/screenTextMargin", screenTextMargin, 0, 10000);
 
+		// 組み合わせたときに表示が成立する寸法と倍率か確認する
 		r.Require(radarSize >= 100 && radarSize <= 1080, "layout", "inconsistent HUD layout");
 		r.Require(radarRadius > 0 && radarRadius <= 160, "layout", "inconsistent HUD layout");
 		r.Require(controlsFontSize > 0 && controlsLineHeight >= controlsFontSize, "layout",

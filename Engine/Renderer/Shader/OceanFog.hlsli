@@ -160,6 +160,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
     bool isOceanPixel = sceneSample.a < 0.5f;
     float sceneDepth = gSceneDepth.SampleLevel(gSampler, uv, 0).r;
 
+    // 逆行列から視線を復元し、霧を積分する方向を求める
     float2 rayNdc = uv * float2(2, -2) + float2(-1, 1);
     float4 farRelative = mul(float4(rayNdc, 1, 1), inverseViewProjection);
     float3 rayDirection = SafeNormalize(farRelative.xyz);
@@ -168,6 +169,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
     float sceneDistance = oceanFogEndDistance;
     float oceanEdgeFade = 0.0f;
 
+    // 海面は視線との交点、その他の物体は深度から距離を求める
     if (isOceanPixel)
     {
         if (abs(rayDirection.y) > 1e-5f)
@@ -195,6 +197,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
         oceanFogFactor = max(oceanFogFactor, oceanEdgeFade);
     }
 
+    // 海面では画面内の空の色へなじませ、見つからなければ計算した空色を使う
     float3 horizonFallback = ToneMapReinhard(GetSkyColor(rayDirection, lighting));
     float3 horizonColor = horizonFallback;
     if (isOceanPixel && oceanFogFactor > 0.001f)

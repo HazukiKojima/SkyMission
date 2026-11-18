@@ -312,6 +312,8 @@ namespace Game {
 		}
 
 		if (m_carrierHitSpeakAtSeconds < 0) return;
+
+		// ミサイルの飛行中や弾切れの場合は命中後の案内を取り消す
 		if (m_carrierMissiles.GetCount() > 0 || m_carrierMissiles.GetAmmo() == 0) {
 			m_carrierHitSpeakAtSeconds = -1;
 			return;
@@ -331,6 +333,7 @@ namespace Game {
 	}
 
 	void FlightScene::CheckMissionCinematics(float dt) {
+		// 勝利時は無線の終了を待ち、余韻を置いて終了演出へ進む
 		if (m_combat.result == CombatResult::Victory && !m_endingPlayed) {
 			if (m_enemyRadio.IsBusy() || m_combat.cinematic.radioLine >= 0) return;
 			if (m_victoryHoldSeconds < 0) { m_victoryHoldSeconds = 1; return; }

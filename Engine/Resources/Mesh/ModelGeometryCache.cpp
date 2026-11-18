@@ -228,6 +228,7 @@ namespace Engine::ModelProcessing {
 					}
 				}
 
+				// 書き込みが完了したファイルだけをキャッシュへ置き換える
 				output.close();
 				if (output) MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING);
 			}

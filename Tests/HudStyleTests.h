@@ -8,6 +8,8 @@ void TestHudTypography() {
 	list.Reset(1920, 1080);
 	list.Text({100, 100}, "速度 1122", 48, Game::HudStyle::Ink);
 	Require(list.GetVertices().size() == 42, "UTF-8 HUD text was rendered per byte");
+
+	// 生成した頂点の右端と文字幅の計算結果を比較する
 	float right = 0;
 
 	for (const auto& vertex : list.GetVertices())

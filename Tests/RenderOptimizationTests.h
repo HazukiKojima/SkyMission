@@ -23,7 +23,7 @@ void TestRenderOptimizationMath() {
 		"Ocean must retain much greater density around the camera");
 
 	// 実際の高さ場を測る。優勢なうねりは、風上方向よりも
-	// 風と直角の方向で大きく変化が小さいことを確かめる。各波頂の一致は求めない
+	// 風と直角の方向で高さの変化が小さいことを確かめる。各波頂の一致は求めない
 	const XMFLOAT2 wind{0.85749293f, 0.51449576f};
 	double alongEnergy = 0, acrossEnergy = 0;
 	const auto height = [](float x, float z) {
@@ -43,6 +43,8 @@ void TestRenderOptimizationMath() {
 
 	Require(alongEnergy > 0 && acrossEnergy < alongEnergy * 0.12,
 		"Ocean swell lost its prevailing wind direction");
+
+	// 変換後の全頂点がカリング用の球内に残ることを確認する
 	const Bounds3 bounds{{-1, -1, -1}, {1, 1, 1}};
 	XMFLOAT4X4 world;
 	XMStoreFloat4x4(

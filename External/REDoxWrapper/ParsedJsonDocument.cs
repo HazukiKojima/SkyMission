@@ -11,6 +11,8 @@ internal sealed class ParsedJsonDocument(JsonDocument document) : IDisposable
     internal int ReadParameters(NumericParameterLayout layout, Span<float> output)
     {
         if (output.Length != layout.ValueCount) return NumericParameterLayout.InvalidValue;
+
+        // 初回の検証に成功した数値配列だけをキャッシュする
         if (!_parameters.TryGetValue(layout, out float[]? values))
         {
             values = new float[layout.ValueCount];
@@ -21,6 +23,7 @@ internal sealed class ParsedJsonDocument(JsonDocument document) : IDisposable
             _parameters.Add(layout, values);
         }
 
+        // 呼び出し側にはコピーを渡してキャッシュを保護する
         values.AsSpan().CopyTo(output);
         return values.Length;
     }

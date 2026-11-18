@@ -57,6 +57,7 @@ namespace Game {
 	bool MissionState::Advance(size_t remainingAircraft, bool playerAlive) {
 		if (m_phase == MissionPhase::Complete || m_phase == MissionPhase::Failed) return false;
 
+		// 自機の撃墜を優先して一段階だけ任務を進める
 		const auto before = m_phase;
 
 		if (!playerAlive)

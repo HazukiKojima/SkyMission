@@ -247,7 +247,7 @@ namespace Game {
 				{sightProjection.pixel.x, sightProjection.pixel.y + 12 * scale}, lineWidth, color);
 		}
 
-		// 選択した敵に命中するよう、照準を予測位置へ合わせる
+		// 選択対象の迎撃位置に予測マーカーを表示する
 		// 予測位置には敵の移動と、自機から引き継ぐ弾速の補正を含む
 		const auto leadPoint = snapshot.lockState == LockState::Locked &&
 				snapshot.selected != Engine::InvalidObjectId && snapshot.aim

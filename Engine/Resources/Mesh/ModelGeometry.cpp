@@ -123,6 +123,7 @@ namespace Engine::ModelProcessing {
 			const std::string& rotatingNodeName, std::vector<MeshInstance>& instances) {
 			const aiMatrix4x4 transform = parentTransform * node->mTransformation;
 
+			// 親が回転対象なら子メッシュにも回転を引き継ぐ
 			const bool isRotatingNode = parentIsNodeRotation ||
 				(!rotatingNodeName.empty() && node->mName.C_Str() == rotatingNodeName);
 			for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex) {

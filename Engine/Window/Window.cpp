@@ -47,6 +47,8 @@ namespace Engine {
 	void Window::SetLoading(bool loading) {
 		m_loading = loading;
 		InvalidateRect(m_hwnd, nullptr, FALSE);
+
+		// 読み込み中に受けた終了要求はワーカーの停止後に反映する
 		if (!loading && m_closeRequested) DestroyWindow(m_hwnd);
 	}
 

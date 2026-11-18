@@ -16,6 +16,7 @@ internal sealed class NumericParameterLayout
     {
         if (names.Length != lengths.Length) throw new ArgumentException("Parameter layout length mismatch");
 
+        // フィールド名から書き込み位置を引ける配置表を作る
         _indices = new(names.Length, StringComparer.Ordinal);
         _offsets = new int[names.Length];
         _lengths = (int[])lengths.Clone();
@@ -71,6 +72,7 @@ internal sealed class NumericParameterLayout
             return true;
         }
 
+        // 配列は成分数が一致する場合だけ読み込む
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != output.Length) return false;
 
         int index = 0;

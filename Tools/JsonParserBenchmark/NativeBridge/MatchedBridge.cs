@@ -39,6 +39,7 @@ public static unsafe class MatchedBridge
                 seen.Clear();
                 int found = 0;
 
+                // 必要な項目を一度だけ走査して両パーサーの条件をそろえる
                 foreach (var property in root.EnumerateObject())
                 {
                     if (!Indices.TryGetValue(property.Name, out int index) || seen[index] != 0) continue;
@@ -59,6 +60,7 @@ public static unsafe class MatchedBridge
                 _cache.Add(fields, values);
             }
 
+            // 完全な配列だけをキャッシュから呼び出し元へ渡す
             values.AsSpan().CopyTo(output);
             return 0;
         }

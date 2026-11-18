@@ -5,6 +5,7 @@
 void TestHostileProjectileOrientation() {
 	using namespace DirectX;
 
+	// 前方軸の異なるモデルでも速度方向へ向くことを確認する
 	for (const XMFLOAT3 modelForward : {XMFLOAT3{0, 1, 0}, XMFLOAT3{1, 0, 0}, XMFLOAT3{0, 0, -1}})
 		for (const XMFLOAT3 velocity : {XMFLOAT3{1000, 0, 0}, XMFLOAT3{-1000, 0, 0}, XMFLOAT3{0, 1000, 0},
 				 XMFLOAT3{0, -1000, 0}, XMFLOAT3{0, 0, 1000}, XMFLOAT3{0, 0, -1000}, XMFLOAT3{600, 300, -800},

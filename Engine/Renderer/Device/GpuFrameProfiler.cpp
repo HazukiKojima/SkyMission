@@ -45,6 +45,7 @@ namespace Engine {
 
 	void GpuFrameProfiler::Submitted(ID3D12CommandQueue* queue) {
 		if (m_capture) {
+			// 今回の計測をCPUが読めるようになる時点を記録する
 			m_pending[m_frame] = ++m_serial;
 			ThrowIfFailed(queue->Signal(m_fence.Get(), m_serial));
 		}
