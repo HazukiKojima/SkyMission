@@ -104,7 +104,7 @@ float3 CalculateSunSpecular(float3 N, float3 V, float3 L, float roughness, Commo
     float NdotH = saturate(dot(N, H));
     float VdotH = saturate(dot(V, H));
 
-    // 背面の反射はゼロとし、分岐を抜けた後の戻り値を明示する
+    // 光が当たらない面の鏡面反射はゼロにする
     float3 contribution = 0.0f;
     if (NdotL > 0.0f)
     {

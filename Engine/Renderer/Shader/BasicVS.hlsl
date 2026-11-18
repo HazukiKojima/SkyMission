@@ -40,6 +40,7 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
     float sinf = sin(f);
     float cosf = cos(f);
 
+    // 波の傾きから接線を更新して法線計算に使う
     tangent +=
         float3(-d.x * d.x * (steepness * sinf), d.x * (steepness * cosf), -d.x * d.y * (steepness * sinf));
 
@@ -66,6 +67,7 @@ PS_INPUT VS(VS_INPUT input)
 
     const int NUM_WAVES = 6;
 
+    // 向きと波長の異なる6成分の波を重ねる
     for (int i = 0; i < NUM_WAVES; ++i)
     {
         float phaseOffset = (float)i * 21.53f;
@@ -82,6 +84,7 @@ PS_INPUT VS(VS_INPUT input)
         steepness *= 0.72f;
     }
 
+    // 重ねた波の接線から法線を求めてピクセルシェーダーへ渡す
     float3 normal = normalize(cross(binormal, tangent));
 
     float3 worldPos = pos;

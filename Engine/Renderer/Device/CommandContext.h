@@ -14,6 +14,7 @@ namespace Engine {
 
 		void Initialize(RenderDevice* renderDevice);
 
+		// 対象フレームのGPU処理完了後に呼ぶ
 		void BeginFrame();
 		void EndFrame();
 		void MoveToNextFrame(RenderDevice* renderDevice);
@@ -27,6 +28,7 @@ namespace Engine {
 			m_currentFrameIndex = device.GetFrameIndex();
 		}
 
+		// 全サブリソースに状態遷移を記録する
 		void TransitionResource(
 			ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
 

@@ -10,6 +10,8 @@ namespace Engine {
 		} else if (diameterPixels < kMediumDetailThresholdPixels) {
 			lod = 1;
 		}
+
+		// モデルが持つLOD数の範囲へ収める
 		return std::min(lod, count - 1);
 	}
 
@@ -20,7 +22,7 @@ namespace Engine {
 		BoundingSphere sphere;
 		XMStoreFloat3(&sphere.Center, XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&world)));
 
-		// sqrt(||A||1 * ||A||inf) bounds the spectral norm, including nonuniform scale and shear.
+		// 非一様スケールやせん断でも球が収まるよう、最大伸長率の上限を求める
 		float rowNorm = 0, columnNorm = 0;
 		for (int i = 0; i < 3; ++i) {
 			float row = 0, column = 0;
@@ -40,10 +42,13 @@ namespace Engine {
 	std::vector<ModelDrawDecision> BuildModelDrawDecisions(
 		const Scene& scene, DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection, UINT height) {
 		using namespace DirectX;
+
+		// 視錐台をワールド空間へ変換する
 		BoundingFrustum local, frustum;
 		BoundingFrustum::CreateFromMatrix(local, projection);
 		local.Transform(frustum, XMMatrixInverse(nullptr, view));
 
+		// シーン順に可視性とLODを判定する
 		std::vector<ModelDrawDecision> decisions;
 		decisions.reserve(scene.GetObjects().size());
 		for (const auto& object : scene.GetObjects()) {
@@ -55,6 +60,7 @@ namespace Engine {
 					WorldCullingSphere(*bounds, object.model->GetCullingRadius(), object.worldTransform);
 				decision.visible = frustum.Intersects(sphere);
 
+				// 投影サイズからLODを選ぶ
 				XMFLOAT3 centerView;
 				XMStoreFloat3(&centerView, XMVector3TransformCoord(XMLoadFloat3(&sphere.Center), view));
 				const float pixels = sphere.Radius * XMVectorGetY(projection.r[1]) * float(height) /

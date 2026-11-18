@@ -8,6 +8,8 @@ void TestHudTypography() {
 	list.Reset(1920, 1080);
 	list.Text({100, 100}, "速度 1122", 48, Game::HudStyle::Ink);
 	Require(list.GetVertices().size() == 42, "UTF-8 HUD text was rendered per byte");
+
+	// 生成した頂点の右端と文字幅の計算結果を比較する
 	float right = 0;
 
 	for (const auto& vertex : list.GetVertices())
@@ -63,6 +65,7 @@ void TestHudTypography() {
 			x > 16 && x < 1904 && y > 16 && y < 1064, "Flight HUD retained the weathered screen-edge frame");
 	}
 
+	// 任務段階と戦闘結果を変え、組み込み字幕のグリフを確認する
 	snapshot.forward = {0, 0, 1};
 	snapshot.enemies = {{1, {0, 0, 1000}, {}, "ENEMY 01", 100, {0, 0, 1}}};
 	snapshot.selected = 1;

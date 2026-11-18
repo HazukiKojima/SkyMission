@@ -13,7 +13,7 @@ namespace Engine {
 	  public:
 		void InitializeSkySphere(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius);
 
-		// 転送を記録し、実行とGPU完了待機はRendererに任せる
+		// 記録中のコマンドリストを受け取り、バッチごとに転送とGPU待機を行う
 		void Load(RenderDevice* device, CommandContext* context, const RendererDefinition& assets);
 		void ReleaseUploadResources();
 

@@ -61,6 +61,7 @@ namespace Engine {
 
 	const RedoxDocument& JsonAssetReader::AcquireDocument(
 		const std::filesystem::path& path, RedoxDocument& transient) const {
+		// 文書キャッシュがなければ呼び出し中だけ文書を保持する
 		if (m_documents) return m_documents->Get(path);
 		if (m_files)
 			transient = RedoxDocument(m_files->Read(path));
@@ -71,6 +72,7 @@ namespace Engine {
 
 	std::filesystem::path JsonAssetReader::Resolve(
 		const std::filesystem::path& path, const std::string& key) const {
+		// 相対参照はJSONファイルの場所を基準に解決する
 		const std::string value = ResolveString(path, key);
 		return path.parent_path() /
 			std::filesystem::path(
@@ -92,6 +94,7 @@ namespace Engine {
 		auto getFloatArray = reinterpret_cast<RedoxGetFloatArray>(
 			RedoxModule::GetFunction("MyRedoxGetFloatArrayFromDocument"));
 
+		// 数値1個または最大3成分のベクトルを受け取る
 		std::vector<float> output(3);
 		const int result =
 			getFloatArray(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),

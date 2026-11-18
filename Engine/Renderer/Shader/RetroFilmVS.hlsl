@@ -10,6 +10,7 @@ PS_INPUT VS(uint vertexID : SV_VertexID)
     float2 position;
     float2 uv;
 
+    // 画面を覆う大きな三角形を頂点番号から作る
     if (vertexID == 0)
     {
         position = float2(-1.0f, -1.0f);

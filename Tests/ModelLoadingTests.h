@@ -21,6 +21,8 @@ void TestPreparedModelCache(const fs::path& repository, const fs::path& fixture)
 	options.rotatingNodeName = "Propeller";
 	options.generateLods = true;
 	const auto first = PrepareModelGeometry(source, options);
+
+	// 同じモデルの再読み込みがキャッシュを使うことを確かめる
 	const auto second = PrepareModelGeometry(source, options);
 	Require(!first.loadedFromCache && second.loadedFromCache && !first.levels[0].empty(),
 		"Prepared model cache did not bypass source processing on reload");

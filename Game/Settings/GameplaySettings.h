@@ -16,6 +16,7 @@ namespace Game {
 		float propellerAngularSpeedPerSpeed = 0.06f;
 
 		float AdvancePropeller(float angle, float speed, float dt) const {
+			// 回転角を1周の範囲へ戻して値の増大を防ぐ
 			return std::fmod(
 				angle + speed * propellerAngularSpeedPerSpeed * std::min(dt, 0.25f), DirectX::XM_2PI);
 		}

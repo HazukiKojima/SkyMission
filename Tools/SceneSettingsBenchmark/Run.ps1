@@ -63,6 +63,7 @@ for ($run = 1; $run -le $ProcessRuns; ++$run) {
         if ($LASTEXITCODE -ne 0) { throw "$backend benchmark failed." }
     }
 
+    # 呼び出し順と返却値が一致した組だけを計測結果に採用する
     $a = (Get-FileHash -LiteralPath (Join-Path $output "redox-$run-trace.txt") -Algorithm SHA256).Hash
     $b = (Get-FileHash -LiteralPath (Join-Path $output "nlohmann-$run-trace.txt") -Algorithm SHA256).Hash
 

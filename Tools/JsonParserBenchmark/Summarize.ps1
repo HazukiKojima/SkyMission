@@ -14,6 +14,7 @@ for ($run = 1; $run -le $ProcessRuns; ++$run) {
     Copy-Item -LiteralPath (Join-Path $InputDirectory "native-$run-environment.txt") -Destination $OutputDirectory
 }
 
+# 全プロセスの標本をまとめて中央値と分位点を計算する
 $summary = $rows | Group-Object workload,dataset,parser | ForEach-Object {
     $values = @($_.Group | ForEach-Object { [double]::Parse($_.ns_per_operation, [Globalization.CultureInfo]::InvariantCulture) } | Sort-Object)
 

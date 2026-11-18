@@ -9,6 +9,7 @@ void TestEnemyRadio() {
 	EnemyRadioController radio;
 	std::array<bool, EnemyRadioClips.size()> heard{};
 
+	// 撃墜と僚機の反応を繰り返して全台詞が使われることを確かめる
 	for (int kill = 0; kill < 7; ++kill) {
 		radio.NotifyDestroyed(100 + kill, survivors);
 		radio.Update(0, survivors, false);
@@ -26,6 +27,8 @@ void TestEnemyRadio() {
 
 	Require(std::all_of(heard.begin(), heard.end(), [](bool value) { return value; }),
 		"Enemy radio did not use all eleven voice clips");
+
+	// 字幕に使う全グリフがアトラスに収まっているか確認する
 	for (const auto& clip : EnemyRadioClips) {
 		std::string_view text = clip.text;
 

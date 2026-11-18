@@ -6,6 +6,7 @@
 namespace Engine {
 	Window::Window(UINT width, UINT height, const wchar_t* title, HINSTANCE hInstance)
 		: m_width(width), m_height(height) {
+		// ウィンドウクラスを登録する
 		WNDCLASSW wc{};
 		wc.lpfnWndProc = WindowProc;
 		wc.hInstance = hInstance;
@@ -13,6 +14,8 @@ namespace Engine {
 
 		if (!RegisterClassW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
 			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+
+		// 指定したクライアント領域を持つウィンドウを作る
 		RECT rc{0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
 		AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 		m_hwnd = CreateWindowExW(0, wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
@@ -44,6 +47,8 @@ namespace Engine {
 	void Window::SetLoading(bool loading) {
 		m_loading = loading;
 		InvalidateRect(m_hwnd, nullptr, FALSE);
+
+		// 読み込み中に受けた終了要求はワーカーの停止後に反映する
 		if (!loading && m_closeRequested) DestroyWindow(m_hwnd);
 	}
 
@@ -55,6 +60,8 @@ namespace Engine {
 
 	void Window::ToggleFullscreen() {
 		EndCameraLook();
+
+		// 元の配置を保存してモニター全体へ広げる
 		if (!m_fullscreen) {
 			MONITORINFO monitor{sizeof(MONITORINFO)};
 			if (!GetMonitorInfoW(MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONEAREST), &monitor) ||
@@ -116,6 +123,7 @@ namespace Engine {
 			return;
 		}
 
+		// 受信前にRaw Inputパケットのサイズを確認する
 		UINT size = 0;
 		if (GetRawInputData(handle, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER)) == UINT(-1)) return;
 		if (size < sizeof(RAWINPUTHEADER)) return;
@@ -128,6 +136,7 @@ namespace Engine {
 			return;
 		}
 
+		// パケットの種類とサイズを確認して入力を振り分ける
 		const auto& raw = *reinterpret_cast<const RAWINPUT*>(storage.data());
 		if (raw.header.dwType == RIM_TYPEKEYBOARD &&
 			bytes >= offsetof(RAWINPUT, data) + sizeof(RAWKEYBOARD)) {
@@ -163,6 +172,7 @@ namespace Engine {
 	}
 
 	LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+		// 作成時にインスタンスを関連付け、以後のメッセージを振り分ける
 		auto* self = reinterpret_cast<Window*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
 		if (message == WM_NCCREATE) {
 			self = static_cast<Window*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);

@@ -38,6 +38,7 @@ namespace Game {
 			return model;
 		};
 
+		// シーンに各種設定を適用する
 		FlightScene scene;
 		scene.ConfigureCombat(assets.combat);
 		scene.Initialize(static_cast<float>(width) / static_cast<float>(height), 1.0f, farZ);
@@ -60,6 +61,8 @@ namespace Game {
 		scene.m_cameraController.Configure(assets.camera);
 		scene.m_cameraController.Initialize(
 			DirectX::XMConvertToRadians(assets.camera.fovDegrees), float(width) / height, 1.0f, farZ);
+
+		// 機体と兵装にモデルを割り当てる
 		scene.SetPlayerAircraftPosition(assets.mission.playerStartPosition);
 		scene.SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		scene.SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
@@ -70,12 +73,15 @@ namespace Game {
 		scene.ConfigureEnemyWeapons(assets.playerWeapon, assets.mission, requireModel(AmmunitionModelId));
 		scene.ConfigureCarrierMissileWeapon(
 			assets.bomb, assets.mission.bombReloadSeconds, requireModel(BombModelId));
+
+		// 先頭を空母として艦船を登録する
 		for (size_t i = 0; i < assets.ships.size(); ++i) {
 			const auto& ship = assets.ships[i];
 			const auto id = scene.AddObject(requireModel(ship.asset.id), ship.BuildTransform());
 			scene.RegisterMissionShip(id, i == 0);
 		}
 
+		// 配置後の表示状態を更新する
 		scene.OnResize(width, height);
 		scene.ApplyRenderStates();
 		scene.RefreshCombatSnapshot();
@@ -112,6 +118,7 @@ namespace Game {
 
 	void FlightScene::Update(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput,
 		CombatInput combatInput) {
+		// フレームごとのイベント通知をリセットする
 		m_combat.audio = {};
 		m_combat.firedVolleys = 0;
 		m_combat.hitCount = 0;
@@ -128,6 +135,7 @@ namespace Game {
 			SaveInitialState();
 		}
 
+		// 演出中は専用の更新へ切り替える
 		if (m_cinematic.GetPresentation().active) {
 			UpdateCinematic(dt, combatInput.skipOpening);
 			UpdateEnemyRadio(dt);
@@ -138,6 +146,7 @@ namespace Game {
 		m_combat.cinematic = m_cinematic.GetPresentation();
 		UpdateCombatTimers(dt);
 
+		// 決着後は再挑戦か演出を処理する
 		if (m_combat.result != CombatResult::Active) {
 			if (combatInput.retry) {
 				Restart(dt);
@@ -225,6 +234,7 @@ namespace Game {
 		AimAssistance assistance;
 		assistance.angleDegrees = m_combatSettings.targeting.assistAngleDegrees;
 
+		// 捕捉済みで射程内の対象だけを射撃補助へ渡す
 		if (m_targeting.GetState() == LockState::Locked) {
 			const auto selectedTarget = m_targeting.GetSelected();
 			const float acquireDistance = m_combatSettings.targeting.acquireDistance;
@@ -241,6 +251,7 @@ namespace Game {
 			}
 		}
 
+		// フレーム内の発射時刻に合わせて各斉射を生成する
 		for (const float age : ages) {
 			if (m_projectiles.FireVolley(m_scene,
 					{.muzzles = m_gun.GetMuzzles(),
@@ -293,6 +304,7 @@ namespace Game {
 
 	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, bool next, float dt) {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
+			// 空母紹介の完了までは目標の捕捉を始めない
 			if (!m_carrierTargetReady) {
 				m_targeting.Update({}, geometry.muzzle, geometry.forward, false, 0);
 				return;
@@ -321,6 +333,7 @@ namespace Game {
 				DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(
 					DirectX::XMLoadFloat3(&target.position), DirectX::XMLoadFloat3(&position))));
 			{
+				// 現在位置への射線を有効な迎撃解で補正する
 				const CombatTarget playerTarget{m_playerId, target.position, target.velocity};
 				const auto aim = SolveGunAim(position, enemy.flightModel.GetVelocity(), playerTarget,
 					m_enemyGunSettings.muzzleSpeed, m_enemyGunSettings.lifetime);
@@ -329,6 +342,7 @@ namespace Game {
 				}
 			}
 
+			// ロック状態に応じた攻撃性と射撃間隔をAIへ渡す
 			enemy.weaponCooldownSeconds = std::max(0.0f, enemy.weaponCooldownSeconds - dt);
 			const bool allowed = true;
 			const auto engagement = GetEnemyEngagementProfile(
@@ -342,6 +356,8 @@ namespace Game {
 				m_mission.GetDefenseCenter(m_scene), true);
 			const auto input = decision.flight;
 			enemy.fire = decision.fire;
+
+			// 移動前の位置を保存して次の衝突判定に使う
 			enemy.previousPosition = enemy.flightModel.GetPosition();
 			enemy.flightModel.Update(input, dt);
 			enemy.propellerAngle =
@@ -360,6 +376,7 @@ namespace Game {
 				.maximumSpeed = m_player.GetMaximumSpeed()});
 		}
 
+		// 手動の敵機注視と任務による自動注視を選ぶ
 		std::optional<DirectX::XMFLOAT3> lookTarget;
 
 		if (cameraInput.IsKeyDown('Z') && m_combat.result == CombatResult::Active &&
@@ -496,6 +513,7 @@ namespace Game {
 				.heading = enemy.flightModel.GetHeading()});
 		}
 
+		// 4門の平均位置を照準と捕捉の基準点にする
 		geometry.forward = m_player.GetForward();
 		geometry.muzzle = m_player.GetPosition();
 
@@ -529,6 +547,7 @@ namespace Game {
 		m_combat.missionMessageSeconds = m_mission.GetMessageSeconds();
 		m_combat.missileImpactPoint.reset();
 
+		// 甲板の中心を目標位置とし、発射時と同じ軌道で着弾点を予測する
 		if (const auto deck = GetDeckTarget()) {
 			const auto center = deck->bounds.Center();
 			DirectX::XMStoreFloat3(&m_combat.objectivePosition,
@@ -596,6 +615,7 @@ namespace Game {
 		std::vector<Engine::ObjectId> destroyed;
 
 		for (const auto& hit : hits) {
+			// 空母への有効な命中から耐久値と撃破・追撃の通知を更新する
 			if (hit.target == m_mission.GetCarrierId() &&
 				(hit.kind == ProjectileKind::Rocket || hit.kind == ProjectileKind::Bomb)) {
 				if (m_mission.ApplyCarrierDamage(hit.damage)) {
@@ -616,6 +636,7 @@ namespace Game {
 				continue;
 			}
 
+			// 自機の被害と音声・被弾方向を更新する
 			if (hit.target == m_playerId && m_playerId != Engine::InvalidObjectId) {
 				if (m_combat.playerHealth <= 0) continue;
 
@@ -642,6 +663,7 @@ namespace Game {
 				continue;
 			}
 
+			// 敵機の被害を反映し、撃破したIDを後で削除するために集める
 			auto enemy = std::find_if(m_enemies.begin(), m_enemies.end(), [&](const EnemyAircraft& e) {
 				return e.objectId == hit.target;
 			});
@@ -704,6 +726,7 @@ namespace Game {
 
 		if (!bounds) return;
 
+		// 変換後の境界8頂点から機体の下端と海面の接触を判定する
 		float lowestY = std::numeric_limits<float>::infinity();
 
 		for (int corner = 0; corner < 8; ++corner) {

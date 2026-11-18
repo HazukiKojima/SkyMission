@@ -12,6 +12,7 @@ namespace Game {
 			reloadSeconds > BombTuning::lifetimeSeconds || !model)
 			throw std::invalid_argument("Bomb requires a model and reload interval in [1,120]");
 
+		// 弾モデルの前方軸を検証する
 		const auto forward = XMLoadFloat3(&modelForward);
 		const float length = XMVectorGetX(XMVector3Length(forward));
 
@@ -19,6 +20,7 @@ namespace Game {
 			throw std::invalid_argument("Bomb modelForward must be finite and nonzero");
 		if (!m_bombs.empty()) throw std::logic_error("Cannot configure active bombs");
 
+		// 検証済みの設定で投下状態を初期化する
 		m_model = std::move(model);
 		XMStoreFloat3(&m_modelForward, XMVector3Normalize(forward));
 		m_reloadSeconds = reloadSeconds;
@@ -54,6 +56,8 @@ namespace Game {
 
 		dt = std::min(dt, 0.25f);
 		m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
+
+		// 投下済みの爆弾を海面到達まで進める
 		std::erase_if(m_bombs, [&](Bomb& bomb) {
 			const auto start = bomb.flight.position;
 			const auto seaTime = bomb.flight.TimeToHeight(0);
@@ -61,6 +65,7 @@ namespace Game {
 			bomb.flight.Advance(valid);
 			bomb.remainingSeconds -= dt;
 
+			// 移動区間が甲板に触れたら命中を通知する
 			if (deck) {
 				if (const auto contact = IntersectMovingTarget(start, bomb.flight.position, *deck, 0, 1)) {
 					XMFLOAT3 point;
@@ -78,12 +83,14 @@ namespace Game {
 				}
 			}
 
+			// 海面到達か寿命切れで爆弾を取り除く
 			if (bomb.flight.position.y <= 0.001f || bomb.remainingSeconds <= 0) {
 				m_missImpacts.push_back(bomb.flight.position);
 				scene.RemoveObject(bomb.id);
 				return true;
 			}
 
+			// 落下後の姿勢をモデルへ反映する
 			if (auto* object = scene.FindObject(bomb.id))
 				object->worldTransform =
 					BuildProjectileTransform(bomb.flight.position, bomb.flight.velocity, m_modelForward);

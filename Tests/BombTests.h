@@ -12,6 +12,8 @@ void TestBombSystem() {
 	Require(!bombs.TryDrop(scene, {}, {}), "Second click bypassed bomb reload");
 	Require(scene.GetObjects().front().worldTransform._42 == 1000 - BombTuning::releaseOffsetMeters,
 		"Actual bomb release disagrees with HUD release position");
+
+	// 表示用の投下予測と実際の落下計算を照合する
 	const auto expected = BombSystem::ReleaseFlight({10, 1000, 20}, {200, 20, -300});
 	bombs.Update(scene, 0.25f, std::nullopt);
 	auto advanced = expected;
@@ -33,6 +35,7 @@ void TestBombSystem() {
 		"Bomb did not reload at the ten-second boundary");
 	Require(bombs.GetCount() <= BombSystem::RequiredModelCapacity(10), "Bomb capacity reservation too small");
 
+	// 甲板への命中と海面への落下を区別する
 	Scene deckScene;
 	BombSystem deckBombs;
 	deckBombs.Configure(10, model, {1, 0, 0});

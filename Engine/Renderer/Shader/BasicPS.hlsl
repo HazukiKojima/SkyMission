@@ -39,6 +39,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     lighting.ambientColor = ambientColor;
     lighting.padding = 0.0f;
 
+    // 表面の基底から拡散光と鏡面反射を求める
     float3 V = SafeNormalize(cameraPos - input.worldPos);
     float3 L = SafeNormalize(lighting.sunDirection);
 

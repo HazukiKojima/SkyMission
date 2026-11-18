@@ -272,6 +272,8 @@ internal static class Program
         double sum = 0;
 
         for (int index = 0; index < iterations; ++index) sum += action();
+
+        // 計測結果を外部から観測可能にし、処理の最適化による除去を防ぐ
         Volatile.Write(ref s_checksum, sum);
     }
 
@@ -304,6 +306,8 @@ internal static class Program
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
+
+        // GCの事前実行を計測から除き、現在のスレッドの割り当て量を測る
         long allocated = GC.GetAllocatedBytesForCurrentThread();
         long start = Stopwatch.GetTimestamp();
         RunBatch(action, iterations);

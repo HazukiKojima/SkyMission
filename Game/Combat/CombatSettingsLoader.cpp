@@ -32,6 +32,8 @@ namespace Game {
 			t.maintainAngleDegrees = ReadPositiveFloat(reader, path, "maintainAngleDegrees");
 			t.lossGraceSeconds = ReadPositiveFloat(reader, path, "lossGraceSeconds");
 			t.assistAngleDegrees = ReadPositiveFloat(reader, path, "assistAngleDegrees");
+
+			// 捕捉条件の大小関係も実際のシステムと同じ検証に通す
 			TargetingSystem{}.Configure(t);
 			settings.enemyHealth = ReadPositiveFloat(reader, path, "enemyHealth");
 			settings.playerHealth = ReadPositiveFloat(reader, path, "playerHealth");

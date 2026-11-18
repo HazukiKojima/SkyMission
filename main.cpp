@@ -7,6 +7,7 @@ namespace {
 
 		if (length <= 0) return L"Unknown error.";
 
+		// 終端文字も含む領域へUTF-8を変換する
 		std::wstring result(static_cast<size_t>(length), L'\0');
 		MultiByteToWideChar(CP_UTF8, 0, text, -1, result.data(), length);
 		result.resize(static_cast<size_t>(length - 1));

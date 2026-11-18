@@ -3,6 +3,8 @@
 
 void TestEnvironmentSettings(const fs::path& repository, const fs::path& fixture) {
 	const auto assets = repository / L"Assets";
+
+	// 元のアセットを変更せず不正設定を試せるコピーを作る
 	const auto root = fixture / L"environment-validation";
 	fs::create_directories(root / L"Environment");
 	fs::create_directories(root / L"Combat");

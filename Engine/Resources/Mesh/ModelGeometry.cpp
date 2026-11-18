@@ -44,6 +44,8 @@ namespace Engine::ModelProcessing {
 			auto& vertices = result.vertices;
 			vertices.reserve(sourceMesh->mNumVertices);
 			const bool isRotatingNode = instance.isRotatingNode;
+
+			// 法線には逆転置行列を適用する
 			const aiMatrix3x3 linearTransform(instance.transform);
 			aiMatrix3x3 normalTransform(linearTransform);
 			normalTransform.Inverse().Transpose();
@@ -51,6 +53,8 @@ namespace Engine::ModelProcessing {
 				std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 			aiVector3D nodeRotationBoundsMax(std::numeric_limits<float>::lowest(),
 				std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
+
+			// ノードの変換を焼き込んだ頂点を作る
 			for (unsigned int vertexIndex = 0; vertexIndex < sourceMesh->mNumVertices; ++vertexIndex) {
 				const aiVector3D position = instance.transform * sourceMesh->mVertices[vertexIndex];
 
@@ -98,6 +102,7 @@ namespace Engine::ModelProcessing {
 				return {};
 			}
 
+			// 回転部品は境界の中心を支点とし、最も薄い方向を回転軸にする
 			result.isRotatingNode = isRotatingNode;
 			if (isRotatingNode) {
 				const float extentX = nodeRotationBoundsMax.x - nodeRotationBoundsMin.x;
@@ -119,6 +124,7 @@ namespace Engine::ModelProcessing {
 			const std::string& rotatingNodeName, std::vector<MeshInstance>& instances) {
 			const aiMatrix4x4 transform = parentTransform * node->mTransformation;
 
+			// 親が回転対象なら子メッシュにも回転を引き継ぐ
 			const bool isRotatingNode = parentIsNodeRotation ||
 				(!rotatingNodeName.empty() && node->mName.C_Str() == rotatingNodeName);
 			for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex) {
@@ -148,6 +154,7 @@ namespace Engine::ModelProcessing {
 
 	std::vector<MeshGeometry> BuildModelGeometry(const aiScene& scene, const ModelLoadOptions& options,
 		std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>>& positions) {
+		// ノード階層から変換付きのメッシュを集める
 		std::vector<MeshInstance> meshInstances;
 		CollectMeshInstances(
 			&scene, scene.mRootNode, aiMatrix4x4(), false, options.rotatingNodeName, meshInstances);
@@ -156,6 +163,7 @@ namespace Engine::ModelProcessing {
 			return {};
 		}
 
+		// 全メッシュの境界から正規化の基準を求める
 		aiVector3D boundsMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
 			std::numeric_limits<float>::max());
 		aiVector3D boundsMax(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(),
@@ -220,6 +228,7 @@ namespace Engine::ModelProcessing {
 				(a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
 		};
 
+		// 回転する部品の軌道も収まる半径を求める
 		for (const auto& geometry : geometries)
 			for (const auto& vertex : geometry.vertices)
 				radius = std::max(radius,

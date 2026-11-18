@@ -40,6 +40,8 @@ if (!$crt) { throw 'Redistributable x64 VC runtime was not found.' }
 Get-ChildItem -LiteralPath $crt.FullName -Filter '*.dll' | Copy-Item -Destination $runtime
 Copy-Item -LiteralPath (Join-Path $repository 'Assets') -Destination $package -Recurse
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'はじめに.txt') -Destination $package
+
+# 依存DLLを必要としないランチャーを配布物の入口として作る
 $developerCommand = Join-Path $installation 'Common7/Tools/VsDevCmd.bat'
 $launcher = Join-Path $PSScriptRoot 'Launcher.cpp'
 $batch = Join-Path $output 'build-launcher.cmd'

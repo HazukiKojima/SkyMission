@@ -50,6 +50,7 @@ namespace Game {
 
 		if (FAILED(MFCreateSourceReaderFromURL(path.c_str(), nullptr, &reader))) return false;
 
+		// 読み込み形式を48kHzの16bit PCMへそろえる
 		ComPtr<IMFMediaType> requested;
 
 		if (FAILED(MFCreateMediaType(&requested))) return false;
@@ -66,6 +67,7 @@ namespace Game {
 			return false;
 		}
 
+		// 実際の出力形式が要求どおりか確認する
 		ComPtr<IMFMediaType> actual;
 
 		if (FAILED(reader->GetCurrentMediaType(kAudioStream, &actual))) return false;
@@ -84,6 +86,7 @@ namespace Game {
 			return false;
 		}
 
+		// サンプルを末尾まで集めてクリップを作る
 		Clip decoded;
 		decoded.format = format;
 
@@ -165,6 +168,7 @@ namespace Game {
 			m_settings.Load(Engine::JsonAssetReader{audioDocuments}, soundDirectory / L"audio.json");
 		}
 
+		// 通常戦闘で使う音声を読み込む
 		const std::string names[] = {m_settings.flightFile, m_settings.gunFile, m_settings.launchFile,
 			m_settings.gunHitFile, m_settings.missileHitFile, m_settings.aircraftFile, m_settings.shipFile,
 			m_settings.battleBgmFile};
@@ -179,6 +183,7 @@ namespace Game {
 			}
 		}
 
+		// 演出ごとの音声と敵無線を読み込む
 		const auto loadCinematicClip = [&](const std::filesystem::path& path, Clip& clip, UINT channels) {
 			if (!path.empty() && (!m_mediaInitialized || !LoadClip(path, clip, channels)))
 				Engine::Log(L"CombatAudio: could not load {}\n", path.wstring());
@@ -199,12 +204,14 @@ namespace Game {
 				loadCinematicClip(settings.radio[i].audio, bank.briefing[bank.briefingCount + i], 1);
 		}
 
+		// 再生先を初期化して用途別の音声ボイスを作る
 		if (FAILED(XAudio2Create(m_engine.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR)) ||
 			FAILED(m_engine->CreateMasteringVoice(&m_master))) {
 			Engine::Log("CombatAudio: audio output unavailable\n");
 			return;
 		}
 
+		// 警告音と命中音を合成する
 		m_hit = Synthesize(SoundKind::Hit);
 		m_lockWarning = Synthesize(SoundKind::LockWarning);
 		m_missileWarning = Synthesize(SoundKind::MissileWarning);
@@ -276,6 +283,7 @@ namespace Game {
 	}
 
 	void CombatAudio::ResetPlayback() {
+		// 再生キューを空にして、台詞と警告の管理状態も初期化する
 		for (auto* voice : m_voices) {
 			StopVoice(voice);
 		}
@@ -308,6 +316,7 @@ namespace Game {
 
 		voice->SetVolume(volume);
 
+		// 再生状態が変わったときだけバッファを入れ直す
 		if (playing == m_loopPlaying[index]) return;
 
 		StopVoice(voice);
@@ -332,6 +341,7 @@ namespace Game {
 
 		if (clip.samples.empty()) return;
 
+		// 再生中の音を止めず、空いているボイスで鳴らす
 		for (auto* voice : m_voices) {
 			if (!voice) continue;
 
@@ -359,6 +369,7 @@ namespace Game {
 			ResetPlayback();
 		}
 
+		// 継続音を状態に合わせた後、警告と単発イベントを処理する
 		SetLoop(0, ClipKind::Flight, state.flying,
 			m_settings.flightVolume *
 				(m_cinematicActive && m_activeCinematicAudio
@@ -375,6 +386,7 @@ namespace Game {
 	}
 
 	CinematicVoiceStatus CombatAudio::UpdateCinematic(const CinematicPresentation& opening) {
+		// 演出の切替や再開始では前の音声を止めて再生位置を戻す
 		if (m_activeCinematicId != opening.cinematicId || m_activePlaybackSerial != opening.playbackSerial) {
 			StopVoice(m_briefingVoice);
 			StopVoice(m_loops[3]);
@@ -466,6 +478,7 @@ namespace Game {
 	}
 
 	void CombatAudio::UpdateWarning(bool flying, bool lockWarning, bool missileWarning, float deltaSeconds) {
+		// 飛行中はミサイル警告をロック警告より優先する
 		int warning = kNoWarning;
 
 		if (flying) {
@@ -476,6 +489,7 @@ namespace Game {
 			}
 		}
 
+		// 警告が切り替わったら待ち時間をリセットしてすぐに鳴らす
 		if (warning != m_warningKind) {
 			StopVoice(m_warningVoice);
 			m_warningKind = warning;
@@ -526,6 +540,7 @@ namespace Game {
 		std::vector<int16_t> samples(static_cast<std::size_t>(kSampleRate * duration));
 		uint32_t randomState = 719;
 
+		// 警告は正弦波、命中音は減衰するノイズと高音を合成する
 		for (std::size_t i = 0; i < samples.size(); ++i) {
 			const float time = static_cast<float>(i) / kSampleRate;
 
@@ -567,6 +582,7 @@ namespace Game {
 			return true;
 		};
 
+		// 警告は専用ボイス、それ以外は空いている単発音用ボイスを使う
 		if (warning) {
 			submit(m_warningVoice);
 		} else {

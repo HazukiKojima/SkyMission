@@ -3,6 +3,7 @@
 namespace Engine {
 	void StartupTiming::Write() const noexcept {
 		try {
+			// ログ出力先が指定された場合だけ計測結果を保存する
 			static const std::filesystem::path path = [] {
 				wchar_t value[32768]{};
 

@@ -77,6 +77,7 @@ namespace Game {
 			}
 		}
 
+		// 切替順が入力配列の並びに依存しないようID順にそろえる
 		std::sort(candidates.begin(), candidates.end(), [](const auto* left, const auto* right) {
 			return left->id < right->id;
 		});
@@ -89,11 +90,13 @@ namespace Game {
 			return XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center) - XMLoadFloat3(&position)));
 		};
 
+		// 現在の選択が候補に残っているか調べる
 		const auto previousSelectedId = m_selected;
 		auto found = std::find_if(candidates.begin(), candidates.end(), [&](auto* candidate) {
 			return candidate->id == m_selected;
 		});
 
+		// 入力と候補に応じて選択対象を決める
 		if (cycleRequested && !candidates.empty()) {
 			if (found != candidates.end()) {
 				++found;
@@ -125,6 +128,7 @@ namespace Game {
 			}
 		}
 
+		// 対象変更時はロック進捗をリセットする
 		if (previousSelectedId != m_selected) {
 			m_acquiredSeconds = 0;
 			m_lostSeconds = 0;
@@ -151,6 +155,7 @@ namespace Game {
 		XMFLOAT3 direction;
 		XMStoreFloat3(&direction, XMLoadFloat3(&target->center) - XMLoadFloat3(&position));
 
+		// ロック解除には猶予時間を設ける
 		if (m_state == LockState::Locked) {
 			if (targetDistance <= m_settings.maintainDistance &&
 				IsWithinAngle(forward, direction, m_settings.maintainAngleDegrees)) {
@@ -166,6 +171,7 @@ namespace Game {
 			m_lostSeconds = 0;
 		}
 
+		// 取得条件を満たした時間でロックを進める
 		if (targetDistance <= m_settings.acquireDistance &&
 			IsWithinAngle(forward, direction, m_settings.acquireAngleDegrees)) {
 			m_acquiredSeconds = std::min(m_acquiredSeconds + deltaSeconds, m_settings.acquireSeconds);

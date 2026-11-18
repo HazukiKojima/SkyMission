@@ -41,6 +41,7 @@ namespace Game {
 		r.Color("/gun/flameOuterColor", gun.flameOuterColor);
 		r.Color("/gun/flameInnerColor", gun.flameInnerColor);
 
+		// 煙の動きと粒子数を読み込む
 		r.Number("/deck/riseSpeed", deck.riseSpeed, 0, 1000000);
 		r.Number("/deck/driftSpeed", deck.driftSpeed, 0, 1000000);
 		r.Number("/deck/growthPerSecond", deck.growthPerSecond, 0, 1000000);
@@ -56,6 +57,8 @@ namespace Game {
 		r.Integer("/explosion/smokeCount", explosion.smokeCount, 22);
 		r.Integer("/impact/fragmentCount", impact.fragmentCount, 28);
 		r.Integer("/impact/smokeCount", impact.smokeCount, 8);
+
+		// 発射演出の寸法と寿命を読み込む
 		r.Number("/gun/flashLifetimeSeconds", gun.flashLifetimeSeconds, 0.000001f, 1000000);
 		r.Number("/gun/flashRadius", gun.flashRadius, 0.000001f, 1000000);
 		r.Number("/gun/flameLength", gun.flameLength, 0.000001f, 1000000);
@@ -70,6 +73,8 @@ namespace Game {
 		r.Number("/gun/smokeVelocityInheritance", gun.smokeVelocityInheritance, 0, 1);
 		r.Number("/gun/smokeDrag", gun.smokeDrag, 0.000001f, 1000000);
 		r.Number("/gun/smokeRiseSpeed", gun.smokeRiseSpeed, 0, 1000000);
+
+		// 着弾演出の寿命と破片の動きを読み込む
 		r.Number("/impact/lifetimeSeconds", impact.lifetimeSeconds, 0.000001f, 1000000);
 		r.Number("/impact/flashSeconds", impact.flashSeconds, 0.000001f, 1000000);
 		r.Number("/impact/flashOuterRadius", impact.flashOuterRadius, 0.000001f, 1000000);
@@ -82,6 +87,8 @@ namespace Game {
 		r.Number("/impact/fragmentDrag", impact.fragmentDrag, 0.000001f, 1000000);
 		r.Number("/impact/fragmentGravity", impact.fragmentGravity, 0.000001f, 1000000);
 		r.Number("/impact/fragmentVelocityInheritance", impact.fragmentVelocityInheritance, 0, 1);
+
+		// 爆発演出の寿命と煙の広がりを読み込む
 		r.Number("/explosion/lifetimeSeconds", explosion.lifetimeSeconds, 0.000001f, 1000000);
 		r.Number("/explosion/flashSeconds", explosion.flashSeconds, 0.000001f, 1000000);
 		r.Number("/explosion/smokeFadeSeconds", explosion.smokeFadeSeconds, 0.000001f, 1000000);
@@ -98,6 +105,8 @@ namespace Game {
 		r.Number("/carrier/smokeStartRadius", carrier.smokeStartRadius, 0.000001f, 1000000);
 		r.Number("/carrier/smokeGrowthPerSecond", carrier.smokeGrowthPerSecond, 0.000001f, 1000000);
 		r.Number("/rocket/smokeLifetimeSeconds", rocket.smokeLifetimeSeconds, 0.000001f, 1000000);
+
+		// 内外の半径と幅が逆転していないか確認する
 		r.Require(explosion.maxRadius >= explosion.minRadius, "effects", "inconsistent radii or widths");
 		r.Require(
 			impact.flashOuterRadius >= impact.flashInnerRadius, "effects", "inconsistent radii or widths");

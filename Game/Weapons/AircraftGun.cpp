@@ -5,6 +5,8 @@
 namespace Game {
 	void AircraftGun::Configure(const GunSettings& settings, const Engine::Model& model) {
 		ValidateGunSettings(settings);
+
+		// 各銃口が一意の有効なノードか確認する
 		std::array<DirectX::XMFLOAT3, 4> muzzles{};
 
 		for (size_t i = 0; i < m_muzzles.size(); ++i) {
@@ -18,6 +20,7 @@ namespace Game {
 					"muzzleNames: nonfinite node position for '" + settings.muzzleNames[i] + "'");
 		}
 
+		// 全銃口の検証後に設定を確定する
 		m_muzzles = muzzles;
 		m_settings = settings;
 		m_cooldown = 0;

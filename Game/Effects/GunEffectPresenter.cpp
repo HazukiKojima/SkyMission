@@ -50,6 +50,7 @@ namespace Game {
 		const float scale = context.GetScale();
 		const size_t tracerCount = std::min(snapshot.gunTracers.size(), GunEffectSettings::maxTracerCount);
 
+		// 画面内へ切り詰めた弾道を曳光線として描く
 		for (size_t index = 0; index < tracerCount; ++index) {
 			if (!context.HasVertexBudget(GunEffectSettings::tracerVertexBudget)) break;
 
@@ -61,6 +62,7 @@ namespace Game {
 					context.Settings().gun.tracerInnerColor);
 		}
 
+		// 曳光線の上に銃口の閃光を重ねる
 		const size_t flashCount = std::min(snapshot.gunFlashes.size(), GunEffectSettings::maxFlashCount);
 
 		for (size_t index = 0; index < flashCount; ++index) {

@@ -4,7 +4,7 @@
 #include "Game/Combat/CombatTypes.h"
 
 namespace Game {
-	// 母艦への誘導ミサイルを管理する。2発を使い切った後に再装填する
+	// 母艦への誘導ミサイルを管理し、設定された弾数を使い切ると再装填する
 	class CarrierMissileSystem {
 	  public:
 		void ConfigureSettings(const MissileSettings& settings) {

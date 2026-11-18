@@ -9,6 +9,8 @@ namespace Game {
 		if (!resolve || !std::isfinite(farZ) || farZ <= 1 || m_cinematic.GetPresentation().active)
 			throw std::invalid_argument(
 				"Configure cinematics before playback with a resolver and valid farZ");
+
+		// 設定に含まれる全カットのモデルを検証する
 		for (const auto& [id, settings] : definitions) {
 			if (id.empty()) throw std::invalid_argument("Cinematic ID must not be empty");
 
@@ -31,6 +33,7 @@ namespace Game {
 					validateModel(shot);
 		}
 
+		// 検証後に演出設定を確定する
 		m_cinematics = definitions;
 		m_resolveCinematicModel = std::move(resolve);
 		m_cinematicFarZ = farZ;
@@ -71,6 +74,7 @@ namespace Game {
 
 		if (found == m_cinematics.end()) return false;
 
+		// 空母が必要な演出は対象の存在を確認する
 		const auto needsCarrier = [](const CinematicShotSettings& shot) { return shot.target == "carrier"; };
 
 		if ((needsCarrier(found->second) || std::any_of(found->second.shots.begin(),
@@ -112,6 +116,7 @@ namespace Game {
 
 		if (!ship || !center || !ship->model->GetLocalBounds()) return;
 
+		// ワールド空間の境界から撮影距離の基準となる艦の寸法を求める
 		const auto& bounds = *ship->model->GetLocalBounds();
 		XMVECTOR minimum = XMVectorReplicate(FLT_MAX), maximum = XMVectorReplicate(-FLT_MAX);
 
@@ -181,6 +186,7 @@ namespace Game {
 		const bool wasReady = m_carrierTargetReady;
 		m_cinematic.UpdateBriefing(voice, deltaSeconds);
 
+		// 通信の終了を任務目標の解禁や次の会話の待ち時間へ反映する
 		if (voice == CinematicVoiceStatus::Finished && m_cinematic.GetPresentation().radioLine >= 0 &&
 			!m_cinematic.GetPresentation().active) {
 			const auto id = m_cinematic.GetPresentation().cinematicId;
@@ -270,6 +276,7 @@ namespace Game {
 			return;
 		}
 
+		// 哨戒完了の会話を終えてから空母攻撃の指令へ進む
 		if (!m_patrolPraiseStarted) {
 			if (m_enemyRadio.IsBusy() || speaking) return;
 
@@ -308,6 +315,8 @@ namespace Game {
 		}
 
 		if (m_carrierHitSpeakAtSeconds < 0) return;
+
+		// ミサイルの飛行中や弾切れの場合は命中後の案内を取り消す
 		if (m_carrierMissiles.GetCount() > 0 || m_carrierMissiles.GetAmmo() == 0) {
 			m_carrierHitSpeakAtSeconds = -1;
 			return;
@@ -327,6 +336,7 @@ namespace Game {
 	}
 
 	void FlightScene::CheckMissionCinematics(float dt) {
+		// 勝利時は無線の終了を待ち、余韻を置いて終了演出へ進む
 		if (m_combat.result == CombatResult::Victory && !m_endingPlayed) {
 			if (m_enemyRadio.IsBusy() || m_combat.cinematic.radioLine >= 0) return;
 			if (m_victoryHoldSeconds < 0) { m_victoryHoldSeconds = 1; return; }

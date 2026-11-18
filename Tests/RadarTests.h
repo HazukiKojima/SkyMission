@@ -6,6 +6,7 @@
 void TestRadarMap() {
 	using namespace DirectX;
 
+	// 縦横比が変わっても配置と方位が保たれることを確かめる
 	for (const XMFLOAT2 size : {XMFLOAT2{800, 600}, XMFLOAT2{1920, 1080}, XMFLOAT2{2560, 1080}}) {
 		Engine::RenderView view;
 		view.width = unsigned(size.x);

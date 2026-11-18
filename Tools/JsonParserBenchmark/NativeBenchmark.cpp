@@ -220,6 +220,8 @@ int wmain(int argc, wchar_t** argv) {
 
 		const fs::path directory = fs::absolute(argv[1]);
 		const int run = std::stoi(argv[2]);
+
+		// 入力データとフィールド一覧を計測前にメモリへ読み込む
 		std::map<std::string, Dataset> datasets;
 		std::ifstream manifest(directory / "datasets.tsv");
 		std::string line;
@@ -253,6 +255,8 @@ int wmain(int argc, wchar_t** argv) {
 
 		for (size_t index = 0; index < fields.size(); ++index)
 			indices.emplace(fields[index], index);
+
+		// 比較方式に対応するDLLと計測ケースを組み立てる
 		std::unique_ptr<Bridge> redox, standard;
 		std::vector<Variant> variants;
 
@@ -384,6 +388,7 @@ int wmain(int argc, wchar_t** argv) {
 					return sum;
 				};
 
+				// 解析を含めるケースと既存文書の読み取りだけのケースを分ける
 				const auto action = [&, bridge, create, cached, read] {
 					double sum = 0;
 
@@ -442,6 +447,7 @@ int wmain(int argc, wchar_t** argv) {
 								 }});
 			}
 
+			// 各パーサーの結果が一致することを確認してから計測する
 			const double expected = tasks.back().action();
 
 			for (auto& task : tasks) {
@@ -464,6 +470,7 @@ int wmain(int argc, wchar_t** argv) {
 				continue;
 			}
 
+			// 実行順を巡回させ、計測順による偏りを抑える
 			for (int sample = 0; sample < kSamples; ++sample) {
 				for (int position = 0; position < int(tasks.size()); ++position) {
 					auto& task = tasks[(position + sample + run + caseIndex) % tasks.size()];

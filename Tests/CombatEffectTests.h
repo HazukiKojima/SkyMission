@@ -11,6 +11,7 @@ void TestCombatEffectLifetime() {
 	Require(snapshot.impacts.front().velocity.z == 30 && snapshot.impacts.front().direction.z == -1,
 		"Impact lost inherited velocity or incoming direction");
 
+	// 不正な時間と長いフレームで寿命が破綻しないか調べる
 	for (float invalid :
 		{0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
 		effects.Update(invalid);
@@ -25,6 +26,7 @@ void TestCombatEffectLifetime() {
 		effects.Update(0.25f);
 	Require(snapshot.explosions.empty(), "Expired explosion was retained");
 
+	// 上限を超えたときは古い演出から置き換わることを確認する
 	for (size_t i = 0; i < ImpactEffectSettings::maxCount + 1; ++i) {
 		hit.position.x = static_cast<float>(i);
 		effects.SpawnImpact(hit, velocity);

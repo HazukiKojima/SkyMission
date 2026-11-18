@@ -6,9 +6,9 @@
 namespace {
 	namespace Binding = Engine::RootBinding;
 
-	// srvCount: ルートテーブル内のSRV数
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRootSignatureWithSrvCount(ID3D12Device* device,
 		UINT srvCount, D3D12_TEXTURE_ADDRESS_MODE addressMode, Engine::RootSignatureLayout layout) {
+		// テクスチャとフレーム定数の共通バインドを定義する
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, srvCount, 0);
 
@@ -16,12 +16,15 @@ namespace {
 		rootParams[Binding::TextureTable].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 		rootParams[Binding::FrameConstants].InitAsConstantBufferView(
 			0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+
 		// ノード回転を使うモデルのみ、頂点シェーダーのb1に回転定数を追加する
 		const bool nodeRotation = layout == Engine::RootSignatureLayout::NodeRotation;
 
 		if (nodeRotation)
 			rootParams[Binding::NodeRotation].InitAsConstants(
 				Binding::NodeRotationDwords, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+
+		// ポスト処理ではピクセルシェーダーのb1に霧の定数を追加する
 		const bool postProcess = layout == Engine::RootSignatureLayout::PostProcess;
 		if (postProcess)
 			rootParams[Binding::FogConstants].InitAsConstantBufferView(
@@ -29,6 +32,7 @@ namespace {
 		const UINT parameterCount = (nodeRotation || postProcess) ? Binding::NodeRotationParameterCount
 																  : Binding::TexturedParameterCount;
 
+		// フィルタは線形補間とし、範囲外の扱いは用途に合わせる
 		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 		samplerDesc.AddressU = addressMode;
@@ -49,6 +53,7 @@ namespace {
 		Microsoft::WRL::ComPtr<ID3DBlob> signature;
 		Microsoft::WRL::ComPtr<ID3DBlob> error;
 
+		// 定義をシリアライズし、失敗時は詳細をログに残す
 		const HRESULT result = D3D12SerializeVersionedRootSignature(&rootSigDesc, &signature, &error);
 		if (FAILED(result) && error) {
 			Engine::Log("Root signature serialization: {}\n",
@@ -68,6 +73,7 @@ namespace {
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device* device,
 		ID3D12RootSignature* rootSignature, ID3DBlob* vertexShader, ID3DBlob* pixelShader,
 		const Engine::PipelineOptions& options) {
+		// 法線と接線を使うパイプラインだけ入力要素を追加する
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -91,11 +97,11 @@ namespace {
 
 		CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
 
-		// Assimpでモデルの座標系と巻き順を左手座標系へ変換済み
 		rasterizerDesc.CullMode = options.cullMode;
 
 		psoDesc.RasterizerState = rasterizerDesc;
 
+		// 透過描画では通常のアルファ合成か加算合成を選ぶ
 		CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
 		if (options.alphaBlend) {
 			blendDesc.RenderTarget[0].BlendEnable = TRUE;
@@ -118,6 +124,7 @@ namespace {
 
 		psoDesc.SampleMask = UINT_MAX;
 
+		// 深度テストと深度への書き込みを個別に設定する
 		CD3DX12_DEPTH_STENCIL_DESC depthDesc(D3D12_DEFAULT);
 		depthDesc.DepthEnable = options.depth;
 		depthDesc.DepthWriteMask =
@@ -154,6 +161,7 @@ namespace Engine {
 			ThrowIfFailed(result);
 		};
 
+		// コンパイル済みシェーダーを読み込み、描画設定と組み合わせる
 		loadShader(options.vs, &vertexShader);
 		loadShader(options.ps, &pixelShader);
 		m_pso = CreatePipelineState(

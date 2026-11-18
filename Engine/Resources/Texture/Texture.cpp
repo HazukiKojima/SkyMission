@@ -41,6 +41,7 @@ namespace Engine {
 				}
 			}
 
+			// 画像の処理条件からキャッシュキーを作る
 			uint64_t hash = kFnvOffsetBasis;
 
 			auto mix = [&hash](uint64_t value) {
@@ -92,6 +93,7 @@ namespace Engine {
 		cacheKey += L"|f" + std::to_wstring(static_cast<unsigned int>(targetFormat));
 		cacheKey += L"|max" + std::to_wstring(maxDimension);
 
+		// 条件が一致する生存中のテクスチャを共有する
 		static std::mutex cacheMutex;
 		static std::unordered_map<std::wstring, std::weak_ptr<Texture>> cache;
 		std::lock_guard<std::mutex> lock(cacheMutex);
@@ -100,6 +102,7 @@ namespace Engine {
 			if (std::shared_ptr<Texture> texture = cached->second.lock()) return texture;
 		}
 
+		// 新しく読み込んだテクスチャを共有キャッシュへ登録する
 		auto texture = std::make_shared<Texture>();
 		if (!texture->LoadFromFile(device, cmdList, filePath, options)) return {};
 
@@ -122,12 +125,15 @@ namespace Engine {
 		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath)) return true;
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options)) return false;
 
+		// 形式変換の前に法線と画像サイズを補正する
 		CorrectNormalGreen(options.invertNormalGreen);
 		if (!ResizeToLimit(options.maxDimension)) return false;
 
 		// BC圧縮形式はミップ生成に非対応のため、生成後に圧縮する
 		if (!GenerateMipChain(options.generateMipmaps) || !ConvertFormat(options.targetFormat, filePath))
 			return false;
+
+		// 処理済み画像を次回起動用に保存する
 		TrySaveDiskCache(cachePath);
 		return true;
 	}
@@ -176,6 +182,8 @@ namespace Engine {
 	bool Texture::DecompressForProcessing(const TextureLoadOptions& options) {
 		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 		HRESULT hr = E_FAIL;
+
+		// 画像補正や形式変更が必要な圧縮画像だけを展開する
 		if (DirectX::IsCompressed(m_meta.format) &&
 			(invertNormalGreen || (generateMipmaps && m_meta.mipLevels == 1) ||
 				m_meta.format != targetFormat ||
@@ -200,6 +208,7 @@ namespace Engine {
 		if (maxDimension == 0 || extent <= maxDimension) return true;
 		if (m_meta.dimension != DirectX::TEX_DIMENSION_TEXTURE2D) return false;
 
+		// 縦横比を保って長辺を上限まで縮める
 		const size_t width = std::max<size_t>(1, m_meta.width * maxDimension / extent);
 		const size_t height = std::max<size_t>(1, m_meta.height * maxDimension / extent);
 		DirectX::ScratchImage resized;
@@ -221,6 +230,7 @@ namespace Engine {
 				for (size_t y = 0; y < image->height; ++y) {
 					uint8_t* row = image->pixels + y * image->rowPitch;
 					for (size_t x = 0; x < image->width; ++x) {
+						// 緑成分を反転して法線マップのY方向をそろえる
 						row[x * 4 + 1] = 255 - row[x * 4 + 1];
 					}
 				}
@@ -286,6 +296,8 @@ namespace Engine {
 				(sourceFormat == DXGI_FORMAT_R8G8_UNORM || sourceFormat == DXGI_FORMAT_R8G8_SNORM ||
 					sourceFormat == DXGI_FORMAT_R16G16_UNORM || sourceFormat == DXGI_FORMAT_R16G16_SNORM ||
 					sourceFormat == DXGI_FORMAT_BC5_UNORM || sourceFormat == DXGI_FORMAT_BC5_SNORM);
+
+			// 2成分の法線画像をRGBAへ展開した場合はZ成分を復元する
 			if (reconstructNormalZ) {
 				for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
 					const DirectX::Image* image = &m_image.GetImages()[imageIndex];
@@ -325,6 +337,7 @@ namespace Engine {
 	}
 
 	void Texture::UploadImage(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList) {
+		// 画像本体と全ミップ・配列要素を収める転送領域を確保する
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, static_cast<UINT>(m_meta.width),
 			static_cast<UINT>(m_meta.height), static_cast<UINT16>(m_meta.arraySize),
 			static_cast<UINT16>(m_meta.mipLevels));
@@ -341,6 +354,7 @@ namespace Engine {
 		ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProps, D3D12_HEAP_FLAG_NONE, &uploadDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_uploadHeap)));
 
+		// 各画像の行間隔を保って転送元を指定する
 		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 		subresources.resize(m_meta.mipLevels * m_meta.arraySize);
 
@@ -378,6 +392,7 @@ namespace Engine {
 		image->pixels[2] = b;
 		image->pixels[3] = a;
 
+		// 単色の1ピクセルをGPUへ転送し、シェーダー参照用に遷移する
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, 1, 1, 1, 1);
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
@@ -409,6 +424,7 @@ namespace Engine {
 		ThrowIfFailed(m_image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
 		m_meta = m_image.GetMetadata();
 
+		// 入力と作業画像の行間隔を区別してコピーする
 		const auto* image = m_image.GetImage(0, 0, 0);
 		for (UINT row = 0; row < height; ++row)
 			std::memcpy(image->pixels + row * image->rowPitch, pixels.data() + size_t(row) * width * 4,

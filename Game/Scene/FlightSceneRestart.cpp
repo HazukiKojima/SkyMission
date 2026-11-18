@@ -58,6 +58,7 @@ namespace Game {
 	}
 
 	void FlightScene::Restart(float dt) {
+		// 保存した開始状態へ戻す
 		const auto& initial = *m_initialState;
 		m_mission = initial.mission;
 		m_carrierMissiles = initial.carrierMissiles;
@@ -84,12 +85,16 @@ namespace Game {
 		m_combat = initial.combat;
 		m_effects = initial.effects;
 		m_enemySequence = initial.enemySequence;
+
+		// 再挑戦に合わせて表示を更新する
 		OnResize(m_width, m_height);
 		ApplyRenderStates();
 		RefreshCombatSnapshot();
 		m_combat.audio.restarted = true;
 		m_combat.audio.flying = true;
 		UpdateCamera({}, dt, {});
+
+		// 演出の進行状態をリセットする
 		m_midMissionPlayed = m_endingPlayed = false;
 		m_reinforcementsPlayed = false;
 		m_carrierLookSeconds = 0;
@@ -101,6 +106,8 @@ namespace Game {
 		m_finalKills = 0;
 		m_finalEncouraged = false;
 		m_reinforcementHoldSeconds = m_victoryHoldSeconds = -1;
+
+		// 演出開始時の状態を準備する
 		const auto command = m_cinematics.find("midMission");
 		m_carrierTargetReady = command == m_cinematics.end() || command->second.radio.empty();
 		m_enemyRadio = {};

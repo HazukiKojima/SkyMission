@@ -10,6 +10,7 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 		std::ofstream(file) << text;
 	};
 
+	// 不正設定の例外に元ファイルの情報が含まれるか調べる
 	const auto rejects = [&](const std::string& json, auto load) {
 		write(json);
 		bool rejected = false;
@@ -68,6 +69,8 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 	rejects("{", [&] {
 		CameraSettings{}.Load(reader, file);
 	});
+
+	// 読み込んだ設定の反映とインスタンス間の独立性を確認する
 	write(R"({"passLegsMeters":[100,200,300,400,500,600]})");
 	EnemyAITuning ai;
 	ai.Load(reader, file);
@@ -181,6 +184,8 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 	colorView.height = 1080;
 	DirectX::XMStoreFloat4x4(&colorView.view, DirectX::XMMatrixIdentity());
 	DirectX::XMStoreFloat4x4(&colorView.projection, DirectX::XMMatrixIdentity());
+
+	// 指定色が描画頂点まで反映されることを確認する
 	CombatEffectSnapshot coloredEffects;
 	coloredEffects.gunTracers.push_back({{0.1f, 0, 0.5f}, {-0.1f, 0, 0.5f}});
 	HudDrawList effectVertices;

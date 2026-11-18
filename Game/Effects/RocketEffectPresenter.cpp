@@ -7,6 +7,7 @@ namespace Game {
 		const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const {
 		using namespace DirectX;
 
+		// 甲板の煙に艦船用の上昇・拡大設定を重ねる
 		for (const auto& smoke : snapshot.deckSmoke) {
 			if (!context.HasVertexBudget(6)) break;
 
@@ -40,6 +41,7 @@ namespace Game {
 					context.Settings().rocket.smokeColor, fade * context.Settings().rocket.smokeOpacity));
 		}
 
+		// 飛行中のロケット後端へ発光と炎を追従させる
 		for (const auto& exhaust : snapshot.rocketExhausts) {
 			if (!context.HasVertexBudget(222)) break;
 

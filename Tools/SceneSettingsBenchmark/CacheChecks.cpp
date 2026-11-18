@@ -26,10 +26,14 @@ int main(int argc, char** argv) try {
     Require(documents.Get(first.parent_path() / "./settings.json").GetHandle() == handle, "Normalized alias duplicated document");
     Require(reader.ResolveFloat(second,"value") == 2 && documents.Get(first).GetHandle() == handle,
         "Inserting another document invalidated cached reference");
+
+    // 同じキャッシュでは値を保持し、新しいキャッシュで変更を読み直す
     std::ofstream(first) << R"({"value":3})";
     Require(reader.ResolveFloat(first,"value") == 1, "In-flight cache unexpectedly reloaded changed file");
     Engine::JsonDocumentCache fresh;
     Require(Engine::JsonAssetReader(fresh).ResolveFloat(first,"value") == 3, "New cache did not reload changed file");
+
+    // 相対パスは現在の作業ディレクトリを基準に解決する
     fs::current_path(first.parent_path());
     Require(reader.ResolveFloat("settings.json","value") == 1, "Relative alias missed existing document");
     fs::current_path(second.parent_path());
@@ -46,6 +50,8 @@ int main(int argc, char** argv) try {
     try { Engine::JsonDocumentCache invalid; settings.Load(Engine::JsonAssetReader(invalid),audio); }
     catch (const std::exception& error) { rejected = std::string(error.what()).find("flightVolume") != std::string::npos; }
     Require(rejected, "Cached audio path lost validation or field error context");
+
+    // 移動後も文書を保持し、移動元に古い参照を残さないことを確かめる
     Engine::JsonDocumentCache moved(std::move(documents));
     Require(Engine::JsonAssetReader(moved).ResolveFloat(first,"value") == 1, "Moving cache lost parsed documents");
     Require(Engine::JsonAssetReader(documents).ResolveFloat(first,"value") == 3, "Moved-from cache retained another cache's pointer");

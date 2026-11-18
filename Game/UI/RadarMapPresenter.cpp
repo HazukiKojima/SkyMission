@@ -21,6 +21,7 @@ namespace Game {
 		label << std::fixed << std::setprecision(3) << meters / 1000;
 		auto value = label.str();
 
+		// 距離表示の小数末尾に残るゼロを省く
 		while (value.back() == '0')
 			value.pop_back();
 		if (value.back() == '.') value.pop_back();
@@ -53,6 +54,7 @@ namespace Game {
 
 		if (layout.scale <= 0 || !std::isfinite(distance)) return point;
 
+		// 範囲外の対象もレーダー外周へ収める
 		point.valid = true;
 		point.outside = distance > layout.rangeMeters;
 		point.direction = distance > 0.001f ? XMFLOAT2{dx / distance, dz / distance} : XMFLOAT2{0, -1};
@@ -77,6 +79,7 @@ namespace Game {
 			return XMFLOAT2{layout.origin.x + x * scale, layout.origin.y + y * scale};
 		};
 
+		// 対象表示の下にレーダーの盤面を描く
 		list.FilledRect(layout.origin, {layout.size, layout.size}, {0.035f, 0.038f, 0.033f, 0.65f});
 
 		for (float inset : {0.0f, 12.0f}) {
@@ -103,6 +106,8 @@ namespace Game {
 			FormatRange(layout.rangeMeters), rangeFont, labelColor);
 		list.Text(panelPoint(166, 218), FormatRange(layout.rangeMeters * 0.5f), std::max(9.0f, 16 * scale),
 			labelColor);
+
+		// 機首方位を三角形の向きで表す
 		const auto aircraft = [&](XMFLOAT2 center, XMFLOAT3 heading, float size, XMFLOAT4 color) {
 			const float length = std::hypot(heading.x, heading.z);
 			const XMFLOAT2 dir = std::isfinite(length) && length > 0.001f
@@ -118,6 +123,7 @@ namespace Game {
 			list.Line(right, tip, lineWidth, color);
 		};
 
+		// 範囲内は機体記号で範囲外は方向を示す
 		for (const auto& enemy : snapshot.enemies) {
 			const auto point = Project(enemy.center, snapshot.playerPosition, layout);
 
@@ -138,6 +144,7 @@ namespace Game {
 				aircraft(point.pixel, enemy.heading, 7 * scale, color);
 			}
 
+			// 選択中の対象に枠を重ねる
 			if (selected) {
 				const float size = 12 * scale, corner = 5 * scale;
 

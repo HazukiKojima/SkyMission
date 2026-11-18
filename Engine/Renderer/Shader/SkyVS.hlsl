@@ -24,6 +24,7 @@ PS_INPUT VS(VS_INPUT input)
 {
     PS_INPUT output;
 
+    // 球体をカメラに追従させ、移動による空の視差をなくす
     float3 worldPos = input.position + cameraPos;
 
     output.position = mul(float4(worldPos, 1.0f), mvp);

@@ -8,6 +8,7 @@ if (args.Length == 0 || args.Length % 5 != 0)
 
 try
 {
+    // 並列ビルドによる生成ファイルの同時更新を防ぐ
     using var generationMutex = new Mutex(false, "AircraftParameterGenerator");
     try
     {
@@ -48,6 +49,7 @@ static void WriteGeneratedFile(string path, string content)
     string outputPath = Path.GetFullPath(path);
     Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
+    // 内容が同じ場合は更新日時を変えず再ビルドを抑える
     if (File.Exists(outputPath) && File.ReadAllText(outputPath) == content)
     {
         return;
@@ -69,6 +71,7 @@ static class CppGenerator
         source.AppendLine();
         source.AppendLine($"static_assert(std::is_standard_layout_v<{qualifiedName}>);");
 
+        // C++側の各フィールド位置と構造体サイズをコンパイル時に照合する
         for (int index = 0; index < fields.Count; index++)
         {
             source.AppendLine($"static_assert(offsetof({qualifiedName}, {fields[index].Name}) == {fields[index].Offset} * sizeof(float));");
@@ -117,6 +120,8 @@ static class CSharpGenerator
         }
 
         source.AppendLine();
+
+        // C++の宣言順で配列要素まで平坦化する変換を生成する
         source.AppendLine("    public float[] ToFloatArray() => new float[]");
         source.AppendLine("    {");
 
@@ -142,6 +147,7 @@ static class CppStructParser
 {
     public static IReadOnlyList<Field> ParseFloatFields(string source, string structName)
     {
+        // コメントを除いた宣言から構造体の配置を抽出する
         List<string> tokens = Tokenize(source);
 
         for (int index = 0; index < tokens.Count - 2; index++)
@@ -162,6 +168,7 @@ static class CppStructParser
             var names = new HashSet<string>(StringComparer.Ordinal);
             index++;
 
+            // floatと固定長配列だけを生成対象として受け付ける
             while (index < tokens.Count && tokens[index] != "}")
             {
                 string type = tokens[index++];
@@ -240,6 +247,7 @@ static class CppStructParser
                 continue;
             }
 
+            // 空白とコメントを捨て、宣言の識別子・数値・記号を切り出す
             if (current == '/' && index + 1 < source.Length && source[index + 1] == '/')
             {
                 index += 2;

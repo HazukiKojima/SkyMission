@@ -27,6 +27,7 @@ namespace Engine::HudFont {
 	inline unsigned Glyph(char32_t character) {
 		if (character >= 32 && character <= 126) return unsigned(character - 32);
 
+		// 日本語グリフがなければ疑問符で代替する
 		const auto index = Japanese.find(character);
 		return index == Japanese.npos ? unsigned('?' - 32) : AsciiCount + unsigned(index);
 	}

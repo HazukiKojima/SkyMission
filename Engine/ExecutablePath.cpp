@@ -9,6 +9,8 @@ namespace Engine {
 			if (count == 0) ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 			if (count < buffer.size())
 				return std::filesystem::path(std::wstring(buffer.data(), count)).parent_path();
+
+			// パスが切れた場合はバッファを広げて取得し直す
 			buffer.resize(buffer.size() * 2);
 		}
 	}

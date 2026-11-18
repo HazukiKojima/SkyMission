@@ -84,6 +84,7 @@ namespace Engine {
 
 		JsonDocumentCache& operator=(JsonDocumentCache&& other) noexcept {
 			if (this != &other) {
+				// 移動前の文書を指す高速参照は引き継がない
 				m_lastDocument = nullptr;
 				other.m_lastDocument = nullptr;
 				m_files = std::move(other.m_files);

@@ -51,6 +51,8 @@ namespace Game {
 		r.Number("burstRangeSeconds", burstRangeSeconds, 0, 1000000);
 		r.Number("pauseSeconds", pauseSeconds, 0.000001f, 1000000);
 		r.Number("pauseRangeSeconds", pauseRangeSeconds, 0, 1000000);
+
+		// 予測照準への寄せ方と弾の散布幅を読み込む
 		r.Number("minimumLeadFraction", minimumLeadFraction, 0, 1);
 		r.Number("leadVariation", leadVariation, 0, 1);
 		r.Number("yawErrorDegrees", yawErrorDegrees, 0, 1000000);
@@ -67,6 +69,8 @@ namespace Game {
 		r.Number("safeDistanceSlotStep", safeDistanceSlotStep, 0, 100000);
 		r.Number("reentryAheadDot", reentryAheadDot, 0, 1);
 		r.Number("reentryReadyTimeScale", reentryReadyTimeScale, 0, 100000);
+
+		// 衝突回避を始める距離と回避方向を読み込む
 		r.Number("collisionClosestMeters", collisionClosestMeters, 0, 100000);
 		r.Number("collisionClosestDistanceScale", collisionClosestDistanceScale, 0, 100000);
 		r.Number("collisionRangeMeters", collisionRangeMeters, 0, 100000);
@@ -79,6 +83,8 @@ namespace Game {
 		r.Number("recoverClimb", recoverClimb, 0, 100000);
 		r.Number("turnDirectionThresholdRadians", turnDirectionThresholdRadians, 0, 100000);
 		r.Number("defenseTurnRadius", defenseTurnRadius, 0, 100000);
+
+		// 離脱から再接近までの時間と経路の変化量を読み込む
 		r.Number("passMinimumVariationSeconds", passMinimumVariationSeconds, 0, 100000);
 		r.Number("passMaximumBaseSeconds", passMaximumBaseSeconds, 0, 100000);
 		r.Number("passMaximumSlotSeconds", passMaximumSlotSeconds, 0, 100000);
@@ -118,6 +124,7 @@ namespace Game {
 		r.Number("patrolHighGThreshold", patrolHighGThreshold, 0, 1);
 		r.Number("patrolHighGMinimumTurn", patrolHighGMinimumTurn, 0, 1);
 
+		// 離脱・防衛の上限と非ロック機の攻撃倍率を読み込む
 		r.Number("minimumPassSeconds", minimumPassSeconds, 0.000001f, 1000000);
 		r.Number("maximumPassSeconds", maximumPassSeconds, 0.000001f, 1000000);
 		r.Number("defenseOuterRadius", defenseOuterRadius, 0.000001f, 1000000);
@@ -130,6 +137,8 @@ namespace Game {
 		r.Number("unlockedAttackRangeScale", unlockedAttackRangeScale, 0.000001f, 1000000);
 		r.Number("unlockedBurstTempoScale", unlockedBurstTempoScale, 0.000001f, 1000000);
 		r.Number("unlockedShotIntervalScale", unlockedShotIntervalScale, 0.000001f, 1000000);
+
+		// 個体ごとの行動差と再進入経路を読み込む
 		r.Array("stylePassDelay", stylePassDelay, -10, 10);
 		r.Array("styleTurnScale", styleTurnScale, 0.000001f, 10);
 		r.Array("styleClimb", styleClimb, -10, 10);
@@ -138,6 +147,8 @@ namespace Game {
 		r.Array("passLegsMeters", passLegsMeters, 1);
 		r.Array("reentryLanesMeters", reentryLanesMeters);
 		r.Array("directionChangesRadians", directionChangesRadians);
+
+		// 各値の範囲に加えて時間と防衛半径の大小関係を確認する
 		r.Require(maximumPassSeconds >= minimumPassSeconds, "EnemyAITuning", "inconsistent settings");
 		r.Require(defenseOuterRadius > defenseInnerRadius, "EnemyAITuning", "inconsistent settings");
 	}
@@ -184,6 +195,8 @@ namespace Game {
 		r.Number("warningVolume", warningVolume, 0, 1);
 		r.Number("missileWarningIntervalSeconds", missileWarningIntervalSeconds, 0.000001f, 1000000);
 		r.Number("lockWarningIntervalSeconds", lockWarningIntervalSeconds, 0.000001f, 1000000);
+
+		// 音量とは別に再生する音声ファイルを読み込む
 		r.Text("flightFile", flightFile);
 		r.Text("gunFile", gunFile);
 		r.Text("launchFile", launchFile);
@@ -204,6 +217,7 @@ namespace Game {
 		r.Array("/layout/hitPosition", hitPosition, 0, 10000);
 		r.Array("/layout/allDownPosition", allDownPosition, 0, 10000);
 
+		// 操作説明と計器の配置を読み込む
 		r.Number("/layout/controlsFontSize", controlsFontSize, 0, 10000);
 		r.Number("/layout/controlsLineHeight", controlsLineHeight, 0, 10000);
 		r.Number("/layout/controlsRightMargin", controlsRightMargin, 0, 10000);
@@ -228,6 +242,8 @@ namespace Game {
 		r.Number("/layout/missionLineHeight", missionLineHeight, 0, 10000);
 		r.Number("/layout/missileStatusY", missileStatusY, 0, 10000);
 		r.Number("/layout/lockStatusY", lockStatusY, 0, 10000);
+
+		// 照準や目標マーカーの寸法を読み込む
 		r.Number("/layout/carrierMarkerRadius", carrierMarkerRadius, 0, 10000);
 		r.Number("/layout/combatAreaMarkerRadius", combatAreaMarkerRadius, 0, 10000);
 		r.Number("/layout/impactMarkerRadius", impactMarkerRadius, 0, 10000);
@@ -240,6 +256,7 @@ namespace Game {
 		r.Number("/layout/markerLabelGap", markerLabelGap, 0, 10000);
 		r.Number("/layout/screenTextMargin", screenTextMargin, 0, 10000);
 
+		// 組み合わせたときに表示が成立する寸法と倍率か確認する
 		r.Require(radarSize >= 100 && radarSize <= 1080, "layout", "inconsistent HUD layout");
 		r.Require(radarRadius > 0 && radarRadius <= 160, "layout", "inconsistent HUD layout");
 		r.Require(controlsFontSize > 0 && controlsLineHeight >= controlsFontSize, "layout",

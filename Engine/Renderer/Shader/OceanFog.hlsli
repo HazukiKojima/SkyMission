@@ -32,6 +32,7 @@ SamplerState gSampler : register(s0);
 
 bool RayBox(float3 origin, float3 direction, float3 boxMin, float3 boxMax, out float tMin, out float tMax)
 {
+    // ゼロ除算を避けながら各軸の交差区間を求める
     float3 invDirection = 1.0f / max(abs(direction), 1e-5f);
     invDirection *= float3(direction.x >= 0 ? 1 : -1, direction.y >= 0 ? 1 : -1, direction.z >= 0 ? 1 : -1);
 
@@ -40,6 +41,7 @@ bool RayBox(float3 origin, float3 direction, float3 boxMin, float3 boxMax, out f
     float3 tSmall = min(t0, t1);
     float3 tLarge = max(t0, t1);
 
+    // 三軸で共通する区間を光線と箱の交差とする
     tMin = max(max(tSmall.x, tSmall.y), tSmall.z);
     tMax = min(min(tLarge.x, tLarge.y), tLarge.z);
 
@@ -54,6 +56,7 @@ float3 ReconstructWorldPosition(float2 uv, float depth)
     float4 clip = float4(ndc, depth, 1.0f);
     float4 world = mul(clip, inverseViewProjection);
 
+    // カメラ相対の位置をワールド座標へ戻す
     return cameraPosition + world.xyz / max(world.w, 1e-8f);
 }
 
@@ -62,6 +65,7 @@ float OceanFogDensityAt(float3 worldPosition)
     float height = saturate((worldPosition.y - oceanFogBottom) / max(oceanFogTop - oceanFogBottom, 1.0f));
     float heightDensity = 1.0f - smoothstep(0.0f, 1.0f, height);
 
+    // 海の外周へ近づくほど霧を濃くする
     float2 oceanLocalPosition = worldPosition.xz - cameraPosition.xz;
     float oceanDistance = max(abs(oceanLocalPosition.x), abs(oceanLocalPosition.y));
     float edgeDensity = smoothstep(oceanFogStartDistance, oceanFogEndDistance, oceanDistance);
@@ -156,6 +160,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
     bool isOceanPixel = sceneSample.a < 0.5f;
     float sceneDepth = gSceneDepth.SampleLevel(gSampler, uv, 0).r;
 
+    // 逆行列から視線を復元し、霧を積分する方向を求める
     float2 rayNdc = uv * float2(2, -2) + float2(-1, 1);
     float4 farRelative = mul(float4(rayNdc, 1, 1), inverseViewProjection);
     float3 rayDirection = SafeNormalize(farRelative.xyz);
@@ -164,6 +169,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
     float sceneDistance = oceanFogEndDistance;
     float oceanEdgeFade = 0.0f;
 
+    // 海面は視線との交点、その他の物体は深度から距離を求める
     if (isOceanPixel)
     {
         if (abs(rayDirection.y) > 1e-5f)
@@ -191,6 +197,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
         oceanFogFactor = max(oceanFogFactor, oceanEdgeFade);
     }
 
+    // 海面では画面内の空の色へなじませ、見つからなければ計算した空色を使う
     float3 horizonFallback = ToneMapReinhard(GetSkyColor(rayDirection, lighting));
     float3 horizonColor = horizonFallback;
     if (isOceanPixel && oceanFogFactor > 0.001f)

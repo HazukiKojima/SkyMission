@@ -9,6 +9,8 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Engine::JsonAssetReader reader;
 	const auto missing = LoadCinematicSettings(reader, fixture / L"no-opening.json");
 	Require(missing.durationSeconds == 5, "Missing opening configuration lost defaults");
+
+	// 設定の省略と部分指定で既定値が残ることを確かめる
 	const auto partial = fixture / L"opening-partial.json";
 	std::ofstream(partial) << "{\"flightSpeedMetersPerSecond\":210}";
 	Require(LoadCinematicSettings(reader, partial).flightSpeedMetersPerSecond == 210,
@@ -16,6 +18,8 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Require(missing.briefing.size() == 3 && missing.formationOffsets.size() == 4 &&
 			missing.originOffsetMeters.z == -5000 && missing.audio.bgmVolume == 0.12f,
 		"Missing opening configuration changed legacy content");
+
+	// 文章と日本語の相対音声パスを含む設定を読み込む
 	const auto configured = fixture / L"opening-data.json";
 	std::ofstream(configured) << R"({"briefing":[
 		{"lines":["First","Second"],"audio":"../音声/会話.wav","fallbackSeconds":0.5},
@@ -31,6 +35,8 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 			data.audio.bgm == configured.parent_path() / L"../音声/曲.wav" &&
 			data.radio.size() == 1 && data.radio[0].audio == configured.parent_path() / L"../音声/無線.wav",
 		"Opening content or relative Japanese audio paths were not read");
+
+	// 音声の終了と代替表示時間に合わせて字幕を進める
 	CinematicController briefingController;
 	briefingController.Start(data);
 	briefingController.EnableBriefing();
@@ -68,6 +74,8 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	briefingController.EnableBriefing();
 	Require(briefingController.GetPresentation().briefingLine == -1,
 		"Empty briefing did not bypass conversation");
+
+	// 不正な設定は項目のパスを含めて報告する
 	const auto invalid = fixture / L"opening-invalid.json";
 
 	for (const auto json :
@@ -132,6 +140,7 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 			"Radio caption uses an unsupported glyph");
 	}
 
+	// 映像の終了・スキップ後も無線を最後まで再生する
 	CinematicController radioController;
 	radioController.Start(settings);
 	Require(radioController.GetPresentation().radioLine == -1, "Radio began during the movie");
@@ -155,6 +164,8 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 		"Skipping the movie did not start the post-movie call");
 	radioController.Start(settings);
 	Require(radioController.GetPresentation().radioLine == -1, "Replay retained post-movie radio");
+
+	// フェードとカメラ切り替えの境界を確認する
 	CinematicController controller;
 	controller.Start(settings);
 	controller.Update(3.6f, false);
@@ -323,6 +334,8 @@ void TestCinematic(const fs::path& repository, const fs::path& fixture) {
 	Require(arrival.GetPresentation().fadeOpacity > 0.9f, "Ending did not fade out after the final report");
 	arrival.Update(0.2f, false);
 	Require(!arrival.GetPresentation().active, "Ending did not finish after its flyaway shot");
+
+	// 各カットの経過時間と完了通知を確認する
 	CinematicController timeline;
 	auto multi = middle;
 	multi.shots = {CinematicShotSettings{}, CinematicShotSettings{}};

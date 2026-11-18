@@ -5,6 +5,7 @@ namespace Game {
 	void BuildCombatSnapshot(CombatSnapshot& snapshot, const CombatSnapshotInput& input) {
 		using namespace DirectX;
 
+		// 自機の状態を表示用のスナップショットへ写す
 		snapshot.playerSpeedMetersPerSecond = input.player.GetSpeed();
 		snapshot.playerAltitudeMeters = input.player.GetPosition().y;
 		snapshot.playerPosition = input.player.GetPosition();
@@ -12,6 +13,7 @@ namespace Game {
 		snapshot.aim.reset();
 		snapshot.assistReady = false;
 
+		// 選択中の対象について予測照準と射撃補助を判定する
 		for (const auto& target : snapshot.enemies)
 			if (target.id == snapshot.selected && input.weaponConfigured) {
 				snapshot.aim = SolveGunAim(snapshot.muzzle, input.player.GetVelocity(), target,

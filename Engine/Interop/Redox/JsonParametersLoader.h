@@ -17,6 +17,7 @@ namespace Engine {
 			static_assert(std::is_trivially_copyable_v<T>);
 			static_assert(sizeof(T) % sizeof(float) == 0);
 
+			// 文書キャッシュがなければ一時文書を作る
 			const std::vector<char> jsonStorage =
 				m_files || m_documents ? std::vector<char>() : ReadJsonFile(jsonPath);
 			const RedoxDocument transientDocument = m_documents
@@ -24,6 +25,7 @@ namespace Engine {
 				: RedoxDocument(m_files ? m_files->Read(jsonPath) : jsonStorage);
 			const RedoxDocument& document = m_documents ? m_documents->Get(jsonPath) : transientDocument;
 
+			// 文書ハンドルから数値配列を取得するDLL関数を選ぶ
 			using GetParameters = int(__cdecl*)(std::intptr_t, float*, int);
 			const std::string documentEntryPoint = std::string(entryPoint) + "FromDocument";
 			auto getParameters =
@@ -37,6 +39,7 @@ namespace Engine {
 					"Failed to deserialize JSON parameters. REDox error code: " + std::to_string(result));
 			}
 
+			// 全項目の取得後に構造体へコピーする
 			T parameters{};
 			std::memcpy(&parameters, values.data(), sizeof(parameters));
 			return parameters;

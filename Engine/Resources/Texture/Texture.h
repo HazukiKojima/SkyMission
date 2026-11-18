@@ -28,6 +28,8 @@ namespace Engine {
 		bool CreateFromSolidColor(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, uint8_t r,
 			uint8_t g, uint8_t b, uint8_t a = 255);
 		void CreateShaderResourceView(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE srvHandle) const;
+
+		// 転送コマンドのGPU完了後に呼ぶ
 		void ReleaseUploadResources();
 		void CreateFromRgba(ID3D12Device* device, ID3D12GraphicsCommandList* commands, UINT width,
 			UINT height, std::span<const uint8_t> pixels);

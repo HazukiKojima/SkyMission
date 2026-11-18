@@ -6,6 +6,7 @@
 namespace Engine {
 	namespace {
 		UINT64 AlignConstantBufferSize(size_t size) {
+			// 定数バッファのサイズを256バイト単位へ切り上げる
 			return (static_cast<UINT64>(size) + 255) & ~static_cast<UINT64>(255);
 		}
 
@@ -15,6 +16,7 @@ namespace Engine {
 	static_assert(sizeof(FilmConstantBufferData) == 224);
 
 	void RendererConstantBuffers::Initialize(ID3D12Device* device) {
+		// CPUが更新する定数領域をフレームごとに分けて確保する
 		for (auto& buffer : m_oceanBuffers)
 			buffer.resource = CreateUploadBuffer(
 				device, AlignConstantBufferSize(sizeof(OceanConstantBufferData)), &buffer.mappedData);
@@ -37,6 +39,7 @@ namespace Engine {
 			return;
 		}
 
+		// GPUの参照が終わってから不足分のバッファを追加する
 		context->WaitForGpu();
 		const UINT64 bufferSize = AlignConstantBufferSize(sizeof(ModelConstantBufferData));
 		for (UINT frameIndex = 0; frameIndex < RenderDevice::FrameCount; ++frameIndex) {

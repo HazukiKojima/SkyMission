@@ -40,6 +40,7 @@ internal static unsafe class Program
 
     private static void Main(string[] args)
     {
+        // フィールド順序と重複キーの扱いを参照APIと比較する
         var layout = new NumericParameterLayout(["a", "vector"], [1, 3]);
 
         foreach (string json in new[] {
@@ -72,6 +73,7 @@ internal static unsafe class Program
 
         using (var document = JsonDocument.Parse("[]")) Require(layout.Read(document, new float[4]) == -3, "Root type validation changed");
 
+        // 生成レイアウトを使う従来APIと文書ハンドルAPIを照合する
         byte[] source = File.ReadAllBytes(Path.Combine(args[0], "Assets/Aircraft/F4U4Corsair/aiParameters.json"));
         using var expectedDocument = JsonDocument.Parse(source);
         float[] expected = GeneratedAircraftAIParameters.FieldNames.Select(name => expectedDocument.RootElement.GetProperty(name).GetSingle()).ToArray();

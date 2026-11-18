@@ -7,6 +7,7 @@ namespace Engine {
 		m_ocean->Initialize(
 			device, {.vs = L"OceanVS.cso", .ps = L"OceanPS.cso", .srvCount = 3, .depth = true});
 
+		// 画面全体の合成では深度テストを使わず、参照先の端をクランプする
 		m_retroFilm = std::make_unique<GraphicsPipeline>();
 		m_retroFilm->Initialize(device,
 			{.vs = L"RetroFilmVS.cso",
@@ -25,6 +26,7 @@ namespace Engine {
 				.renderTargetFormat = RenderDevice::CloudFormat});
 		m_sky->Initialize(device, {.vs = L"SkyVS.cso", .ps = L"SkyPS.cso"});
 
+		// モデル用には法線・接線とノード回転のバインドを追加する
 		m_model = std::make_unique<GraphicsPipeline>();
 		m_model->Initialize(device,
 			{.vs = L"ModelVS.cso",

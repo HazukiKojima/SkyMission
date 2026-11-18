@@ -22,6 +22,7 @@ namespace Game {
 	Application::~Application() {}
 
 	void Application::Initialize() {
+		// 読み込み用のウィンドウを表示する
 		StartupTiming timing("application.window_and_json");
 		const auto startupTime = std::chrono::steady_clock::now();
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
@@ -29,6 +30,7 @@ namespace Game {
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 		UpdateWindow(m_window->GetHandle());
 
+		// 起動に必要な設定を読み込む
 		const auto assetsDir = AssetsDirectory();
 		const FlightSceneLoader sceneLoader;
 		const SceneSourcePaths scenePaths = {.environment = assetsDir / L"Environment/environment.json",
@@ -41,6 +43,7 @@ namespace Game {
 		const FlightSceneDefinition assets = sceneLoader.Load(scenePaths);
 		timing.Mark("application.renderer");
 
+		// ワーカーで描画リソースを準備する
 		m_renderer = std::make_unique<Renderer>();
 		const HWND hwnd = m_window->GetHandle();
 		const UINT width = m_window->GetWidth(), height = m_window->GetHeight();
@@ -66,6 +69,7 @@ namespace Game {
 			MsgWaitForMultipleObjectsEx(0, nullptr, 16, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 		}
 
+		// 読み込み後の画面寸法を反映する
 		loading.get(); // ワーカー停止後に、初期化エラーを呼び出し元へ伝播する
 		m_window->SetLoading(false);
 
@@ -78,6 +82,7 @@ namespace Game {
 		m_windowTitle = L"SkyMission | GPU: " + m_renderer->GetAdapterName();
 		SetWindowTextW(m_window->GetHandle(), m_windowTitle.c_str());
 
+		// シーンと音声を初期化する
 		InitializeFlightScene(assets);
 		timing.Mark("application.audio");
 		m_combatAudio.Initialize(assetsDir / L"Sound", assets.cinematics);
@@ -93,6 +98,8 @@ namespace Game {
 
 		for (const auto& ship : assets.ships)
 			m_captureShipModels.push_back(m_renderer->GetModel(ship.asset.id));
+
+		// 読み込んだ設定を表示と演出へ反映して任務シーンを作る
 		m_hudPresenter.Configure(assets.hud);
 		m_hudPresenter.ConfigureTuning(assets.ui);
 		m_hudPresenter.ConfigureText(assets.text);
@@ -113,6 +120,8 @@ namespace Game {
 				return FlightScene::CinematicModel{m_renderer->GetModel(id), scale};
 			},
 			m_renderer->GetOceanSize());
+
+		// 弾や増援を見込んだ描画領域を確保する
 		m_renderer->InitializeConstantBuffers(m_scene->GetRenderScene());
 		m_renderer->ReserveModelCapacity(m_scene->GetObjects().size() +
 			assets.playerWeapon.gun.maxProjectiles + assets.mission.maxHostileProjectiles +
@@ -166,6 +175,7 @@ namespace Game {
 	}
 
 	void Application::Update() {
+		// 経過時間を測り、一定間隔でFPSとGPU時間の表示を更新する
 		auto now = std::chrono::steady_clock::now();
 		std::chrono::duration<float> dt = now - m_lastTime;
 		m_lastTime = now;
@@ -193,6 +203,7 @@ namespace Game {
 			const InputSnapshot input = m_window->ConsumeInput();
 			m_combatAudio.SetSuspended(!input.active);
 
+			// タイトルとクリア画面ではEnterによる画面遷移だけを処理する
 			if (m_screen == Screen::Title || m_screen == Screen::Clear) {
 				if (input.active && input.WasKeyPressed(VK_RETURN)) {
 					m_combatAudio.ResetPlayback();
@@ -225,6 +236,7 @@ namespace Game {
 				Log("Capture view: {} (0=normal, 1=environment+ships, 2=environment)\n", m_captureMode);
 			}
 
+			// 入力から戦闘を進め、演出終了時にクリア画面へ切り替える
 			auto combat = CombatController{}.ReadInput(input);
 
 			if (m_scene->GetCombatSnapshot().result == CombatResult::Victory) combat.retry = false;
@@ -244,6 +256,7 @@ namespace Game {
 				return;
 			}
 
+			// シーンの状態で音声を更新し、再生状況を台詞の進行へ返す
 			const auto& combatState = m_scene->GetCombatSnapshot();
 
 			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();

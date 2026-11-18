@@ -8,6 +8,8 @@ namespace Engine::MaterialTexturePaths {
 	std::filesystem::path FindTexturePath(const std::filesystem::path& modelDirectory,
 		const std::filesystem::path& texturePath, const ModelLoadOptions& options) {
 		const std::filesystem::path texturesDirectory = modelDirectory / options.textureDirectory;
+
+		// モデルの参照先から順に画像を探す
 		const std::filesystem::path candidates[] = {
 			texturePath.is_absolute() ? texturePath : modelDirectory / texturePath,
 			texturesDirectory / texturePath, texturesDirectory / texturePath.filename()};
@@ -52,6 +54,8 @@ namespace Engine::MaterialTexturePaths {
 
 		std::wstring baseSuffixLower = baseColorSuffix;
 		std::transform(baseSuffixLower.begin(), baseSuffixLower.end(), baseSuffixLower.begin(), towlower);
+
+		// ベースカラーと同じ名前の接頭部で関連画像を探す
 		const size_t baseColorPosition = baseNameLower.find(baseSuffixLower);
 		if (!baseColorSuffix.empty() && baseColorPosition != std::wstring::npos) {
 			const auto candidate = texturesDirectory / (baseName.substr(0, baseColorPosition) + suffix);
@@ -59,6 +63,7 @@ namespace Engine::MaterialTexturePaths {
 			if (std::filesystem::exists(candidate)) return candidate;
 		}
 
+		// 見つからなければ材質名と接尾辞で画像を探す
 		std::string materialNameLower = materialName;
 		std::transform(materialNameLower.begin(), materialNameLower.end(), materialNameLower.begin(),
 			[](unsigned char c) {

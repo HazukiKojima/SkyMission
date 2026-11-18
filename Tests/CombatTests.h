@@ -11,6 +11,7 @@
 void TestEnemyGunBehavior() {
 	using namespace DirectX;
 
+	// 敵ごとの発射開始時刻とバーストの休止を確認する
 	std::array<EnemyGunPattern, 6> patterns;
 	std::array<float, 6> cooldown{}, firstShot;
 	std::array<unsigned, 6> shots{};
@@ -32,6 +33,8 @@ void TestEnemyGunBehavior() {
 		Require(count >= 5 && count < 45, "Enemy gun lacked burst pauses or stopped attacking");
 	const auto times = std::minmax_element(firstShot.begin(), firstShot.end());
 	Require(*times.second - *times.first > 0.5f, "Enemy guns started in a synchronized volley");
+
+	// 照準誤差の再現性と発射後の直進を確認する
 	const CombatTarget target{1, {1000, 1500, -5000}, {500, 0, 0}};
 	const XMFLOAT3 position{0, 1500, 0}, inherited{0, 0, -700};
 	const auto exact = SolveGunAim(position, inherited, target, 1800, 5);
@@ -91,6 +94,8 @@ void TestEnemyEngagementProfile() {
 			GetEnemyEngagementProfile(LockState::None, 0, 7).shotIntervalScale < 1 &&
 			GetEnemyEngagementProfile(LockState::Locked, 8, 7).shotIntervalScale < 1,
 		"Selection/acquisition or switching targets incorrectly suppressed enemy aggression");
+
+	// 同じ条件で攻撃機会を数え、未ロック時の積極性を比較する
 	const auto countShots = [&](const EnemyEngagementProfile& profile) {
 		EnemyGunPattern pattern;
 		const auto ai = profile.Apply(base);
@@ -295,6 +300,7 @@ void TestEnemyCombatAI() {
 		Require(!afterBurst.flight.highGTurn, "Spacing break sustained a high-G orbit");
 	}
 
+	// 防衛圏への帰還と境界付近の往復防止を確認する
 	AircraftAIController defense;
 	aircraft.SetPosition({13000, 300, 0});
 	const XMFLOAT3 home{0, 0, 0};
@@ -435,6 +441,7 @@ void TestCombatMath() {
 	raw.SetActive(true);
 	Require(!raw.ConsumeFrame().WasKeyPressed(VK_TAB), "Focus regain restored a Tab edge");
 
+	// 静止と相対運動の迎撃解を比較する
 	CombatTarget target{1, {0, 0, -900}, {}, "ENEMY 01", 100};
 	const auto aim = SolveGunAim({}, {}, target, 900, 3);
 	Require(aim && std::abs(aim->seconds - 1) < 0.001f && aim->direction.z < -0.999f,
@@ -454,6 +461,7 @@ void TestCombatMath() {
 	Require(IsWithinAngle({0, 0, -1}, {0.02f, 0, -1}, 3) && !IsWithinAngle({0, 0, -1}, {0.1f, 0, -1}, 3),
 		"Assist angle boundary failed");
 
+	// 対象切替とロックの取得から喪失までを通して検証する
 	std::vector<CombatTarget> targets{
 		{3, {200, 0, -900}, {}, "3", 100}, {1, {0, 0, -900}, {}, "1", 100}, {2, {0, 0, 900}, {}, "2", 100}};
 	TargetingSystem targeting;
@@ -500,6 +508,7 @@ void TestCombatMath() {
 			replacement.GetSelected() == Engine::InvalidObjectId, "All enemies destroyed retained a target");
 	}
 
+	// 高速な弾道と動く箱の交差を検証する
 	CollisionTarget box{4, {{-1, -1, -1}, {1, 1, 1}}, {0, 10, -50}, {}};
 	XMStoreFloat4x4(&box.world, XMMatrixRotationY(0.7f) * XMMatrixTranslation(0, 10, -50));
 	Require(IntersectMovingTarget({0, 10, 0}, {0, 10, -100}, box, 0, 1).has_value(),
@@ -821,6 +830,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		Require(returned, "Defending fighter did not physically return inside eight kilometers");
 	}
 
+	// 簡易モデルで撃墜、無線、任務遷移、再挑戦を確認する
 	const auto cubePath = fixture / L"combat-box.obj";
 	std::ofstream(cubePath)
 		<< "v -1 -1 -1\nv 1 -1 -1\nv 1 1 -1\nv -1 1 -1\nv -1 -1 1\nv 1 -1 1\nv 1 1 1\nv -1 1 1\n"
@@ -953,6 +963,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				"Retry retained damage or weapons");
 		}
 
+		// 並び順にかかわらず最初の接触で命中を確定する
 		GunSettings gun = definition.playerWeapon.gun;
 		gun.muzzleSpeed = 900;
 		std::array<XMFLOAT3, 4> muzzles{};
@@ -1086,6 +1097,8 @@ void TestHudRendering(const fs::path& fixture) {
 			};
 
 			buildFrame();
+
+			// 速度・高度の換算、丸め、右揃えを頂点で照合する
 			const auto requireFlightText = [&](float right, std::string_view text) {
 				const float scale = std::min(float(width) / 1920, float(height) / 1080);
 				const float offsetX = (width - 1920 * scale) * 0.5f;
@@ -1130,6 +1143,8 @@ void TestHudRendering(const fs::path& fixture) {
 			effects.explosions = {{{0, 0, -250}, {}, 0.2f, 22}};
 			buildFrame();
 			Require(list.GetVertices().size() == baseVertices, "Rear explosion was drawn");
+
+			// 演出が集中してもHUD用の頂点数を確保する
 			effects.explosions.assign(4, {{0, 0, 250}, {}, 0.08f, 22});
 			effects.impacts.assign(64, {{0, 0, 250}, 0});
 			effects.gunSmoke.assign(GunEffectSettings::maxSmokeCount, {{0, 0, 100}, {20, 0, 0}, 0.1f});
@@ -1180,7 +1195,7 @@ void TestHudRendering(const fs::path& fixture) {
 			effects.explosions = {{{-25, 0, 250}, {}, 0.2f, 22}};
 			snapshot.selected = 1;
 
-			// 両解像度の読み戻し画像に発射演出を含め、照準との重なりを確認する
+			// 各解像度の画像に発射演出を含め、照準との重なりを確認する
 			for (size_t muzzle = 0; muzzle < 4; ++muzzle) {
 				const float x = -18 + float(muzzle) * 12;
 				effects.gunFlashes.push_back({muzzle, {x, -10, 90}, {0, 0, 1}, 0.01f, muzzle});
@@ -1208,6 +1223,8 @@ void TestHudRendering(const fs::path& fixture) {
 				renderer.Record(device, commands, list);
 				context.TransitionResource(
 					target, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
+
+				// 描画結果を読み戻しバッファへコピーする
 				D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
 				UINT64 bytes = 0;
 				const auto desc = target->GetDesc();
@@ -1224,6 +1241,8 @@ void TestHudRendering(const fs::path& fixture) {
 					target, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_PRESENT);
 				context.EndFrame();
 				context.WaitForGpu();
+
+				// GPU完了後に行ピッチを考慮して画像へ移す
 				void* mapped = nullptr;
 				const CD3DX12_RANGE range(0, SIZE_T(bytes));
 				ThrowIfFailed(readback->Map(0, &range, &mapped));

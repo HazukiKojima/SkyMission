@@ -99,6 +99,7 @@ bool ReadField(const Json& value, int count, std::vector<float>& values) {
 }
 
 int NativeParameters(Handle h, const std::string& kind, float* output, int capacity) {
+    // 本番と同じく文書ごとに検証済みの配置結果を保持する
     auto& doc = documents.at(h);
     auto cached = doc.cache.find(kind);
 
@@ -254,6 +255,7 @@ FARPROC WINAPI SceneBenchmarkGetProcAddress(HMODULE module,LPCSTR name) {
 
     if (!useNative && !recording) return ::GetProcAddress(module, name);
 
+    // 記録時と比較先の実行時だけ公開APIを同じ計測用関数へ差し替える
     const std::string key(name);
 #define ENTRY(api,fn) if (key == api) return reinterpret_cast<FARPROC>(&fn)
     ENTRY("MyRedoxCreateDocument",Create);
@@ -299,6 +301,7 @@ int main(int argc,char** argv) try {
         if (definition.ships.empty() || definition.cinematics.empty()) throw std::runtime_error("Incomplete scene definition");
     };
 
+    // 初回読み込みと照合用の呼び出し記録を通常の反復計測から分ける
     auto before = Clock::now(); run();
     const double firstUs = std::chrono::duration<double,std::micro>(Clock::now()-before).count();
     const auto stem = std::string(argv[3])+"-"+argv[4];
@@ -309,6 +312,7 @@ int main(int argc,char** argv) try {
     std::ofstream csv(std::filesystem::path(argv[2])/(stem+".csv"));
     csv << "backend,process,sample,iterations,microseconds_per_load\n" << std::setprecision(12);
 
+    // 各標本を一定時間繰り返し、1回の読み込み時間へ換算する
     for(int sample=0;sample<7;++sample) {
         before = Clock::now(); int count=0; double elapsed;
         do {run(); ++count; elapsed=std::chrono::duration<double>(Clock::now()-before).count();} while(elapsed<0.15);

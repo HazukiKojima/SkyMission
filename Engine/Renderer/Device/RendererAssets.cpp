@@ -14,6 +14,7 @@ namespace Engine {
 			if (texture)
 				texture->CreateShaderResourceView(device.GetDevice(), handle);
 			else {
+				// 画像を読み込めなくてもSRVの配置順を維持する
 				D3D12_SHADER_RESOURCE_VIEW_DESC nullSrv{};
 				nullSrv.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 				nullSrv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -68,6 +69,7 @@ namespace Engine {
 			context->BeginFrame();
 		};
 
+		// 環境画像の転送後にモデルを一つずつ読み込む
 		finishBatch();
 		for (const auto& asset : assets.models) {
 			const auto started = std::chrono::steady_clock::now();

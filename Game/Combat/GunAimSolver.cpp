@@ -21,17 +21,21 @@ namespace Game {
 		if (!std::isfinite(speed) || speed <= 0 || !std::isfinite(lifetime) || lifetime <= 0)
 			return std::nullopt;
 
+		// 射手から見た相対位置と相対速度を求める
 		const double rx = double(target.center.x) - muzzle.x;
 		const double ry = double(target.center.y) - muzzle.y;
 		const double rz = double(target.center.z) - muzzle.z;
 		const double ux = double(target.velocity.x) - shooterVelocity.x;
 		const double uy = double(target.velocity.y) - shooterVelocity.y;
 		const double uz = double(target.velocity.z) - shooterVelocity.z;
+
+		// 迎撃時刻の二次方程式を組み立てる
 		const double a = ux * ux + uy * uy + uz * uz - double(speed) * speed;
 		const double b = 2 * (rx * ux + ry * uy + rz * uz);
 		const double c = rx * rx + ry * ry + rz * rz;
 		double time = std::numeric_limits<double>::infinity();
 
+		// 最も早い正の迎撃時刻を求める
 		if (std::abs(a) <= 1e-8 * (double(speed) * speed + 1)) {
 			if (std::abs(b) > 1e-8) time = -c / b;
 		} else {
@@ -39,6 +43,7 @@ namespace Game {
 
 			if (discriminant < 0) return std::nullopt;
 
+			// 桁落ちを避けて解を求める
 			const double q = -0.5 * (b + std::copysign(std::sqrt(discriminant), b));
 			const double t1 = q / a;
 			const double t2 = q == 0 ? time : c / q;
@@ -47,6 +52,7 @@ namespace Game {
 			if (t2 > 1e-6) time = std::min(time, t2);
 		}
 
+		// 寿命内の迎撃解を射線へ変換する
 		if (!std::isfinite(time) || time <= 1e-6 || time > lifetime) return std::nullopt;
 
 		const auto relative =

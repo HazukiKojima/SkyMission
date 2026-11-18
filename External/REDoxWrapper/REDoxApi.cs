@@ -39,6 +39,7 @@ public static unsafe class REDoxApi
             return InvalidArguments;
         }
 
+        // 解析が失敗した場合に無効なハンドルを残さない
         *outputHandle = 0;
         JsonDocument document;
         try
@@ -61,6 +62,7 @@ public static unsafe class REDoxApi
                 }
                 while (handle == 0 || Documents.ContainsKey(handle));
 
+                // 解析済みの文書を重複しないIDで公開する
                 Documents.Add(handle, new ParsedJsonDocument(document));
                 *outputHandle = handle;
             }
@@ -206,6 +208,7 @@ public static unsafe class REDoxApi
                 !TryGetObject(root, "scratch", out REDox.DElement scratch) ||
                 !TryGetObject(root, "flicker", out REDox.DElement flicker)) return InvalidSchema;
 
+            // 全項目の検証が終わるまで呼び出し元の出力へ書き込まない
             Span<float> values = stackalloc float[parameterCount];
             int index = 0;
             bool valid =
@@ -228,6 +231,7 @@ public static unsafe class REDoxApi
                 AppendNumber(flicker, "amplitude", values, ref index) && AppendArray(root, "overlayColor", 3, values, ref index);
             if (!valid || index != parameterCount - 2) return InvalidValue;
 
+            // シェーダーと同じ配置になるよう末尾の余白を埋める
             values[index++] = 0.0f;
             values[index++] = 0.0f;
             values.CopyTo(new Span<float>(output, outputCapacity));
@@ -340,10 +344,12 @@ public static unsafe class REDoxApi
 
     private static int ReadFloatArray(JsonDocument document, ReadOnlySpan<byte> key, float* output, int outputCapacity)
     {
+        // ルートキーとJSON Pointerを同じ経路で解決する
         int lookup = FindValue(document, key, out REDox.DElement value);
 
         if (lookup < 0) return lookup;
 
+        // 検証中の値を一時領域へ集めて部分書き込みを防ぐ
         Span<float> values = outputCapacity <= 256 ? stackalloc float[outputCapacity] : new float[outputCapacity];
 
         if (value.ValueKind == JsonValueKind.Number)
@@ -401,10 +407,12 @@ public static unsafe class REDoxApi
 
         if (result == null) return InvalidValue;
 
+        // 文字数ではなくUTF-8のバイト数で出力容量を確認する
         int requiredLength = Encoding.UTF8.GetByteCount(result);
 
         if (requiredLength > outputCapacity) return InvalidValue;
 
+        // 終端文字は付けず、書き込んだバイト数を返す
         Encoding.UTF8.GetBytes(result.AsSpan(), new Span<byte>(output, outputCapacity));
         return requiredLength;
     }
@@ -421,6 +429,7 @@ public static unsafe class REDoxApi
 
         foreach (string encoded in path[1..].Split('/'))
         {
+            // JSON Pointerの予約文字を復元して階層をたどる
             string part = encoded.Replace("~1", "/").Replace("~0", "~");
 
             if (value.ValueKind == JsonValueKind.Object)

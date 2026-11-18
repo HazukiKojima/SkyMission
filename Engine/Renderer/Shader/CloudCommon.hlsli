@@ -1,5 +1,6 @@
 float3 CloudViewRay(float2 uv)
 {
+    // 画面UVからカメラ相対の視線方向を復元する
     float2 ndc = uv * float2(2, -2) + float2(-1, 1);
     float4 farH = mul(float4(ndc, 1, 1), inverseViewProjection);
     return SafeNormalize(farH.xyz);
@@ -16,6 +17,8 @@ float CloudSceneDistance(float2 uv, float3 ray)
     if (depth < 1)
     {
         float2 ndc = uv * float2(2, -2) + float2(-1, 1);
+
+        // 深度を視線方向の距離へ戻して雲の描画限界に使う
         float4 hitH = mul(float4(ndc, depth, 1), inverseViewProjection);
         distanceToSurface = max(0, dot(hitH.xyz / max(hitH.w, 1e-8f), ray));
     }
