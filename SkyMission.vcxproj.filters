@@ -734,4 +734,28 @@
     <None Include="Assets\Sound\audio.json"><Filter>Assets\Sound</Filter></None>
     <None Include="Assets\UI\labels.json"><Filter>Assets\UI</Filter></None>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Input\RawInputState.cpp"><Filter>Engine\Input</Filter></ClCompile>
+    <ClCompile Include="Engine\Interop\Redox\RedoxBridge.cpp"><Filter>Engine\Interop\Redox</Filter></ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\GpuFrameProfiler.cpp"><Filter>Engine\Renderer\Device</Filter></ClCompile>
+    <ClCompile Include="Engine\Renderer\Device\RenderVisibility.cpp"><Filter>Engine\Renderer\Device</Filter></ClCompile>
+    <ClCompile Include="Engine\ExecutablePath.cpp"><Filter>Engine</Filter></ClCompile>
+    <ClCompile Include="Game\Aircraft\ValidateFlightParameters.cpp"><Filter>Game\Aircraft</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\EnemyGunBehavior.cpp"><Filter>Game\Combat</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\EnemyRadio.cpp"><Filter>Game\Combat</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\MissionState.cpp"><Filter>Game\Combat</Filter></ClCompile>
+    <ClCompile Include="Game\Settings\GameplaySettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
+    <ClCompile Include="Game\Settings\SettingsReader.cpp"><Filter>Game\Settings</Filter></ClCompile>
+    <ClCompile Include="Game\Settings\UiTextSettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
+    <ClCompile Include="Game\Effects\CombatEffectSettings.cpp"><Filter>Game\Effects</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\BombFlight.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\UI\RadioCaptionPresenter.cpp"><Filter>Game\UI</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\StartupTiming.cpp"><Filter>Engine</Filter></ClCompile>
+    <ClCompile Include="Engine\Resources\Buffer\BufferUtilities.cpp"><Filter>Engine\Resources\Buffer</Filter></ClCompile>
+    <ClCompile Include="Engine\Renderer\Hud\HudFont.cpp"><Filter>Engine\Renderer\Hud</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\ProjectilePose.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\WeaponDefinition.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+  </ItemGroup>
 </Project>

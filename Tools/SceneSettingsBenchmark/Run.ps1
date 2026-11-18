@@ -23,7 +23,11 @@ $installation = & $vswhere -latest -requires Microsoft.VisualStudio.Component.VC
 
 if (!$installation) { throw 'Visual Studio C++ tools required.' }
 $sources = @('Tools/SceneSettingsBenchmark/Benchmark.cpp', 'Game/Scene/FlightSceneLoader.cpp',
-    'Engine/Resources/JsonAssetReader.cpp', 'Game/Cinematics/CinematicSettings.cpp',
+    'Engine/StartupTiming.cpp', 'Engine/Resources/JsonAssetReader.cpp', 'Engine/Interop/Redox/RedoxBridge.cpp',
+    'Game/Settings/SettingsReader.cpp', 'Game/Settings/GameplaySettings.cpp',
+    'Game/Settings/UiTextSettings.cpp', 'Game/Effects/CombatEffectSettings.cpp',
+    'Game/Aircraft/ValidateFlightParameters.cpp', 'Game/Weapons/WeaponDefinition.cpp',
+    'Game/Combat/MissionState.cpp', 'Game/Cinematics/CinematicSettings.cpp',
     'Game/Scene/CloudSettingsLoader.cpp', 'Game/Combat/CombatSettingsLoader.cpp', 'Engine/Scene/CloudSettings.cpp',
     'Game/Combat/TargetingSystem.cpp', 'Game/Combat/GunAimSolver.cpp')
 $flags = @('/nologo','/O2','/DNDEBUG','/std:c++20','/EHsc','/MD','/utf-8','/DNOMINMAX','/DUNICODE',
@@ -38,7 +42,7 @@ $flags | Set-Content -LiteralPath $response -Encoding Unicode
 $batch = Join-Path $output 'build.cmd'
 @('@echo off', ('call "{0}/Common7/Tools/VsDevCmd.bat" -arch=x64 -host_arch=x64 >nul' -f $installation),
     ('cl.exe @"{0}"' -f $response), 'if errorlevel 1 exit /b %errorlevel%',
-    ('cl.exe /nologo /O2 /std:c++20 /EHsc /MD /utf-8 /DNOMINMAX /DUNICODE /I"{0}" /Fe"{1}/CacheChecks.exe" /Fo"{1}\\" "{2}/CacheChecks.cpp" "{0}/Engine/Resources/JsonAssetReader.cpp"' -f $repository, $output, $PSScriptRoot),
+    ('cl.exe /nologo /O2 /std:c++20 /EHsc /MD /utf-8 /DNOMINMAX /DUNICODE /I"{0}" /Fe"{1}/CacheChecks.exe" /Fo"{1}\\" "{2}/CacheChecks.cpp" "{0}/Engine/Resources/JsonAssetReader.cpp" "{0}/Engine/Interop/Redox/RedoxBridge.cpp" "{0}/Game/Settings/SettingsReader.cpp" "{0}/Game/Settings/GameplaySettings.cpp"' -f $repository, $output, $PSScriptRoot),
     'if errorlevel 1 exit /b %errorlevel%',
     ('cl.exe /nologo /c /O2 /std:c++20 /EHsc /MD /utf-8 /DNOMINMAX /DUNICODE /I"{0}" /I"{0}/packages/directxtex_desktop_win10.2026.5.8.1/include" /I"{0}/packages/AssimpCpp.5.0.1.6/build/native/include" /Fo"{1}/CombatAudio.obj" "{0}/Game/Audio/CombatAudio.cpp"' -f $repository, $output),
     'if errorlevel 1 exit /b %errorlevel%') | Set-Content -LiteralPath $batch -Encoding utf8

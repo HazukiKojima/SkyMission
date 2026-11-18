@@ -16,40 +16,11 @@
 namespace Engine {
 	inline constexpr std::uintmax_t MaxJsonFileSize = 16u * 1024u * 1024u;
 
-	inline std::vector<char> ReadJsonFile(const std::filesystem::path& jsonPath) {
-		std::error_code error;
-		const std::uintmax_t fileSize = std::filesystem::file_size(jsonPath, error);
-		if (error) {
-			throw std::runtime_error("Failed to determine JSON file size.");
-		}
-
-		if (fileSize == 0 || fileSize > MaxJsonFileSize ||
-			fileSize > static_cast<std::uintmax_t>((std::numeric_limits<int>::max)())) {
-			throw std::runtime_error("JSON file is empty or exceeds the size limit.");
-		}
-
-		std::ifstream file(jsonPath, std::ios::binary);
-		if (!file) {
-			throw std::runtime_error("Failed to open JSON file.");
-		}
-
-		std::vector<char> json(static_cast<size_t>(fileSize));
-		file.read(json.data(), static_cast<std::streamsize>(json.size()));
-		if (!file || file.gcount() != static_cast<std::streamsize>(json.size())) {
-			throw std::runtime_error("Failed to read JSON file.");
-		}
-		return json;
-	}
+	std::vector<char> ReadJsonFile(const std::filesystem::path& jsonPath);
 
 	class JsonFileCache {
 	  public:
-		const std::vector<char>& Read(const std::filesystem::path& jsonPath) {
-			auto found = m_files.find(jsonPath);
-			if (found == m_files.end()) {
-				found = m_files.emplace(jsonPath, ReadJsonFile(jsonPath)).first;
-			}
-			return found->second;
-		}
+		const std::vector<char>& Read(const std::filesystem::path& jsonPath);
 
 	  private:
 		std::map<std::filesystem::path, std::vector<char>> m_files;
@@ -57,28 +28,10 @@ namespace Engine {
 
 	class RedoxModule {
 	  public:
-		static FARPROC GetFunction(const char* entryPoint) {
-			HMODULE module = GetModule();
-			FARPROC function = ::GetProcAddress(module, entryPoint);
-
-			if (!function) {
-				throw std::runtime_error(std::string("Failed to find REDox entry point: ") + entryPoint);
-			}
-			return function;
-		}
+		static FARPROC GetFunction(const char* entryPoint);
 
 	  private:
-		static HMODULE GetModule() {
-			static HMODULE module = [] {
-				HMODULE loaded = ::LoadLibraryW(L"REDoxWrapper.dll");
-				if (!loaded) {
-					throw std::runtime_error("Failed to load REDoxWrapper.dll.");
-				}
-				return loaded;
-			}();
-
-			return module;
-		}
+		static HMODULE GetModule();
 	};
 
 	// NativeAOT側の文書ハンドルを所有する移動専用型
@@ -87,18 +40,7 @@ namespace Engine {
 	  public:
 		RedoxDocument() = default;
 
-		explicit RedoxDocument(const std::vector<char>& json) {
-			using CreateDocument = int(__cdecl*)(const unsigned char*, int, std::intptr_t*);
-			auto createDocument =
-				reinterpret_cast<CreateDocument>(RedoxModule::GetFunction("MyRedoxCreateDocument"));
-			const int result = createDocument(reinterpret_cast<const unsigned char*>(json.data()),
-				static_cast<int>(json.size()), &m_handle);
-			if (result != 0 || m_handle == 0) {
-				m_handle = 0;
-				throw std::runtime_error(
-					"Failed to parse JSON document. REDox error code: " + std::to_string(result));
-			}
-		}
+		explicit RedoxDocument(const std::vector<char>& json);
 
 		~RedoxDocument() {
 			Reset();
@@ -125,20 +67,7 @@ namespace Engine {
 		}
 
 	  private:
-		void Reset() noexcept {
-			if (m_handle == 0) return;
-
-			try {
-				using ReleaseDocument = int(__cdecl*)(std::intptr_t);
-				const auto releaseDocument =
-					reinterpret_cast<ReleaseDocument>(RedoxModule::GetFunction("MyRedoxReleaseDocument"));
-				releaseDocument(m_handle);
-			} catch (...) {
-				// デストラクタでは例外を送出せず、DLLを保持する
-			}
-
-			m_handle = 0;
-		}
+		void Reset() noexcept;
 
 		std::intptr_t m_handle = 0;
 	};
@@ -163,31 +92,10 @@ namespace Engine {
 			return *this;
 		}
 
-		const RedoxDocument& Get(const std::filesystem::path& jsonPath) {
-			// 多くの設定は、同じ絶対パスから複数の項目を続けて読む
-			// 相対パスは毎回解決し、作業ディレクトリの変更を反映する
-			if (jsonPath.is_absolute() && m_lastDocument && jsonPath == m_lastPath) return *m_lastDocument;
-
-			const std::filesystem::path key = Normalize(jsonPath);
-			auto found = m_documents.find(key);
-			if (found == m_documents.end()) {
-				const std::vector<char>& json = m_files.Read(key);
-				found = m_documents.emplace(key, RedoxDocument(json)).first;
-			}
-
-			if (jsonPath.is_absolute()) {
-				m_lastPath = jsonPath;
-				m_lastDocument = &found->second; // std::map insertions preserve references.
-			}
-			return found->second;
-		}
+		const RedoxDocument& Get(const std::filesystem::path& jsonPath);
 
 	  private:
-		static std::filesystem::path Normalize(const std::filesystem::path& path) {
-			std::error_code error;
-			const std::filesystem::path absolute = std::filesystem::absolute(path, error);
-			return (error ? path : absolute).lexically_normal();
-		}
+		static std::filesystem::path Normalize(const std::filesystem::path& path);
 
 		JsonFileCache m_files;
 		std::map<std::filesystem::path, RedoxDocument> m_documents;

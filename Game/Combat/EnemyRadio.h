@@ -35,51 +35,9 @@ namespace Game {
 	// 音声チャンネルは1つ。連続撃墜中は、待機中の最新の会話だけを残す
 	class EnemyRadioController {
 	  public:
-		void NotifyDestroyed(Engine::ObjectId victim, std::span<const Engine::ObjectId> survivors) {
-			if (m_current.reaction && m_current.actor == victim) StopCurrent();
-			m_pending.clear();
-			constexpr std::array deaths{0, 1, 3, 7, 8, 9, 10};
-			constexpr std::array reactions{2, 4, 5, 6};
-			m_pending.push_back({deaths[m_deaths++ % deaths.size()], victim, false});
+		void NotifyDestroyed(Engine::ObjectId victim, std::span<const Engine::ObjectId> survivors);
 
-			if (!survivors.empty()) {
-				const auto actor = survivors[m_reactions % survivors.size()];
-				m_pending.push_back({reactions[m_reactions++ % reactions.size()], actor, true});
-			}
-		}
-
-		void Update(float dt, std::span<const Engine::ObjectId> survivors, bool blocked) {
-			if (blocked) { StopCurrent(); return; }
-			const auto alive = [&](Engine::ObjectId id) {
-				return std::find(survivors.begin(), survivors.end(), id) != survivors.end();
-			};
-
-			if (m_presentation.clip >= 0) {
-				m_remaining -= dt;
-
-				if (m_remaining > 0 && (!m_current.reaction || alive(m_current.actor))) return;
-
-				StopCurrent();
-				m_gap = 0.25f;
-			}
-
-			m_gap = std::max(0.0f, m_gap - dt);
-
-			if (m_gap > 0) return;
-
-			while (!m_pending.empty()) {
-				m_current = m_pending.front();
-				m_pending.pop_front();
-
-				if (m_current.reaction && !alive(m_current.actor)) continue;
-
-				const auto& clip = EnemyRadioClips[m_current.clip];
-				m_remaining = clip.seconds;
-				m_presentation = {m_current.clip, ++m_serial,
-					{m_current.reaction ? "敵僚機" : "敵機", clip.text, "enemy"}};
-				break;
-			}
-		}
+		void Update(float dt, std::span<const Engine::ObjectId> survivors, bool blocked);
 
 		bool IsBusy() const { return m_presentation.clip >= 0 || !m_pending.empty(); }
 		void Clear() { m_pending.clear(); StopCurrent(); m_gap = 0; }

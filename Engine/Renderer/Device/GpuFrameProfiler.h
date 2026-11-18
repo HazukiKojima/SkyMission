@@ -30,42 +30,9 @@ namespace Engine {
 
 	class GpuFrameProfiler {
 	  public:
-		void Initialize(ID3D12Device* device, ID3D12CommandQueue* queue) {
-			ThrowIfFailed(queue->GetTimestampFrequency(&m_frequency));
+		void Initialize(ID3D12Device* device, ID3D12CommandQueue* queue);
 
-			D3D12_QUERY_HEAP_DESC desc{};
-			desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-			desc.Count = Marks * RenderDevice::FrameCount;
-			ThrowIfFailed(device->CreateQueryHeap(&desc, IID_PPV_ARGS(&m_heap)));
-			const CD3DX12_HEAP_PROPERTIES heap(D3D12_HEAP_TYPE_READBACK);
-
-			const auto buffer = CD3DX12_RESOURCE_DESC::Buffer(sizeof(uint64_t) * desc.Count);
-			ThrowIfFailed(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &buffer,
-				D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_readback)));
-			ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		}
-
-		void Begin(ID3D12GraphicsCommandList* commands, UINT frame) {
-			m_frame = frame;
-			m_capture = m_pending[frame] == 0 || m_fence->GetCompletedValue() >= m_pending[frame];
-			if (!m_capture) return;
-			if (m_pending[frame] != 0) {
-				const SIZE_T offset = sizeof(uint64_t) * Marks * frame;
-				const CD3DX12_RANGE reads(offset, offset + sizeof(uint64_t) * Marks);
-				void* data = nullptr;
-				ThrowIfFailed(m_readback->Map(0, &reads, &data));
-
-				const auto* ticks = static_cast<const uint64_t*>(data) + Marks * frame;
-				std::array<double, 6> ms{};
-				for (unsigned i = 0; i < 6; ++i)
-					ms[i] = double(ticks[i + 1] - ticks[i]) * 1000.0 / double(m_frequency);
-				m_latest = {true, ms[0], ms[1], ms[2], ms[3], ms[4], ms[5]};
-				const CD3DX12_RANGE noWrites(0, 0);
-				m_readback->Unmap(0, &noWrites);
-			}
-
-			Mark(commands, GpuTimestamp::FrameBegin);
-		}
+		void Begin(ID3D12GraphicsCommandList* commands, UINT frame);
 
 		void Mark(ID3D12GraphicsCommandList* commands, GpuTimestamp mark) {
 			if (m_capture)
@@ -79,12 +46,7 @@ namespace Engine {
 					m_readback.Get(), sizeof(uint64_t) * m_frame * Marks);
 		}
 
-		void Submitted(ID3D12CommandQueue* queue) {
-			if (m_capture) {
-				m_pending[m_frame] = ++m_serial;
-				ThrowIfFailed(queue->Signal(m_fence.Get(), m_serial));
-			}
-		}
+		void Submitted(ID3D12CommandQueue* queue);
 
 		const GpuFrameTimings& Latest() const {
 			return m_latest;

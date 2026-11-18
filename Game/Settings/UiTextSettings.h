@@ -3,10 +3,7 @@
 #include <map>
 namespace Game {
 	struct UiTextSettings {
-		static const UiTextSettings& Defaults() {
-			static const UiTextSettings defaults;
-			return defaults;
-		}
+		static const UiTextSettings& Defaults();
 
 		std::map<std::string, std::string, std::less<>> labels{
 			{"WASD：操縦", "WASD：操縦"},
@@ -70,23 +67,6 @@ namespace Game {
 			return labels.at(key);
 		}
 
-		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
-			SettingsReader r(reader, path);
-
-			for (auto& [key, value] : labels) {
-				std::string escaped;
-
-				for (char c : key) {
-					if (c == '~')
-						escaped += "~0";
-					else if (c == '/')
-						escaped += "~1";
-					else
-						escaped += c;
-				}
-
-				r.Text("/labels/" + escaped, value);
-			}
-		}
+		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};
 } // namespace Game
