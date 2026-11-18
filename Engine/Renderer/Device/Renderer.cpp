@@ -108,7 +108,7 @@ namespace Engine {
 		m_statistics.oceanTriangles = m_oceanGeometry.GetIndexCount() / 3;
 		m_gpuProfiler.Begin(cmd, m_context->GetFrameIndex());
 
-		// シーンの描画結果に雲を合成する
+		// シーンを描き、その深度を参照して合成用の雲画像を作る
 		RecordScenePass(runtimeScene);
 		m_context->TransitionResource(
 			sceneTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -149,6 +149,7 @@ namespace Engine {
 		cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
+		// 空、海、モデルの順で描き、各パスの終了時刻を記録する
 		const FrameContext frame{
 			cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()};
 		m_skyPass.Record(frame, m_assets);
@@ -173,6 +174,7 @@ namespace Engine {
 	void Renderer::Resize(UINT width, UINT height) {
 		if (width == 0 || height == 0 || !m_context || !m_device) return;
 
+		// 描画中のリソースを使い終えてから画面サイズとフレーム番号を更新する
 		m_context->WaitForGpu();
 		m_device->Resize(width, height);
 		m_context->SynchronizeFrameIndex(*m_device);

@@ -94,7 +94,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     color = ToneMapReinhard(color);
 
-    // ガンマ補正して出力する
+    // 負の成分を除いて出力する
 
     return float4(max(color, 0.0f), 1.0f);
 }

@@ -201,6 +201,7 @@ namespace Game {
 				}
 			}
 
+			// 明示されたブリーフィングで既定の台詞を置き換える
 			if (auto count = reader.TryResolveArrayLength(path, "briefing")) {
 				if (*count > 64) throw std::invalid_argument("briefing must contain at most 64 entries");
 
@@ -223,6 +224,7 @@ namespace Game {
 				}
 			}
 
+			// 映像と並行して流す無線の字幕・音声・時刻を読む
 			if (auto count = reader.TryResolveArrayLength(path, "radio")) {
 				if (*count > 64) throw std::invalid_argument("radio must contain at most 64 entries");
 
@@ -256,6 +258,7 @@ namespace Game {
 			number("modelScale", result.modelScale);
 			number("headingDegrees", result.headingDegrees);
 
+			// 共通設定を引き継ぎ、カットごとの指定項目で上書きする
 			if (auto count = reader.TryResolveArrayLength(path, "shots")) {
 				if (*count < 1 || *count > 64)
 					throw std::invalid_argument("shots must contain 1..64 entries");

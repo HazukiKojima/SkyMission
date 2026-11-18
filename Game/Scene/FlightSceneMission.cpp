@@ -39,6 +39,7 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateMission(float dt) {
+		// 任務の段階が変わったときだけ増援生成や勝敗確定を行う
 		if (m_mission.Advance(
 				m_enemies.size(), m_combat.playerHealth > 0 && m_scene.FindObject(m_playerId), dt)) {
 			switch (m_mission.GetPhase()) {
@@ -192,6 +193,7 @@ namespace Game {
 					AttackSource::EnemyAircraft, m_enemyGunTuning.damage);
 			}
 
+			// 発射できたときだけ次の射撃時刻と前後方向の警告を更新する
 			if (fired) {
 				const float interval = m_mission.GetPhase() == MissionPhase::Commander
 					? m_commanderGunInterval

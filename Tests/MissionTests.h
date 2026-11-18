@@ -46,6 +46,7 @@ void TestMissionRules() {
 		"Last aircraft did not complete mission");
 	Require(!mission.Advance(0, true), "Completion was emitted twice");
 
+	// 落下の逐次更新と着弾予測が一致することを確認する
 	BombFlight bomb{{10, 1000, 20}, {200, 20, -300}};
 	const auto expected = bomb.Predict(100);
 	Require(expected.has_value(), "Bomb trajectory could not predict deck");
@@ -58,6 +59,7 @@ void TestMissionRules() {
 		"Bomb inherited velocity/gravity disagrees with impact prediction");
 	Require(!BombFlight{{0, 10, 0}, {}}.Predict(100), "Bomb predicted a deck above release");
 
+	// 敵弾の命中時に攻撃元とダメージが引き継がれることを確認する
 	ProjectileSystem hostile;
 	GunSettings gun;
 	gun.muzzleNames = {"a", "b", "c", "d"};
@@ -252,6 +254,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 
 		const auto initialEnemyPosition = initialized.GetCombatSnapshot().enemies.front().center;
 		{
+			// 注視カメラが飛行と武器の照準に影響しないことを確認する
 			auto tracking = initialized, normal = initialized;
 			Engine::InputSnapshot hold;
 			hold.active = true;
@@ -299,6 +302,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		}
 
 		{
+			// 導入映像中の入力遮断と通常飛行への引き継ぎを確認する
 			auto natural = initialized;
 			natural.EnableOpening(definition.opening, box, 20, 100000);
 			auto skipped = natural;
@@ -381,6 +385,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		}
 
 		{
+			// 哨戒完了の無線から母艦への注視と攻撃解禁までを確認する
 			auto reusable = initialized;
 			auto clips = definition.cinematics;
 			clips.erase("opening");
@@ -497,7 +502,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 					"Carrier target was not released by missing-audio fallback");
 			}
 
-			// 明示的な演出再生は引き続き使える。変わるのは自動開始の条件だけ
+			// 自動注視とは別に、母艦の映像を明示的に再生できる
 			Require(reusable.PlayCinematic("midMission"), "Explicit carrier cinematic stopped working");
 
 			{
@@ -703,7 +708,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				"Patrol formation did not stagger altitude and approach distance");
 		}
 
-		// 近くの護衛機が拡大したプレイヤーへ撃つことで、機銃の命中を保証する
+		// 近くの護衛艦から拡大した自機を撃ち、対空砲の命中を確認する
 		{
 			auto aaScene = scene;
 			aaScene.RemoveObject(playerId);
@@ -727,6 +732,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			Require(heardGunHit, "Anti-aircraft fixture did not produce gun hit audio");
 		}
 
+		// 各段階の敗北から、武器と演出も含めて初期状態に戻す
 		const auto checkDefeatRetry = [&](FlightScene checkpoint) {
 			checkpoint.RemoveObject(playerId);
 			checkpoint.Update({}, 0.01f);
@@ -834,6 +840,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		};
 
 		{
+			// 連射時の弾数、再装填、誘導と完了無線を確認する
 			auto volley = scene;
 			configureCarrierDialogue(volley);
 			lockCarrier(volley);
@@ -930,6 +937,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			"Carrier explosion was not large or centered on the transformed model");
 		Require(!scene.GetEffectSnapshot().deckSmoke.empty(), "Carrier defeat did not emit smoke");
 		{
+			// 増援の遅延と到着映像、戦闘再開を確認する
 			auto arrival = scene;
 			auto clips = definition.cinematics;
 			clips.erase("opening");
@@ -1053,6 +1061,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 		}
 
 		{
+			// 勝利後の映像とタイトルからの任務再開を確認する
 			auto victoryMovie = scene;
 			victoryMovie.ConfigureCinematics(definition.cinematics, [&](const std::string& id) {
 				return FlightScene::CinematicModel{resolveModel(id), 1};

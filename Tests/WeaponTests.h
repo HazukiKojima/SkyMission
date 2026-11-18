@@ -38,6 +38,7 @@ void TestHostileProjectileOrientation() {
 void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	using namespace DirectX;
 
+	// フォーカス喪失や機器の切断で射撃入力が残らないことを確認する
 	RawInputState raw;
 	const auto mouse1 = reinterpret_cast<HANDLE>(std::uintptr_t(101));
 	const auto mouse2 = reinterpret_cast<HANDLE>(std::uintptr_t(102));
@@ -96,6 +97,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 	raw.ForgetDevice(keyboard);
 	Require(!WeaponController{}.ReadInput(raw.ConsumeFrame()).fire, "Disconnected keyboard kept firing");
 
+	// 武器設定の読み込みと不正値の診断を確認する
 	const auto config = repository / L"Assets";
 	const auto definition = FlightSceneLoader{}.Load({.environment = config / L"Environment/environment.json",
 		.playerAircraft = config / L"Aircraft/N1K2JShidenKai/N1K2JShidenKai.json",
@@ -241,6 +243,8 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		Require(muzzle && std::abs(muzzle->x) < 0.001f && std::abs(muzzle->y - 15.1f) < 0.001f,
 			"Empty child node did not share parent/mesh normalization");
 		Require(!model->FindNodePosition("missing"), "Missing node returned a position");
+
+		// 射撃間隔とフレーム内の発射時刻を確認する
 		AircraftGun gun;
 		gun.Configure(settings, *model);
 		Require(gun.Update({true}, 0.25f).size() == 3, "Low FPS did not emit three volleys");
@@ -262,6 +266,7 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		gun.Update({false}, 0.25f);
 		Require(gun.Update({true}, 0.01f).size() == 1, "Released cooldown did not advance");
 
+		// 銃口変換、速度継承、弾数上限と消滅条件を確認する
 		settings.muzzleSpeed = 900;
 		ProjectileSystem projectiles;
 		projectiles.Configure(settings, model, {0, 1, 0});

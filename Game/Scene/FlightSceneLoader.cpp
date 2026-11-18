@@ -167,6 +167,8 @@ namespace Game {
 					 parameters.repositionSeconds})
 				if (!std::isfinite(value) || value <= 0)
 					throw std::runtime_error("Invalid enemy attack-run parameter");
+
+			// 攻撃・巡航・離脱の速度と距離の順序を確認する
 			if (parameters.attackSpeed >= parameters.cruiseSpeed ||
 				parameters.cruiseSpeed >= parameters.escapeSpeed ||
 				parameters.disengageDistance >= parameters.tailDistance ||
@@ -194,6 +196,8 @@ namespace Game {
 			if (parameters.aimAngleDegrees > 45 || parameters.aimErrorDegrees > parameters.aimAngleDegrees ||
 				parameters.disengageDistance >= parameters.attackDistance)
 				throw std::runtime_error("Invalid enemy aim or distance ranges");
+
+			// 巡回用の高度・応答・機動周期も検証する
 			if (!std::isfinite(parameters.directionChangeSeconds) ||
 				parameters.directionChangeSeconds <= 0.0f ||
 				!std::isfinite(parameters.altitudeChangeSeconds) ||
@@ -279,6 +283,7 @@ namespace Game {
 			const auto skyJsonPath = reader.Resolve(paths.environment, "sky");
 			const auto oceanJsonPath = reader.Resolve(paths.environment, "ocean");
 
+			// 共有レイアウトの数値を読み、描画設定へ組み立てる
 			const OceanParameters oceanParameters =
 				parametersLoader.Load<OceanParameters>(oceanJsonPath, "MyRedoxGetOceanParameters");
 			const SkyParameters skyParameters =
@@ -343,6 +348,7 @@ namespace Game {
 
 			std::vector<ShipDefinition> ships;
 
+			// 艦ごとにモデルと配置を読み、変換後も有限値に収まるか検証する
 			for (int i = 1; i <= static_cast<int>(count); ++i) {
 				const auto prefix = "ship" + std::to_string(i);
 				const auto vector = [&](const char* suffix) {

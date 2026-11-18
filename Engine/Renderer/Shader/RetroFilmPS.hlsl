@@ -69,6 +69,7 @@ float FilmDust(float2 pixel, float time)
     float frame = floor(time * dustFrameRate);
     float chance = Hash(cell + frame * 13.7f + float2(17.1f, 9.2f));
 
+    // 選ばれたセル内にランダムな位置と大きさの埃を置く
     float dustAmount = 0.0f;
     if (chance >= dustThreshold)
     {

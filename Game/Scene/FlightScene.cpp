@@ -234,6 +234,7 @@ namespace Game {
 		AimAssistance assistance;
 		assistance.angleDegrees = m_combatSettings.targeting.assistAngleDegrees;
 
+		// 捕捉済みで射程内の対象だけを射撃補助へ渡す
 		if (m_targeting.GetState() == LockState::Locked) {
 			const auto selectedTarget = m_targeting.GetSelected();
 			const float acquireDistance = m_combatSettings.targeting.acquireDistance;
@@ -250,6 +251,7 @@ namespace Game {
 			}
 		}
 
+		// フレーム内の発射時刻に合わせて各斉射を生成する
 		for (const float age : ages) {
 			if (m_projectiles.FireVolley(m_scene,
 					{.muzzles = m_gun.GetMuzzles(),
@@ -545,6 +547,7 @@ namespace Game {
 		m_combat.missionMessageSeconds = m_mission.GetMessageSeconds();
 		m_combat.missileImpactPoint.reset();
 
+		// 甲板の中心を目標位置とし、発射時と同じ軌道で着弾点を予測する
 		if (const auto deck = GetDeckTarget()) {
 			const auto center = deck->bounds.Center();
 			DirectX::XMStoreFloat3(&m_combat.objectivePosition,
@@ -612,6 +615,7 @@ namespace Game {
 		std::vector<Engine::ObjectId> destroyed;
 
 		for (const auto& hit : hits) {
+			// 空母への有効な命中から耐久値と撃破・追撃の通知を更新する
 			if (hit.target == m_mission.GetCarrierId() &&
 				(hit.kind == ProjectileKind::Rocket || hit.kind == ProjectileKind::Bomb)) {
 				if (m_mission.ApplyCarrierDamage(hit.damage)) {
@@ -632,6 +636,7 @@ namespace Game {
 				continue;
 			}
 
+			// 自機の被害と音声・被弾方向を更新する
 			if (hit.target == m_playerId && m_playerId != Engine::InvalidObjectId) {
 				if (m_combat.playerHealth <= 0) continue;
 
@@ -658,6 +663,7 @@ namespace Game {
 				continue;
 			}
 
+			// 敵機の被害を反映し、撃破したIDを後で削除するために集める
 			auto enemy = std::find_if(m_enemies.begin(), m_enemies.end(), [&](const EnemyAircraft& e) {
 				return e.objectId == hit.target;
 			});
@@ -720,6 +726,7 @@ namespace Game {
 
 		if (!bounds) return;
 
+		// 変換後の境界8頂点から機体の下端と海面の接触を判定する
 		float lowestY = std::numeric_limits<float>::infinity();
 
 		for (int corner = 0; corner < 8; ++corner) {

@@ -172,6 +172,7 @@ namespace Engine {
 	}
 
 	LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+		// 作成時にインスタンスを関連付け、以後のメッセージを振り分ける
 		auto* self = reinterpret_cast<Window*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
 		if (message == WM_NCCREATE) {
 			self = static_cast<Window*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);

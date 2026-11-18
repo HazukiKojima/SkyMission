@@ -37,7 +37,7 @@ namespace Game {
 			float maximum = 1000000) const {
 			if (!exists) return;
 
-			// REDoxの数値配列は最大3成分まで。それより大きい配列はポインタで読む
+			// JsonAssetReaderの一括取得は最大3成分のため、各要素をJSON Pointerで読む
 			auto length = Read(key, [&] {
 				return reader.TryResolveArrayLength(path, key);
 			});

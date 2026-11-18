@@ -28,6 +28,8 @@ namespace Engine {
 			const std::wstring& filePath, const ModelLoadOptions& options = {});
 		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 			float nodeRotationAngle = 0.0f, unsigned lod = 0) const;
+
+		// 転送コマンドのGPU完了後に呼ぶ
 		void ReleaseUploadResources();
 
 		unsigned GetLodCount() const {

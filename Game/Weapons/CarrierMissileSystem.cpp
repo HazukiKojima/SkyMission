@@ -24,6 +24,7 @@ namespace Game {
 			throw std::invalid_argument("Missile modelForward must be finite and nonzero");
 		if (!m_missiles.empty()) throw std::logic_error("Cannot configure active missiles");
 
+		// 検証後に弾数と再装填・通知の状態を初期化する
 		m_ammo = m_settings.ammoCount;
 		m_model = std::move(model);
 		XMStoreFloat3(&m_modelForward, XMVector3Normalize(forward));

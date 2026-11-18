@@ -107,6 +107,8 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			camera.Initialize(DirectX::XM_PIDIV4, float(width) / height, 1, 10000000);
 			camera.LookAt(position, target);
 			scene.SetCamera(camera);
+
+			// シーンと深度を描画し、雲と後処理を重ねる
 			updater.Configure(definition.environment.ocean, clouds);
 			updater.Update(
 				scene, elapsed, definition.environment.retroFilm, buffers, device.GetDevice(), &context);
@@ -189,6 +191,7 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 					<< " " << postMs << '\n';
 			}
 
+			// GPU完了後に画像を取得し、行ピッチを除いて比較用に詰める
 			DirectX::ScratchImage capture;
 
 			if (profile && std::wstring_view(file) == L"clouds-cumulus.png") {
@@ -218,7 +221,7 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			render(definition.environment.clouds, {0, 1145, 0}, {0, -1200, -4000}, L"ocean-flight-down.png", 12);
 			render(definition.environment.clouds, {0, 70, 0}, {0, 40, -3000}, L"ocean-low-level.png", 12);
 
-			// 雲を高くした設定を固定し、雲層の下と内部で一周分を撮影する
+			// 既定設定で雲層の下と内部から一周分を撮影する
 			for (unsigned level = 0; level < 2; ++level) {
 				std::array<double, 12> turnTimes{};
 				const DirectX::XMFLOAT3 eye = level == 0 ? DirectX::XMFLOAT3{0, 1500, 0} :
@@ -339,6 +342,8 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			"Thick clouds must remain scattered; translucent cirrus may veil the clear sky");
 		render(clouds, {0, 7400, 0}, {0, 4000, -20000}, L"clouds-above-down.png");
 		render(clouds, {0, 4500, 0}, {0, 4500, -20000}, L"clouds-stacked-levels.png");
+
+		// 積雲を無効にして巻雲の描画と風による移動を確認する
 		auto cirrusOnly = clouds;
 		cirrusOnly.density = 0;
 		const auto cirrus = render(cirrusOnly, {0, 1500, 0}, {0, 5500, -15000}, L"clouds-cirrus-reference.png");
@@ -412,6 +417,8 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 			"Lowest cloud step budget truncates the horizon");
 		Require(device.GetCloudWidth() == (width + 2) / 3 && device.GetCloudHeight() == (height + 2) / 3,
 			"Cloud ray marching is not running at one-third resolution");
+
+		// 手前のモデルが雲に覆われないことを確認する
 		DirectX::XMFLOAT4X4 transform;
 		DirectX::XMStoreFloat4x4(&transform,
 			DirectX::XMMatrixScaling(150, 150, 150) * DirectX::XMMatrixTranslation(0, 1500, -100));

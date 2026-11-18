@@ -164,6 +164,7 @@ namespace Game {
 			list.Text({offsetX + x * scale, offsetY + y * scale}, text, fontSize, color);
 		};
 
+		// 計器の枠を作り、数値を枠の内側へ右寄せする
 		const auto drawFlightValue = [&](float x, bool pointsRight, std::string_view label, float value) {
 			const float top = m_tuning.layout.flightPanelTop, width = m_tuning.layout.flightPanelWidth,
 						height = m_tuning.layout.flightPanelHeight,
@@ -208,6 +209,7 @@ namespace Game {
 				snapshot.result == CombatResult::Victory ? m_text.Text("任務達成") : m_text.Text("自機撃墜"));
 		}
 
+		// 自機の前方を基準に被弾方向の矢印を表示する
 		if (snapshot.playerHitSeconds > 0) {
 			const auto& d = snapshot.playerHitDirection;
 			const auto& f = snapshot.forward;
@@ -380,6 +382,7 @@ namespace Game {
 		};
 
 		{
+			// 任務の段階と残存目標数を画面右上へ表示する
 			const auto phase = snapshot.missionPhase;
 			std::string objective;
 
@@ -475,6 +478,7 @@ namespace Game {
 					DrawOffscreenIndicator(marker, color, view, list);
 			}
 
+			// 捕捉状況・残弾・再装填と予想着弾点をまとめて表示する
 			if (phase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active &&
 				snapshot.selected != Engine::InvalidObjectId) {
 				std::string lock = m_text.Text("敵空母：照準を合わせてロック");

@@ -127,6 +127,8 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					presentation.radioLine = -1;
 					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
 						"Expired radio retained its voice");
+
+					// 音声の破損・欠落時の代替状態と、演出間の音声の独立性を確認する
 					configured.radio[0].audio.clear();
 					presentation.briefingLine = 0;
 					const auto brokenAudio = fixture / L"broken-briefing.wav";
@@ -158,6 +160,8 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					presentation.cinematicId = "middle";
 					Require(audio.UpdateCinematic(presentation) == CinematicVoiceStatus::Unavailable,
 						"Switching cinematic IDs reused a previous briefing clip");
+
+					// 本番の各無線アセットを読み込み、母艦の音声が映像終了後も続くことを確認する
 					std::map<std::string, CinematicSettings> patrolCommands;
 
 					for (const auto* id : {"patrolEncouragement", "patrolComplete", "midMission"})
@@ -262,6 +266,8 @@ void TestFlightAndScene() {
 	}
 
 	Require(rejected, "Equal stall/critical angles were accepted");
+
+	// 飛行更新、入力変換、削除後のIDと機体ごとのアニメーションを確認する
 	AircraftFlightModel flight;
 	flight.SetFlightParameters(parameters);
 
@@ -334,6 +340,7 @@ void TestFollowCameraLook() {
 	Require(releaseOffset > 1 && releaseOffset < initialOffset && releaseOffset > initialOffset * 0.5f,
 		"Middle-button release snapped camera or did not start smooth return");
 
+	// 見回しからの復帰がフレームレートや機体移動に左右されないことを確認する
 	auto slowFrames = camera, fastFrames = camera;
 
 	for (int i = 0; i < 30; ++i)
@@ -415,6 +422,7 @@ void TestTargetCameraLook() {
 		return XMVectorGetX(XMVector3Length(XMLoadFloat3(&a) - XMLoadFloat3(&b)));
 	};
 
+	// 各方向への注視と、キー解放・対象消失・フォーカス喪失からの復帰を確認する
 	for (const XMFLOAT3 point : {XMFLOAT3{0, 1500, -5000}, {5000, 1500, 0},
 		{-5000, 1500, 0}, {0, 1500, 5000}, {0, 5000, -5000}, {0, -2000, -5000}}) {
 		auto camera = reference;
@@ -632,6 +640,7 @@ void TestRawInput() {
 	Require(std::abs(camera.GetPosition().z - position.z) > 1.0f,
 		"Free camera did not consume raw keyboard state");
 
+	// ウィンドウの生成・破棄に伴う入力登録とキャプチャの寿命を確認する
 	const auto registrations = [] {
 		UINT count = 0;
 		Require(GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) != UINT(-1),
@@ -754,6 +763,8 @@ void RequireDefaultBufferContent(ID3D12Device* device, ID3D12GraphicsCommandList
 	const auto desc = CD3DX12_RESOURCE_DESC::Buffer(bytes);
 	ThrowIfFailed(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
 		D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readback)));
+
+	// 元の状態を復元して送信し、読み戻した内容を比較する
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(source, state, D3D12_RESOURCE_STATE_COPY_SOURCE);
 	commands->ResourceBarrier(1, &barrier);
 	commands->CopyBufferRegion(readback.Get(), 0, source, 0, bytes);
@@ -770,6 +781,7 @@ void RequireDefaultBufferContent(ID3D12Device* device, ID3D12GraphicsCommandList
 }
 
 void TestGpuTextures(const fs::path& fixture) {
+	// WARPデバイスでテクスチャとバッファの転送を検証する
 	ComPtr<ID3D12Debug> debug;
 
 	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) debug->EnableDebugLayer();
@@ -814,6 +826,7 @@ void TestGpuTextures(const fs::path& fixture) {
 	const auto extensionless = fixture / L"拡張子なし";
 	fs::copy_file(png, extensionless, fs::copy_options::overwrite_existing);
 
+	// 圧縮形式ごとにミップ生成とディスクキャッシュの再読み込みを確認する
 	for (const auto format : {DXGI_FORMAT_BC3_UNORM_SRGB, DXGI_FORMAT_BC4_UNORM, DXGI_FORMAT_BC5_UNORM}) {
 		const TextureLoadOptions options{
 			.useSrgb = format == DXGI_FORMAT_BC3_UNORM_SRGB, .generateMipmaps = true, .targetFormat = format};
@@ -855,7 +868,7 @@ void TestGpuTextures(const fs::path& fixture) {
 
 	Texture noExtension;
 
-	// 解像度の上限は、縦横比を保ち、ミップを作り直し、独立したキャッシュキーを持つ
+	// 解像度制限後のサイズとミップ数、制限なしのキャッシュとの独立性を確認する
 	for (int load = 0; load < 2; ++load) {
 		auto limited = Texture::LoadCached(device.Get(), commands.Get(), png.wstring(),
 			{.targetFormat = DXGI_FORMAT_BC3_UNORM_SRGB, .maxDimension = 8});
@@ -891,6 +904,7 @@ void TestGpuTextures(const fs::path& fixture) {
 		"Cache ignored mip options");
 	submit();
 
+	// アップロード領域の解放後も生成ジオメトリの内容が保たれることを確認する
 	VertexBuffer proceduralVertices;
 	const float vertexData[]{1, 2, 3, 4, 5, 6};
 	proceduralVertices.Initialize(
@@ -983,8 +997,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 	definition.playerAircraft.model = definition.enemyAircraft.model = model;
 	definition.playerAircraft.model = fixture / L"muzzles.dae";
 
-	// 同じマテリアルの静的な部品は統合してよいが、既存のプロペラは独立したままにする
-	definition.environment.skyTexture = definition.environment.oceanTexture =
+		definition.environment.skyTexture = definition.environment.oceanTexture =
 		definition.environment.oceanNormalTexture = definition.environment.oceanNormalTexture2 =
 			fixture / L"機体.png";
 	const HWND window = CreateWindowW(L"STATIC", L"SkyMission regression (hidden)", WS_OVERLAPPEDWINDOW, 0, 0,
@@ -1022,6 +1035,8 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		auto renderDefinition = definition.BuildRendererDefinition();
 		renderDefinition.models.push_back({"staticBatchTest", model, {}});
 		renderer.Initialize(window, 64, 64, renderDefinition);
+
+		// 静的な部品は統合し、回転するプロペラは独立させる
 		const auto merged = renderer.GetModel("staticBatchTest");
 		Require(merged->GetSourceMeshCount() == 2 && merged->GetMeshCount() == 1 &&
 				merged->GetTriangleCount() == 2,
@@ -1049,6 +1064,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 			shipIds.push_back(scene.AddObject(shipModel, ship.BuildTransform()));
 		}
 
+		// 弾数を見込んで予約し、連続描画でも定数バッファが増えないことを確認する
 		renderer.InitializeConstantBuffers(scene.GetRenderScene());
 		renderer.ReserveModelCapacity(scene.GetObjects().size() + definition.playerWeapon.gun.maxProjectiles +
 			CarrierMissileSystem::RequiredModelCapacity(definition.mission.bombReloadSeconds));
@@ -1104,6 +1120,7 @@ void TestRendererSmoke(const fs::path& repository, const fs::path& fixture) {
 		Require(
 			renderer.GetModelCapacity() == reserved, "Firing grew GPU constant buffers despite reservation");
 
+		// ゼロサイズからの復帰と、自機削除後の射撃停止・再挑戦を確認する
 		renderer.Resize(0, 0);
 		renderer.Render(0, 0, scene.GetRenderScene());
 		renderer.Resize(96, 96);

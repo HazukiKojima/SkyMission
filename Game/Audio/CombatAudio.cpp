@@ -283,6 +283,7 @@ namespace Game {
 	}
 
 	void CombatAudio::ResetPlayback() {
+		// 再生キューを空にして、台詞と警告の管理状態も初期化する
 		for (auto* voice : m_voices) {
 			StopVoice(voice);
 		}
@@ -368,6 +369,7 @@ namespace Game {
 			ResetPlayback();
 		}
 
+		// 継続音を状態に合わせた後、警告と単発イベントを処理する
 		SetLoop(0, ClipKind::Flight, state.flying,
 			m_settings.flightVolume *
 				(m_cinematicActive && m_activeCinematicAudio
@@ -538,6 +540,7 @@ namespace Game {
 		std::vector<int16_t> samples(static_cast<std::size_t>(kSampleRate * duration));
 		uint32_t randomState = 719;
 
+		// 警告は正弦波、命中音は減衰するノイズと高音を合成する
 		for (std::size_t i = 0; i < samples.size(); ++i) {
 			const float time = static_cast<float>(i) / kSampleRate;
 
@@ -579,6 +582,7 @@ namespace Game {
 			return true;
 		};
 
+		// 警告は専用ボイス、それ以外は空いている単発音用ボイスを使う
 		if (warning) {
 			submit(m_warningVoice);
 		} else {

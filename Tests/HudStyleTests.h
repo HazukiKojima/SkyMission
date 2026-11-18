@@ -65,6 +65,7 @@ void TestHudTypography() {
 			x > 16 && x < 1904 && y > 16 && y < 1064, "Flight HUD retained the weathered screen-edge frame");
 	}
 
+	// 任務段階と戦闘結果を変え、組み込み字幕のグリフを確認する
 	snapshot.forward = {0, 0, 1};
 	snapshot.enemies = {{1, {0, 0, 1000}, {}, "ENEMY 01", 100, {0, 0, 1}}};
 	snapshot.selected = 1;

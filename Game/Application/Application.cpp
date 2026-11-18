@@ -175,6 +175,7 @@ namespace Game {
 	}
 
 	void Application::Update() {
+		// 経過時間を測り、一定間隔でFPSとGPU時間の表示を更新する
 		auto now = std::chrono::steady_clock::now();
 		std::chrono::duration<float> dt = now - m_lastTime;
 		m_lastTime = now;
@@ -202,6 +203,7 @@ namespace Game {
 			const InputSnapshot input = m_window->ConsumeInput();
 			m_combatAudio.SetSuspended(!input.active);
 
+			// タイトルとクリア画面ではEnterによる画面遷移だけを処理する
 			if (m_screen == Screen::Title || m_screen == Screen::Clear) {
 				if (input.active && input.WasKeyPressed(VK_RETURN)) {
 					m_combatAudio.ResetPlayback();
@@ -234,6 +236,7 @@ namespace Game {
 				Log("Capture view: {} (0=normal, 1=environment+ships, 2=environment)\n", m_captureMode);
 			}
 
+			// 入力から戦闘を進め、演出終了時にクリア画面へ切り替える
 			auto combat = CombatController{}.ReadInput(input);
 
 			if (m_scene->GetCombatSnapshot().result == CombatResult::Victory) combat.retry = false;
@@ -253,6 +256,7 @@ namespace Game {
 				return;
 			}
 
+			// シーンの状態で音声を更新し、再生状況を台詞の進行へ返す
 			const auto& combatState = m_scene->GetCombatSnapshot();
 
 			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();

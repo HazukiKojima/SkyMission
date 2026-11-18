@@ -153,6 +153,7 @@ void TestGunFireEffects() {
 			"Gun smoke density changed with FPS");
 	}
 
+	// 上限、寿命、銃口への追従と独立した煙の扱いを確認する
 	CombatEffectSystem effects;
 
 	for (size_t index = 0; index < 70; ++index)

@@ -412,6 +412,7 @@ public static unsafe class REDoxApi
 
         if (requiredLength > outputCapacity) return InvalidValue;
 
+        // 終端文字は付けず、書き込んだバイト数を返す
         Encoding.UTF8.GetBytes(result.AsSpan(), new Span<byte>(output, outputCapacity));
         return requiredLength;
     }

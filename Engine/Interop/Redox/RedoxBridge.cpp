@@ -81,7 +81,7 @@ namespace Engine {
 				reinterpret_cast<ReleaseDocument>(RedoxModule::GetFunction("MyRedoxReleaseDocument"));
 			releaseDocument(m_handle);
 		} catch (...) {
-			// デストラクタでは例外を送出せず、DLLを保持する
+			// 解放中の例外をデストラクタの外へ出さない
 		}
 
 		m_handle = 0;

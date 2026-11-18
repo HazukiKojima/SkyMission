@@ -102,6 +102,7 @@ namespace Engine::ModelProcessing {
 				return {};
 			}
 
+			// 回転部品は境界の中心を支点とし、最も薄い方向を回転軸にする
 			result.isRotatingNode = isRotatingNode;
 			if (isRotatingNode) {
 				const float extentX = nodeRotationBoundsMax.x - nodeRotationBoundsMin.x;

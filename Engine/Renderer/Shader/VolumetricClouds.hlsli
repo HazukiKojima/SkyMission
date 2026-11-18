@@ -165,6 +165,7 @@ float CloudTransmission(float3 position, float3 lightDirection, float cloudTime,
         (abs(lightDirection.y) > 1e-5f ? lightDirection.y : 1e-5f)));
     if (abs(lightDirection.y) <= 1e-5f) exit = 5000;
 
+    // 光源方向の密度を少数点で積分し、遠方では評価数を減らす
     float samples = lerp(3, 2, smoothstep(12000, 60000, distanceAlongRay));
     float previous = 0;
     [loop] for (uint i = 0; i < 3; ++i)

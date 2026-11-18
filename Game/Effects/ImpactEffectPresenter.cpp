@@ -8,7 +8,7 @@ namespace Game {
 
 	namespace {
 		void DrawImpactSmoke(const ImpactEffect& impact, EffectDrawContext& context) {
-			// 入射方向の逆を基準にして、金属片を機体の外側へ散らす
+			// 入射方向の逆を基準に煙の広がる平面を作る
 			const float ageSeconds = impact.age;
 			const auto origin = XMLoadFloat3(&impact.position);
 			const auto inherited = XMLoadFloat3(&impact.velocity);

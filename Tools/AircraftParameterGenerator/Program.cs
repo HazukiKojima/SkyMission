@@ -71,6 +71,7 @@ static class CppGenerator
         source.AppendLine();
         source.AppendLine($"static_assert(std::is_standard_layout_v<{qualifiedName}>);");
 
+        // C++側の各フィールド位置と構造体サイズをコンパイル時に照合する
         for (int index = 0; index < fields.Count; index++)
         {
             source.AppendLine($"static_assert(offsetof({qualifiedName}, {fields[index].Name}) == {fields[index].Offset} * sizeof(float));");
@@ -119,6 +120,8 @@ static class CSharpGenerator
         }
 
         source.AppendLine();
+
+        // C++の宣言順で配列要素まで平坦化する変換を生成する
         source.AppendLine("    public float[] ToFloatArray() => new float[]");
         source.AppendLine("    {");
 
@@ -244,6 +247,7 @@ static class CppStructParser
                 continue;
             }
 
+            // 空白とコメントを捨て、宣言の識別子・数値・記号を切り出す
             if (current == '/' && index + 1 < source.Length && source[index + 1] == '/')
             {
                 index += 2;

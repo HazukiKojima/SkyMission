@@ -116,6 +116,7 @@ namespace Game {
 
 		if (!ship || !center || !ship->model->GetLocalBounds()) return;
 
+		// ワールド空間の境界から撮影距離の基準となる艦の寸法を求める
 		const auto& bounds = *ship->model->GetLocalBounds();
 		XMVECTOR minimum = XMVectorReplicate(FLT_MAX), maximum = XMVectorReplicate(-FLT_MAX);
 
@@ -185,6 +186,7 @@ namespace Game {
 		const bool wasReady = m_carrierTargetReady;
 		m_cinematic.UpdateBriefing(voice, deltaSeconds);
 
+		// 通信の終了を任務目標の解禁や次の会話の待ち時間へ反映する
 		if (voice == CinematicVoiceStatus::Finished && m_cinematic.GetPresentation().radioLine >= 0 &&
 			!m_cinematic.GetPresentation().active) {
 			const auto id = m_cinematic.GetPresentation().cinematicId;
@@ -274,6 +276,7 @@ namespace Game {
 			return;
 		}
 
+		// 哨戒完了の会話を終えてから空母攻撃の指令へ進む
 		if (!m_patrolPraiseStarted) {
 			if (m_enemyRadio.IsBusy() || speaking) return;
 

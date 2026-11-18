@@ -118,6 +118,7 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 				}
 			}
 
+			// シーン、雲、後処理、HUDの順に描画する
 			updater.Update(scene, flight.GetCombatSnapshot().cinematic.elapsedSeconds,
 				definition.environment.retroFilm, buffers, device.GetDevice(), &context);
 			context.BeginFrame();
@@ -164,6 +165,8 @@ void TestCinematicRendering(const fs::path& repository, const fs::path& fixture)
 				D3D12_RESOURCE_STATE_PRESENT);
 			context.EndFrame();
 			context.WaitForGpu();
+
+			// GPU完了後に画像を取得し、暗転時は中央が黒いことを確認する
 			DirectX::ScratchImage pixels;
 			ThrowIfFailed(DirectX::CaptureTexture(device.GetCommandQueue(), device.GetCurrentRenderTarget(),
 				false, pixels, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PRESENT));

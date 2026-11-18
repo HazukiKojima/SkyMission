@@ -193,6 +193,7 @@ namespace Engine::ModelProcessing {
 			std::filesystem::create_directories(path.parent_path(), error);
 			if (error) return;
 
+			// 並行する書き込みを分離し、完成前のキャッシュを公開しない
 			auto temporary = path;
 			temporary += L"." + std::to_wstring(GetCurrentProcessId()) + L"." +
 				std::to_wstring(GetCurrentThreadId()) + L".tmp";

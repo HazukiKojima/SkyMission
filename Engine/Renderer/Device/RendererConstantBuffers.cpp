@@ -16,6 +16,7 @@ namespace Engine {
 	static_assert(sizeof(FilmConstantBufferData) == 224);
 
 	void RendererConstantBuffers::Initialize(ID3D12Device* device) {
+		// CPUが更新する定数領域をフレームごとに分けて確保する
 		for (auto& buffer : m_oceanBuffers)
 			buffer.resource = CreateUploadBuffer(
 				device, AlignConstantBufferSize(sizeof(OceanConstantBufferData)), &buffer.mappedData);

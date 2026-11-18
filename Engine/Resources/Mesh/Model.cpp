@@ -18,6 +18,7 @@ namespace Engine {
 	namespace {
 		std::filesystem::path ResolveMaterialTexture(const aiMaterial* material, aiTextureType type,
 			const std::filesystem::path& modelDirectory, const ModelLoadOptions& options) {
+			// 埋め込み画像は扱わず、外部ファイルの参照を解決する
 			aiString texturePath;
 
 			if (material->GetTexture(type, 0, &texturePath) != AI_SUCCESS || texturePath.length == 0 ||
@@ -240,6 +241,7 @@ namespace Engine {
 	}
 
 	void Model::InitializeFallbackTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commands) {
+		// 画像がない材質には白色・非金属・最大粗さ・平坦な法線を使う
 		m_fallbackTexture = std::make_unique<Texture>();
 		if (!m_fallbackTexture->CreateFromSolidColor(device, commands, 255, 255, 255)) {
 			throw std::runtime_error("Failed to initialize fallback material texture.");
@@ -264,6 +266,7 @@ namespace Engine {
 	void Model::LoadMaterialTextures(Mesh& mesh, const PreparedMaterial& source,
 		const std::filesystem::path& modelDirectory, const ModelLoadOptions& options, ID3D12Device* device,
 		ID3D12GraphicsCommandList* commandList) {
+		// 保存した材質情報をAssimpの画像参照として組み立て直す
 		aiMaterial materialData;
 		const aiString sourceName(source.name);
 		materialData.AddProperty(&sourceName, AI_MATKEY_NAME);
@@ -276,6 +279,7 @@ namespace Engine {
 			materialData.AddProperty(&path, AI_MATKEY_TEXTURE(types[type], 0));
 		}
 
+		// ベースカラーを参照情報、命名規則、代替画像の順に探す
 		const aiMaterial* material = &materialData;
 		aiString materialName;
 		material->Get(AI_MATKEY_NAME, materialName);
@@ -362,6 +366,7 @@ namespace Engine {
 
 		static_assert(sizeof(NodeRotationConstants) == RootBinding::NodeRotationDwords * sizeof(UINT));
 
+		// 選択したLODの各メッシュへ回転定数と材質を設定して描く
 		for (const Mesh& mesh : m_lodMeshes[std::min(lod, m_lodCount - 1)]) {
 			const NodeRotationConstants nodeRotationConstants = {nodeRotationAngle, mesh.nodeRotationPivot,
 				mesh.nodeRotationAxis, mesh.isRotatingNode ? 1u : 0u};

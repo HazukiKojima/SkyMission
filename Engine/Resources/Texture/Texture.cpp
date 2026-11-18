@@ -182,6 +182,8 @@ namespace Engine {
 	bool Texture::DecompressForProcessing(const TextureLoadOptions& options) {
 		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 		HRESULT hr = E_FAIL;
+
+		// 画像補正や形式変更が必要な圧縮画像だけを展開する
 		if (DirectX::IsCompressed(m_meta.format) &&
 			(invertNormalGreen || (generateMipmaps && m_meta.mipLevels == 1) ||
 				m_meta.format != targetFormat ||
@@ -335,6 +337,7 @@ namespace Engine {
 	}
 
 	void Texture::UploadImage(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList) {
+		// 画像本体と全ミップ・配列要素を収める転送領域を確保する
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, static_cast<UINT>(m_meta.width),
 			static_cast<UINT>(m_meta.height), static_cast<UINT16>(m_meta.arraySize),
 			static_cast<UINT16>(m_meta.mipLevels));
@@ -351,6 +354,7 @@ namespace Engine {
 		ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProps, D3D12_HEAP_FLAG_NONE, &uploadDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_uploadHeap)));
 
+		// 各画像の行間隔を保って転送元を指定する
 		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 		subresources.resize(m_meta.mipLevels * m_meta.arraySize);
 
@@ -388,6 +392,7 @@ namespace Engine {
 		image->pixels[2] = b;
 		image->pixels[3] = a;
 
+		// 単色の1ピクセルをGPUへ転送し、シェーダー参照用に遷移する
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, 1, 1, 1, 1);
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
@@ -419,6 +424,7 @@ namespace Engine {
 		ThrowIfFailed(m_image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
 		m_meta = m_image.GetMetadata();
 
+		// 入力と作業画像の行間隔を区別してコピーする
 		const auto* image = m_image.GetImage(0, 0, 0);
 		for (UINT row = 0; row < height; ++row)
 			std::memcpy(image->pixels + row * image->rowPitch, pixels.data() + size_t(row) * width * 4,

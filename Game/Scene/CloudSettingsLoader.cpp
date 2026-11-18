@@ -7,7 +7,7 @@ namespace Game {
 		if (!std::filesystem::exists(path)) return {};
 
 		try {
-			// 無効な設定では雲の詳細を読み込まない
+			// 雲が無効なら詳細設定を読み込まずに戻る
 			const float enabled = reader.ResolveFloat(path, "enabled");
 
 			if (enabled != 0 && enabled != 1) throw std::invalid_argument("enabled must be 0 or 1");

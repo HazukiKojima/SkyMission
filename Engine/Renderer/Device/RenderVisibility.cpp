@@ -22,7 +22,7 @@ namespace Engine {
 		BoundingSphere sphere;
 		XMStoreFloat3(&sphere.Center, XMVector3TransformCoord(XMLoadFloat3(&center), XMLoadFloat4x4(&world)));
 
-		// sqrt(||A||1 * ||A||inf) bounds the spectral norm, including nonuniform scale and shear.
+		// 非一様スケールやせん断でも球が収まるよう、最大伸長率の上限を求める
 		float rowNorm = 0, columnNorm = 0;
 		for (int i = 0; i < 3; ++i) {
 			float row = 0, column = 0;

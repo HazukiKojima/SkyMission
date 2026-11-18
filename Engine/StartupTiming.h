@@ -7,7 +7,7 @@
 #include <string_view>
 
 namespace Engine {
-	// エンジンの読み込みを、プロセス起動やデバッガーのオーバーヘッドから切り分けるための、任意の計測
+	// 読み込みの段階ごとに所要時間を記録する任意の診断
 	class StartupTiming {
 	  public:
 		explicit StartupTiming(std::string_view stage) : m_stage(stage) {}

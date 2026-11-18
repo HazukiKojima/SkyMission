@@ -223,6 +223,8 @@ namespace Game {
 
 		if (defenseCenter && std::hypot(XMVectorGetX(home), XMVectorGetZ(home)) > m_tuning.defenseTurnRadius)
 			ChooseTurn(yaw, home, slot);
+
+		// 機体番号と離脱回数から離脱時間・距離に変化を付ける
 		const auto maneuver = m_passSequence++;
 		m_passMinimum = m_tuning.minimumPassSeconds + style.passDelay +
 			EnemyVariation(slot, maneuver, 83) * m_tuning.passMinimumVariationSeconds;
@@ -235,6 +237,8 @@ namespace Game {
 		m_passStart = position;
 		m_reentrySeconds = m_tuning.reentryMinimumSeconds +
 			EnemyVariation(slot, maneuver, 103) * m_tuning.reentryVariationSeconds;
+
+		// 目標の向きを基準に再接近する位置をずらす
 		const auto targetForward = XMLoadFloat3(&target.forward);
 		auto targetRight = XMVector3Cross(targetForward, XMVectorSet(0, 1, 0, 0));
 
@@ -339,7 +343,7 @@ namespace Game {
 		targetSpeed = std::min(targetSpeed, aircraft.GetMaximumSpeed());
 		input.throttle = std::clamp((targetSpeed - aircraft.GetSpeed()) * p.speedMatchGain, -1.0f, 1.0f);
 
-		// 再接近時だけ短くハイG旋回し、近距離で旋回し続けるのを防ぐ
+		// 衝突回避と離脱・再接近の初期にハイG旋回を使う
 		input.highGTurn = (imminentCollision && m_mode != AircraftCombatMode::Recover) ||
 			(m_mode == AircraftCombatMode::Disengage && m_spacingBreak &&
 				m_modeSeconds < m_tuning.spacingHighGSeconds) ||
@@ -369,6 +373,7 @@ namespace Game {
 			m_initialized = true;
 		}
 
+		// 巡回中は一定間隔で目標方位と高度を切り替える
 		if (m_elapsedSeconds >= m_nextDirectionChange) {
 			m_targetYaw = std::remainder(currentYaw +
 					m_tuning.directionChangesRadians[m_directionChangeIndex %
@@ -384,6 +389,7 @@ namespace Game {
 			m_nextAltitudeChange += parameters.altitudeChangeSeconds;
 		}
 
+		// 方位・高度・速度の差を操縦入力へ変換する
 		const float yawError = std::remainder(m_targetYaw - currentYaw, DirectX::XM_2PI);
 		input.turn = std::clamp(yawError * parameters.turnGain, -1.0f, 1.0f);
 		const DirectX::XMFLOAT3 forward = aircraft.GetForward();
@@ -396,6 +402,7 @@ namespace Game {
 		input.throttle =
 			std::clamp((targetSpeed - aircraft.GetSpeed()) * parameters.speedMatchGain, -1.0f, 1.0f);
 
+		// 周期的に短いハイG旋回を加える
 		const float maneuverPhase = std::fmod(m_elapsedSeconds, parameters.highGManeuverIntervalSeconds);
 		input.highGTurn = maneuverPhase < parameters.highGManeuverDurationSeconds &&
 			std::abs(input.turn) > m_tuning.patrolHighGThreshold;

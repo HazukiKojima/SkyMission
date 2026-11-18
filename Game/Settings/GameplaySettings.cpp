@@ -51,6 +51,8 @@ namespace Game {
 		r.Number("burstRangeSeconds", burstRangeSeconds, 0, 1000000);
 		r.Number("pauseSeconds", pauseSeconds, 0.000001f, 1000000);
 		r.Number("pauseRangeSeconds", pauseRangeSeconds, 0, 1000000);
+
+		// 予測照準への寄せ方と弾の散布幅を読み込む
 		r.Number("minimumLeadFraction", minimumLeadFraction, 0, 1);
 		r.Number("leadVariation", leadVariation, 0, 1);
 		r.Number("yawErrorDegrees", yawErrorDegrees, 0, 1000000);
@@ -67,6 +69,8 @@ namespace Game {
 		r.Number("safeDistanceSlotStep", safeDistanceSlotStep, 0, 100000);
 		r.Number("reentryAheadDot", reentryAheadDot, 0, 1);
 		r.Number("reentryReadyTimeScale", reentryReadyTimeScale, 0, 100000);
+
+		// 衝突回避を始める距離と回避方向を読み込む
 		r.Number("collisionClosestMeters", collisionClosestMeters, 0, 100000);
 		r.Number("collisionClosestDistanceScale", collisionClosestDistanceScale, 0, 100000);
 		r.Number("collisionRangeMeters", collisionRangeMeters, 0, 100000);
@@ -79,6 +83,8 @@ namespace Game {
 		r.Number("recoverClimb", recoverClimb, 0, 100000);
 		r.Number("turnDirectionThresholdRadians", turnDirectionThresholdRadians, 0, 100000);
 		r.Number("defenseTurnRadius", defenseTurnRadius, 0, 100000);
+
+		// 離脱から再接近までの時間と経路の変化量を読み込む
 		r.Number("passMinimumVariationSeconds", passMinimumVariationSeconds, 0, 100000);
 		r.Number("passMaximumBaseSeconds", passMaximumBaseSeconds, 0, 100000);
 		r.Number("passMaximumSlotSeconds", passMaximumSlotSeconds, 0, 100000);
@@ -118,6 +124,7 @@ namespace Game {
 		r.Number("patrolHighGThreshold", patrolHighGThreshold, 0, 1);
 		r.Number("patrolHighGMinimumTurn", patrolHighGMinimumTurn, 0, 1);
 
+		// 離脱・防衛の上限と非ロック機の攻撃倍率を読み込む
 		r.Number("minimumPassSeconds", minimumPassSeconds, 0.000001f, 1000000);
 		r.Number("maximumPassSeconds", maximumPassSeconds, 0.000001f, 1000000);
 		r.Number("defenseOuterRadius", defenseOuterRadius, 0.000001f, 1000000);

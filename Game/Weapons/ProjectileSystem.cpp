@@ -163,6 +163,7 @@ namespace Game {
 
 		if (!std::isfinite(speedSquared) || speedSquared < 1e-8f) return false;
 
+		// 弾モデルの前方を発射速度の方向へ合わせる
 		const auto direction = XMVector3Normalize(velocityVector);
 		const auto forward = XMVectorSet(0, 0, -1, 0);
 		const float dot = std::clamp(XMVectorGetX(XMVector3Dot(forward, direction)), -1.0f, 1.0f);
