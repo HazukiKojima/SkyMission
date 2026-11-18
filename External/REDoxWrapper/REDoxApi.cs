@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -438,7 +439,9 @@ public static unsafe class REDoxApi
             }
             else if (value.ValueKind == JsonValueKind.Array)
             {
-                if (!int.TryParse(part, out int index) || index < 0 || index >= value.GetArrayLength())
+                // JSON Pointerの配列インデックスは現在のカルチャに依存しない。
+                if (!int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ||
+                    index < 0 || index >= value.GetArrayLength())
                     return InvalidValue;
 
                 int current = 0;

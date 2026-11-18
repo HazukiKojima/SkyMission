@@ -15,27 +15,29 @@ namespace Engine {
 	}
 
 	std::vector<char> ReadJsonFile(const std::filesystem::path& jsonPath) {
-		// JSONのサイズを検証する
-		std::error_code error;
-		const std::uintmax_t fileSize = std::filesystem::file_size(jsonPath, error);
-		if (error) {
+		const HANDLE handle = CreateFileW(jsonPath.c_str(), GENERIC_READ,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (handle == INVALID_HANDLE_VALUE) {
+			throw std::runtime_error("Failed to open JSON file.");
+		}
+		const std::unique_ptr<void, decltype(&CloseHandle)> file(handle, &CloseHandle);
+
+		// サイズ確認と読み込みに同じハンドルを使う
+		LARGE_INTEGER fileSize{};
+		if (!GetFileSizeEx(file.get(), &fileSize)) {
 			throw std::runtime_error("Failed to determine JSON file size.");
 		}
 
-		if (fileSize == 0 || fileSize > MaxJsonFileSize ||
-			fileSize > static_cast<std::uintmax_t>((std::numeric_limits<int>::max)())) {
+		if (fileSize.QuadPart <= 0 || static_cast<std::uintmax_t>(fileSize.QuadPart) > MaxJsonFileSize) {
 			throw std::runtime_error("JSON file is empty or exceeds the size limit.");
 		}
 
 		// JSONの全データを読み込む
-		std::ifstream file(jsonPath, std::ios::binary);
-		if (!file) {
-			throw std::runtime_error("Failed to open JSON file.");
-		}
-
-		std::vector<char> json(static_cast<size_t>(fileSize));
-		file.read(json.data(), static_cast<std::streamsize>(json.size()));
-		if (!file || file.gcount() != static_cast<std::streamsize>(json.size())) {
+		const auto byteCount = static_cast<DWORD>(fileSize.QuadPart);
+		std::vector<char> json(byteCount);
+		DWORD bytesRead = 0;
+		if (!ReadFile(file.get(), json.data(), byteCount, &bytesRead, nullptr) || bytesRead != byteCount) {
 			throw std::runtime_error("Failed to read JSON file.");
 		}
 		return json;
@@ -47,6 +49,11 @@ namespace Engine {
 			found = m_files.emplace(jsonPath, ReadJsonFile(jsonPath)).first;
 		}
 		return found->second;
+	}
+
+	void RedoxModule::WarmUp() {
+		// 最初のネイティブ呼び出しも済ませる。ゲーム設定ファイルは読み込まない。
+		const RedoxDocument document(std::vector<char>{'{', '}'});
 	}
 
 	FARPROC RedoxModule::GetFunction(const char* entryPoint) {
