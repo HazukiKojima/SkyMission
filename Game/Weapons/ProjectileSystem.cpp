@@ -20,6 +20,7 @@ namespace Game {
 		if (!std::isfinite(length) || length < 0.001f)
 			throw std::invalid_argument("modelForward must be a finite nonzero direction");
 
+		// 弾モデルの前方軸を補正する
 		const auto from = XMVector3Normalize(source);
 		const auto to = XMVectorSet(0, 0, -1, 0);
 		const float dot = std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f);
@@ -30,6 +31,8 @@ namespace Game {
 		else if (dot < 0.9999f)
 			rotation = XMMatrixRotationAxis(XMVector3Cross(from, to), std::acos(dot));
 		XMStoreFloat4x4(&m_modelRotation, rotation);
+
+		// 設定を確定して射撃履歴を初期化する
 		m_model = std::move(model);
 		m_settings = settings;
 		m_projectiles.reserve(settings.maxProjectiles);
@@ -78,12 +81,15 @@ namespace Game {
 		float frameSeconds, std::span<const CollisionTarget> targets) {
 		if (projectile.position.y <= 0 || projectile.remainingLifetime <= 0) return false;
 
+		// 寿命と海面到達までに弾の移動を制限する
 		float valid = std::min(duration, projectile.remainingLifetime);
 
 		if (projectile.velocity.y < 0)
 			valid = std::min(valid, -projectile.position.y / projectile.velocity.y);
 		const auto start = projectile.position;
 		Advance(projectile, valid);
+
+		// 最初に接触する対象を選ぶ
 		std::optional<float> first;
 		Engine::ObjectId hit = Engine::InvalidObjectId;
 
@@ -98,6 +104,7 @@ namespace Game {
 			}
 		}
 
+		// 最初の接触を命中通知に変換する
 		if (first) {
 			XMFLOAT3 position;
 			XMStoreFloat3(
@@ -182,6 +189,7 @@ namespace Game {
 	bool ProjectileSystem::FireVolley(Engine::Scene& scene, const GunVolley& volley) {
 		if (!m_model || m_settings.maxProjectiles - m_projectiles.size() < 4) return false;
 
+		// 各銃口の弾に使う機体姿勢を取り出す
 		auto aircraftRotation = XMLoadFloat4x4(&volley.aircraftPose);
 		aircraftRotation.r[3] = XMVectorSet(0, 0, 0, 1);
 
@@ -192,6 +200,7 @@ namespace Game {
 				XMVector3TransformCoord(XMLoadFloat3(&muzzle), XMLoadFloat4x4(&volley.aircraftWorld)));
 			XMFLOAT3 direction = volley.forward;
 
+			// 射撃補助の範囲内で発射方向を補正する
 			if (volley.assistance.target) {
 				const auto aim = SolveGunAim(projectile.position, volley.aircraftVelocity,
 					*volley.assistance.target, m_settings.muzzleSpeed, m_settings.lifetime);
@@ -210,6 +219,8 @@ namespace Game {
 			projectile.isTracer = (m_volleySequence + phase) % 2 == 0;
 			m_shotEvents.push_back({muzzleIndex, projectile.position, volley.aircraftVelocity, direction,
 				volley.ageSeconds, m_volleySequence});
+
+			// 発射後の経過分だけ弾を進める
 			if (!MoveAndCollide(projectile, volley.ageSeconds,
 					std::max(0.0f, volley.frameSeconds - volley.ageSeconds), volley.frameSeconds,
 					volley.targets))

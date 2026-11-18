@@ -6,7 +6,6 @@
 namespace {
 	namespace Binding = Engine::RootBinding;
 
-	// srvCount: ルートテーブル内のSRV数
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateRootSignatureWithSrvCount(ID3D12Device* device,
 		UINT srvCount, D3D12_TEXTURE_ADDRESS_MODE addressMode, Engine::RootSignatureLayout layout) {
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];

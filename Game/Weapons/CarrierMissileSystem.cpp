@@ -82,6 +82,7 @@ namespace Game {
 
 		dt = std::min(dt, 0.25f);
 
+		// 再装填が終わったら弾数を戻す
 		if (m_cooldownSeconds > 0) {
 			m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
 
@@ -97,6 +98,7 @@ namespace Game {
 				const auto start = missile.flight.position;
 				const float durationSeconds = std::min(stepSeconds, missile.remainingSeconds);
 
+				// 旋回角を制限して対象へ誘導する
 				if (missile.target != Engine::InvalidObjectId) {
 					if (hull && hull->id == missile.target) {
 						XMFLOAT3 target;
@@ -110,6 +112,7 @@ namespace Game {
 					}
 				}
 
+				// 寿命と海面到達までに移動を制限する
 				const float validSeconds =
 					std::min(durationSeconds, missile.flight.TimeToHeight(0).value_or(durationSeconds));
 				missile.flight.Advance(validSeconds);
@@ -140,6 +143,7 @@ namespace Game {
 					}
 				}
 
+				// 航跡を残して消滅条件を判定する
 				missile.smokeSeconds -= validSeconds;
 
 				if (missile.smokeSeconds <= 0) {
@@ -154,6 +158,7 @@ namespace Game {
 				}
 			}
 
+			// 移動後の姿勢を弾モデルへ反映する
 			if (auto* object = scene.FindObject(missile.id))
 				object->worldTransform = BuildProjectileTransform(
 					missile.flight.position, missile.flight.velocity, m_modelForward);

@@ -15,6 +15,7 @@ namespace Engine {
 	}
 
 	std::vector<char> ReadJsonFile(const std::filesystem::path& jsonPath) {
+		// JSONのサイズを検証する
 		std::error_code error;
 		const std::uintmax_t fileSize = std::filesystem::file_size(jsonPath, error);
 		if (error) {
@@ -26,6 +27,7 @@ namespace Engine {
 			throw std::runtime_error("JSON file is empty or exceeds the size limit.");
 		}
 
+		// JSONの全データを読み込む
 		std::ifstream file(jsonPath, std::ios::binary);
 		if (!file) {
 			throw std::runtime_error("Failed to open JSON file.");
@@ -89,6 +91,7 @@ namespace Engine {
 		// 相対パスは毎回解決し、作業ディレクトリの変更を反映する
 		if (jsonPath.is_absolute() && m_lastDocument && jsonPath == m_lastPath) return *m_lastDocument;
 
+		// 正規化したパスで文書を共有する
 		const std::filesystem::path key = Normalize(jsonPath);
 		auto found = m_documents.find(key);
 		if (found == m_documents.end()) {
@@ -96,6 +99,7 @@ namespace Engine {
 			found = m_documents.emplace(key, RedoxDocument(json)).first;
 		}
 
+		// 直近の絶対パスの参照を保持する
 		if (jsonPath.is_absolute()) {
 			m_lastPath = jsonPath;
 			m_lastDocument = &found->second; // std::map insertions preserve references.

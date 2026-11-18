@@ -31,6 +31,7 @@ namespace Engine {
 		// Pauseに含まれる、解放通知のないE1付き疑似Ctrl押下を除外する
 		if (keyboard.VKey == VK_CONTROL && (keyboard.Flags & RI_KEY_E1)) return;
 
+		// 修飾キーの左右を識別する
 		UINT key = keyboard.VKey;
 		if (key == VK_CONTROL)
 			key = keyboard.Flags & RI_KEY_E0 ? VK_RCONTROL : VK_LCONTROL;
@@ -41,6 +42,7 @@ namespace Engine {
 		const bool down = (keyboard.Flags & RI_KEY_BREAK) == 0;
 		bool wasDown = false;
 
+		// 全キーボードを通じた新規押下を判定する
 		for (const auto& [id, keys] : m_keyboards)
 			wasDown = wasDown || keys[key];
 		if (down && !wasDown) {
@@ -57,12 +59,14 @@ namespace Engine {
 		HANDLE device, const RAWMOUSE& mouse, int desktopWidth, int desktopHeight) {
 		if (!m_active) return;
 
+		// 全マウスを通じた右ボタンの押下を数える
 		const bool wasRightDown = IsRightMouseDown();
 		if ((mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) && !wasRightDown &&
 			m_rightMousePressCount < std::numeric_limits<std::uint16_t>::max())
 			++m_rightMousePressCount;
 		auto& state = m_mice[device];
 
+		// 受信元マウスのボタン状態を更新する
 		if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) state.leftDown = true;
 		if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) state.leftDown = false;
 		if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) state.rightDown = true;
@@ -70,6 +74,7 @@ namespace Engine {
 		if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) state.middleDown = true;
 		if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP) state.middleDown = false;
 
+		// マウス入力を移動量へそろえる
 		std::int64_t dx = mouse.lLastX, dy = mouse.lLastY;
 		if (mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
 			// 絶対位置入力は0〜65535の正規化座標から変換する
@@ -90,6 +95,8 @@ namespace Engine {
 			state.height = desktopHeight;
 		} else
 			state.hasAbsolute = false;
+
+		// 中ボタン操作中の移動量を蓄積する
 		if (IsMiddleMouseDown()) {
 			m_deltaX += dx;
 			m_deltaY += dy;
@@ -97,6 +104,7 @@ namespace Engine {
 	}
 
 	InputSnapshot RawInputState::ConsumeFrame() {
+		// フレームで共有する入力状態をまとめる
 		InputSnapshot snapshot{.active = m_active};
 		if (m_active) {
 			for (const auto& [device, keys] : m_keyboards)
@@ -112,6 +120,7 @@ namespace Engine {
 			snapshot.mouseDeltaY = m_deltaY;
 		}
 
+		// 消費済みの押下回数と移動量をリセットする
 		m_deltaX = 0;
 		m_deltaY = 0;
 		m_pressedKeys.fill(false);

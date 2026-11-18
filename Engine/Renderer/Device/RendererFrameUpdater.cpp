@@ -26,6 +26,7 @@ namespace Engine {
 		constexpr float kProjectionMargin = 1.1f; // 海の四隅を遠クリップ面に収める余裕
 		const Camera& camera = scene.GetCamera();
 
+		// 海の四隅が収まる遠クリップ距離を求める
 		const auto camPos = camera.GetPosition();
 		const float cameraHeight = (camPos.y < 0.0f) ? -camPos.y : camPos.y;
 		const float oceanHalfDiagonal = m_oceanSettings.size / std::sqrt(2.0f);
@@ -55,12 +56,14 @@ namespace Engine {
 		const UINT index = context->GetFrameIndex();
 		buffers.EnsureModelCapacity(device, context, scene.GetObjects().size());
 
+		// 視点に応じた描画対象を決める
 		const auto frame = BuildFrameView(scene, elapsedTime);
 		m_drawDecisions =
 			BuildModelDrawDecisions(scene, frame.view, frame.projection, context->GetRenderHeight());
 		DirectX::XMStoreFloat4x4(&m_renderView.view, frame.view);
 		DirectX::XMStoreFloat4x4(&m_renderView.projection, frame.projection);
 
+		// 各描画パスの定数を更新する
 		const auto& lighting = scene.GetEnvironment();
 		UpdateOceanConstants(frame, lighting, buffers.GetOceanData(index));
 		UpdateFogConstants(frame, lighting, buffers.GetOceanFogData(index));
@@ -107,7 +110,6 @@ namespace Engine {
 		using namespace DirectX;
 
 		// CPUの行ベクトル用行列をHLSLへの転送時に転置する
-
 		XMStoreFloat4x4(&oceanFog->inverseViewProjection, XMMatrixTranspose(frame.inverseViewProjection));
 		oceanFog->cameraPosition = frame.cameraPosition;
 		oceanFog->padding0 = 0.0f;

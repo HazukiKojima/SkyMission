@@ -222,8 +222,6 @@ namespace Engine {
 		CreateSceneResources();
 	}
 
-	// シーン描画用のリソース
-
 	void RenderDevice::CreateSceneResources() {
 		CreateSceneRenderTargets();
 		CreateCloudRenderTargets();
@@ -259,8 +257,6 @@ namespace Engine {
 
 	void RenderDevice::CreateSceneDepth() {
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-
-		// シーンの深度画像
 
 		CD3DX12_RESOURCE_DESC depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 			DXGI_FORMAT_R32_TYPELESS, m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);

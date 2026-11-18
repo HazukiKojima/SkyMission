@@ -24,6 +24,7 @@ namespace Engine {
 	}
 
 	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets) {
+		// 描画とGPU計測の基盤を初期化する
 		StartupTiming timing("renderer.device");
 		m_frameUpdater.Configure(assets.environment.ocean, assets.environment.clouds);
 		m_retroFilmParameters = assets.environment.retroFilm;
@@ -34,6 +35,7 @@ namespace Engine {
 		m_context->Initialize(m_device.get());
 		m_gpuProfiler.Initialize(m_device->GetDevice(), m_device->GetCommandQueue());
 
+		// 描画パイプラインとアセットを準備する
 		timing.Mark("renderer.pipelines");
 		m_pipelines.Initialize(m_device->GetDevice());
 		timing.Mark("renderer.assets");
@@ -43,6 +45,8 @@ namespace Engine {
 		m_assets.InitializeSkySphere(m_device->GetDevice(), commands, assets.environment.sky.radius);
 		m_oceanGeometry.Initialize(m_device->GetDevice(), commands, m_frameUpdater.GetOceanSize());
 		m_assets.Load(m_device.get(), m_context.get(), assets);
+
+		// HUDを含む初期転送の完了を待つ
 		timing.Mark("renderer.hud_and_upload_wait");
 		m_hudRenderer.Initialize(*m_device, commands);
 		m_context->EndFrame();
@@ -76,6 +80,7 @@ namespace Engine {
 	void Renderer::Render(UINT width, UINT height, const Scene& runtimeScene, const HudDrawList* hud) {
 		if (width == 0 || height == 0) return;
 
+		// フレームの描画準備を始める
 		m_context->BeginFrame();
 
 		auto cmd = m_context->GetCommandList();
@@ -83,7 +88,7 @@ namespace Engine {
 		auto sceneTarget = m_device->GetSceneRenderTarget();
 		auto sceneDepth = m_device->GetSceneDepth();
 
-		// バックバッファをレンダーターゲットへ遷移
+		// 描画先を書き込み可能な状態へ遷移する
 		m_context->TransitionResource(
 			backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_context->TransitionResource(
@@ -91,6 +96,7 @@ namespace Engine {
 		m_context->TransitionResource(
 			sceneDepth, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
+		// 描画範囲と計測の開始状態を設定する
 		D3D12_VIEWPORT viewport = {
 			0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f};
 		D3D12_RECT scissorRect = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
@@ -101,6 +107,8 @@ namespace Engine {
 		m_statistics = {};
 		m_statistics.oceanTriangles = m_oceanGeometry.GetIndexCount() / 3;
 		m_gpuProfiler.Begin(cmd, m_context->GetFrameIndex());
+
+		// シーンの描画結果に雲を合成する
 		RecordScenePass(runtimeScene);
 		m_context->TransitionResource(
 			sceneTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -108,11 +116,14 @@ namespace Engine {
 			sceneDepth, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		m_cloudPass.Record({cmd, m_device.get(), m_pipelines, m_constantBuffers, m_context->GetFrameIndex()});
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::CloudsEnd);
+
+		// フィルム効果の後にHUDを重ねる
 		RecordRetroFilmPass();
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::PostProcessEnd);
 
 		if (hud) m_hudRenderer.Record(*m_device, cmd, *hud);
 
+		// GPU計測結果の読み戻しを記録する
 		m_gpuProfiler.Mark(cmd, GpuTimestamp::HudEnd);
 		m_gpuProfiler.Resolve(cmd);
 

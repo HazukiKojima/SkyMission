@@ -41,6 +41,7 @@ namespace Engine {
 				}
 			}
 
+			// 画像の処理条件からキャッシュキーを作る
 			uint64_t hash = kFnvOffsetBasis;
 
 			auto mix = [&hash](uint64_t value) {
@@ -92,6 +93,7 @@ namespace Engine {
 		cacheKey += L"|f" + std::to_wstring(static_cast<unsigned int>(targetFormat));
 		cacheKey += L"|max" + std::to_wstring(maxDimension);
 
+		// 条件が一致する生存中のテクスチャを共有する
 		static std::mutex cacheMutex;
 		static std::unordered_map<std::wstring, std::weak_ptr<Texture>> cache;
 		std::lock_guard<std::mutex> lock(cacheMutex);
@@ -100,6 +102,7 @@ namespace Engine {
 			if (std::shared_ptr<Texture> texture = cached->second.lock()) return texture;
 		}
 
+		// 新しく読み込んだテクスチャを共有キャッシュへ登録する
 		auto texture = std::make_shared<Texture>();
 		if (!texture->LoadFromFile(device, cmdList, filePath, options)) return {};
 
@@ -122,12 +125,15 @@ namespace Engine {
 		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath)) return true;
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options)) return false;
 
+		// 圧縮前に画像を補正する
 		CorrectNormalGreen(options.invertNormalGreen);
 		if (!ResizeToLimit(options.maxDimension)) return false;
 
 		// BC圧縮形式はミップ生成に非対応のため、生成後に圧縮する
 		if (!GenerateMipChain(options.generateMipmaps) || !ConvertFormat(options.targetFormat, filePath))
 			return false;
+
+		// 処理済み画像を次回起動用に保存する
 		TrySaveDiskCache(cachePath);
 		return true;
 	}

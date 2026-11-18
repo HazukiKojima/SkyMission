@@ -33,6 +33,7 @@ namespace Engine::ModelImport {
 			const auto modified = std::filesystem::last_write_time(source, error);
 			if (error) return {};
 
+			// 読み込み条件をキャッシュキーに反映する
 			const auto pathText = canonical.u8string();
 			const auto key = std::string(reinterpret_cast<const char*>(pathText.data()), pathText.size()) +
 				"|scene-v2-static|" + std::to_string(size) + "|" +
@@ -70,6 +71,7 @@ namespace Engine::ModelImport {
 			return std::string(reinterpret_cast<const char*>(text.data()), text.size());
 		};
 
+		// シーンキャッシュを優先して読み込む
 		std::error_code error;
 		if (!cache.empty() && std::filesystem::is_regular_file(cache, error)) {
 			const auto* cached = importer.ReadFile(utf8(cache), 0);
@@ -79,6 +81,7 @@ namespace Engine::ModelImport {
 			}
 		}
 
+		// キャッシュを使えなければ元ファイルを解析する
 		const aiScene* scene = importer.ReadFile(importerPath, flags);
 		if (!scene || !scene->HasMeshes() || !scene->mRootNode) {
 			Log("{}", importer.GetErrorString());
@@ -86,6 +89,7 @@ namespace Engine::ModelImport {
 			return nullptr;
 		}
 
+		// 保存完了後にシーンキャッシュを置き換える
 		if (!cache.empty()) {
 			std::filesystem::create_directories(cache.parent_path(), error);
 			if (!error) {

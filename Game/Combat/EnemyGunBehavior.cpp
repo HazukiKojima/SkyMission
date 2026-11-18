@@ -11,12 +11,15 @@ namespace Game {
 
 	bool EnemyGunPattern::Update(float dt, size_t slot, const EnemyGunTuning& tuning) {
 		if (!std::isfinite(dt) || dt <= 0) return false;
+
+		// 機体ごとに射撃開始をずらす
 		if (!m_initialized) {
 			m_remaining =
 				tuning.initialDelaySeconds + EnemyVariation(slot, 0, 11) * tuning.initialDelayRangeSeconds;
 			m_initialized = true;
 		}
 
+		// 個体差を付けて連射と休止を切り替える
 		m_remaining -= std::min(dt, 0.25f);
 
 		if (m_remaining <= 0) {
@@ -45,6 +48,7 @@ namespace Game {
 			direction = XMVector3Normalize(XMVectorLerp(direction, XMLoadFloat3(&aim->direction), lead));
 		}
 
+		// 予測した射線に角度誤差を加える
 		const float yaw =
 			XMConvertToRadians((EnemyVariation(slot, shot, 53) * 2 - 1) * tuning.yawErrorDegrees);
 		const float pitch =
@@ -70,6 +74,8 @@ namespace Game {
 		if (XMVectorGetX(XMVector3LengthSq(right)) < 0.0001f) right = XMVectorSet(1, 0, 0, 0);
 		right = XMVector3Normalize(right);
 		const auto up = XMVector3Normalize(XMVector3Cross(right, forward));
+
+		// 射線に垂直な平面で散布量を決める
 		const float angle = EnemyVariation(slot, shot, 83) * XM_2PI;
 		const float spread = XMConvertToRadians(
 			tuning.minimumSpreadDegrees + EnemyVariation(slot, shot, 97) * tuning.spreadRangeDegrees);

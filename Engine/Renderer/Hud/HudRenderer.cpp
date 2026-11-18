@@ -8,6 +8,7 @@
 namespace Engine {
 	namespace {
 		std::vector<uint8_t> CreateFontAtlas() {
+			// 文字アトラスの描画環境を用意する
 			const HDC dc = CreateCompatibleDC(nullptr);
 			if (!dc) throw std::runtime_error("Could not create HUD font DC");
 
@@ -40,6 +41,7 @@ namespace Engine {
 			SetBkColor(dc, RGB(0, 0, 0));
 			SetBkMode(dc, TRANSPARENT);
 
+			// 各文字を対応するセルへ描く
 			for (unsigned glyph = 0; glyph < HudFont::GlyphCount; ++glyph) {
 				const bool ascii = glyph < HudFont::AsciiCount;
 				const wchar_t text =
@@ -52,6 +54,7 @@ namespace Engine {
 				ExtTextOutW(dc, x + 2, y + 3, ETO_CLIPPED, &cell, &text, 1, nullptr);
 			}
 
+			// 文字の明るさをアルファへ変換する
 			GdiFlush();
 			std::vector<uint8_t> rgba(HudFont::Width * HudFont::Height * 4);
 			const auto* source = static_cast<const uint8_t*>(pixels);
@@ -60,9 +63,12 @@ namespace Engine {
 				rgba[i + 3] = source[i];
 			}
 
+			// 図形の塗りつぶし用の領域を確保する
 			for (unsigned y = HudFont::Height - 8; y < HudFont::Height; ++y)
 				for (unsigned x = HudFont::Width - 8; x < HudFont::Width; ++x)
 					rgba[(y * HudFont::Width + x) * 4 + 3] = 255;
+
+			// 使用したGDIリソースを解放する
 			SelectObject(dc, oldFont);
 			SelectObject(dc, oldBitmap);
 			DeleteObject(font);
@@ -75,10 +81,13 @@ namespace Engine {
 	} // namespace
 
 	void HudRenderer::Initialize(RenderDevice& device, ID3D12GraphicsCommandList* commands) {
+		// 文字アトラスをGPUへ転送する
 		auto* gpu = device.GetDevice();
 		const auto pixels = CreateFontAtlas();
 		m_atlas.CreateFromRgba(gpu, commands, HudFont::Width, HudFont::Height, pixels);
 		m_atlas.CreateShaderResourceView(gpu, device.AllocateSrvDescriptor(&m_srv));
+
+		// HUD用の描画パイプラインを作る
 		CD3DX12_DESCRIPTOR_RANGE range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
 		CD3DX12_ROOT_PARAMETER parameter;
@@ -124,6 +133,7 @@ namespace Engine {
 		desc.SampleDesc.Count = 1;
 		ThrowIfFailed(gpu->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&m_pipeline)));
 
+		// フレーム別に頂点の転送領域を確保する
 		for (UINT frame = 0; frame < RenderDevice::FrameCount; ++frame)
 			m_vertices[frame] =
 				CreateUploadBuffer(gpu, HudDrawList::MaxVertices * sizeof(HudVertex), &m_mapped[frame]);

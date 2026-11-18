@@ -38,6 +38,7 @@ namespace Game {
 			return model;
 		};
 
+		// シーンに各種設定を適用する
 		FlightScene scene;
 		scene.ConfigureCombat(assets.combat);
 		scene.Initialize(static_cast<float>(width) / static_cast<float>(height), 1.0f, farZ);
@@ -60,6 +61,8 @@ namespace Game {
 		scene.m_cameraController.Configure(assets.camera);
 		scene.m_cameraController.Initialize(
 			DirectX::XMConvertToRadians(assets.camera.fovDegrees), float(width) / height, 1.0f, farZ);
+
+		// 機体と兵装にモデルを割り当てる
 		scene.SetPlayerAircraftPosition(assets.mission.playerStartPosition);
 		scene.SetPlayerAircraftVisualScale(assets.playerAircraft.visualScale);
 		scene.SetPlayerAircraftFlightParameters(assets.playerAircraft.flightParameters);
@@ -70,12 +73,15 @@ namespace Game {
 		scene.ConfigureEnemyWeapons(assets.playerWeapon, assets.mission, requireModel(AmmunitionModelId));
 		scene.ConfigureCarrierMissileWeapon(
 			assets.bomb, assets.mission.bombReloadSeconds, requireModel(BombModelId));
+
+		// 先頭を空母として艦船を登録する
 		for (size_t i = 0; i < assets.ships.size(); ++i) {
 			const auto& ship = assets.ships[i];
 			const auto id = scene.AddObject(requireModel(ship.asset.id), ship.BuildTransform());
 			scene.RegisterMissionShip(id, i == 0);
 		}
 
+		// 配置後の表示状態を更新する
 		scene.OnResize(width, height);
 		scene.ApplyRenderStates();
 		scene.RefreshCombatSnapshot();
@@ -112,6 +118,7 @@ namespace Game {
 
 	void FlightScene::Update(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput,
 		CombatInput combatInput) {
+		// フレームごとのイベント通知をリセットする
 		m_combat.audio = {};
 		m_combat.firedVolleys = 0;
 		m_combat.hitCount = 0;
@@ -128,6 +135,7 @@ namespace Game {
 			SaveInitialState();
 		}
 
+		// 演出中は専用の更新へ切り替える
 		if (m_cinematic.GetPresentation().active) {
 			UpdateCinematic(dt, combatInput.skipOpening);
 			UpdateEnemyRadio(dt);
@@ -138,6 +146,7 @@ namespace Game {
 		m_combat.cinematic = m_cinematic.GetPresentation();
 		UpdateCombatTimers(dt);
 
+		// 決着後は再挑戦か演出を処理する
 		if (m_combat.result != CombatResult::Active) {
 			if (combatInput.retry) {
 				Restart(dt);

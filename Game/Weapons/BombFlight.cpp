@@ -9,11 +9,13 @@ namespace Game {
 
 		if (XMVectorGetX(XMVector3LengthSq(desired)) < 0.0001f) return;
 
+		// 目標へ向くための旋回角を求める
 		const auto from = XMVector3Normalize(value), to = XMVector3Normalize(desired);
 		const float angle = std::acos(std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f));
 
 		if (angle < 0.00001f) return;
 
+		// 回転軸が決まらない場合の代替軸を選ぶ
 		auto axis = XMVector3Cross(from, to);
 
 		if (XMVectorGetX(XMVector3LengthSq(axis)) < 0.0001f) {
@@ -22,6 +24,7 @@ namespace Game {
 			if (XMVectorGetX(XMVector3LengthSq(axis)) < 0.0001f) axis = XMVectorSet(1, 0, 0, 0);
 		}
 
+		// 速度を保って旋回角の範囲内で向きを変える
 		XMStoreFloat3(
 			&velocity, XMVector3TransformNormal(value, XMMatrixRotationAxis(axis, std::min(angle, radians))));
 	}

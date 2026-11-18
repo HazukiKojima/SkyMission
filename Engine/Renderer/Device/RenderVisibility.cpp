@@ -40,10 +40,13 @@ namespace Engine {
 	std::vector<ModelDrawDecision> BuildModelDrawDecisions(
 		const Scene& scene, DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection, UINT height) {
 		using namespace DirectX;
+
+		// 視錐台をワールド空間へ変換する
 		BoundingFrustum local, frustum;
 		BoundingFrustum::CreateFromMatrix(local, projection);
 		local.Transform(frustum, XMMatrixInverse(nullptr, view));
 
+		// シーン順に可視性とLODを判定する
 		std::vector<ModelDrawDecision> decisions;
 		decisions.reserve(scene.GetObjects().size());
 		for (const auto& object : scene.GetObjects()) {
@@ -55,6 +58,7 @@ namespace Engine {
 					WorldCullingSphere(*bounds, object.model->GetCullingRadius(), object.worldTransform);
 				decision.visible = frustum.Intersects(sphere);
 
+				// 投影サイズからLODを選ぶ
 				XMFLOAT3 centerView;
 				XMStoreFloat3(&centerView, XMVector3TransformCoord(XMLoadFloat3(&sphere.Center), view));
 				const float pixels = sphere.Radius * XMVectorGetY(projection.r[1]) * float(height) /
