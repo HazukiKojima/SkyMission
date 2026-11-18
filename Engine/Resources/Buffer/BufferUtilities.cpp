@@ -8,6 +8,8 @@ namespace Engine {
 		const auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
 		ThrowIfFailed(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
 			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resource)));
+
+		// CPUは書き込みだけを行う転送領域としてマップする
 		const CD3DX12_RANGE noCpuReads(0, 0);
 		ThrowIfFailed(resource->Map(0, &noCpuReads, reinterpret_cast<void**>(mappedData)));
 		return resource;

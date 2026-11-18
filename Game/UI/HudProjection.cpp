@@ -15,10 +15,14 @@ namespace Game {
 		const auto clip =
 			XMVector4Transform(XMVectorSet(point.x, point.y, point.z, 1), XMLoadFloat4x4(&m_viewProjection));
 		const float w = XMVectorGetW(clip);
+
+		// 背面の点でも画面外表示用の投影方向を保つ
 		const float divisor = std::max(std::abs(w), 1e-5f);
 		const float x = XMVectorGetX(clip) / divisor;
 		const float y = XMVectorGetY(clip) / divisor;
 		const float z = XMVectorGetZ(clip) / divisor;
+
+		// 正規化した座標を左上原点の画面座標へ移す
 		return {{(x + 1) * m_width * 0.5f, (1 - y) * m_height * 0.5f},
 			w > 0 && std::abs(x) <= 1 && std::abs(y) <= 1 && z >= 0 && z <= 1, w <= 0};
 	}
@@ -66,6 +70,7 @@ namespace Game {
 
 		if (enter > exit) return std::nullopt;
 
+		// 切り詰めた線分の両端を画面座標へ変換する
 		const auto toPixel = [&](float fraction) {
 			const auto clip = XMVectorLerp(headClip, tailClip, fraction);
 			const float w = std::max(XMVectorGetW(clip), 1e-5f);

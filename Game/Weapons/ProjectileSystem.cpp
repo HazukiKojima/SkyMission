@@ -60,6 +60,8 @@ namespace Game {
 		const float speed = XMVectorGetX(XMVector3Length(velocity));
 		const float distance =
 			XMVectorGetX(XMVector3Length(XMLoadFloat3(&head) - XMLoadFloat3(&projectile.birthPosition)));
+
+		// 飛行距離と表示時間で曳光線の長さを制限する
 		const float length = std::min(
 			{distance, speed * m_effectSettings.gun.tracerSeconds, m_effectSettings.gun.tracerMaxLength});
 		if (!std::isfinite(length) || length <= 0 || speed <= 0) return;

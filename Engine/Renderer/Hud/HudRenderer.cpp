@@ -146,6 +146,8 @@ namespace Engine {
 		if (vertices.size() > HudDrawList::MaxVertices)
 			throw std::length_error("HUD vertex capacity exceeded");
 		const auto frame = device.GetFrameIndex();
+
+		// このフレーム用の領域へHUD頂点を書き込む
 		std::memcpy(m_mapped[frame], vertices.data(), vertices.size() * sizeof(HudVertex));
 		commands->SetGraphicsRootSignature(m_root.Get());
 		commands->SetPipelineState(m_pipeline.Get());

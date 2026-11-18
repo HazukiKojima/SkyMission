@@ -12,6 +12,7 @@ namespace Game {
 		for (auto& [key, value] : labels) {
 			std::string escaped;
 
+			// ラベル名をJSON Pointerのキーとしてエスケープする
 			for (char c : key) {
 				if (c == '~')
 					escaped += "~0";

@@ -155,6 +155,8 @@ namespace Engine {
 
 			const SceneObject& object = objects[objectIndex];
 			ModelConstantBufferData* modelData = constantBuffers.GetModelData(frameIndex, objectIndex);
+
+			// モデルごとの変換行列をシェーダー用に転置する
 			const XMMATRIX objectWorld = XMLoadFloat4x4(&object.worldTransform);
 
 			XMStoreFloat4x4(&modelData->mvp, XMMatrixTranspose(objectWorld * frame.view * frame.projection));

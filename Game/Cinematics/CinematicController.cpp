@@ -57,11 +57,14 @@ namespace Game {
 		if (!m_presentation.active || m_presentation.briefingLine < 0 || !std::isfinite(deltaSeconds) ||
 			deltaSeconds <= 0)
 			return;
+
+		// 行を切り替えた直後の自動送りを防ぐ
 		if (!m_briefingStarted) {
 			m_briefingStarted = true;
 			return;
 		}
 
+		// 音声終了を優先して行送りの時刻を決める
 		if (voice == CinematicVoiceStatus::Playing) return;
 
 		m_briefingSeconds += std::min(deltaSeconds, 0.25f);
@@ -74,6 +77,8 @@ namespace Game {
 
 	void CinematicController::Update(float deltaSeconds, bool skipRequested) {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
+
+		// 映像終了後も残っている無線を進める
 		if (!m_presentation.active) {
 			if (m_radioRunning) {
 				m_radioSeconds += deltaSeconds;
@@ -91,6 +96,7 @@ namespace Game {
 			return;
 		}
 
+		// ブリーフィング中は映像の時間を止める
 		if (m_presentation.briefingLine >= 0) return;
 
 		m_presentation.elapsedSeconds =
@@ -128,6 +134,7 @@ namespace Game {
 		const float seconds = m_presentation.elapsedSeconds;
 		RefreshRadio();
 
+		// 経過時間に対応するカットの表示内容を選ぶ
 		if (!m_settings.shots.empty()) {
 			float end = m_settings.shots.front().durationSeconds;
 			m_presentation.shotIndex = 0;
@@ -143,6 +150,7 @@ namespace Game {
 			return;
 		}
 
+		// カット一覧がない設定は従来の切替時刻を使う
 		m_presentation.formationShot = seconds < m_settings.cutSeconds;
 		m_presentation.fadeOpacity = seconds < m_settings.cutSeconds
 			? SmoothProgress(seconds, m_settings.fadeOutStartSeconds,
@@ -170,6 +178,8 @@ namespace Game {
 	CinematicPose CinematicController::GetPose() const {
 		const auto& shot = GetCurrentShot();
 		const float seconds = ShotSeconds();
+
+		// カット内の経過時間でカメラ位置を滑らかに補間する
 		const float blend = SmoothProgress(
 			seconds, 0, m_settings.shots.empty() ? m_settings.fadeOutStartSeconds : shot.durationSeconds);
 		DirectX::XMFLOAT3 camera;
@@ -188,6 +198,7 @@ namespace Game {
 	float CinematicController::ShotSeconds() const {
 		float seconds = m_presentation.elapsedSeconds;
 
+		// 過去のカットの長さを引いて現在のカット内時刻にする
 		for (size_t i = 0; i < m_presentation.shotIndex; ++i)
 			seconds -= m_settings.shots[i].durationSeconds;
 		return seconds;

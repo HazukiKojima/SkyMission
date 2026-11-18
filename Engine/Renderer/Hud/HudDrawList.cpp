@@ -10,6 +10,7 @@ namespace Engine {
 		if (m_width == 0 || m_height == 0) return;
 		if (m_vertices.size() + 6 > MaxVertices) throw std::length_error("HUD vertex capacity exceeded");
 
+		// 画面座標の四角形をクリップ空間の二つの三角形へ変換する
 		const DirectX::XMFLOAT2 uv[] = {uv0, {uv1.x, uv0.y}, uv1, {uv0.x, uv1.y}};
 		for (const int index : {0, 1, 2, 0, 2, 3})
 			m_vertices.push_back(
@@ -32,6 +33,7 @@ namespace Engine {
 		const float length = std::hypot(dx, dy);
 		if (length < 0.001f) return;
 
+		// 線分に垂直な方向へ広げて太さを付ける
 		const float x = -dy / length * width * 0.5f;
 		const float y = dx / length * width * 0.5f;
 		const DirectX::XMFLOAT2 p[] = {
@@ -69,6 +71,7 @@ namespace Engine {
 			m_vertices.push_back({{point.x * 2 / m_width - 1, 1 - point.y * 2 / m_height}, uv, tint});
 		};
 
+		// 中心から外周へ透明になる三角形を並べる
 		for (int i = 0; i < segments; ++i) {
 			const float a = DirectX::XM_2PI * i / segments;
 			const float b = DirectX::XM_2PI * (i + 1) / segments;
@@ -80,6 +83,7 @@ namespace Engine {
 
 	void HudDrawList::Circle(
 		DirectX::XMFLOAT2 center, float radius, float progress, float width, DirectX::XMFLOAT4 color) {
+		// 進行率に応じた円弧を短い線分で描く
 		const float arc = std::clamp(progress, 0.0f, 1.0f) * DirectX::XM_2PI;
 		for (float begin = 0; begin < arc; begin += DirectX::XM_2PI / 64) {
 			const float end = std::min(begin + DirectX::XM_2PI / 64, arc);
@@ -91,10 +95,13 @@ namespace Engine {
 	void HudDrawList::Text(
 		DirectX::XMFLOAT2 position, std::string_view text, float height, DirectX::XMFLOAT4 color) {
 		while (!text.empty()) {
+			// UTF-8から一文字分のグリフを取り出す
 			const unsigned glyph = HudFont::Glyph(HudFont::Next(text));
 
 			const float x = float(glyph % HudFont::Columns) * HudFont::Cell;
 			const float y = float(glyph / HudFont::Columns) * HudFont::Cell;
+
+			// 文字幅に合わせた四角形へグリフを貼る
 			const float width = height * HudFont::GlyphWidth(glyph) / HudFont::Cell;
 			const DirectX::XMFLOAT2 p[] = {{position.x, position.y}, {position.x + width, position.y},
 				{position.x + width, position.y + height}, {position.x, position.y + height}};
@@ -109,6 +116,8 @@ namespace Engine {
 		float advance = 0, width = 0;
 		while (!text.empty()) {
 			const unsigned glyph = HudFont::Glyph(HudFont::Next(text));
+
+			// 最後の文字の右端を文字列の幅にする
 			width = advance + height * HudFont::GlyphWidth(glyph) / HudFont::Cell;
 			advance += height * HudFont::Advance(glyph) / HudFont::Cell;
 		}

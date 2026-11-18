@@ -44,6 +44,7 @@ namespace Game {
 		DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode) const {
 		using namespace DirectX;
 
+		// 中心と半径の端を投影して画面上の大きさを求める
 		XMFLOAT3 center;
 		XMFLOAT3 edge;
 		XMStoreFloat3(&center, position);
@@ -57,6 +58,7 @@ namespace Game {
 			projectedEdge.pixel.x - projectedCenter.pixel.x, projectedEdge.pixel.y - projectedCenter.pixel.y);
 		const auto point = projectedCenter.pixel;
 
+		// 中心が画面内にある場合だけ採用する
 		if (clipMode == EffectClipMode::CenterVisible) {
 			if (!projectedCenter.visible) return std::nullopt;
 			return ProjectedBillboard{point, std::min(pixels, float(m_view.height))};

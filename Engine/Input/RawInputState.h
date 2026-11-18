@@ -30,6 +30,8 @@ namespace Engine {
 
 		bool IsKeyDown(UINT key) const {
 			if (!active || key >= keys.size()) return false;
+
+			// 左右を区別しない修飾キーは両側の状態をまとめる
 			if (key == VK_CONTROL) return keys[VK_LCONTROL] || keys[VK_RCONTROL];
 			if (key == VK_SHIFT) return keys[VK_LSHIFT] || keys[VK_RSHIFT];
 			if (key == VK_MENU) return keys[VK_LMENU] || keys[VK_RMENU];

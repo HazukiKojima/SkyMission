@@ -37,6 +37,8 @@ float3 CompositeClouds(float2 uv, float3 background)
             if (totalWeight > 0.001f)
             {
                 clouds /= totalWeight;
+
+                // 雲のアルファを透過率として背景に掛ける
                 result = clouds.rgb + background * saturate(clouds.a);
             }
         }

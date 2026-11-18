@@ -24,6 +24,8 @@ namespace Game {
 		dt = std::min(dt, 0.25f);
 		m_combatTime += dt;
 		m_modeSeconds += dt;
+
+		// 目標との位置関係と最接近を予測する
 		const auto position = aircraft.GetPosition(), forward = aircraft.GetForward();
 		const auto velocity = aircraft.GetVelocity();
 		const auto delta = XMLoadFloat3(&target.position) - XMLoadFloat3(&position);
@@ -44,6 +46,7 @@ namespace Game {
 		const float yaw = std::atan2(forward.x, -forward.z);
 		XMVECTOR home = XMVectorZero();
 
+		// 艦隊からの距離に応じて帰還状態を切り替える
 		if (defenseCenter) {
 			home = XMLoadFloat3(&*defenseCenter) - XMLoadFloat3(&position);
 			const float homeDistance = std::hypot(XMVectorGetX(home), XMVectorGetZ(home));
@@ -54,6 +57,8 @@ namespace Game {
 				m_returning = false;
 		} else
 			m_returning = false;
+
+		// 低高度からの回復を優先して行動を切り替える
 		if (position.y < p.lowAltitude)
 			EnterMode(AircraftCombatMode::Recover);
 		else if (m_returning) {
@@ -92,6 +97,7 @@ namespace Game {
 																   : AircraftCombatMode::Pursuit;
 		}
 
+		// 接近中の相手との衝突を予測する
 		const bool imminentCollision = closestTime > 0 &&
 			closest < std::min(m_tuning.collisionClosestMeters,
 						  p.disengageDistance * m_tuning.collisionClosestDistanceScale) &&
@@ -113,6 +119,7 @@ namespace Game {
 			m_avoidanceRecheck = m_tuning.collisionRecheckSeconds;
 		}
 
+		// 行動状態に応じた操縦目標を求める
 		const float prediction =
 			std::min(p.pursuitPredictionSeconds, distance / std::max(1.0f, aircraft.GetSpeed()));
 		XMVECTOR steering = delta + XMLoadFloat3(&target.velocity) * prediction;

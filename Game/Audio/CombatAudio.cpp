@@ -50,6 +50,7 @@ namespace Game {
 
 		if (FAILED(MFCreateSourceReaderFromURL(path.c_str(), nullptr, &reader))) return false;
 
+		// 読み込み形式を48kHzの16bit PCMへそろえる
 		ComPtr<IMFMediaType> requested;
 
 		if (FAILED(MFCreateMediaType(&requested))) return false;
@@ -66,6 +67,7 @@ namespace Game {
 			return false;
 		}
 
+		// 実際の出力形式が要求どおりか確認する
 		ComPtr<IMFMediaType> actual;
 
 		if (FAILED(reader->GetCurrentMediaType(kAudioStream, &actual))) return false;
@@ -84,6 +86,7 @@ namespace Game {
 			return false;
 		}
 
+		// サンプルを末尾まで集めてクリップを作る
 		Clip decoded;
 		decoded.format = format;
 
@@ -165,6 +168,7 @@ namespace Game {
 			m_settings.Load(Engine::JsonAssetReader{audioDocuments}, soundDirectory / L"audio.json");
 		}
 
+		// 通常戦闘で使う音声を読み込む
 		const std::string names[] = {m_settings.flightFile, m_settings.gunFile, m_settings.launchFile,
 			m_settings.gunHitFile, m_settings.missileHitFile, m_settings.aircraftFile, m_settings.shipFile,
 			m_settings.battleBgmFile};
@@ -179,6 +183,7 @@ namespace Game {
 			}
 		}
 
+		// 演出ごとの音声と敵無線を読み込む
 		const auto loadCinematicClip = [&](const std::filesystem::path& path, Clip& clip, UINT channels) {
 			if (!path.empty() && (!m_mediaInitialized || !LoadClip(path, clip, channels)))
 				Engine::Log(L"CombatAudio: could not load {}\n", path.wstring());
@@ -199,12 +204,14 @@ namespace Game {
 				loadCinematicClip(settings.radio[i].audio, bank.briefing[bank.briefingCount + i], 1);
 		}
 
+		// 再生先を初期化して用途別の音声ボイスを作る
 		if (FAILED(XAudio2Create(m_engine.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR)) ||
 			FAILED(m_engine->CreateMasteringVoice(&m_master))) {
 			Engine::Log("CombatAudio: audio output unavailable\n");
 			return;
 		}
 
+		// 警告音と命中音を合成する
 		m_hit = Synthesize(SoundKind::Hit);
 		m_lockWarning = Synthesize(SoundKind::LockWarning);
 		m_missileWarning = Synthesize(SoundKind::MissileWarning);

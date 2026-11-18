@@ -24,6 +24,7 @@ namespace Game {
 	void CombatEffectSystem::Update(float deltaSeconds) {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0) return;
 
+		// 寿命を進めて終了した演出を取り除く
 		const float step = std::min(deltaSeconds, CombatEffectSettings::maximumFrameSeconds);
 		AdvanceEffects(m_snapshot.gunFlashes, step, m_settings.gun.flashLifetimeSeconds);
 		AdvanceEffects(m_snapshot.gunSmoke, step, m_settings.gun.smokeLifetimeSeconds);
@@ -51,6 +52,7 @@ namespace Game {
 		else
 			*found = flash;
 
+		// まだ寿命内の発射煙だけを追加する
 		if (shot.age < m_settings.gun.smokeLifetimeSeconds) {
 			AddBoundedEffect(m_snapshot.gunSmoke, GunSmoke{shot.position, shot.aircraftVelocity, shot.age},
 				GunEffectSettings::maxSmokeCount);

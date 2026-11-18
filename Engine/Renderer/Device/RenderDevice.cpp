@@ -178,6 +178,7 @@ namespace Engine {
 
 		D3D12_CPU_DESCRIPTOR_HANDLE handle = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
 
+		// ディスクリプタ番号をヒープ内のバイト位置へ変換する
 		handle.ptr += static_cast<SIZE_T>(m_srvDescriptorCount) * m_srvDescriptorSize;
 
 		if (outIndex) {

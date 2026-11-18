@@ -84,6 +84,7 @@ namespace Engine {
 			ID3D12DescriptorHeap* modelHeaps[] = {device->GetSrvDescriptorHeap()};
 			commandList->SetDescriptorHeaps(_countof(modelHeaps), modelHeaps);
 
+			// 可視と判定されたモデルだけを選択済みのLODで描く
 			for (size_t objectIndex = 0; objectIndex < objects.size(); ++objectIndex) {
 				const SceneObject& object = objects[objectIndex];
 				const auto decision = decisions[objectIndex];
@@ -112,6 +113,7 @@ namespace Engine {
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		commands->ResourceBarrier(1, &barrier);
 
+		// 雲だけを低解像度の描画先へ出力する
 		const D3D12_VIEWPORT viewport{
 			0, 0, float(device->GetCloudWidth()), float(device->GetCloudHeight()), 0, 1};
 		const D3D12_RECT scissor{0, 0, LONG(device->GetCloudWidth()), LONG(device->GetCloudHeight())};
@@ -130,10 +132,13 @@ namespace Engine {
 			frame.constantBuffers.GetOceanFogResource(frame.frameIndex)->GetGPUVirtualAddress());
 		commands->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		commands->DrawInstanced(3, 1, 0, 0);
+
+		// 描いた雲を後続の合成処理から読める状態に戻す
 		barrier = CD3DX12_RESOURCE_BARRIER::Transition(device->GetCloudRenderTarget(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		commands->ResourceBarrier(1, &barrier);
 
+		// 後続の描画範囲を画面全体へ戻す
 		const D3D12_VIEWPORT full{0, 0, float(device->GetWidth()), float(device->GetHeight()), 0, 1};
 		const D3D12_RECT fullScissor{0, 0, LONG(device->GetWidth()), LONG(device->GetHeight())};
 		commands->RSSetViewports(1, &full);

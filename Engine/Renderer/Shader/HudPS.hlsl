@@ -7,6 +7,7 @@ float Hash(float2 p)
 
 float Noise(float2 p)
 {
+    // 格子点の乱数を滑らかに補間する
     float2 cell = floor(p), f = frac(p);
     f = f * f * (3 - 2 * f);
     return lerp(lerp(Hash(cell), Hash(cell + float2(1, 0)), f.x),
@@ -15,6 +16,7 @@ float Noise(float2 p)
 
 float Turbulence(float2 p)
 {
+    // 異なる大きさのノイズを重ねて細部を加える
     float value = 0, weight = 0.55;
     [unroll] for (int i = 0; i < 4; ++i)
     {
@@ -27,6 +29,7 @@ float Turbulence(float2 p)
 
 float4 PS(float4 position : SV_POSITION, float2 uv : TEXCOORD0, float4 color : COLOR0) : SV_TARGET
 {
+    // 負のU座標は文字ではなく煙や炎として描く
     if (uv.x < -0.5)
     {
         float seed = floor(uv.y / 4);

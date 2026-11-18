@@ -2,6 +2,7 @@
 
 namespace Game {
 	float EnemyVariation(size_t slot, uint32_t event, uint32_t salt) {
+		// 機体と射撃番号から再現可能なばらつきを作る
 		uint32_t value = uint32_t(slot) * 747796405u + event * 2891336453u + salt * 277803737u;
 		value ^= value >> 16;
 		value *= 2246822519u;

@@ -155,6 +155,7 @@ namespace Game {
 	void AircraftCameraController::UpdateFollowOrientation(float deltaSeconds, bool snap) {
 		XMVECTOR followDirection = XMVector3Normalize(XMLoadFloat3(&m_followHeading));
 
+		// ピッチ操作中は機首の水平成分への切替を避ける
 		if (!m_followPitchInputActive) {
 			const XMVECTOR forward = XMLoadFloat3(&m_followForward);
 			const XMVECTOR horizontalForward =
@@ -164,6 +165,7 @@ namespace Game {
 			}
 		}
 
+		// 角度の折り返しをまたいでも短い側へ補間する
 		const float targetYaw = std::atan2(XMVectorGetX(followDirection), -XMVectorGetZ(followDirection));
 		const float yawBlend =
 			snap ? 1.0f : 1.0f - std::exp(-m_settings.followDirectionSmoothing * deltaSeconds);
@@ -181,6 +183,8 @@ namespace Game {
 
 	void AircraftCameraController::UpdateFollowPosition(float deltaSeconds, bool snap) {
 		const XMVECTOR target = XMLoadFloat3(&m_followTarget);
+
+		// 追従方向に見回し角を加えて視点の向きを求める
 		const float orbitYaw = m_followCameraYaw + m_lookYaw;
 		const float orbitPitch = std::clamp(
 			m_followCameraPitch + m_lookPitch, -m_settings.orbitPitchLimit, m_settings.orbitPitchLimit);
@@ -188,6 +192,8 @@ namespace Game {
 		const XMVECTOR smoothedDirection = XMVectorSet(
 			std::sin(orbitYaw) * pitchCosine, std::sin(orbitPitch), -std::cos(orbitYaw) * pitchCosine, 0.0f);
 		const XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+		// 速度が上がるほど機体からカメラを離す
 		const float speedRange = std::max(m_followMaximumSpeed - m_settings.speedDistanceStart, 0.001f);
 		const float speedRatio =
 			std::clamp((m_followSpeed - m_settings.speedDistanceStart) / speedRange, 0.0f, 1.0f);

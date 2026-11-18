@@ -32,12 +32,14 @@ namespace Game {
 		m_framingScale = std::max(m_framingScale, 0.01f);
 		m_aircraft.resize(settings.formationOffsets.size());
 
+		// 設定された編隊数だけ描画用の機体を作る
 		for (auto& id : m_aircraft)
 			id = m_scene.AddObject(model);
 		OnResize(width, height);
 	}
 
 	void CinematicScene::Update(const CinematicPose& pose) {
+		// 進行方向と移動距離から編隊の基準位置を求める
 		XMFLOAT3 lead = m_origin;
 		const float heading = XMConvertToRadians(m_settings.headingDegrees);
 
@@ -48,6 +50,7 @@ namespace Game {
 			lead.z -= std::cos(heading) * pose.travelMeters;
 		}
 
+		// 基準位置に各機の編隊オフセットを重ねる
 		for (size_t index = 0; index < m_aircraft.size(); ++index) {
 			const auto& offset = m_settings.formationOffsets[index];
 			const float x = lead.x + offset.x * m_settings.formationSpacingMeters * m_framingScale;
@@ -61,6 +64,7 @@ namespace Game {
 			aircraft->nodeRotationRadians = pose.propellerRadians;
 		}
 
+		// 機体の大きさに合わせてカメラの構図を更新する
 		XMFLOAT3 eye;
 		XMFLOAT3 target;
 		XMStoreFloat3(&eye, XMLoadFloat3(&lead) + XMLoadFloat3(&pose.cameraOffsetMeters) * m_framingScale);

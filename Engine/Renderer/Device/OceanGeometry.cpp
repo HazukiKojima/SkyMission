@@ -33,6 +33,7 @@ namespace Engine {
 		vertices.reserve(static_cast<size_t>(kGridSize) * kGridSize);
 		indices.reserve(static_cast<size_t>(kGridSize - 1) * (kGridSize - 1) * 6);
 
+		// カメラ付近ほど密になる海面の頂点を作る
 		for (int z = 0; z < kGridSize; ++z) {
 			for (int x = 0; x < kGridSize; ++x) {
 				const float px = GridCoordinate(x, oceanSize);
@@ -44,6 +45,7 @@ namespace Engine {
 			}
 		}
 
+		// 格子の各セルを二つの三角形へ分ける
 		for (int z = 0; z < kGridSize - 1; ++z) {
 			for (int x = 0; x < kGridSize - 1; ++x) {
 				const uint32_t i0 = z * kGridSize + x;
@@ -59,6 +61,7 @@ namespace Engine {
 			}
 		}
 
+		// 完成した海面をGPUの描画用バッファへ転送する
 		m_indexCount = static_cast<UINT>(indices.size());
 		m_vertexBuffer = std::make_unique<VertexBuffer>();
 		m_vertexBuffer->Initialize(device, commands, vertices.data(),
@@ -83,6 +86,8 @@ namespace Engine {
 			throw std::invalid_argument("wavelength must be positive and finite");
 		if (!std::isfinite(steepness) || steepness < 0)
 			throw std::invalid_argument("steepness must be nonnegative and finite");
+
+		// 海面シェーダーと同じ6成分の波で高さを求める
 		const float baseWindX = 1.0f / std::sqrt(1.0f + 0.6f * 0.6f);
 		const float baseWindZ = 0.6f / std::sqrt(1.0f + 0.6f * 0.6f);
 		float height = 0.0f;

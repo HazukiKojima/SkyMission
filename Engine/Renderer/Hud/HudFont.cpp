@@ -2,10 +2,12 @@
 
 namespace Engine::HudFont {
 	char32_t Next(std::string_view& text) {
+		// ASCIIは先頭の1バイトだけで確定する
 		const auto first = static_cast<unsigned char>(text.front());
 		text.remove_prefix(1);
 		if (first < 0x80) return first;
 
+		// 先頭バイトから後続バイト数と文字コードの下限を決める
 		unsigned count = 0;
 		char32_t value = 0, minimum = 0;
 		if (first >= 0xc2 && first <= 0xdf) {
@@ -24,6 +26,7 @@ namespace Engine::HudFont {
 			return U'?';
 		if (text.size() < count) return U'?';
 
+		// 後続バイトを検証して文字コードへ組み立てる
 		for (unsigned i = 0; i < count; ++i) {
 			const auto next = static_cast<unsigned char>(text[i]);
 			if ((next & 0xc0) != 0x80) return U'?';
@@ -32,6 +35,8 @@ namespace Engine::HudFont {
 		}
 
 		text.remove_prefix(count);
+
+		// Unicodeとして不正な値は代替文字にする
 		return value < minimum || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff) ? U'?' : value;
 	}
 } // namespace Engine::HudFont

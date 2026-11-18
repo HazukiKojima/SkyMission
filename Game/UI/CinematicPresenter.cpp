@@ -15,6 +15,8 @@ namespace Game {
 		if (presentation.briefingLine >= 0) {
 			const auto& text = presentation.briefingLines;
 			list.FilledRect({0, 0}, {float(view.width), float(view.height)}, {0, 0, 0, 1});
+
+			// 2行の文章が画面内に収まる共通の文字サイズを選ぶ
 			const float widest = std::max(Engine::HudDrawList::MeasureTextWidth(text[0], 1),
 				Engine::HudDrawList::MeasureTextWidth(text[1], 1));
 			const float size = std::min({textSettings.briefingFontSize * textScale,

@@ -9,6 +9,8 @@ namespace Game {
 		if (!resolve || !std::isfinite(farZ) || farZ <= 1 || m_cinematic.GetPresentation().active)
 			throw std::invalid_argument(
 				"Configure cinematics before playback with a resolver and valid farZ");
+
+		// 設定に含まれる全カットのモデルを検証する
 		for (const auto& [id, settings] : definitions) {
 			if (id.empty()) throw std::invalid_argument("Cinematic ID must not be empty");
 
@@ -31,6 +33,7 @@ namespace Game {
 					validateModel(shot);
 		}
 
+		// 検証後に演出設定を確定する
 		m_cinematics = definitions;
 		m_resolveCinematicModel = std::move(resolve);
 		m_cinematicFarZ = farZ;
@@ -71,6 +74,7 @@ namespace Game {
 
 		if (found == m_cinematics.end()) return false;
 
+		// 空母が必要な演出は対象の存在を確認する
 		const auto needsCarrier = [](const CinematicShotSettings& shot) { return shot.target == "carrier"; };
 
 		if ((needsCarrier(found->second) || std::any_of(found->second.shots.begin(),

@@ -26,6 +26,7 @@ namespace Game {
 	bool FlightMission::Advance(size_t remaining, bool alive, float dt) {
 		m_missionMessageSeconds = std::max(0.0f, m_missionMessageSeconds - dt);
 
+		// 空母撃破後は増援までの間を空ける
 		if (alive && m_mission.GetPhase() == MissionPhase::CarrierAttack && m_mission.IsDeckDisabled()) {
 			if (m_reinforcementElapsedSeconds < 0)
 				m_reinforcementElapsedSeconds = 0;
@@ -64,6 +65,7 @@ namespace Game {
 
 		if (!carrier || !carrier->model->GetLocalBounds()) return std::nullopt;
 
+		// 船体の境界から甲板の当たり判定を作る
 		auto bounds = *carrier->model->GetLocalBounds();
 		const auto center = bounds.Center();
 		const float halfX =
@@ -87,6 +89,8 @@ namespace Game {
 		const bool opening = kind == SquadronKind::Patrol;
 		const bool commander = kind == SquadronKind::Commander;
 		std::vector<AircraftSpawn> spawns;
+
+		// 空母から離れる方向を編隊配置の基準にする
 		XMFLOAT3 away{0, 0, 1};
 
 		if (const auto* carrier = scene.FindObject(m_carrierId)) {
@@ -99,6 +103,7 @@ namespace Game {
 			XMStoreFloat3(&away, XMVector3Normalize(XMLoadFloat3(&away)));
 		}
 
+		// 艦隊から離れた位置に空戦の中心を置く
 		GetDefenseCenter(scene);
 		m_airCombatPosition = {player.x + away.x * m_missionSettings.combatAreaDistanceMeters,
 			std::max(m_missionSettings.minimumCombatAltitudeMeters, player.y),
@@ -118,6 +123,7 @@ namespace Game {
 
 		XMStoreFloat3(&approach, XMVector3Normalize(XMLoadFloat3(&approach)));
 
+		// 編隊の各スロットに機体の生成情報を割り当てる
 		for (size_t i = 0; i < count; ++i) {
 			const auto position = CalculateWavePosition(player, count, i, opening, approach, away);
 			const auto ai = BuildWaveAI(slotBase + i);
@@ -203,6 +209,7 @@ namespace Game {
 
 			if (!ship || m_escorts[i].cooldownSeconds > 0) continue;
 
+			// 護衛艦の射点から自機までの距離を調べる
 			XMFLOAT3 origin{ship->worldTransform._41,
 				ship->worldTransform._42 + m_missionSettings.antiAircraftMuzzleHeightMeters,
 				ship->worldTransform._43};

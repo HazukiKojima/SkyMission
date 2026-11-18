@@ -39,6 +39,7 @@ namespace Engine {
 
 	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 		const std::wstring& filePath, const ModelLoadOptions& options) {
+		// 以前の形状とGPUリソースを破棄する
 		for (auto& meshes : m_lodMeshes)
 			meshes.clear();
 		m_lodCount = options.generateLods ? 3u : 1u;
@@ -54,6 +55,7 @@ namespace Engine {
 		m_fallbackRoughnessTexture.reset();
 		m_fallbackNormalTexture.reset();
 
+		// 描画用の形状と境界情報を準備する
 		const std::filesystem::path modelPath(filePath);
 		auto prepared = PrepareModelGeometry(modelPath, options);
 		m_sourceMeshCount = prepared.levels[0].size();
@@ -62,6 +64,8 @@ namespace Engine {
 		m_nodePositions = std::move(prepared.nodePositions);
 		m_localBounds = prepared.bounds;
 		m_cullingRadius = prepared.cullingRadius;
+
+		// 不足する材質を補ってメッシュをGPUへ転送する
 		StartupTiming timing("model.materials_and_upload");
 		InitializeFallbackTextures(device, commandList);
 
@@ -78,6 +82,7 @@ namespace Engine {
 			std::vector<uint32_t> indices;
 		};
 
+		// 同じ材質の静的メッシュをLODごとにまとめる
 		std::array<std::vector<Batch>, 3> batches;
 		std::vector<TextureDescriptorSet> textureDescriptorSets;
 		std::unordered_map<unsigned, Mesh> materials;
@@ -115,12 +120,14 @@ namespace Engine {
 					batch = std::prev(list.end());
 				}
 
+				// 結合先の頂点位置に合わせてインデックスを補正する
 				const auto offset = static_cast<uint32_t>(batch->vertices.size());
 				for (auto index : data.indices)
 					batch->indices.push_back(index + offset);
 				batch->vertices.insert(batch->vertices.end(), data.vertices.begin(), data.vertices.end());
 			}
 
+			// 結合済みの元データを解放してメモリを抑える
 			std::vector<ModelVertex>().swap(geometry.vertices);
 			std::vector<uint32_t>().swap(geometry.indices);
 			for (unsigned level = 1; level < m_lodCount; ++level) {
@@ -129,6 +136,7 @@ namespace Engine {
 			}
 		}
 
+		// 全バッチを収める共通バッファの容量を求める
 		std::vector<ModelVertex> vertices;
 		std::vector<uint32_t> indices;
 		size_t vertexCount = 0, indexCount = 0;
@@ -142,6 +150,8 @@ namespace Engine {
 			throw std::runtime_error("Combined model buffers exceed D3D12 view limits");
 		vertices.reserve(vertexCount);
 		indices.reserve(indexCount);
+
+		// 共通バッファ内の描画範囲を各メッシュに割り当てる
 		for (unsigned level = 0; level < m_lodCount; ++level) {
 			for (auto& batch : batches[level]) {
 				auto& mesh = batch.mesh;
@@ -190,6 +200,8 @@ namespace Engine {
 			mesh.roughnessTexture ? mesh.roughnessTexture.get() : m_fallbackRoughnessTexture.get();
 		const Texture* normalTexture =
 			mesh.normalTexture ? mesh.normalTexture.get() : m_fallbackNormalTexture.get();
+
+		// 同じテクスチャの組み合わせならSRVを再利用する
 		const auto descriptorSet =
 			std::find_if(sets.begin(), sets.end(), [&](const TextureDescriptorSet& set) {
 				return set.diffuse == diffuseTexture && set.metallic == metallicTexture &&
@@ -199,6 +211,7 @@ namespace Engine {
 		if (descriptorSet != sets.end()) {
 			mesh.textureSrvIndex = descriptorSet->srvIndex;
 		} else {
+			// シェーダーの参照順に4枚分のSRVを連続配置する
 			auto descriptorHandle = renderDevice->AllocateSrvDescriptor(&mesh.textureSrvIndex);
 			diffuseTexture->CreateShaderResourceView(device, descriptorHandle);
 			descriptorHandle = renderDevice->AllocateSrvDescriptor();
@@ -220,6 +233,7 @@ namespace Engine {
 			device, commandList, indices, indexBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
 		for (auto& meshes : m_lodMeshes)
 			for (auto& mesh : meshes) {
+				// バッファ内の相対位置をGPUアドレスへ変換する
 				mesh.vertexBufferView.BufferLocation += m_vertexBuffer->GetGPUVirtualAddress();
 				mesh.indexBufferView.BufferLocation += m_indexBuffer->GetGPUVirtualAddress();
 			}

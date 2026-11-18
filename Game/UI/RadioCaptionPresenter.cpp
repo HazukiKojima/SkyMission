@@ -8,12 +8,15 @@ namespace Game {
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		const DirectX::XMFLOAT4 accent = caption.side == "enemy" ? DirectX::XMFLOAT4{1, 0.35f, 0.3f, 1}
 																 : DirectX::XMFLOAT4{0.2f, 0.8f, 1, 1};
+
+		// 影を重ねて背景上でも字幕を読めるようにする
 		const auto shadowText = [&](float x, float y, std::string_view text, float size,
 									DirectX::XMFLOAT4 color) {
 			list.Text({x + 2 * scale, y + 2 * scale}, text, size, {0, 0, 0, 0.85f});
 			list.Text({x, y}, text, size, color);
 		};
 
+		// 話者名と本文を画面幅に収まる大きさで配置する
 		const float available = view.width - 64 * scale;
 		const float speakerSize = std::min(30 * scale,
 			available / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(caption.speaker, 1)));

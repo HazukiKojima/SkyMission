@@ -94,6 +94,8 @@ namespace Game {
 				definition.gun.fireInterval = reader.ResolveFloat(weaponPath, "fireInterval");
 				definition.gun.muzzleSpeed = reader.ResolveFloat(weaponPath, "muzzleSpeed");
 				definition.gun.lifetime = reader.ResolveFloat(weaponPath, "lifetime");
+
+				// 整数として使える弾数か変換前に検証する
 				const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
 
 				if (!std::isfinite(capacity) || capacity < 4 || std::floor(capacity) != capacity ||
@@ -106,6 +108,7 @@ namespace Game {
 				throw std::runtime_error(pathText(weaponPath) + ": " + error.what());
 			}
 
+			// 弾モデルの設定を兵装定義へ取り込む
 			const auto ammoPath = reader.Resolve(weaponPath, "ammunition");
 			try {
 				definition.ammunition = {
@@ -135,6 +138,7 @@ namespace Game {
 
 		std::map<std::string, CinematicSettings> LoadCinematics(
 			const JsonAssetReader& reader, const std::filesystem::path& directory) {
+			// 演出一覧がなければ既定の冒頭演出を使う
 			const auto manifest = directory / L"cinematics.json";
 
 			if (!std::filesystem::exists(manifest))
@@ -313,6 +317,7 @@ namespace Game {
 	DirectX::XMFLOAT4X4 ShipDefinition::BuildTransform() const {
 		using namespace DirectX;
 
+		// 縮尺と回転を適用してから喫水補正を加えた位置へ移す
 		XMFLOAT4X4 transform;
 		XMStoreFloat4x4(&transform,
 			XMMatrixScaling(size, size, size) *

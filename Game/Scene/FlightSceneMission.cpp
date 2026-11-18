@@ -88,6 +88,7 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateCarrierMissiles(const CombatInput& input, float dt) {
+		// 攻撃可能な空母の船体をミサイルの判定対象にする
 		const bool carrierAttackActive =
 			m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled();
 		std::optional<CollisionTarget> hull;
@@ -101,6 +102,7 @@ namespace Game {
 			}
 		}
 
+		// 飛行中のミサイルを進めて演出を受け取る
 		m_carrierMissiles.Update(m_scene, dt, hull);
 
 		for (const auto& position : m_carrierMissiles.TakeMissImpacts()) {
@@ -111,6 +113,7 @@ namespace Game {
 			m_effects.SpawnRocketSmoke(position, 0);
 		}
 
+		// 捕捉状態と残弾から今回の発射を判断する
 		if (carrierAttackActive && m_scene.FindObject(m_playerId)) {
 			const unsigned count = std::min(input.missilePressCount, m_carrierMissiles.GetAmmo());
 			const auto target = m_targeting.GetState() == LockState::Locked &&
@@ -138,6 +141,7 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateHostileWeapons(float dt) {
+		// 自機の前後位置を敵弾の連続衝突判定へ渡す
 		std::vector<CollisionTarget> playerTargets;
 
 		if (const auto* player = m_scene.FindObject(m_playerId); player && player->model->GetLocalBounds()) {
@@ -150,6 +154,8 @@ namespace Game {
 		m_hostileProjectiles.Update(m_scene, dt, playerTargets);
 		UpdateEnemyGuns();
 		m_mission.UpdateAntiAircraftGuns(m_scene, m_player, m_hostileProjectiles, m_battleSeconds, dt);
+
+		// 自機と敵機の曳光線を同じ描画情報へまとめる
 		auto tracers = m_effects.GetSnapshot().gunTracers;
 		auto hostileTracers = m_hostileProjectiles.TakeTracers();
 		tracers.insert(tracers.end(), hostileTracers.begin(), hostileTracers.end());

@@ -52,11 +52,15 @@ namespace Game {
 	CarrierMissileFlight CarrierMissileSystem::BuildLaunchFlight(
 		const XMFLOAT3& position, const XMFLOAT3& velocity, const XMFLOAT3& forward) const {
 		auto release = position;
+
+		// 残弾の偶奇で左右の発射位置を切り替える
 		const float side =
 			m_ammo % 2 == 1 ? m_settings.releaseSideOffsetMeters : -m_settings.releaseSideOffsetMeters;
 		release.x -= forward.z * side;
 		release.y -= m_settings.releaseOffsetMeters;
 		release.z += forward.x * side;
+
+		// 機体速度に機首方向の発射速度を加える
 		XMFLOAT3 launch;
 		XMStoreFloat3(&launch, XMLoadFloat3(&velocity) + XMLoadFloat3(&forward) * m_missileSpeed);
 		return {release, launch};

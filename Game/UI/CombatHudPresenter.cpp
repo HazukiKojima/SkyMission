@@ -14,6 +14,8 @@ namespace Game {
 	void CombatHudPresenter::Build(
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		if (view.width == 0 || view.height == 0) return;
+
+		// 映像演出中は通常HUDを専用の表示へ切り替える
 		if (snapshot.cinematic.active) {
 			CinematicPresenter{m_tuning.ink}.Build(snapshot.cinematic, view, list);
 
@@ -23,6 +25,7 @@ namespace Game {
 			return;
 		}
 
+		// 通常戦闘の情報を描画順に重ねる
 		RadarMapPresenter{}.Build(snapshot, view, list, m_tuning);
 		DrawFlightStatus(snapshot, view, list);
 		DrawGunSight(snapshot, view, list);
@@ -32,6 +35,7 @@ namespace Game {
 		DrawCombatGuide(snapshot, view, list);
 		DrawDebugCollisions(snapshot, view, list);
 
+		// 最後に現在の無線字幕を重ねる
 		if (snapshot.cinematic.radioLine >= 0)
 			RadioCaptionPresenter{}.Build(snapshot.cinematic.radio, view, list);
 		else if (snapshot.enemyRadio.clip >= 0)
@@ -42,6 +46,7 @@ namespace Game {
 		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
 		if (snapshot.result != CombatResult::Active) return;
 
+		// 任務の段階に合った操作案内を選ぶ
 		std::string title, detail;
 		bool locked = false;
 
@@ -57,6 +62,8 @@ namespace Game {
 		} else return;
 
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
+
+		// 案内文が画面幅に収まる文字サイズを求める
 		const float available = view.width - 80 * scale;
 		const float titleSize = std::min(50 * scale, available / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(title, 1)));
 		const float detailSize = std::min(34 * scale, available / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(detail, 1)));
@@ -614,11 +621,15 @@ namespace Game {
 		float deltaY = projection.pixel.y - centerY;
 
 		if (std::hypot(deltaX, deltaY) < 0.001f) deltaY = 1;
+
+		// 対象の方向を保ったまま矢印を画面の内縁へ収める
 		const float ratio = 1 /
 			std::max(std::abs(deltaX) / std::max(1.0f, centerX - 50 * scale),
 				std::abs(deltaY) / std::max(1.0f, centerY - 50 * scale));
 		const XMFLOAT2 tip{centerX + deltaX * ratio, centerY + deltaY * ratio};
 		const float length = std::hypot(deltaX, deltaY);
+
+		// 対象の方向を基準に矢印の両翼を描く
 		const float unitX = deltaX / length;
 		const float unitY = deltaY / length;
 		list.Line(tip,

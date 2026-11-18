@@ -7,6 +7,7 @@ namespace Engine::ModelProcessing {
 	MeshGeometry SimplifyGeometry(const MeshGeometry& source, float extent, unsigned lod) {
 		if (lod == 0 || source.isRotatingNode) return source;
 
+		// LODで省ける小さな部品を判定する
 		auto low = source.vertices.front().position, high = low;
 		for (const auto& v : source.vertices) {
 			low.x = std::min(low.x, v.position.x);
@@ -20,6 +21,7 @@ namespace Engine::ModelProcessing {
 		const float componentSize = std::max({high.x - low.x, high.y - low.y, high.z - low.z});
 		if (componentSize < extent * (lod == 1 ? 0.006f : 0.018f)) return {};
 
+		// 位置と表面属性が近い頂点を同じクラスタへまとめる
 		struct Key {
 			std::array<int, 7> values;
 			bool operator==(const Key&) const = default;
@@ -76,6 +78,7 @@ namespace Engine::ModelProcessing {
 			}
 		}
 
+		// クラスタ内の頂点位置とUVを平均する
 		for (size_t i = 0; i < result.vertices.size(); ++i) {
 			const float scale = 1.0f / counts[i];
 			auto& v = result.vertices[i];
@@ -86,6 +89,7 @@ namespace Engine::ModelProcessing {
 			v.texcoord.y *= scale;
 		}
 
+		// 統合後につぶれた三角形を除く
 		for (size_t i = 0; i < source.indices.size(); i += 3) {
 			const auto a = remap[source.indices[i]], b = remap[source.indices[i + 1]],
 					   c = remap[source.indices[i + 2]];

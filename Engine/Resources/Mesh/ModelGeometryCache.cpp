@@ -41,6 +41,7 @@ namespace Engine::ModelProcessing {
 			const auto modified = std::filesystem::last_write_time(source, error);
 			if (error) return {};
 
+			// 元データと読み込み条件からキャッシュキーを作る
 			const auto text = canonical.u8string();
 			std::string key(reinterpret_cast<const char*>(text.data()), text.size());
 			key += "|" + std::to_string(Magic) + "|" + std::to_string(size) + "|" +
@@ -112,6 +113,8 @@ namespace Engine::ModelProcessing {
 			if (input.Value<uint64_t>() != Magic || input.Value<unsigned>() != lodCount)
 				throw std::runtime_error("Outdated geometry cache");
 			PreparedModelGeometry data;
+
+			// 境界と材質をキャッシュから復元する
 			data.bounds = input.Value<Bounds3>();
 			data.cullingRadius = input.Value<float>();
 
@@ -132,6 +135,7 @@ namespace Engine::ModelProcessing {
 				data.materials.push_back(std::move(source));
 			}
 
+			// 銃口などの補助ノード位置を復元する
 			const auto nodes = input.Value<uint32_t>();
 			if (nodes > 1000000) throw std::runtime_error("Invalid cached node count");
 
@@ -141,6 +145,7 @@ namespace Engine::ModelProcessing {
 				data.nodePositions.emplace(std::string(name.begin(), name.end()), positions);
 			}
 
+			// LODごとに形状を復元してデータの整合性を調べる
 			for (unsigned level = 0; level < lodCount; ++level) {
 				const auto count = input.Value<uint32_t>();
 				if (!count || count > 1000000 || (level && count != data.levels[0].size()))
@@ -237,6 +242,7 @@ namespace Engine::ModelProcessing {
 		const auto cache = CachePath(source, options);
 		const unsigned lodCount = options.generateLods ? 3 : 1;
 
+		// 処理済みの形状を優先して読み込む
 		if (!cache.empty()) {
 			try {
 				auto data = ReadCache(cache, lodCount);
@@ -250,6 +256,7 @@ namespace Engine::ModelProcessing {
 			}
 		}
 
+		// キャッシュを使えなければ元データから形状を作る
 		PreparedModelGeometry data;
 		timing.Mark("model.import");
 		const auto text = source.u8string();
@@ -283,6 +290,8 @@ namespace Engine::ModelProcessing {
 		data.cullingRadius = CalculateCullingRadius(data.levels[0], data.bounds);
 		const float extent = std::max({data.bounds.maximum.x - data.bounds.minimum.x,
 			data.bounds.maximum.y - data.bounds.minimum.y, data.bounds.maximum.z - data.bounds.minimum.z});
+
+		// 基準の形状から低精細のLODを作る
 		for (unsigned level = 1; level < lodCount; ++level) {
 			data.levels[level].reserve(data.levels[0].size());
 
@@ -290,6 +299,7 @@ namespace Engine::ModelProcessing {
 				data.levels[level].push_back(SimplifyGeometry(geometry, extent, level));
 		}
 
+		// 次回の読み込みに備えて処理結果を保存する
 		SaveCache(cache, data, lodCount);
 		return data;
 	}

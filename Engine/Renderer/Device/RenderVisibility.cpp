@@ -10,6 +10,8 @@ namespace Engine {
 		} else if (diameterPixels < kMediumDetailThresholdPixels) {
 			lod = 1;
 		}
+
+		// モデルが持つLOD数の範囲へ収める
 		return std::min(lod, count - 1);
 	}
 

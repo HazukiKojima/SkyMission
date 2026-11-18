@@ -10,6 +10,7 @@ namespace Game {
 		for (const auto& smoke : snapshot.deckSmoke) {
 			if (!context.HasVertexBudget(6)) break;
 
+			// 上昇と横流れを加えて甲板の煙を広げる
 			const auto location = XMLoadFloat3(&smoke.position) +
 				XMVectorSet(smoke.age * context.Settings().deck.driftSpeed,
 					smoke.age * context.Settings().deck.riseSpeed, 0, 0);

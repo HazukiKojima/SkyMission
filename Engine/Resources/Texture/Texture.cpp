@@ -206,6 +206,7 @@ namespace Engine {
 		if (maxDimension == 0 || extent <= maxDimension) return true;
 		if (m_meta.dimension != DirectX::TEX_DIMENSION_TEXTURE2D) return false;
 
+		// 縦横比を保って長辺を上限まで縮める
 		const size_t width = std::max<size_t>(1, m_meta.width * maxDimension / extent);
 		const size_t height = std::max<size_t>(1, m_meta.height * maxDimension / extent);
 		DirectX::ScratchImage resized;
@@ -227,6 +228,7 @@ namespace Engine {
 				for (size_t y = 0; y < image->height; ++y) {
 					uint8_t* row = image->pixels + y * image->rowPitch;
 					for (size_t x = 0; x < image->width; ++x) {
+						// 緑成分を反転して法線マップのY方向をそろえる
 						row[x * 4 + 1] = 255 - row[x * 4 + 1];
 					}
 				}

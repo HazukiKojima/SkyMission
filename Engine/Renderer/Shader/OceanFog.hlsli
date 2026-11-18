@@ -32,6 +32,7 @@ SamplerState gSampler : register(s0);
 
 bool RayBox(float3 origin, float3 direction, float3 boxMin, float3 boxMax, out float tMin, out float tMax)
 {
+    // ゼロ除算を避けながら各軸の交差区間を求める
     float3 invDirection = 1.0f / max(abs(direction), 1e-5f);
     invDirection *= float3(direction.x >= 0 ? 1 : -1, direction.y >= 0 ? 1 : -1, direction.z >= 0 ? 1 : -1);
 
@@ -40,6 +41,7 @@ bool RayBox(float3 origin, float3 direction, float3 boxMin, float3 boxMax, out f
     float3 tSmall = min(t0, t1);
     float3 tLarge = max(t0, t1);
 
+    // 三軸で共通する区間を光線と箱の交差とする
     tMin = max(max(tSmall.x, tSmall.y), tSmall.z);
     tMax = min(min(tLarge.x, tLarge.y), tLarge.z);
 
@@ -54,6 +56,7 @@ float3 ReconstructWorldPosition(float2 uv, float depth)
     float4 clip = float4(ndc, depth, 1.0f);
     float4 world = mul(clip, inverseViewProjection);
 
+    // カメラ相対の位置をワールド座標へ戻す
     return cameraPosition + world.xyz / max(world.w, 1e-8f);
 }
 
@@ -62,6 +65,7 @@ float OceanFogDensityAt(float3 worldPosition)
     float height = saturate((worldPosition.y - oceanFogBottom) / max(oceanFogTop - oceanFogBottom, 1.0f));
     float heightDensity = 1.0f - smoothstep(0.0f, 1.0f, height);
 
+    // 海の外周へ近づくほど霧を濃くする
     float2 oceanLocalPosition = worldPosition.xz - cameraPosition.xz;
     float oceanDistance = max(abs(oceanLocalPosition.x), abs(oceanLocalPosition.y));
     float edgeDensity = smoothstep(oceanFogStartDistance, oceanFogEndDistance, oceanDistance);
