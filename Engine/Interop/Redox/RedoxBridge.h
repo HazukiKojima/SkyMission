@@ -28,6 +28,7 @@ namespace Engine {
 
 	class RedoxModule {
 	  public:
+		static void WarmUp();
 		static FARPROC GetFunction(const char* entryPoint);
 
 	  private:

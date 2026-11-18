@@ -35,6 +35,13 @@ of the parser libraries or an optimized native rewrite of the game.
 
 ## Measurements and correctness
 
+For a first settings load after backend preparation, run
+`./Tools/SceneSettingsBenchmark/Run.ps1 -OutputDirectory x64/SceneSettingsPrepared -ProcessRuns 5 -Prepared`.
+Each fresh process creates and releases an in-memory empty JSON document before
+the first-load timer. The same preparation is applied to both backends.
+Per-process info files report `preparation_us` separately from `first_load_us`.
+Game settings files are first read inside the first-load timer.
+
 1. First complete settings load in a fresh process, including RE:DOX DLL load and
    runtime initialization, native layout initialization, reads, lookups and cleanup.
    This does **not** flush the Windows file cache or measure process launch time.

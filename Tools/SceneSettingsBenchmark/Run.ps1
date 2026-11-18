@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = 'x64/SceneSettingsBenchmark', [ValidateRange(1,10)][int]$ProcessRuns = 3)
+param([string]$OutputDirectory = 'x64/SceneSettingsBenchmark', [ValidateRange(1,10)][int]$ProcessRuns = 3, [switch]$Prepared)
 $ErrorActionPreference = 'Stop'
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $output = [IO.Path]::GetFullPath((Join-Path $repository $OutputDirectory))
@@ -54,11 +54,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Benchmark compilation failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'Document cache regression checks failed.' }
 
 # Keep execution sequential and alternate which backend runs first per process pair.
+$modeArgs = @(if ($Prepared) { '--prepared' })
 for ($run = 1; $run -le $ProcessRuns; ++$run) {
     $order = if ($run % 2) { @('redox','nlohmann') } else { @('nlohmann','redox') }
 
     foreach ($backend in $order) {
-        & (Join-Path $output 'SceneSettingsBenchmark.exe') $repository $output $backend $run
+        & (Join-Path $output 'SceneSettingsBenchmark.exe') $repository $output $backend $run @modeArgs
 
         if ($LASTEXITCODE -ne 0) { throw "$backend benchmark failed." }
     }

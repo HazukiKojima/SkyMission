@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <string_view>
 
 namespace {
 using Json = nlohmann::json;
@@ -277,7 +278,8 @@ HMODULE WINAPI SceneBenchmarkLoadLibraryW(LPCWSTR name) {
 }
 
 int main(int argc,char** argv) try {
-    if (argc != 5) throw std::runtime_error("Usage: Benchmark repository output redox|nlohmann processIndex");
+    if (argc != 5 && (argc != 6 || std::string_view(argv[5]) != "--prepared"))
+        throw std::runtime_error("Usage: Benchmark repository output redox|nlohmann processIndex [--prepared]");
 
     useNative = std::string(argv[3]) == "nlohmann";
     const auto root = std::filesystem::absolute(argv[1]) / "Assets";
@@ -302,7 +304,12 @@ int main(int argc,char** argv) try {
     };
 
     // 初回読み込みと照合用の呼び出し記録を通常の反復計測から分ける
-    auto before = Clock::now(); run();
+    const auto preparationStart = Clock::now();
+    if (argc == 6) Engine::RedoxModule::WarmUp();
+    auto before = Clock::now();
+    const double preparationUs = argc == 6 ?
+        std::chrono::duration<double, std::micro>(before - preparationStart).count() : 0.0;
+    run();
     const double firstUs = std::chrono::duration<double,std::micro>(Clock::now()-before).count();
     const auto stem = std::string(argv[3])+"-"+argv[4];
     trace.open(std::filesystem::path(argv[2])/(stem+"-trace.txt"));
@@ -320,7 +327,8 @@ int main(int argc,char** argv) try {
     }
 
     std::ofstream info(std::filesystem::path(argv[2])/(stem+"-info.txt"));
-    info << "first_load_us=" << firstUs << "\ntrace_calls=" << calls << "\ndocuments=" << documentsCreated << '\n';
+    info << "first_load_us=" << firstUs << "\npreparation_us=" << preparationUs
+         << "\ntrace_calls=" << calls << "\ndocuments=" << documentsCreated << '\n';
     std::cout << stem << ": first=" << firstUs << " us; documents=" << documentsCreated << "; calls=" << calls << '\n';
     return 0;
 } catch(const std::exception& e) {std::cerr << e.what() << '\n'; return 1;}

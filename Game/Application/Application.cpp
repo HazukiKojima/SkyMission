@@ -11,6 +11,7 @@
 #include "Engine/Log.h"
 #include "Engine/StartupTiming.h"
 #include "Engine/ExecutablePath.h"
+#include "Engine/Interop/Redox/RedoxBridge.h"
 #include "Game/Weapons/WeaponController.h"
 #include "Game/Combat/CombatController.h"
 
@@ -29,6 +30,10 @@ namespace Game {
 		m_window->SetLoading(true);
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 		UpdateWindow(m_window->GetHandle());
+
+		timing.Mark("application.redox_warmup");
+		RedoxModule::WarmUp();
+		timing.Mark("application.scene_settings");
 
 		// 起動に必要な設定を読み込む
 		const auto assetsDir = AssetsDirectory();
