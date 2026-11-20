@@ -114,16 +114,20 @@ namespace Game {
 	}
 
 	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
-		if (input.active && input.middleMouseDown && !m_automaticLook) {
-			m_lookYaw = std::remainder(
-				m_lookYaw - static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity, XM_2PI);
-			m_lookPitch =
-				std::clamp(m_lookPitch - static_cast<float>(input.mouseDeltaY) * m_settings.mouseSensitivity,
-					-m_settings.lookPitchLimit, m_settings.lookPitchLimit);
+		const auto& pad = input.gamepad;
+		const bool stickLook = pad.rightX != 0 || pad.rightY != 0;
+		if (input.active && !m_automaticLook && (input.middleMouseDown || stickLook)) {
+			constexpr float stickLookSpeed = XM_PI;
+			const float yawDelta = static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity +
+				pad.rightX * stickLookSpeed * deltaSeconds;
+			const float pitchDelta = static_cast<float>(input.mouseDeltaY) * m_settings.mouseSensitivity +
+				pad.rightY * stickLookSpeed * deltaSeconds;
+			m_lookYaw = std::remainder(m_lookYaw - yawDelta, XM_2PI);
+			m_lookPitch = std::clamp(m_lookPitch - pitchDelta, -m_settings.lookPitchLimit, m_settings.lookPitchLimit);
 		} else {
 			float targetYaw = 0, targetPitch = 0;
 
-			if ((m_automaticLook || input.IsKeyDown('Z')) && m_lookTarget) {
+			if ((m_automaticLook || input.IsTargetLookDown()) && m_lookTarget) {
 				const auto& point = *m_lookTarget;
 
 				// doubleで差と距離を求め、極端な座標でも角度の計算を有限に保つ

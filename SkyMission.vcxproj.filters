@@ -264,6 +264,9 @@
     <ClInclude Include="Engine\Input\RawInputState.h">
       <Filter>Engine\Input</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Input\GamepadInput.h">
+      <Filter>Engine\Input</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h">
       <Filter>Engine\Interop\Redox</Filter>
     </ClInclude>
@@ -736,6 +739,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Input\RawInputState.cpp"><Filter>Engine\Input</Filter></ClCompile>
+    <ClCompile Include="Engine\Input\GamepadInput.cpp"><Filter>Engine\Input</Filter></ClCompile>
     <ClCompile Include="Engine\Interop\Redox\RedoxBridge.cpp"><Filter>Engine\Interop\Redox</Filter></ClCompile>
     <ClCompile Include="Engine\Renderer\Device\GpuFrameProfiler.cpp"><Filter>Engine\Renderer\Device</Filter></ClCompile>
     <ClCompile Include="Engine\Renderer\Device\RenderVisibility.cpp"><Filter>Engine\Renderer\Device</Filter></ClCompile>

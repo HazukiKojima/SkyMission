@@ -379,7 +379,7 @@ namespace Game {
 		// 手動の敵機注視と任務による自動注視を選ぶ
 		std::optional<DirectX::XMFLOAT3> lookTarget;
 
-		if (cameraInput.IsKeyDown('Z') && m_combat.result == CombatResult::Active &&
+	if (cameraInput.IsTargetLookDown() && m_combat.result == CombatResult::Active &&
 			m_scene.FindObject(m_playerId)) {
 			for (const auto& enemy : m_combat.enemies) {
 				if (enemy.id == m_combat.selected && enemy.health > 0 && m_scene.FindObject(enemy.id)) {

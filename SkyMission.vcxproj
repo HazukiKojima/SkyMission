@@ -422,6 +422,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Input\RawInputState.h" />
+    <ClInclude Include="Engine\Input\GamepadInput.h" />
   </ItemGroup>
 
   <ItemGroup>
@@ -625,6 +626,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Input\RawInputState.cpp" />
+    <ClCompile Include="Engine\Input\GamepadInput.cpp" />
     <ClCompile Include="Engine\Interop\Redox\RedoxBridge.cpp" />
     <ClCompile Include="Engine\Renderer\Device\GpuFrameProfiler.cpp" />
     <ClCompile Include="Engine\Renderer\Device\RenderVisibility.cpp" />

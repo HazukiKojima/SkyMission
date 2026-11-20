@@ -1,7 +1,7 @@
 #pragma once
 #include <functional>
 #include "../EngineCommon.h"
-#include "../Input/RawInputState.h"
+#include "../Input/GamepadInput.h"
 
 namespace Engine {
 	class Window {
@@ -42,6 +42,7 @@ namespace Engine {
 		void ToggleFullscreen();
 
 		RawInputState m_input;
+		GamepadInput m_gamepad;
 		HWND m_hwnd = nullptr;
 		bool m_cameraMouseCaptured = false;
 		bool m_loading = false;

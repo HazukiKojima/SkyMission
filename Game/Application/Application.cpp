@@ -210,7 +210,7 @@ namespace Game {
 
 			// タイトルとクリア画面ではEnterによる画面遷移だけを処理する
 			if (m_screen == Screen::Title || m_screen == Screen::Clear) {
-				if (input.active && input.WasKeyPressed(VK_RETURN)) {
+				if (input.WasConfirmPressed()) {
 					m_combatAudio.ResetPlayback();
 
 					if (m_screen == Screen::Clear) {
@@ -294,7 +294,7 @@ namespace Game {
 
 		centered(m_screen == Screen::Title ? "SkyMission" : "ミッションクリア",
 			height * 0.4f, 48 * scale);
-		centered(m_screen == Screen::Title ? "エンターキーでスタート" : "エンターでタイトルに戻る",
+		centered(m_screen == Screen::Title ? "Enter / A / × でスタート" : "Enter / A / × でタイトルに戻る",
 			height * 0.56f, 26 * scale);
 	}
 
