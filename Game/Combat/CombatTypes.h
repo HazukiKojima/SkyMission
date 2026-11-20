@@ -127,6 +127,7 @@ namespace Game {
 		std::vector<CombatTarget> enemies;
 		unsigned firedVolleys = 0;
 		unsigned hitCount = 0;
+		unsigned enemyAircraftDestroyed = 0;
 		Engine::ObjectId selected = Engine::InvalidObjectId;
 		LockState lockState = LockState::None;
 		float acquireProgress = 0; // ロック捕捉の進行率（0～1）

@@ -15,7 +15,7 @@ namespace Engine::HudFont {
 		U"ぞ調子４次爆阻止"
 		U"能力奪"
 		U"オタト戻ショア"
-		U"抜前帰待動き滅生還新俺必ず叩";
+		U"抜前帰待動き滅生還新俺必ず叩×";
 	inline constexpr unsigned AsciiCount = 95;
 	inline constexpr unsigned GlyphCount = AsciiCount + unsigned(Japanese.size());
 	static_assert(((GlyphCount + Columns - 1) / Columns) * Cell < Height - 8);

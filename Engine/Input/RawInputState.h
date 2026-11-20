@@ -6,6 +6,26 @@
 #include <unordered_map>
 
 namespace Engine {
+	enum class GamepadButton : unsigned { South, West, North, East, LeftShoulder, RightShoulder, RightStick, Menu, Count };
+
+	struct GamepadSnapshot {
+		float leftX = 0, leftY = 0, rightX = 0, rightY = 0;
+		float leftTrigger = 0, rightTrigger = 0;
+		unsigned buttons = 0;
+		std::array<std::uint16_t, static_cast<unsigned>(GamepadButton::Count)> presses{};
+		bool isDualShock4 = false;
+		bool northTapped = false;
+		bool northHeld = false;
+
+		bool IsDown(GamepadButton button) const {
+			return (buttons & (1u << static_cast<unsigned>(button))) != 0;
+		}
+
+		unsigned PressCount(GamepadButton button) const {
+			return presses[static_cast<unsigned>(button)];
+		}
+	};
+
 	// 同じ更新内で入力スナップショットを共有する
 	struct InputSnapshot {
 		bool active = false;
@@ -27,6 +47,16 @@ namespace Engine {
 		bool middleMouseDown = false;
 		std::int64_t mouseDeltaX = 0;
 		std::int64_t mouseDeltaY = 0;
+		GamepadSnapshot gamepad;
+
+		bool WasConfirmPressed() const {
+			return active && (WasKeyPressed(VK_RETURN) || gamepad.PressCount(GamepadButton::South));
+		}
+
+		bool IsTargetLookDown() const {
+			const bool padLook = gamepad.isDualShock4 ? gamepad.northHeld : gamepad.IsDown(GamepadButton::East);
+			return IsKeyDown('Z') || (active && padLook);
+		}
 
 		bool IsKeyDown(UINT key) const {
 			if (!active || key >= keys.size()) return false;

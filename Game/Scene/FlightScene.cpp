@@ -122,6 +122,7 @@ namespace Game {
 		m_combat.audio = {};
 		m_combat.firedVolleys = 0;
 		m_combat.hitCount = 0;
+		m_combat.enemyAircraftDestroyed = 0;
 #if defined(_DEBUG)
 		if (cameraInput.WasKeyPressed(VK_F3)) m_debugCollisionsEnabled = !m_debugCollisionsEnabled;
 #endif
@@ -379,7 +380,7 @@ namespace Game {
 		// 手動の敵機注視と任務による自動注視を選ぶ
 		std::optional<DirectX::XMFLOAT3> lookTarget;
 
-		if (cameraInput.IsKeyDown('Z') && m_combat.result == CombatResult::Active &&
+		if (cameraInput.IsTargetLookDown() && m_combat.result == CombatResult::Active &&
 			m_scene.FindObject(m_playerId)) {
 			for (const auto& enemy : m_combat.enemies) {
 				if (enemy.id == m_combat.selected && enemy.health > 0 && m_scene.FindObject(enemy.id)) {
@@ -682,6 +683,7 @@ namespace Game {
 			m_combat.hitSeconds = m_combatSettings.feedback.hitSeconds;
 
 			if (enemy->health <= 0) {
+				++m_combat.enemyAircraftDestroyed;
 				++m_combat.audio.aircraftExplosions;
 
 				if (const auto* aircraft = m_scene.FindObject(enemy->objectId)) {

@@ -9,7 +9,10 @@ namespace Game {
 	class WeaponController {
 	  public:
 		WeaponInput ReadInput(const Engine::InputSnapshot& input) const {
-			return {.fire = input.leftMouseDown};
+			using Engine::GamepadButton;
+			const auto fireButton = input.gamepad.isDualShock4 ? GamepadButton::South : GamepadButton::West;
+			return {.fire = input.leftMouseDown ||
+				(input.active && input.gamepad.IsDown(fireButton))};
 		}
 	};
 } // namespace Game

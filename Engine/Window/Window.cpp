@@ -41,7 +41,13 @@ namespace Engine {
 
 	InputSnapshot Window::ConsumeInput() {
 		if (GetForegroundWindow() != m_hwnd) DeactivateInput();
-		return m_input.ConsumeFrame();
+		auto snapshot = m_input.ConsumeFrame();
+		if (snapshot.active) snapshot.gamepad = m_gamepad.ConsumeFrame();
+		return snapshot;
+	}
+
+	void Window::SetGamepadRumble(float lowFrequency, float highFrequency) {
+		m_gamepad.SetRumble(lowFrequency, highFrequency);
 	}
 
 	void Window::SetLoading(bool loading) {
@@ -54,6 +60,7 @@ namespace Engine {
 
 	void Window::DeactivateInput() {
 		m_input.SetActive(false);
+		m_gamepad.Reset();
 		m_fullscreenEnterHeld = false;
 		EndCameraLook();
 	}
