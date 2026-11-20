@@ -21,8 +21,7 @@ namespace Engine {
 				return (buttons & mask) ? 1u << static_cast<unsigned>(button) : 0u;
 			};
 			return bit(GamepadButton::South, GameInputGamepadA) |
-				bit(GamepadButton::West, GameInputGamepadX) |
-				bit(GamepadButton::North, GameInputGamepadY) |
+				bit(GamepadButton::West, GameInputGamepadX) | bit(GamepadButton::North, GameInputGamepadY) |
 				bit(GamepadButton::East, GameInputGamepadB) |
 				bit(GamepadButton::LeftShoulder, GameInputGamepadLeftShoulder) |
 				bit(GamepadButton::RightShoulder, GameInputGamepadRightShoulder) |
@@ -36,7 +35,7 @@ namespace Engine {
 					std::abs(state.rightThumbstickX), std::abs(state.rightThumbstickY)}) > 0.18f ||
 				std::max(state.leftTrigger, state.rightTrigger) > 0.12f;
 		}
-	}
+	} // namespace
 
 	GamepadInput::GamepadInput() {
 		// Windows SDKのGameInput v0を使い、更新済みランタイムがあれば優先する。
@@ -45,7 +44,8 @@ namespace Engine {
 		for (const auto* name : runtimes) {
 			const HMODULE runtime = LoadLibraryExW(name, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 			if (!runtime) continue;
-			const auto create = std::bit_cast<decltype(&GameInputCreate)>(GetProcAddress(runtime, "GameInputCreate"));
+			const auto create =
+				std::bit_cast<decltype(&GameInputCreate)>(GetProcAddress(runtime, "GameInputCreate"));
 			if (create && SUCCEEDED(create(m_input.GetAddressOf())) && m_input) {
 				m_runtime = runtime;
 				return;
@@ -67,9 +67,8 @@ namespace Engine {
 		const bool wasVibrating = m_rumble.lowFrequency > 0 || m_rumble.highFrequency > 0;
 		const bool isVibrating = lowFrequency > 0 || highFrequency > 0;
 		const ULONGLONG now = GetTickCount64();
-		// FPSに比例して振動コマンドを送らない。開始と停止は間引かない。
-		if (wasVibrating && isVibrating && now - m_lastRumbleUpdate < kRumbleUpdateMilliseconds)
-			return;
+		// 振動中の強さの更新だけを間引き、開始と停止は即時に送る
+		if (wasVibrating && isVibrating && now - m_lastRumbleUpdate < kRumbleUpdateMilliseconds) return;
 		m_rumble = {.lowFrequency = lowFrequency, .highFrequency = highFrequency};
 		m_device->SetRumbleState(&m_rumble);
 		m_lastRumbleUpdate = now;
@@ -93,23 +92,27 @@ namespace Engine {
 
 		Microsoft::WRL::ComPtr<IGameInputReading> latest;
 		GameInputGamepadState state{};
-		const HRESULT read = m_input->GetCurrentReading(GameInputKindGamepad, m_device.Get(), latest.GetAddressOf());
+		const HRESULT read =
+			m_input->GetCurrentReading(GameInputKindGamepad, m_device.Get(), latest.GetAddressOf());
 		if (FAILED(read) || !latest || !latest->GetGamepadState(&state)) {
 			if (!m_device) return {};
 			Log("GameInput: active gamepad reading failed (0x{:08x}), scanning again\n",
 				static_cast<unsigned>(read));
 			Reset();
-			if (FAILED(m_input->GetCurrentReading(GameInputKindGamepad, nullptr, latest.ReleaseAndGetAddressOf())) ||
+			if (FAILED(m_input->GetCurrentReading(
+					GameInputKindGamepad, nullptr, latest.ReleaseAndGetAddressOf())) ||
 				!latest || !latest->GetGamepadState(&state))
 				return {};
 		}
 
 		const auto now = m_input->GetCurrentTimestamp();
 		if (m_device && latest->GetTimestamp() + kGamepadRescanMicroseconds < now) {
-			// 操作されていないパッドは同じ読み取りを返し続ける。別のパッドに新しい操作がある場合だけ切り替える。
+			// 操作されていないパッドでは、同じ読み取りが返り続ける
+			// 別のパッドで新しい操作を検出したときだけ切り替える
 			Microsoft::WRL::ComPtr<IGameInputReading> candidate;
 			GameInputGamepadState candidateState{};
-			if (SUCCEEDED(m_input->GetCurrentReading(GameInputKindGamepad, nullptr, candidate.GetAddressOf())) &&
+			if (SUCCEEDED(
+					m_input->GetCurrentReading(GameInputKindGamepad, nullptr, candidate.GetAddressOf())) &&
 				candidate && candidate->GetTimestamp() > latest->GetTimestamp() &&
 				candidate->GetTimestamp() + kGamepadRescanMicroseconds >= now &&
 				candidate->GetGamepadState(&candidateState) && HasGamepadInput(candidateState)) {
@@ -119,8 +122,7 @@ namespace Engine {
 			}
 		}
 
-		GamepadSnapshot frame{
-			.leftX = ApplyDeadZone(state.leftThumbstickX, 0.18f),
+		GamepadSnapshot frame{.leftX = ApplyDeadZone(state.leftThumbstickX, 0.18f),
 			.leftY = ApplyDeadZone(-state.leftThumbstickY, 0.18f),
 			.rightX = ApplyDeadZone(state.rightThumbstickX, 0.18f),
 			.rightY = ApplyDeadZone(-state.rightThumbstickY, 0.18f),
@@ -154,8 +156,8 @@ namespace Engine {
 			// フレーム間の短い押下と再押下を保持する。履歴が途切れたときは最新状態へ進む。
 			for (unsigned i = 0; i < 256; ++i) {
 				Microsoft::WRL::ComPtr<IGameInputReading> next;
-				if (FAILED(m_input->GetNextReading(m_previous.Get(), GameInputKindGamepad,
-						m_device.Get(), next.GetAddressOf())) ||
+				if (FAILED(m_input->GetNextReading(
+						m_previous.Get(), GameInputKindGamepad, m_device.Get(), next.GetAddressOf())) ||
 					next.Get() == latest.Get() || next->GetTimestamp() > latest->GetTimestamp())
 					break;
 				GameInputGamepadState intermediate{};
@@ -165,11 +167,11 @@ namespace Engine {
 			}
 			addPresses(frame.buttons, latest->GetTimestamp());
 		}
-		frame.northHeld = m_northPressedAt &&
-			m_input->GetCurrentTimestamp() - *m_northPressedAt >= kLongPressMicroseconds;
+		frame.northHeld =
+			m_northPressedAt && m_input->GetCurrentTimestamp() - *m_northPressedAt >= kLongPressMicroseconds;
 		const auto* info = m_device ? m_device->GetDeviceInfo() : nullptr;
-		frame.isDualShock4 = info && info->vendorId == 0x054c &&
-			(info->productId == 0x05c4 || info->productId == 0x09cc);
+		frame.isDualShock4 =
+			info && info->vendorId == 0x054c && (info->productId == 0x05c4 || info->productId == 0x09cc);
 		m_buttons = frame.buttons;
 		m_previous = std::move(latest);
 		return frame;
