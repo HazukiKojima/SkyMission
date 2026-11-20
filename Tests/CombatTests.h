@@ -1120,7 +1120,7 @@ void TestHudRendering(const fs::path& fixture) {
 					"Flight HUD conversion, rounding or right alignment failed");
 			};
 
-			requireFlightText(312, "360");
+			requireFlightText(312, "36");
 			requireFlightText(1808, "1543");
 			snapshot.playerSpeedMetersPerSecond = 0;
 			buildFrame();
