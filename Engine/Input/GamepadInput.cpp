@@ -51,7 +51,15 @@ namespace Engine {
 		if (m_runtime) FreeLibrary(m_runtime);
 	}
 
+	void GamepadInput::SetRumble(float lowFrequency, float highFrequency) {
+		if (!m_device || (m_rumble.lowFrequency == lowFrequency && m_rumble.highFrequency == highFrequency))
+			return;
+		m_rumble = {.lowFrequency = lowFrequency, .highFrequency = highFrequency};
+		m_device->SetRumbleState(&m_rumble);
+	}
+
 	void GamepadInput::Reset() {
+		SetRumble(0, 0);
 		m_previous.Reset();
 		m_device.Reset();
 		m_buttons = 0;

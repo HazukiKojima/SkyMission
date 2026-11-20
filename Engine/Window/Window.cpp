@@ -46,6 +46,10 @@ namespace Engine {
 		return snapshot;
 	}
 
+	void Window::SetGamepadRumble(float lowFrequency, float highFrequency) {
+		m_gamepad.SetRumble(lowFrequency, highFrequency);
+	}
+
 	void Window::SetLoading(bool loading) {
 		m_loading = loading;
 		InvalidateRect(m_hwnd, nullptr, FALSE);

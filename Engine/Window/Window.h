@@ -13,6 +13,7 @@ namespace Engine {
 		Window& operator=(const Window&) = delete;
 
 		InputSnapshot ConsumeInput();
+		void SetGamepadRumble(float lowFrequency, float highFrequency);
 		void SetLoading(bool loading);
 
 		HWND GetHandle() const {

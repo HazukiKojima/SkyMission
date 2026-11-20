@@ -122,6 +122,7 @@ namespace Game {
 		m_combat.audio = {};
 		m_combat.firedVolleys = 0;
 		m_combat.hitCount = 0;
+		m_combat.enemyAircraftDestroyed = 0;
 #if defined(_DEBUG)
 		if (cameraInput.WasKeyPressed(VK_F3)) m_debugCollisionsEnabled = !m_debugCollisionsEnabled;
 #endif
@@ -682,6 +683,7 @@ namespace Game {
 			m_combat.hitSeconds = m_combatSettings.feedback.hitSeconds;
 
 			if (enemy->health <= 0) {
+				++m_combat.enemyAircraftDestroyed;
 				++m_combat.audio.aircraftExplosions;
 
 				if (const auto* aircraft = m_scene.FindObject(enemy->objectId)) {

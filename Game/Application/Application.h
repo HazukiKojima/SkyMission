@@ -33,6 +33,8 @@ namespace Game {
 		void InitializeFlightScene(const FlightSceneDefinition& assets);
 		void ConfigureResizeHandling();
 		void BuildMenuHud();
+		void UpdateGamepadRumble(float deltaSeconds, bool active, const AircraftInput& flight,
+			const CombatSnapshot& combat, bool playerTookDamage);
 		enum class Screen { Title, Playing, Clear };
 		Screen m_screen = Screen::Title;
 		const Engine::Scene& PrepareCaptureScene();
@@ -46,6 +48,16 @@ namespace Game {
 		CombatHudPresenter m_hudPresenter;
 		CombatEffectPresenter m_effectPresenter;
 		CombatAudio m_combatAudio;
+		float m_gunRumbleSeconds = 0;
+		float m_gunRumblePhaseSeconds = 0;
+		bool m_gunRumblePlayed = false;
+		float m_missileRumbleSeconds = 0;
+		float m_damageRumbleSeconds = 0;
+		float m_killRumbleSeconds = 0;
+		float m_carrierRumbleSeconds = 0;
+		float m_accelerationRumble = 0;
+		float m_brakingRumble = 0;
+		float m_playerMaximumSpeed = 1.0f;
 		Engine::HudDrawList m_hud;
 
 		// F6: normal -> environment with ships -> environment only.

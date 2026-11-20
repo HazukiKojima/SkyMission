@@ -4,6 +4,7 @@
 #include "Game/Scene/FlightSceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <format>
 #include <future>
@@ -115,6 +116,7 @@ namespace Game {
 				return m_renderer->GetModel(id);
 			},
 			m_window->GetWidth(), m_window->GetHeight(), m_renderer->GetOceanSize()));
+		m_playerMaximumSpeed = assets.playerAircraft.flightParameters.maximumSpeed;
 		m_scene->ConfigureCinematics(
 			assets.cinematics,
 			[this, enemyScale = assets.enemyAircraft.visualScale,
@@ -249,10 +251,16 @@ namespace Game {
 				m_scene->GetCombatSnapshot().cinematic.active && !input.active ? 0 : deltaSeconds;
 			const bool endingWasActive = m_scene->GetCombatSnapshot().cinematic.active &&
 				m_scene->GetCombatSnapshot().cinematic.cinematicId == "ending";
-			m_scene->Update(m_aircraftController.ReadInput(input), simulationSeconds, input, combat);
+			const float previousHealth = m_scene->GetCombatSnapshot().playerHealth;
+			const auto flight = m_aircraftController.ReadInput(input);
+			m_scene->Update(flight, simulationSeconds, input, combat);
+			const auto& combatState = m_scene->GetCombatSnapshot();
+			const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
+				combatState.result == CombatResult::Victory;
+			UpdateGamepadRumble(deltaSeconds, input.active && !showClearScreen, flight, combatState,
+				combatState.playerHealth < previousHealth);
 
-			if (endingWasActive && !m_scene->GetCombatSnapshot().cinematic.active &&
-				m_scene->GetCombatSnapshot().result == CombatResult::Victory) {
+			if (showClearScreen) {
 				m_screen = Screen::Clear;
 				m_captureMode = 0;
 				m_combatAudio.ResetPlayback();
@@ -262,8 +270,6 @@ namespace Game {
 			}
 
 			// シーンの状態で音声を更新し、再生状況を台詞の進行へ返す
-			const auto& combatState = m_scene->GetCombatSnapshot();
-
 			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();
 			const auto voice = m_combatAudio.UpdateCinematic(combatState.cinematic);
 			m_combatAudio.UpdateEnemyRadio(combatState.enemyRadio);
@@ -282,18 +288,78 @@ namespace Game {
 		}
 	}
 
+	void Application::UpdateGamepadRumble(float deltaSeconds, bool active, const AircraftInput& flight,
+		const CombatSnapshot& combat, bool playerTookDamage) {
+		if (!active || combat.audio.restarted) {
+			m_gunRumbleSeconds = m_missileRumbleSeconds = m_damageRumbleSeconds = 0;
+			m_gunRumblePhaseSeconds = 0;
+			m_gunRumblePlayed = false;
+			m_killRumbleSeconds = 0;
+			m_carrierRumbleSeconds = 0;
+			m_accelerationRumble = m_brakingRumble = 0;
+			m_window->SetGamepadRumble(0, 0);
+			return;
+		}
+
+		m_gunRumbleSeconds = std::max(0.0f, m_gunRumbleSeconds - deltaSeconds);
+		if (combat.firedVolleys && !m_gunRumblePlayed) {
+			m_gunRumbleSeconds = 0.14f;
+			m_gunRumblePlayed = true;
+		}
+		if (!combat.audio.gunFiring) m_gunRumblePlayed = false;
+		m_missileRumbleSeconds =
+			combat.audio.missileLaunches ? 0.19f : std::max(0.0f, m_missileRumbleSeconds - deltaSeconds);
+		m_damageRumbleSeconds =
+			playerTookDamage ? 0.24f : std::max(0.0f, m_damageRumbleSeconds - deltaSeconds);
+		m_killRumbleSeconds =
+			combat.enemyAircraftDestroyed ? 0.12f : std::max(0.0f, m_killRumbleSeconds - deltaSeconds);
+		constexpr float carrierRumbleDuration = 0.65f;
+		m_carrierRumbleSeconds = combat.audio.shipExplosions ? carrierRumbleDuration :
+			std::max(0.0f, m_carrierRumbleSeconds - deltaSeconds);
+		const float carrierRumble = m_carrierRumbleSeconds / carrierRumbleDuration;
+
+		const bool flying = combat.audio.flying && combat.result == CombatResult::Active && !combat.cinematic.active;
+		const bool highG = flying && flight.highGTurn &&
+			std::max(std::abs(flight.turn), std::abs(flight.yaw)) > 0.05f;
+		const float acceleration = std::max(0.0f, flight.throttle);
+		const float braking = std::max(0.0f, -flight.throttle);
+		const float speedRatio = std::clamp(combat.playerSpeedMetersPerSecond / m_playerMaximumSpeed, 0.0f, 1.0f);
+		// 加速の低い振動はゆっくり立ち上げ、減速時は速度に応じた細かい振動を返す。
+		m_accelerationRumble = flying ?
+			std::lerp(m_accelerationRumble, acceleration, 1.0f - std::exp(-8.0f * deltaSeconds)) : 0.0f;
+		m_brakingRumble = flying ?
+			std::lerp(m_brakingRumble, braking * speedRatio, 1.0f - std::exp(-16.0f * deltaSeconds)) : 0.0f;
+		const float engineRumble = m_accelerationRumble > 0.01f ? 0.16f * m_accelerationRumble : 0.0f;
+		const float airflowRumble = m_brakingRumble > 0.01f ? 0.18f * m_brakingRumble : 0.0f;
+		const bool gunStartPulse = m_gunRumbleSeconds > 0;
+		constexpr float gunRumbleInterval = 0.10f;
+		constexpr float gunRumblePulse = 0.02f;
+		const bool repeatGunRumble = m_gunRumblePlayed && !gunStartPulse;
+		m_gunRumblePhaseSeconds = repeatGunRumble ?
+			std::fmod(m_gunRumblePhaseSeconds + deltaSeconds, gunRumbleInterval) : 0.0f;
+		const bool gunRepeatPulse = repeatGunRumble && m_gunRumblePhaseSeconds >= gunRumbleInterval - gunRumblePulse;
+		const float gunLow = gunStartPulse ? 0.60f : (gunRepeatPulse ? 0.002f : 0.0f);
+		const float gunHigh = gunStartPulse ? 0.45f : (gunRepeatPulse ? 0.0043f : 0.0f);
+		const float low = std::max({gunLow, engineRumble, 0.95f * carrierRumble, highG ? 0.22f : 0.0f,
+			m_missileRumbleSeconds > 0 ? 0.55f : 0.0f,
+			m_damageRumbleSeconds > 0 ? 0.80f : 0.0f, m_killRumbleSeconds > 0 ? 0.72f : 0.0f});
+		const float high =
+			std::max({gunHigh, airflowRumble, 0.55f * carrierRumble * carrierRumble, m_missileRumbleSeconds > 0 ? 0.35f : 0.0f,
+				m_damageRumbleSeconds > 0 ? 0.45f : 0.0f, m_killRumbleSeconds > 0 ? 0.90f : 0.0f});
+		m_window->SetGamepadRumble(low, high);
+	}
+
 	void Application::BuildMenuHud() {
 		const float width = float(m_window->GetWidth()), height = float(m_window->GetHeight());
 		m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
 		m_hud.FilledRect({0, 0}, {width, height}, {0, 0, 0, 1});
 		const float scale = std::min(width / 800.0f, height / 600.0f);
 		const auto centered = [&](std::string_view text, float y, float size) {
-			m_hud.Text({(width - HudDrawList::MeasureTextWidth(text, size)) * 0.5f, y},
-				text, size, {1, 1, 1, 1});
+			m_hud.Text(
+				{(width - HudDrawList::MeasureTextWidth(text, size)) * 0.5f, y}, text, size, {1, 1, 1, 1});
 		};
 
-		centered(m_screen == Screen::Title ? "SkyMission" : "ミッションクリア",
-			height * 0.4f, 48 * scale);
+		centered(m_screen == Screen::Title ? "SkyMission" : "ミッションクリア", height * 0.4f, 48 * scale);
 		centered(m_screen == Screen::Title ? "Enter / A / × でスタート" : "Enter / A / × でタイトルに戻る",
 			height * 0.56f, 26 * scale);
 	}
@@ -311,11 +377,13 @@ namespace Game {
 		if (m_captureMode == 1) {
 			for (const auto& object : m_scene->GetObjects()) {
 				if (std::find(m_captureShipModels.begin(), m_captureShipModels.end(), object.model) ==
-					m_captureShipModels.end()) continue;
+					m_captureShipModels.end())
+					continue;
 
 				const auto id = m_captureScene.AddObject(object.model, object.worldTransform);
 
-				if (auto* copy = m_captureScene.FindObject(id)) copy->nodeRotationRadians = object.nodeRotationRadians;
+				if (auto* copy = m_captureScene.FindObject(id))
+					copy->nodeRotationRadians = object.nodeRotationRadians;
 			}
 		}
 		return m_captureScene;

@@ -13,6 +13,7 @@ namespace Engine {
 		GamepadInput& operator=(const GamepadInput&) = delete;
 
 		GamepadSnapshot ConsumeFrame();
+		void SetRumble(float lowFrequency, float highFrequency);
 		void Reset();
 
 	  private:
@@ -22,5 +23,6 @@ namespace Engine {
 		Microsoft::WRL::ComPtr<IGameInputReading> m_previous;
 		unsigned m_buttons = 0;
 		std::optional<std::uint64_t> m_northPressedAt;
+		GameInputRumbleParams m_rumble{};
 	};
 } // namespace Engine
