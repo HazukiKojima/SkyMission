@@ -5,6 +5,9 @@
 
 namespace Engine {
 	namespace {
+		constexpr unsigned kNorthButtonMask = 1u << static_cast<unsigned>(GamepadButton::North);
+		constexpr std::uint64_t kLongPressMicroseconds = 300'000;
+
 		float ApplyDeadZone(float value, float deadZone) {
 			const float magnitude = std::clamp((std::abs(value) - deadZone) / (1.0f - deadZone), 0.0f, 1.0f);
 			return std::copysign(magnitude, value);
@@ -52,6 +55,7 @@ namespace Engine {
 		m_previous.Reset();
 		m_device.Reset();
 		m_buttons = 0;
+		m_northPressedAt.reset();
 	}
 
 	GamepadSnapshot GamepadInput::ConsumeFrame() {
@@ -79,10 +83,16 @@ namespace Engine {
 			// 接続・フォーカス復帰時に、すでに保持しているボタンを新規押下として扱わない。
 			latest->GetDevice(m_device.GetAddressOf());
 		} else if (m_previous.Get() != latest.Get()) {
-			const auto addPresses = [&](unsigned buttons) {
+			const auto addPresses = [&](unsigned buttons, std::uint64_t timestamp) {
 				const unsigned pressed = buttons & ~m_buttons;
 				for (unsigned i = 0; i < frame.presses.size(); ++i)
 					if (pressed & (1u << i)) ++frame.presses[i];
+				if (pressed & kNorthButtonMask) {
+					m_northPressedAt = timestamp;
+				} else if (!(buttons & kNorthButtonMask) && m_northPressedAt) {
+					frame.northTapped |= timestamp - *m_northPressedAt < kLongPressMicroseconds;
+					m_northPressedAt.reset();
+				}
 				m_buttons = buttons;
 			};
 
@@ -94,11 +104,14 @@ namespace Engine {
 					next.Get() == latest.Get() || next->GetTimestamp() > latest->GetTimestamp())
 					break;
 				GameInputGamepadState intermediate{};
-				if (next->GetGamepadState(&intermediate)) addPresses(MapButtons(intermediate.buttons));
+				if (next->GetGamepadState(&intermediate))
+					addPresses(MapButtons(intermediate.buttons), next->GetTimestamp());
 				m_previous = std::move(next);
 			}
-			addPresses(frame.buttons);
+			addPresses(frame.buttons, latest->GetTimestamp());
 		}
+		frame.northHeld = m_northPressedAt &&
+			m_input->GetCurrentTimestamp() - *m_northPressedAt >= kLongPressMicroseconds;
 		const auto* info = m_device ? m_device->GetDeviceInfo() : nullptr;
 		frame.isDualShock4 = info && info->vendorId == 0x054c &&
 			(info->productId == 0x05c4 || info->productId == 0x09cc);

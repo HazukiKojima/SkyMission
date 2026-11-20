@@ -14,6 +14,8 @@ namespace Engine {
 		unsigned buttons = 0;
 		std::array<std::uint16_t, static_cast<unsigned>(GamepadButton::Count)> presses{};
 		bool isDualShock4 = false;
+		bool northTapped = false;
+		bool northHeld = false;
 
 		bool IsDown(GamepadButton button) const {
 			return (buttons & (1u << static_cast<unsigned>(button))) != 0;
@@ -52,8 +54,8 @@ namespace Engine {
 		}
 
 		bool IsTargetLookDown() const {
-			const auto button = gamepad.isDualShock4 ? GamepadButton::North : GamepadButton::East;
-			return IsKeyDown('Z') || (active && gamepad.IsDown(button));
+			const bool padLook = gamepad.isDualShock4 ? gamepad.northHeld : gamepad.IsDown(GamepadButton::East);
+			return IsKeyDown('Z') || (active && padLook);
 		}
 
 		bool IsKeyDown(UINT key) const {

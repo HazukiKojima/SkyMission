@@ -1,6 +1,7 @@
 #pragma once
 #include "RawInputState.h"
 #include <GameInput.h>
+#include <optional>
 #include <wrl/client.h>
 
 namespace Engine {
@@ -20,5 +21,6 @@ namespace Engine {
 		Microsoft::WRL::ComPtr<IGameInputDevice> m_device;
 		Microsoft::WRL::ComPtr<IGameInputReading> m_previous;
 		unsigned m_buttons = 0;
+		std::optional<std::uint64_t> m_northPressedAt;
 	};
 } // namespace Engine
