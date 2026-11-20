@@ -4,7 +4,6 @@
 #include "Game/Scene/FlightSceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
-#include <cmath>
 #include <filesystem>
 #include <format>
 #include <future>
@@ -116,7 +115,7 @@ namespace Game {
 				return m_renderer->GetModel(id);
 			},
 			m_window->GetWidth(), m_window->GetHeight(), m_renderer->GetOceanSize()));
-		m_playerMaximumSpeed = assets.playerAircraft.flightParameters.maximumSpeed;
+		m_combatRumble.Configure(assets.rumble, assets.playerAircraft.flightParameters.maximumSpeed);
 		m_scene->ConfigureCinematics(
 			assets.cinematics,
 			[this, enemyScale = assets.enemyAircraft.visualScale,
@@ -257,8 +256,9 @@ namespace Game {
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
 				combatState.result == CombatResult::Victory;
-			UpdateGamepadRumble(deltaSeconds, input.active && !showClearScreen, flight, combatState,
+			const auto rumble = m_combatRumble.Update(deltaSeconds, input.active && !showClearScreen, flight, combatState,
 				combatState.playerHealth < previousHealth);
+			m_window->SetGamepadRumble(rumble.lowFrequency, rumble.highFrequency);
 
 			if (showClearScreen) {
 				m_screen = Screen::Clear;
@@ -286,67 +286,6 @@ namespace Game {
 				m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud);
 			}
 		}
-	}
-
-	void Application::UpdateGamepadRumble(float deltaSeconds, bool active, const AircraftInput& flight,
-		const CombatSnapshot& combat, bool playerTookDamage) {
-		if (!active || combat.audio.restarted) {
-			m_gunRumbleSeconds = m_missileRumbleSeconds = m_damageRumbleSeconds = 0;
-			m_gunRumblePhaseSeconds = 0;
-			m_gunRumblePlayed = false;
-			m_killRumbleSeconds = 0;
-			m_carrierRumbleSeconds = 0;
-			m_accelerationRumble = m_brakingRumble = 0;
-			m_window->SetGamepadRumble(0, 0);
-			return;
-		}
-
-		m_gunRumbleSeconds = std::max(0.0f, m_gunRumbleSeconds - deltaSeconds);
-		if (combat.firedVolleys && !m_gunRumblePlayed) {
-			m_gunRumbleSeconds = 0.14f;
-			m_gunRumblePlayed = true;
-		}
-		if (!combat.audio.gunFiring) m_gunRumblePlayed = false;
-		m_missileRumbleSeconds =
-			combat.audio.missileLaunches ? 0.19f : std::max(0.0f, m_missileRumbleSeconds - deltaSeconds);
-		m_damageRumbleSeconds =
-			playerTookDamage ? 0.24f : std::max(0.0f, m_damageRumbleSeconds - deltaSeconds);
-		m_killRumbleSeconds =
-			combat.enemyAircraftDestroyed ? 0.12f : std::max(0.0f, m_killRumbleSeconds - deltaSeconds);
-		constexpr float carrierRumbleDuration = 0.65f;
-		m_carrierRumbleSeconds = combat.audio.shipExplosions ? carrierRumbleDuration :
-			std::max(0.0f, m_carrierRumbleSeconds - deltaSeconds);
-		const float carrierRumble = m_carrierRumbleSeconds / carrierRumbleDuration;
-
-		const bool flying = combat.audio.flying && combat.result == CombatResult::Active && !combat.cinematic.active;
-		const bool highG = flying && flight.highGTurn &&
-			std::max(std::abs(flight.turn), std::abs(flight.yaw)) > 0.05f;
-		const float acceleration = std::max(0.0f, flight.throttle);
-		const float braking = std::max(0.0f, -flight.throttle);
-		const float speedRatio = std::clamp(combat.playerSpeedMetersPerSecond / m_playerMaximumSpeed, 0.0f, 1.0f);
-		// 加速の低い振動はゆっくり立ち上げ、減速時は速度に応じた細かい振動を返す。
-		m_accelerationRumble = flying ?
-			std::lerp(m_accelerationRumble, acceleration, 1.0f - std::exp(-8.0f * deltaSeconds)) : 0.0f;
-		m_brakingRumble = flying ?
-			std::lerp(m_brakingRumble, braking * speedRatio, 1.0f - std::exp(-16.0f * deltaSeconds)) : 0.0f;
-		const float engineRumble = m_accelerationRumble > 0.01f ? 0.16f * m_accelerationRumble : 0.0f;
-		const float airflowRumble = m_brakingRumble > 0.01f ? 0.18f * m_brakingRumble : 0.0f;
-		const bool gunStartPulse = m_gunRumbleSeconds > 0;
-		constexpr float gunRumbleInterval = 0.10f;
-		constexpr float gunRumblePulse = 0.02f;
-		const bool repeatGunRumble = m_gunRumblePlayed && !gunStartPulse;
-		m_gunRumblePhaseSeconds = repeatGunRumble ?
-			std::fmod(m_gunRumblePhaseSeconds + deltaSeconds, gunRumbleInterval) : 0.0f;
-		const bool gunRepeatPulse = repeatGunRumble && m_gunRumblePhaseSeconds >= gunRumbleInterval - gunRumblePulse;
-		const float gunLow = gunStartPulse ? 0.60f : (gunRepeatPulse ? 0.002f : 0.0f);
-		const float gunHigh = gunStartPulse ? 0.45f : (gunRepeatPulse ? 0.0043f : 0.0f);
-		const float low = std::max({gunLow, engineRumble, 0.95f * carrierRumble, highG ? 0.22f : 0.0f,
-			m_missileRumbleSeconds > 0 ? 0.55f : 0.0f,
-			m_damageRumbleSeconds > 0 ? 0.80f : 0.0f, m_killRumbleSeconds > 0 ? 0.72f : 0.0f});
-		const float high =
-			std::max({gunHigh, airflowRumble, 0.55f * carrierRumble * carrierRumble, m_missileRumbleSeconds > 0 ? 0.35f : 0.0f,
-				m_damageRumbleSeconds > 0 ? 0.45f : 0.0f, m_killRumbleSeconds > 0 ? 0.90f : 0.0f});
-		m_window->SetGamepadRumble(low, high);
 	}
 
 	void Application::BuildMenuHud() {

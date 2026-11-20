@@ -730,9 +730,12 @@
     <ClInclude Include="Tests\GameplaySettingsTests.h"><Filter>Tests</Filter></ClInclude>
     <ClInclude Include="Game\Settings\SettingsReader.h"><Filter>Game\Settings</Filter></ClInclude>
     <ClInclude Include="Game\Settings\GameplaySettings.h"><Filter>Game\Settings</Filter></ClInclude>
+    <ClInclude Include="Game\Settings\RumbleSettings.h"><Filter>Game\Settings</Filter></ClInclude>
+    <ClInclude Include="Game\Combat\CombatRumble.h"><Filter>Game\Combat</Filter></ClInclude>
     <ClInclude Include="Game\Settings\UiTextSettings.h"><Filter>Game\Settings</Filter></ClInclude>
     <None Include="Assets\Camera\aircraftCamera.json"><Filter>Assets\Camera</Filter></None>
     <None Include="Assets\Effects\combatEffects.json"><Filter>Assets\Effects</Filter></None>
+    <None Include="Assets\Combat\rumble.json"><Filter>Assets\Combat</Filter></None>
     <None Include="Assets\Combat\enemyWeapon.json"><Filter>Assets\Combat</Filter></None>
     <None Include="Assets\Sound\audio.json"><Filter>Assets\Sound</Filter></None>
     <None Include="Assets\UI\labels.json"><Filter>Assets\UI</Filter></None>
@@ -749,6 +752,8 @@
     <ClCompile Include="Game\Combat\EnemyRadio.cpp"><Filter>Game\Combat</Filter></ClCompile>
     <ClCompile Include="Game\Combat\MissionState.cpp"><Filter>Game\Combat</Filter></ClCompile>
     <ClCompile Include="Game\Settings\GameplaySettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
+    <ClCompile Include="Game\Settings\RumbleSettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\CombatRumble.cpp"><Filter>Game\Combat</Filter></ClCompile>
     <ClCompile Include="Game\Settings\SettingsReader.cpp"><Filter>Game\Settings</Filter></ClCompile>
     <ClCompile Include="Game\Settings\UiTextSettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
     <ClCompile Include="Game\Effects\CombatEffectSettings.cpp"><Filter>Game\Effects</Filter></ClCompile>

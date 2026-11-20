@@ -1,5 +1,6 @@
 #pragma once
 #include "Game/Settings/GameplaySettings.h"
+#include "Game/Settings/RumbleSettings.h"
 #include "Game/Settings/UiTextSettings.h"
 #include "Game/UI/RadarMapPresenter.h"
 
@@ -51,6 +52,22 @@ void TestGameplaySettings(const fs::path& repository, const fs::path& fixture) {
 	rejects(R"({"flightVolume":1.5})", [&] {
 		AudioSettings{}.Load(reader, file);
 	});
+	const auto rumbleDefaults = LoadRumbleSettings(reader, fixture / L"missing-rumble.json");
+	Require(rumbleDefaults.gunStart.durationSeconds == 0.14f &&
+			rumbleDefaults.gunRepeatIntervalSeconds == 0.10f,
+		"Missing rumble settings lost defaults");
+	write(R"({"gun":{"start":{"lowFrequency":0.25}},"carrierDestroyed":{"durationSeconds":0}})");
+	const auto rumble = LoadRumbleSettings(reader, file);
+	Require(rumble.gunStart.motors.lowFrequency == 0.25f && rumble.gunStart.motors.highFrequency == 0.45f &&
+			rumble.carrierDestroyed.durationSeconds == 0.0f,
+		"Partial rumble settings lost defaults or ignored zero duration");
+	rejects(R"({"playerHit":{"highFrequency":1.1}})", [&] { LoadRumbleSettings(reader, file); });
+	rejects(R"({"gun":{"repeat":{"intervalSeconds":0}}})", [&] { LoadRumbleSettings(reader, file); });
+	rejects(R"({"gun":{"repeat":{"durationSeconds":0.2}}})", [&] { LoadRumbleSettings(reader, file); });
+	const auto shippedRumble = LoadRumbleSettings(reader, repository / L"Assets/Combat/rumble.json");
+	Require(shippedRumble.gunRepeat.motors.highFrequency == rumbleDefaults.gunRepeat.motors.highFrequency &&
+			shippedRumble.carrierDestroyed.durationSeconds == rumbleDefaults.carrierDestroyed.durationSeconds,
+		"Shipped rumble settings diverged from defaults");
 	rejects(R"({"passLegsMeters":[1,2]})", [&] {
 		EnemyAITuning{}.Load(reader, file);
 	});

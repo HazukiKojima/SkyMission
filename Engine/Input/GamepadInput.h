@@ -24,5 +24,6 @@ namespace Engine {
 		unsigned m_buttons = 0;
 		std::optional<std::uint64_t> m_northPressedAt;
 		GameInputRumbleParams m_rumble{};
+		ULONGLONG m_lastRumbleUpdate = 0;
 	};
 } // namespace Engine
