@@ -1,0 +1,49 @@
+{
+  "gun": {
+    "start": {
+      "lowFrequency": 0.60,
+      "highFrequency": 0.45,
+      "durationSeconds": 0.14
+    },
+    "repeat": {
+      "lowFrequency": 0.002,
+      "highFrequency": 0.0043,
+      "durationSeconds": 0.02,
+      "intervalSeconds": 0.10
+    }
+  },
+  "missileLaunch": {
+    "lowFrequency": 0.55,
+    "highFrequency": 0.35,
+    "durationSeconds": 0.19
+  },
+  "playerHit": {
+    "lowFrequency": 0.80,
+    "highFrequency": 0.45,
+    "durationSeconds": 0.24
+  },
+  "enemyDestroyed": {
+    "lowFrequency": 0.72,
+    "highFrequency": 0.90,
+    "durationSeconds": 0.12
+  },
+  "carrierDestroyed": {
+    "lowFrequency": 0.95,
+    "highFrequency": 0.55,
+    "durationSeconds": 0.65
+  },
+  "highG": {
+    "lowFrequency": 0.22,
+    "highFrequency": 0.0
+  },
+  "acceleration": {
+    "lowFrequency": 0.16,
+    "highFrequency": 0.0,
+    "responsePerSecond": 8.0
+  },
+  "braking": {
+    "lowFrequency": 0.0,
+    "highFrequency": 0.18,
+    "responsePerSecond": 16.0
+  }
+}

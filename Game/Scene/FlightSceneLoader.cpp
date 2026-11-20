@@ -454,6 +454,7 @@ namespace Game {
 			.enemyGunTuning = enemyGun,
 			.enemyAITuning = enemyAI,
 			.effects = effects,
+			.rumble = LoadRumbleSettings(reader, assetsRoot / L"Combat/rumble.json"),
 			.ui = ui,
 			.text = text,
 			.environment = LoadEnvironment(paths, reader, parameters),

@@ -1,6 +1,7 @@
 #pragma once
 #include "Game/Settings/UiTextSettings.h"
 #include "Game/Settings/GameplaySettings.h"
+#include "Game/Settings/RumbleSettings.h"
 #include "Game/Effects/CombatEffectSettings.h"
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Engine/Renderer/RendererDefinition.h"
@@ -49,6 +50,7 @@ namespace Game {
 		EnemyGunTuning enemyGunTuning;
 		EnemyAITuning enemyAITuning;
 		EffectSettings effects;
+		RumbleSettings rumble;
 		UiTuning ui;
 		UiTextSettings text;
 		Engine::RenderEnvironmentDefinition environment;

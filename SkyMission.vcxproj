@@ -617,9 +617,12 @@
     <ClInclude Include="Tests\GameplaySettingsTests.h" />
     <ClInclude Include="Game\Settings\SettingsReader.h" />
     <ClInclude Include="Game\Settings\GameplaySettings.h" />
+    <ClInclude Include="Game\Settings\RumbleSettings.h" />
+    <ClInclude Include="Game\Combat\CombatRumble.h" />
     <ClInclude Include="Game\Settings\UiTextSettings.h" />
     <None Include="Assets\Camera\aircraftCamera.json" />
     <None Include="Assets\Effects\combatEffects.json" />
+    <None Include="Assets\Combat\rumble.json" />
     <None Include="Assets\Combat\enemyWeapon.json" />
     <None Include="Assets\Sound\audio.json" />
     <None Include="Assets\UI\labels.json" />
@@ -636,6 +639,8 @@
     <ClCompile Include="Game\Combat\EnemyRadio.cpp" />
     <ClCompile Include="Game\Combat\MissionState.cpp" />
     <ClCompile Include="Game\Settings\GameplaySettings.cpp" />
+    <ClCompile Include="Game\Settings\RumbleSettings.cpp" />
+    <ClCompile Include="Game\Combat\CombatRumble.cpp" />
     <ClCompile Include="Game\Settings\SettingsReader.cpp" />
     <ClCompile Include="Game\Settings\UiTextSettings.cpp" />
     <ClCompile Include="Game\Effects\CombatEffectSettings.cpp" />
