@@ -192,10 +192,14 @@ namespace Engine::ModelProcessing {
 		const ModelNormalization normalization{
 			boundsMin, boundsMax, options.normalizedExtent / extent, options.groundOffset, options.origin};
 		CollectNodePositions(*scene.mRootNode, aiMatrix4x4(), normalization, positions);
+		// 奇数枚のプロペラは境界の中心と回転軸の中心が一致しないため、補助ノードを優先する
+		const auto pivot = positions.find(options.rotatingNodeName + "Pivot");
 		std::vector<MeshGeometry> geometries;
 		for (const auto& instance : meshInstances) {
 			auto geometry = BuildMeshGeometry(instance, normalization);
 
+			if (geometry.isRotatingNode && pivot != positions.end() && pivot->second.size() == 1)
+				geometry.nodeRotationPivot = pivot->second.front();
 			if (!geometry.indices.empty()) geometries.push_back(std::move(geometry));
 		}
 

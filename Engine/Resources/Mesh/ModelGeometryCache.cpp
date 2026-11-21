@@ -18,7 +18,7 @@
 namespace Engine::ModelProcessing {
 	namespace {
 		// 読み込み、形状、LODの処理を変えたときに更新する
-		constexpr uint64_t Magic = 0x534d47454f4d3032ULL;
+		constexpr uint64_t Magic = 0x534d47454f4d3033ULL;
 
 		std::filesystem::path CachePath(
 			const std::filesystem::path& source, const ModelLoadOptions& options) {
