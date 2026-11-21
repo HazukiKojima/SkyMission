@@ -21,11 +21,10 @@ namespace Engine {
 				return (buttons & mask) ? 1u << static_cast<unsigned>(button) : 0u;
 			};
 			return bit(GamepadButton::South, GameInputGamepadA) |
-				bit(GamepadButton::West, GameInputGamepadX) | bit(GamepadButton::North, GameInputGamepadY) |
+				bit(GamepadButton::North, GameInputGamepadY) |
 				bit(GamepadButton::East, GameInputGamepadB) |
 				bit(GamepadButton::LeftShoulder, GameInputGamepadLeftShoulder) |
 				bit(GamepadButton::RightShoulder, GameInputGamepadRightShoulder) |
-				bit(GamepadButton::RightStick, GameInputGamepadRightThumbstick) |
 				bit(GamepadButton::Menu, GameInputGamepadMenu);
 		}
 
@@ -169,9 +168,6 @@ namespace Engine {
 		}
 		frame.northHeld =
 			m_northPressedAt && m_input->GetCurrentTimestamp() - *m_northPressedAt >= kLongPressMicroseconds;
-		const auto* info = m_device ? m_device->GetDeviceInfo() : nullptr;
-		frame.isDualShock4 =
-			info && info->vendorId == 0x054c && (info->productId == 0x05c4 || info->productId == 0x09cc);
 		m_buttons = frame.buttons;
 		m_previous = std::move(latest);
 		return frame;
