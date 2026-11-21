@@ -1,14 +1,14 @@
 #pragma once
 #include "Engine/Renderer/RendererDefinition.h"
-#include <array>
+#include <vector>
 #include <cmath>
 #include <stdexcept>
 #include <unordered_set>
 
 namespace Game {
-	// 4門共通の発射設定。時間は秒、muzzleSpeedはワールド単位/秒
+	// 各銃口で共有する発射設定。時間は秒、muzzleSpeedはワールド単位/秒
 	struct GunSettings {
-		std::array<std::string, 4> muzzleNames;
+		std::vector<std::string> muzzleNames;
 		float fireInterval = 0.1f;
 		float muzzleSpeed = 900.0f;
 		float lifetime = 3.0f;

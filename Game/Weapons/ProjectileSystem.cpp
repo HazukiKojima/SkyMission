@@ -190,7 +190,10 @@ namespace Game {
 	}
 
 	bool ProjectileSystem::FireVolley(Engine::Scene& scene, const GunVolley& volley) {
-		if (!m_model || m_settings.maxProjectiles - m_projectiles.size() < 4) return false;
+		const auto muzzleCount = volley.muzzles.size();
+		if (!m_model || muzzleCount != m_settings.muzzleNames.size() ||
+			m_settings.maxProjectiles - m_projectiles.size() < muzzleCount)
+			return false;
 
 		// 各銃口の弾に使う機体姿勢を取り出す
 		auto aircraftRotation = XMLoadFloat4x4(&volley.aircraftPose);
@@ -217,7 +220,7 @@ namespace Game {
 			projectile.damage = volley.damage;
 			projectile.birthPosition = projectile.position;
 
-			// L1・R2とL2・R1を交互に光らせ、4門が同時に消える周期を作らない
+			// 2門なら左右、4門ならL1・R2とL2・R1を交互に光らせる
 			const unsigned phase = muzzleIndex == 0 || muzzleIndex == 3 ? 0u : 1u;
 			projectile.isTracer = (m_volleySequence + phase) % 2 == 0;
 			m_shotEvents.push_back({muzzleIndex, projectile.position, volley.aircraftVelocity, direction,

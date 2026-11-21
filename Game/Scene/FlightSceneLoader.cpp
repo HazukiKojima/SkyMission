@@ -87,10 +87,16 @@ namespace Game {
 			WeaponDefinition definition;
 			definition.sourcePath = weaponPath;
 			try {
-				const char* muzzleKeys[] = {"muzzleL1", "muzzleL2", "muzzleR1", "muzzleR2"};
+				const auto leftOuter = reader.TryResolveString(weaponPath, "muzzleL2");
+				const auto rightOuter = reader.TryResolveString(weaponPath, "muzzleR2");
+				if (leftOuter.has_value() != rightOuter.has_value())
+					throw std::invalid_argument("muzzleL2 and muzzleR2 must be specified together");
 
-				for (size_t i = 0; i < 4; ++i)
-					definition.gun.muzzleNames[i] = reader.ResolveString(weaponPath, muzzleKeys[i]);
+				auto& names = definition.gun.muzzleNames;
+				names.push_back(reader.ResolveString(weaponPath, "muzzleL1"));
+				if (leftOuter) names.push_back(*leftOuter);
+				names.push_back(reader.ResolveString(weaponPath, "muzzleR1"));
+				if (rightOuter) names.push_back(*rightOuter);
 				definition.gun.fireInterval = reader.ResolveFloat(weaponPath, "fireInterval");
 				definition.gun.muzzleSpeed = reader.ResolveFloat(weaponPath, "muzzleSpeed");
 				definition.gun.lifetime = reader.ResolveFloat(weaponPath, "lifetime");

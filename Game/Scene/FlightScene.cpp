@@ -319,7 +319,7 @@ namespace Game {
 		// 閃光だけを現在の銃口に追従させ、放出した煙と実弾は独立して動かす
 		std::array<DirectX::XMFLOAT3, 4> positions{};
 
-		for (size_t index = 0; index < positions.size(); ++index) {
+		for (size_t index = 0; index < m_gun.GetMuzzles().size(); ++index) {
 			DirectX::XMStoreFloat3(&positions[index],
 				DirectX::XMVector3TransformCoord(DirectX::XMLoadFloat3(&m_gun.GetMuzzles()[index]),
 					DirectX::XMLoadFloat4x4(&aircraft->worldTransform)));
@@ -557,7 +557,7 @@ namespace Game {
 				.heading = enemy.flightModel.GetHeading()});
 		}
 
-		// 4門の平均位置を照準と捕捉の基準点にする
+		// 銃口の平均位置を照準と捕捉の基準点にする
 		geometry.forward = m_player.GetForward();
 		geometry.muzzle = m_player.GetPosition();
 
@@ -565,8 +565,9 @@ namespace Game {
 			XMVECTOR center = XMVectorZero();
 
 			for (const auto& muzzle : m_gun.GetMuzzles()) {
-				center += XMLoadFloat3(&muzzle) * 0.25f;
+				center += XMLoadFloat3(&muzzle);
 			}
+			center /= static_cast<float>(m_gun.GetMuzzles().size());
 
 			const auto pose = m_player.GetWorldTransform();
 			XMStoreFloat3(&geometry.muzzle,
