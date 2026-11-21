@@ -20,13 +20,11 @@ namespace Game {
 		CombatInput ReadInput(const Engine::InputSnapshot& input) const {
 			using Engine::GamepadButton;
 			const auto& pad = input.gamepad;
-			const auto missileButton = pad.isDualShock4 ? GamepadButton::East : GamepadButton::North;
-			const auto skipButton = pad.isDualShock4 ? GamepadButton::Menu : GamepadButton::South;
-			const bool padNextTarget = pad.isDualShock4 ? pad.northTapped : pad.PressCount(GamepadButton::RightStick) != 0;
 			return {.weapon = WeaponController{}.ReadInput(input),
-				.nextTarget = input.WasKeyPressed(VK_TAB) || (input.active && padNextTarget),
-				.missilePressCount = input.active ? input.rightMousePressCount + pad.PressCount(missileButton) : 0u,
-				.skipOpening = input.WasKeyPressed(VK_RETURN) || (input.active && pad.PressCount(skipButton))};
+				.nextTarget = input.WasKeyPressed(VK_TAB) || (input.active && pad.northTapped),
+				.missilePressCount =
+					input.active ? input.rightMousePressCount + pad.PressCount(GamepadButton::East) : 0u,
+				.skipOpening = input.WasKeyPressed(VK_RETURN) || (input.active && pad.PressCount(GamepadButton::Menu))};
 		}
 	};
 } // namespace Game

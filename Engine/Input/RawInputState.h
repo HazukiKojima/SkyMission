@@ -6,14 +6,13 @@
 #include <unordered_map>
 
 namespace Engine {
-	enum class GamepadButton : unsigned { South, West, North, East, LeftShoulder, RightShoulder, RightStick, Menu, Count };
+	enum class GamepadButton : unsigned { South, North, East, LeftShoulder, RightShoulder, Menu, Count };
 
 	struct GamepadSnapshot {
 		float leftX = 0, leftY = 0, rightX = 0, rightY = 0;
 		float leftTrigger = 0, rightTrigger = 0;
 		unsigned buttons = 0;
 		std::array<std::uint16_t, static_cast<unsigned>(GamepadButton::Count)> presses{};
-		bool isDualShock4 = false;
 		bool northTapped = false;
 		bool northHeld = false;
 
@@ -54,8 +53,7 @@ namespace Engine {
 		}
 
 		bool IsTargetLookDown() const {
-			const bool padLook = gamepad.isDualShock4 ? gamepad.northHeld : gamepad.IsDown(GamepadButton::East);
-			return IsKeyDown('Z') || (active && padLook);
+			return IsKeyDown('Z') || (active && gamepad.northHeld);
 		}
 
 		bool IsKeyDown(UINT key) const {
