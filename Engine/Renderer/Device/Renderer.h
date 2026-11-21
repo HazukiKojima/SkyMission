@@ -11,6 +11,7 @@
 #include "RendererPasses.h"
 #include "GpuFrameProfiler.h"
 #include "Engine/Renderer/Hud/HudRenderer.h"
+#include <functional>
 
 namespace Engine {
 	class Scene;
@@ -22,7 +23,9 @@ namespace Engine {
 		~Renderer() noexcept;
 
 		// 初期化・設定
-		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets);
+		using LoadProgressCallback = std::function<void(size_t, size_t, std::wstring_view)>;
+		void Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets,
+			const LoadProgressCallback& reportProgress = {});
 		void InitializeConstantBuffers(const Scene& scene);
 		void ReserveModelCapacity(size_t objectCount);
 

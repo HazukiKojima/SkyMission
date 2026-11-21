@@ -7,14 +7,19 @@
 #include "../RendererDefinition.h"
 #include <unordered_map>
 #include <string_view>
+#include <functional>
 
 namespace Engine {
 	class RendererAssets {
 	  public:
+		static constexpr size_t EnvironmentTextureCount = 4;
+		using LoadItemCallback = std::function<void(std::wstring_view)>;
+
 		void InitializeSkySphere(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius);
 
 		// 記録中のコマンドリストを受け取り、バッチごとに転送とGPU待機を行う
-		void Load(RenderDevice* device, CommandContext* context, const RendererDefinition& assets);
+		void Load(RenderDevice* device, CommandContext* context, const RendererDefinition& assets,
+			const LoadItemCallback& reportItem = {});
 		void ReleaseUploadResources();
 
 		SkySphere* GetSkySphere() const {
