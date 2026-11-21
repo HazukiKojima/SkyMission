@@ -17,6 +17,35 @@ namespace Game {
 				DirectX::XMMatrixScaling(scale, scale, scale) * DirectX::XMLoadFloat4x4(&transform));
 			object.nodeRotationRadians = angle;
 		}
+
+		void EmitWingtipVapor(CombatEffectSystem& effects, const Engine::SceneObject& object,
+			const DirectX::XMFLOAT4X4& previous, const AircraftFlightModel& aircraft, float scale,
+			float dt, float visibility = 1.0f) {
+			using namespace DirectX;
+			const auto current = aircraft.GetWorldTransform();
+			// 機首方向の変化で急旋回と引き起こしを拾い、軸回りのロールは除く
+			const float turnRate = XMVectorGetX(XMVector3Length(XMVectorSet(
+				current._31 - previous._31, current._32 - previous._32, current._33 - previous._33, 0))) / dt;
+			const float strength = std::clamp((turnRate - 0.30f) / 0.40f, 0.0f, 1.0f) * visibility;
+			if (strength <= 0 || !object.model) return;
+
+			const auto bounds = object.model->GetLocalBounds();
+			if (!bounds) return;
+
+			const auto center = bounds->Center();
+			const auto left = object.model->FindNodePosition("Wingtip_L").value_or(
+				XMFLOAT3{center.x + (bounds->maximum.x - center.x) * 0.97f, center.y, center.z});
+			const auto right = object.model->FindNodePosition("Wingtip_R").value_or(
+				XMFLOAT3{center.x + (bounds->minimum.x - center.x) * 0.97f, center.y, center.z});
+			for (const auto& localTip : {left, right}) {
+				const auto tip = XMLoadFloat3(&localTip) * scale;
+				WingtipVaporSegment segment;
+				XMStoreFloat3(&segment.head, XMVector3TransformCoord(tip, XMLoadFloat4x4(&current)));
+				XMStoreFloat3(&segment.tail, XMVector3TransformCoord(tip, XMLoadFloat4x4(&previous)));
+				segment.strength = strength;
+				effects.SpawnWingtipVapor(segment);
+			}
+		}
 	} // namespace
 	FlightScene FlightScene::CreateMission(const FlightSceneDefinition& assets,
 		const std::function<std::shared_ptr<Engine::Model>(const std::string&)>& resolveModel, UINT width,
@@ -131,6 +160,7 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0) return;
 
 		dt = std::min(dt, 0.25f);
+		m_effects.UpdateWingtipVapor(dt);
 
 		if (!m_initialState) {
 			SaveInitialState();
@@ -175,7 +205,10 @@ namespace Game {
 		m_effects.Update(dt);
 
 		// 更新後の機体位置・姿勢をカメラと描画状態へ反映する
+		const auto previousPlayerPose = m_player.GetWorldTransform();
 		UpdatePlayer(input, dt);
+		if (const auto* player = m_scene.FindObject(m_playerId))
+			EmitWingtipVapor(m_effects, *player, previousPlayerPose, m_player, m_playerVisualScale, dt);
 		UpdateEnemies(dt);
 		ApplyRenderStates();
 		UpdateWeapons(combatInput, dt);
@@ -286,7 +319,7 @@ namespace Game {
 		// 閃光だけを現在の銃口に追従させ、放出した煙と実弾は独立して動かす
 		std::array<DirectX::XMFLOAT3, 4> positions{};
 
-		for (size_t index = 0; index < positions.size(); ++index) {
+		for (size_t index = 0; index < m_gun.GetMuzzles().size(); ++index) {
 			DirectX::XMStoreFloat3(&positions[index],
 				DirectX::XMVector3TransformCoord(DirectX::XMLoadFloat3(&m_gun.GetMuzzles()[index]),
 					DirectX::XMLoadFloat4x4(&aircraft->worldTransform)));
@@ -324,7 +357,8 @@ namespace Game {
 
 	void FlightScene::UpdateEnemies(float dt) {
 		for (auto& enemy : m_enemies) {
-			if (!m_scene.FindObject(enemy.objectId)) continue;
+			const auto* object = m_scene.FindObject(enemy.objectId);
+			if (!object) continue;
 
 			const AircraftAITarget target{
 				m_player.GetPosition(), m_player.GetVelocity(), m_player.GetForward()};
@@ -360,7 +394,16 @@ namespace Game {
 
 			// 移動前の位置を保存して次の衝突判定に使う
 			enemy.previousPosition = enemy.flightModel.GetPosition();
+			const auto previousPose = enemy.flightModel.GetWorldTransform();
 			enemy.flightModel.Update(input, dt);
+			const auto playerPosition = m_player.GetPosition();
+			const auto enemyPosition = enemy.flightModel.GetPosition();
+			const float distance = DirectX::XMVectorGetX(DirectX::XMVector3Length(DirectX::XMVectorSubtract(
+				DirectX::XMLoadFloat3(&enemyPosition), DirectX::XMLoadFloat3(&playerPosition))));
+			const float visibility = std::clamp((1800.0f - distance) / 500.0f, 0.0f, 1.0f);
+			if (visibility > 0)
+				EmitWingtipVapor(m_effects, *object, previousPose, enemy.flightModel, enemy.visualScale, dt,
+					visibility);
 			enemy.propellerAngle =
 				m_enemyAnimation.AdvancePropeller(enemy.propellerAngle, enemy.flightModel.GetSpeed(), dt);
 		}
@@ -514,7 +557,7 @@ namespace Game {
 				.heading = enemy.flightModel.GetHeading()});
 		}
 
-		// 4門の平均位置を照準と捕捉の基準点にする
+		// 銃口の平均位置を照準と捕捉の基準点にする
 		geometry.forward = m_player.GetForward();
 		geometry.muzzle = m_player.GetPosition();
 
@@ -522,8 +565,9 @@ namespace Game {
 			XMVECTOR center = XMVectorZero();
 
 			for (const auto& muzzle : m_gun.GetMuzzles()) {
-				center += XMLoadFloat3(&muzzle) * 0.25f;
+				center += XMLoadFloat3(&muzzle);
 			}
+			center /= static_cast<float>(m_gun.GetMuzzles().size());
 
 			const auto pose = m_player.GetWorldTransform();
 			XMStoreFloat3(&geometry.muzzle,

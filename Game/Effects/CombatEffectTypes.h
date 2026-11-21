@@ -24,6 +24,14 @@ namespace Game {
 		float age = 0;
 	};
 
+	struct WingtipVaporSegment {
+		static constexpr float lifetimeSeconds = 1.0f;
+		static constexpr size_t maximumCount = 1024;
+		DirectX::XMFLOAT3 head{}, tail{};
+		float strength = 0;
+		float age = 0;
+	};
+
 	struct RocketExhaust {
 		DirectX::XMFLOAT3 position{}, direction{0, 0, -1};
 	};
@@ -53,5 +61,6 @@ namespace Game {
 		std::vector<ExplosionEffect> explosions;
 		std::vector<RocketTrailSample> rocketSmoke;
 		std::vector<RocketExhaust> rocketExhausts;
+		std::vector<WingtipVaporSegment> wingtipVapor;
 	};
 } // namespace Game

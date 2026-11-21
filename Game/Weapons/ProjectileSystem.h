@@ -7,7 +7,7 @@
 
 namespace Game {
 	struct GunVolley {
-		std::array<DirectX::XMFLOAT3, 4> muzzles{};
+		std::span<const DirectX::XMFLOAT3> muzzles;
 		DirectX::XMFLOAT4X4 aircraftWorld{};
 		DirectX::XMFLOAT4X4 aircraftPose{};
 		DirectX::XMFLOAT3 forward{0, 0, -1};

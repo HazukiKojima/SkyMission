@@ -966,7 +966,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 		// 並び順にかかわらず最初の接触で命中を確定する
 		GunSettings gun = definition.playerWeapon.gun;
 		gun.muzzleSpeed = 900;
-		std::array<XMFLOAT3, 4> muzzles{};
+		std::vector<XMFLOAT3> muzzles(gun.muzzleNames.size());
 		XMFLOAT4X4 world, pose;
 		XMStoreFloat4x4(&world, XMMatrixTranslation(0, 20, 0));
 		pose = world;
@@ -989,7 +989,7 @@ void TestCombatDamage(const fs::path& repository, const fs::path& fixture) {
 				.targets = boxes,
 				.frameSeconds = 0.25f});
 		const auto hits = bullets.TakeHits();
-		Require(hits.size() == 4 &&
+		Require(hits.size() == muzzles.size() &&
 				std::all_of(hits.begin(), hits.end(),
 					[](const HitEvent& hit) {
 						return hit.target == 1;

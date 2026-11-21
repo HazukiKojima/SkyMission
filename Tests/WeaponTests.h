@@ -112,6 +112,10 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 			definition.playerWeapon.ammunition.options.normalizedExtent ==
 				reader.ResolveFloat(config / L"Ammunition/20mmAmmo/modelImport.json", "normalizedExtent"),
 		"Weapon/ammunition JSON was not loaded");
+	Require(settings.muzzleNames == std::vector<std::string>{"GunMuzzle_L1", "GunMuzzle_R1"},
+		"Zero must have one gun per wing");
+	// 4門構成の既存アセットも引き続き検証する
+	settings.muzzleNames = {"GunMuzzle_L1", "GunMuzzle_L2", "GunMuzzle_R1", "GunMuzzle_R2"};
 	for (float invalid :
 		{0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()}) {
 		for (auto member : {&GunSettings::fireInterval, &GunSettings::muzzleSpeed, &GunSettings::lifetime}) {
@@ -274,6 +278,19 @@ void TestWeapons(const fs::path& repository, const fs::path& fixture) {
 		XMFLOAT4X4 world, pose;
 		XMStoreFloat4x4(&pose, XMMatrixTranslation(10, 100, 20));
 		XMStoreFloat4x4(&world, XMMatrixScaling(2, 2, 2) * XMLoadFloat4x4(&pose));
+		{
+			auto twoGunSettings = settings;
+			twoGunSettings.muzzleNames = {"GunMuzzle_L1", "GunMuzzle_R1"};
+			AircraftGun twoGun;
+			twoGun.Configure(twoGunSettings, *model);
+			ProjectileSystem twoProjectiles;
+			twoProjectiles.Configure(twoGunSettings, model, {0, 1, 0});
+			Scene twoGunScene;
+			Require(twoProjectiles.FireVolley(twoGunScene,
+						{.muzzles = twoGun.GetMuzzles(), .aircraftWorld = world, .aircraftPose = pose}) &&
+					twoProjectiles.GetCount() == 2 && twoProjectiles.TakeShotEvents().size() == 2,
+				"Two-gun volley did not create two projectiles and shot effects");
+		}
 		projectiles.FireVolley(scene,
 			{.muzzles = gun.GetMuzzles(),
 				.aircraftWorld = world,

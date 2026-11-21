@@ -35,6 +35,14 @@ namespace Game {
 		AdvanceEffects(m_snapshot.explosions, step, m_settings.explosion.lifetimeSeconds);
 	}
 
+	void CombatEffectSystem::UpdateWingtipVapor(float deltaSeconds) {
+		AdvanceEffects(m_snapshot.wingtipVapor, deltaSeconds, WingtipVaporSegment::lifetimeSeconds);
+	}
+
+	void CombatEffectSystem::SpawnWingtipVapor(const WingtipVaporSegment& segment) {
+		AddBoundedEffect(m_snapshot.wingtipVapor, segment, WingtipVaporSegment::maximumCount);
+	}
+
 	void CombatEffectSystem::SpawnGunShot(const GunShotEvent& shot) {
 		if (shot.muzzleIndex >= GunEffectSettings::maxFlashCount || !std::isfinite(shot.age) || shot.age < 0)
 			return;

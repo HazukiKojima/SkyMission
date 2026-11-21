@@ -36,5 +36,17 @@ namespace Game {
 
 			DrawImpact(impact, context);
 		}
+
+		for (const auto& vapor : snapshot.wingtipVapor) {
+			if (!context.HasVertexBudget(12)) break;
+			const auto segment = context.ProjectClippedSegment(vapor.head, vapor.tail);
+			if (!segment) continue;
+
+			const float remaining = 1.0f - vapor.age / WingtipVaporSegment::lifetimeSeconds;
+			const float opacity = vapor.strength * remaining * remaining;
+			const float width = (2.4f + (1.0f - remaining) * 1.6f) * context.GetScale();
+			context.DrawStreak(*segment, width, {0.85f, 0.92f, 1.0f, opacity * 0.18f},
+				width * 0.5f, {1.0f, 1.0f, 1.0f, opacity * 0.42f});
+		}
 	}
 } // namespace Game

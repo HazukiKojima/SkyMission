@@ -10,10 +10,13 @@ namespace Game {
 
 		if (settings.maxProjectiles < 4) throw std::invalid_argument("maxProjectiles must be at least 4");
 
+		if (settings.muzzleNames.size() != 2 && settings.muzzleNames.size() != 4)
+			throw std::invalid_argument("muzzleNames must contain two or four names");
+
 		std::unordered_set<std::string> names;
 
 		for (const auto& name : settings.muzzleNames)
 			if (name.empty() || !names.insert(name).second)
-				throw std::invalid_argument("muzzleNames must contain four unique nonempty names");
+				throw std::invalid_argument("muzzleNames must contain unique nonempty names");
 	}
 } // namespace Game
