@@ -7,9 +7,9 @@ namespace Game {
 		ValidateGunSettings(settings);
 
 		// 各銃口が一意の有効なノードか確認する
-		std::array<DirectX::XMFLOAT3, 4> muzzles{};
+		std::vector<DirectX::XMFLOAT3> muzzles(settings.muzzleNames.size());
 
-		for (size_t i = 0; i < m_muzzles.size(); ++i) {
+		for (size_t i = 0; i < muzzles.size(); ++i) {
 			if (model.CountNodes(settings.muzzleNames[i]) != 1)
 				throw std::invalid_argument(
 					"muzzleNames: expected exactly one node named '" + settings.muzzleNames[i] + "'");
@@ -21,7 +21,7 @@ namespace Game {
 		}
 
 		// 全銃口の検証後に設定を確定する
-		m_muzzles = muzzles;
+		m_muzzles = std::move(muzzles);
 		m_settings = settings;
 		m_cooldown = 0;
 	}
@@ -44,10 +44,10 @@ namespace Game {
 		// floatのフレーム時間の累積誤差で、境界直前に余分な一斉射を生成しない
 		const double epsilon = std::min(1e-7, interval * 1e-5);
 
-		if (m_cooldown < seconds - epsilon) {
+		if (m_cooldown < seconds - epsilon && !m_muzzles.empty()) {
 			const double count = std::ceil((seconds - m_cooldown - epsilon) / interval);
 			const auto generated =
-				static_cast<size_t>(std::min(count, static_cast<double>(m_settings.maxProjectiles / 4)));
+				static_cast<size_t>(std::min(count, static_cast<double>(m_settings.maxProjectiles / m_muzzles.size())));
 			ages.reserve(generated);
 
 			for (size_t i = 0; i < generated; ++i)
