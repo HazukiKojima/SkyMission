@@ -233,6 +233,19 @@ namespace Game {
 			const InputSnapshot input = m_window->ConsumeInput();
 			m_combatAudio.SetSuspended(!input.active);
 
+			const bool keyboardOrMouse = std::ranges::any_of(input.keys, std::identity{}) ||
+				std::ranges::any_of(input.pressedKeys, std::identity{}) || input.leftMouseDown ||
+				input.middleMouseDown || input.rightMouseDown || input.rightMousePressCount != 0;
+			const auto& pad = input.gamepad;
+			const bool gamepadInput = pad.buttons != 0 || pad.northTapped ||
+				std::ranges::any_of(pad.presses, std::identity{}) || pad.leftX != 0 || pad.leftY != 0 ||
+				pad.rightX != 0 || pad.rightY != 0 || pad.leftTrigger != 0 || pad.rightTrigger != 0;
+			// 入力がないフレームでも直前の操作方式を維持し、同時入力時はキーボード・マウスを優先する
+			if (!input.active || keyboardOrMouse)
+				m_usingGamepad = false;
+			else if (gamepadInput)
+				m_usingGamepad = true;
+
 			// タイトルとクリア画面ではEnterによる画面遷移だけを処理する
 			if (m_screen == Screen::Title || m_screen == Screen::Clear) {
 				if (input.WasConfirmPressed()) {
@@ -280,8 +293,8 @@ namespace Game {
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
 				combatState.result == CombatResult::Victory;
-			const auto rumble = m_combatRumble.Update(deltaSeconds, input.active && !showClearScreen, flight, combatState,
-				combatState.playerHealth < previousHealth);
+			const auto rumble = m_combatRumble.Update(deltaSeconds, m_usingGamepad && !showClearScreen,
+				flight, combatState, combatState.playerHealth < previousHealth);
 			m_window->SetGamepadRumble(rumble.lowFrequency, rumble.highFrequency);
 
 			if (showClearScreen) {

@@ -48,6 +48,7 @@ namespace Game {
 		CombatEffectPresenter m_effectPresenter;
 		CombatAudio m_combatAudio;
 		CombatRumble m_combatRumble;
+		bool m_usingGamepad = false;
 		Engine::HudDrawList m_hud;
 
 		// F6: normal -> environment with ships -> environment only.
