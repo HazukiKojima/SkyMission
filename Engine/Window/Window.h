@@ -1,5 +1,7 @@
 #pragma once
 #include <functional>
+#include <string>
+#include <string_view>
 #include "../EngineCommon.h"
 #include "../Input/GamepadInput.h"
 
@@ -15,6 +17,11 @@ namespace Engine {
 		InputSnapshot ConsumeInput();
 		void SetGamepadRumble(float lowFrequency, float highFrequency);
 		void SetLoading(bool loading);
+		void SetLoadingProgress(int percent, std::wstring_view item);
+
+		bool IsCloseRequested() const {
+			return m_closeRequested;
+		}
 
 		HWND GetHandle() const {
 			return m_hwnd;
@@ -47,6 +54,8 @@ namespace Engine {
 		HWND m_hwnd = nullptr;
 		bool m_cameraMouseCaptured = false;
 		bool m_loading = false;
+		int m_loadingPercent = 0;
+		std::wstring m_loadingItem;
 		bool m_closeRequested = false;
 		bool m_fullscreen = false;
 		bool m_fullscreenEnterHeld = false;

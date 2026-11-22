@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <format>
 #include <future>
+#include <mutex>
+#include <optional>
 #include <algorithm>
 #include "Engine/Log.h"
 #include "Engine/StartupTiming.h"
@@ -28,12 +30,14 @@ namespace Game {
 		const auto startupTime = std::chrono::steady_clock::now();
 		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
 		m_window->SetLoading(true);
+		m_window->SetLoadingProgress(0, L"読み込みエンジンの準備");
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
 		UpdateWindow(m_window->GetHandle());
 
 		timing.Mark("application.redox_warmup");
 		RedoxModule::WarmUp();
 		timing.Mark("application.scene_settings");
+		m_window->SetLoadingProgress(5, L"マップとミッションの設定");
 
 		// 起動に必要な設定を読み込む
 		const auto assetsDir = AssetsDirectory();
@@ -52,6 +56,9 @@ namespace Game {
 		m_renderer = std::make_unique<Renderer>();
 		const HWND hwnd = m_window->GetHandle();
 		const UINT width = m_window->GetWidth(), height = m_window->GetHeight();
+		using LoadingProgress = std::pair<int, std::wstring>;
+		std::mutex progressMutex;
+		std::optional<LoadingProgress> pendingProgress;
 		auto loading = std::async(std::launch::async, [&, hwnd, width, height]() {
 			ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 			struct ComScope {
@@ -59,7 +66,11 @@ namespace Game {
 					CoUninitialize();
 				}
 			} comScope;
-			m_renderer->Initialize(hwnd, width, height, assets.BuildRendererDefinition());
+			m_renderer->Initialize(hwnd, width, height, assets.BuildRendererDefinition(),
+				[&](size_t completed, size_t total, std::wstring_view item) {
+					const std::lock_guard lock(progressMutex);
+					pendingProgress.emplace(10 + static_cast<int>(75 * completed / total), item);
+				});
 		});
 
 		// スワップチェーン作成中にDXGIがウィンドウメッセージを送るため、UIスレッドで処理し続ける
@@ -71,14 +82,22 @@ namespace Game {
 				DispatchMessageW(&message);
 			}
 
+			std::optional<LoadingProgress> progress;
+			{
+				const std::lock_guard lock(progressMutex);
+				progress.swap(pendingProgress);
+			}
+			if (progress) m_window->SetLoadingProgress(progress->first, progress->second);
 			MsgWaitForMultipleObjectsEx(0, nullptr, 16, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 		}
 
 		// 読み込み後の画面寸法を反映する
 		loading.get(); // ワーカー停止後に、初期化エラーを呼び出し元へ伝播する
-		m_window->SetLoading(false);
-
-		if (!m_window->GetHandle()) return;
+		if (m_window->IsCloseRequested()) {
+			m_window->SetLoading(false);
+			return;
+		}
+		m_window->SetLoadingProgress(85, L"ミッションと機体の準備");
 		if (width != m_window->GetWidth() || height != m_window->GetHeight()) {
 			if (m_window->GetWidth() && m_window->GetHeight())
 				m_renderer->Resize(m_window->GetWidth(), m_window->GetHeight());
@@ -90,8 +109,13 @@ namespace Game {
 		// シーンと音声を初期化する
 		InitializeFlightScene(assets);
 		timing.Mark("application.audio");
+		m_window->SetLoadingProgress(95, L"効果音と音声");
 		m_combatAudio.Initialize(assetsDir / L"Sound", assets.cinematics);
 		ConfigureResizeHandling();
+		// 読み込み中の決定入力でタイトル画面を飛ばさない
+		m_window->ConsumeInput();
+		m_window->SetLoadingProgress(100, L"読み込み完了");
+		m_window->SetLoading(false);
 
 		m_lastTime = std::chrono::steady_clock::now();
 		Log("Startup completed in {:.0f} ms\n",

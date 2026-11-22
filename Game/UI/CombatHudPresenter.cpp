@@ -187,8 +187,9 @@ namespace Game {
 				top + (height - m_settings.fontSize) * 0.5f, text);
 		};
 
+		constexpr float speedDisplayScale = 0.1f;
 		drawFlightValue(m_tuning.layout.speedPanelX, true, m_text.Text("速度 km/h"),
-			snapshot.playerSpeedMetersPerSecond * 3.6f);
+			snapshot.playerSpeedMetersPerSecond * 3.6f * speedDisplayScale);
 		drawFlightValue(
 			m_tuning.layout.altitudePanelX, false, m_text.Text("高度 m"), snapshot.playerAltitudeMeters);
 		drawStatus(m_tuning.layout.healthStatusY,
