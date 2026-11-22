@@ -1,5 +1,6 @@
 #include "Window.h"
 #include "../Log.h"
+#include <algorithm>
 #include <cstddef>
 #include <vector>
 
@@ -58,6 +59,13 @@ namespace Engine {
 		if (!loading && m_closeRequested) DestroyWindow(m_hwnd);
 	}
 
+	void Window::SetLoadingProgress(int percent, std::wstring_view item) {
+		m_loadingPercent = std::clamp(percent, 0, 100);
+		m_loadingItem = item;
+		InvalidateRect(m_hwnd, nullptr, FALSE);
+		UpdateWindow(m_hwnd);
+	}
+
 	void Window::DeactivateInput() {
 		m_input.SetActive(false);
 		m_gamepad.Reset();
@@ -67,6 +75,8 @@ namespace Engine {
 
 	void Window::ToggleFullscreen() {
 		EndCameraLook();
+		const UINT positioningFlags = SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED |
+			(m_loading ? SWP_NOCOPYBITS : 0);
 
 		// 元の配置を保存してモニター全体へ広げる
 		if (!m_fullscreen) {
@@ -79,14 +89,18 @@ namespace Engine {
 			SetWindowPos(m_hwnd, nullptr, monitor.rcMonitor.left, monitor.rcMonitor.top,
 				monitor.rcMonitor.right - monitor.rcMonitor.left,
 				monitor.rcMonitor.bottom - monitor.rcMonitor.top,
-				SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+				positioningFlags);
 		} else {
 			m_fullscreen = false;
 			SetWindowLongPtrW(m_hwnd, GWL_STYLE, m_windowedStyle);
 			SetWindowPlacement(m_hwnd, &m_windowedPlacement);
 			SetWindowPos(m_hwnd, nullptr, 0, 0, 0, 0,
-				SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+				SWP_NOMOVE | SWP_NOSIZE | positioningFlags);
 		}
+
+		// スタイルと配置の変更がすべて終わってから、新しいクライアント領域を描き直す
+		if (m_loading && !IsIconic(m_hwnd))
+			RedrawWindow(m_hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW);
 	}
 
 	void Window::BeginCameraLook() {
@@ -189,8 +203,15 @@ namespace Engine {
 
 		if (self) {
 			switch (message) {
+			case WM_NCCALCSIZE:
+				if (self->m_loading && wParam) {
+					DefWindowProcW(hwnd, message, wParam, lParam);
+					// 最大化や復元でも、旧クライアント領域に描いた文字をコピーさせない
+					return WVR_REDRAW;
+				}
+				break;
 			case WM_CLOSE:
-				// レンダラーの読み込みスレッドがスワップチェーンを作る間、HWNDを破棄しない
+				// 読み込み中の終了要求はワーカーの完了後に処理する
 				if (self->m_loading) {
 					self->m_closeRequested = true;
 					return 0;
@@ -205,8 +226,25 @@ namespace Engine {
 					FillRect(dc, &area, static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
 					SetBkMode(dc, TRANSPARENT);
 					SetTextColor(dc, RGB(230, 230, 230));
-					DrawTextW(dc, L"Loading SkyMission...", -1, &area,
-						DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+					const LONG centerX = (area.left + area.right) / 2;
+					const LONG centerY = (area.top + area.bottom) / 2;
+					const LONG halfWidth = std::clamp((area.right - area.left) / 3, 0L, 220L);
+					RECT heading{area.left, centerY - 46, area.right, centerY - 18};
+					const std::wstring title = L"Loading SkyMission...  " +
+						std::to_wstring(self->m_loadingPercent) + L"%";
+					DrawTextW(dc, title.c_str(), -1, &heading, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+					RECT track{centerX - halfWidth, centerY - 5, centerX + halfWidth, centerY + 5};
+					const auto brush = static_cast<HBRUSH>(GetStockObject(DC_BRUSH));
+					SetDCBrushColor(dc, RGB(50, 55, 61));
+					FillRect(dc, &track, brush);
+					track.right = track.left + (track.right - track.left) * self->m_loadingPercent / 100;
+					SetDCBrushColor(dc, RGB(255, 255, 255));
+					FillRect(dc, &track, brush);
+
+					RECT detail{area.left + 8, centerY + 14, area.right - 8, centerY + 40};
+					DrawTextW(dc, self->m_loadingItem.c_str(), -1, &detail,
+						DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
 					EndPaint(hwnd, &paint);
 					return 0;
 				}
@@ -256,6 +294,9 @@ namespace Engine {
 			case WM_SIZE:
 				self->m_width = LOWORD(lParam);
 				self->m_height = HIWORD(lParam);
+
+				// Loadingの旧描画位置も消せるよう、拡張された部分だけでなく全体を再描画する
+				if (self->m_loading && wParam != SIZE_MINIMIZED) InvalidateRect(hwnd, nullptr, FALSE);
 
 				if (self->m_onResize) self->m_onResize(self->m_width, self->m_height);
 				return 0;

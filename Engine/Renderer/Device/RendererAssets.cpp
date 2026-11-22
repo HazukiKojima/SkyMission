@@ -49,16 +49,24 @@ namespace Engine {
 	}
 
 	void RendererAssets::Load(
-		RenderDevice* device, CommandContext* context, const RendererDefinition& assets) {
+		RenderDevice* device, CommandContext* context, const RendererDefinition& assets,
+		const LoadItemCallback& reportItem) {
+		const auto report = [&](std::wstring_view item) {
+			if (reportItem) reportItem(item);
+		};
 		// Oceanのt0〜t2を連続させるため、途中で別のディスクリプタを割り当てない
+		report(L"海面テクスチャとキャッシュ");
 		m_oceanTexture = LoadTexture(
 			*device, *context, assets.environment.oceanTexture, {.useSrgb = true}, m_oceanTextureSrvIndex);
+		report(L"海面の法線マップとキャッシュ");
 		m_oceanNormalTexture = LoadTexture(*device, *context, assets.environment.oceanNormalTexture,
 			{.useSrgb = false}, m_oceanNormalTextureSrvIndex);
+		report(L"海面の追加法線マップとキャッシュ");
 		m_oceanNormalTexture2 = LoadTexture(*device, *context, assets.environment.oceanNormalTexture2,
 			{.useSrgb = false}, m_oceanNormalTexture2SrvIndex);
 		assert(m_oceanNormalTextureSrvIndex == m_oceanTextureSrvIndex + 1);
 		assert(m_oceanNormalTexture2SrvIndex == m_oceanTextureSrvIndex + 2);
+		report(L"空のテクスチャとキャッシュ");
 		m_skyTexture =
 			LoadTexture(*device, *context, assets.environment.skyTexture, {}, m_skyTextureSrvIndex);
 		// 全モデル分のアップロードヒープを溜めないよう、上限付きのバッチで送信する
@@ -72,6 +80,7 @@ namespace Engine {
 		// 環境画像の転送後にモデルを一つずつ読み込む
 		finishBatch();
 		for (const auto& asset : assets.models) {
+			if (reportItem) reportItem(L"モデルとキャッシュ: " + asset.file.filename().wstring());
 			const auto started = std::chrono::steady_clock::now();
 			if (asset.id.empty() || m_models.contains(asset.id))
 				throw std::invalid_argument("Model asset IDs must be unique and nonempty.");

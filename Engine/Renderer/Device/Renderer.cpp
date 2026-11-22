@@ -23,8 +23,17 @@ namespace Engine {
 		}
 	}
 
-	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets) {
+	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets,
+		const LoadProgressCallback& reportProgress) {
+		const size_t total = 3 + RendererAssets::EnvironmentTextureCount + assets.models.size();
+		size_t completed = 0;
+		const auto reportItem = [&](std::wstring_view label) {
+			if (reportProgress) reportProgress(completed, total, label);
+			++completed;
+		};
+
 		// 描画とGPU計測の基盤を初期化する
+		reportItem(L"グラフィックスデバイス");
 		StartupTiming timing("renderer.device");
 		m_frameUpdater.Configure(assets.environment.ocean, assets.environment.clouds);
 		m_retroFilmParameters = assets.environment.retroFilm;
@@ -36,6 +45,7 @@ namespace Engine {
 		m_gpuProfiler.Initialize(m_device->GetDevice(), m_device->GetCommandQueue());
 
 		// 描画パイプラインとアセットを準備する
+		reportItem(L"シェーダーと描画パイプライン");
 		timing.Mark("renderer.pipelines");
 		m_pipelines.Initialize(m_device->GetDevice());
 		timing.Mark("renderer.assets");
@@ -44,9 +54,10 @@ namespace Engine {
 		auto* commands = m_context->GetCommandList();
 		m_assets.InitializeSkySphere(m_device->GetDevice(), commands, assets.environment.sky.radius);
 		m_oceanGeometry.Initialize(m_device->GetDevice(), commands, m_frameUpdater.GetOceanSize());
-		m_assets.Load(m_device.get(), m_context.get(), assets);
+		m_assets.Load(m_device.get(), m_context.get(), assets, reportItem);
 
 		// HUDを含む初期転送の完了を待つ
+		reportItem(L"HUDとGPUへの転送");
 		timing.Mark("renderer.hud_and_upload_wait");
 		m_hudRenderer.Initialize(*m_device, commands);
 		m_context->EndFrame();
