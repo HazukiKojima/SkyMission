@@ -7,6 +7,7 @@
 namespace Engine {
 	class CommandContext;
 
+	// GPUへそのまま転送するため、メンバーの順序とパディングを対応するHLSLのcbufferに揃える
 	struct OceanConstantBufferData {
 		DirectX::XMFLOAT4X4 mvp;
 		float time;

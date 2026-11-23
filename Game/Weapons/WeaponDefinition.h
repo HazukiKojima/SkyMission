@@ -15,7 +15,7 @@ namespace Game {
 		size_t maxProjectiles = 128;
 	};
 
-	// 数値の正値・有限性、最低4発の容量、銃口名の非空・重複なしを検証する
+	// 数値の正値・有限性、最低4発の容量、2門または4門の一意な銃口名を検証する
 	// モデル内にその名前のノードが存在するかはAircraftGun::Configureで検証する
 	void ValidateGunSettings(const GunSettings& settings);
 

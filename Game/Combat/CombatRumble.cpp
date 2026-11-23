@@ -27,6 +27,7 @@ namespace Game {
 			return {};
 		}
 
+		// 機銃の開始振動は撃ち始めに一度だけ出し、射撃をやめると次の開始を受け付ける
 		m_gunRumbleSeconds = std::max(0.0f, m_gunRumbleSeconds - deltaSeconds);
 		if (combat.firedVolleys && !m_gunRumblePlayed) {
 			m_gunRumbleSeconds = m_settings.gunStart.durationSeconds;
@@ -61,6 +62,7 @@ namespace Game {
 		const float airflowRumble = m_brakingRumble > 0.01f ? m_brakingRumble : 0.0f;
 		const bool gunStartPulse = m_gunRumbleSeconds > 0;
 		const float gunRumbleInterval = m_settings.gunRepeatIntervalSeconds;
+		// 開始振動が終わったら、連射が続く間は各周期の末尾で短く振動させる
 		const bool repeatGunRumble = m_gunRumblePlayed && !gunStartPulse;
 		m_gunRumblePhaseSeconds = repeatGunRumble ?
 			std::fmod(m_gunRumblePhaseSeconds + deltaSeconds, gunRumbleInterval) : 0.0f;
@@ -73,6 +75,7 @@ namespace Game {
 		const RumbleMotors damage = m_damageRumbleSeconds > 0 ? m_settings.playerHit.motors : RumbleMotors{};
 		const RumbleMotors kill = m_killRumbleSeconds > 0 ? m_settings.enemyDestroyed.motors : RumbleMotors{};
 		RumbleMotors output;
+		// 効果が重なったときはモーターごとに最も強い振動を採用する
 		const auto mix = [&](RumbleMotors motors, float lowScale = 1.0f, float highScale = 1.0f) {
 			output.lowFrequency = std::max(output.lowFrequency, motors.lowFrequency * lowScale);
 			output.highFrequency = std::max(output.highFrequency, motors.highFrequency * highScale);
