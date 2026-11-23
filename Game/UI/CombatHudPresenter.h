@@ -25,15 +25,16 @@ namespace Game {
 		// 初期化済みリストへレーダー・敵方向矢印・照準・文字を追記する
 		// エフェクト描画後に呼び出し、HUDの視認性を保つ。幅か高さが0なら描画しない
 		void Build(
-			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list,
+			bool usingGamepad = false) const;
 
 	  private:
 		void DrawCombatGuide(
-			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list, bool usingGamepad) const;
 		void DrawDebugCollisions(
 			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
 		void DrawControls(
-			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list, bool usingGamepad) const;
 		void DrawFlightStatus(
 			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
 		void DrawGunSight(
@@ -41,7 +42,7 @@ namespace Game {
 		void DrawEnemyMarkers(
 			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
 		void DrawMissionStatus(
-			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const;
+			const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list, bool usingGamepad) const;
 		void DrawEnemyDirection(const DirectX::XMFLOAT3& target, const CombatSnapshot& snapshot,
 			const Engine::RenderView& view, Engine::HudDrawList& list) const;
 		void DrawOffscreenIndicator(const HudProjection& projection, DirectX::XMFLOAT4 tint,

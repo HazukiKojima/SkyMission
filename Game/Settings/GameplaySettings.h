@@ -164,6 +164,7 @@ namespace Game {
 		float titleBottomOffset = 120.0f;
 		float subtitleBottomOffset = 58.0f;
 		std::string skipHint = "Enter：スキップ";
+		std::string gamepadSkipHint = "OPTIONS：スキップ";
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};
 

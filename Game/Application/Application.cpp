@@ -241,9 +241,9 @@ namespace Game {
 				std::ranges::any_of(pad.presses, std::identity{}) || pad.leftX != 0 || pad.leftY != 0 ||
 				pad.rightX != 0 || pad.rightY != 0 || pad.leftTrigger != 0 || pad.rightTrigger != 0;
 			// 入力がないフレームでも直前の操作方式を維持し、同時入力時はキーボード・マウスを優先する
-			if (!input.active || keyboardOrMouse)
+			if (input.active && keyboardOrMouse)
 				m_usingGamepad = false;
-			else if (gamepadInput)
+			else if (input.active && gamepadInput)
 				m_usingGamepad = true;
 
 			// タイトルとクリア画面ではEnterによる画面遷移だけを処理する
@@ -270,7 +270,7 @@ namespace Game {
 				m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 				m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
 				m_hudPresenter.Build(m_scene->GetCombatSnapshot(),
-					{.width = m_window->GetWidth(), .height = m_window->GetHeight()}, m_hud);
+					{.width = m_window->GetWidth(), .height = m_window->GetHeight()}, m_hud, m_usingGamepad);
 				return;
 			}
 
@@ -293,7 +293,7 @@ namespace Game {
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
 				combatState.result == CombatResult::Victory;
-			const auto rumble = m_combatRumble.Update(deltaSeconds, m_usingGamepad && !showClearScreen,
+			const auto rumble = m_combatRumble.Update(deltaSeconds, input.active && m_usingGamepad && !showClearScreen,
 				flight, combatState, combatState.playerHealth < previousHealth);
 			m_window->SetGamepadRumble(rumble.lowFrequency, rumble.highFrequency);
 
@@ -320,7 +320,7 @@ namespace Game {
 			if (m_captureMode == 0) {
 				if (!m_scene->GetCombatSnapshot().cinematic.active)
 					m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);
-				m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud);
+				m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud, m_usingGamepad);
 			}
 		}
 	}
@@ -336,8 +336,9 @@ namespace Game {
 		};
 
 		centered(m_screen == Screen::Title ? "SkyMission" : "ミッションクリア", height * 0.4f, 48 * scale);
-		centered(m_screen == Screen::Title ? "Enter / A / × でスタート" : "Enter / A / × でタイトルに戻る",
-			height * 0.56f, 26 * scale);
+		const auto confirm = m_usingGamepad ? "×" : "Enter";
+		const auto action = m_screen == Screen::Title ? " でスタート" : " でタイトルに戻る";
+		centered(std::string(confirm) + action, height * 0.56f, 26 * scale);
 	}
 
 	const Engine::Scene& Application::PrepareCaptureScene() {

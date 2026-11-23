@@ -5,7 +5,7 @@
 
 namespace Game {
 	void CinematicPresenter::Build(const CinematicPresentation& presentation, const Engine::RenderView& view,
-		Engine::HudDrawList& list) const {
+		Engine::HudDrawList& list, bool usingGamepad) const {
 		if (!presentation.active || view.width == 0 || view.height == 0) return;
 
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
@@ -54,7 +54,7 @@ namespace Game {
 				{0, 0}, {float(view.width), float(view.height)}, {0, 0, 0, presentation.fadeOpacity});
 		if (presentation.radioLine >= 0)
 			RadioCaptionPresenter{}.Build(presentation.radio, view, list, barHeight);
-		const auto& hint = textSettings.skipHint;
+		const auto& hint = usingGamepad ? textSettings.gamepadSkipHint : textSettings.skipHint;
 		const float fontSize = std::min({textSettings.hintFontSize * textScale, barHeight * 0.8f,
 			(view.width - 96 * scale) / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(hint, 1))});
 		list.Text({view.width - 48 * scale - Engine::HudDrawList::MeasureTextWidth(hint, fontSize),
