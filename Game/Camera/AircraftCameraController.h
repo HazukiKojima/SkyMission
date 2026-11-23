@@ -16,6 +16,16 @@ namespace Game {
 		float maximumSpeed;
 	};
 
+	struct AircraftCameraShakeInput {
+		float acceleration = 0.0f;
+		bool highG = false;
+		bool gunFired = false;
+		bool missileLaunched = false;
+		bool gunHit = false;
+		bool heavyHit = false;
+		bool enemyDestroyed = false;
+	};
+
 	class AircraftCameraController {
 	  public:
 		static constexpr float DefaultFovY = DirectX::XM_PI / 3.0f; // 縦視野角60度
@@ -33,6 +43,8 @@ namespace Game {
 		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
 		void SetFollowTarget(const AircraftCameraTarget& target);
+		void UpdateShake(float deltaSeconds, const AircraftCameraShakeInput& input);
+		void ResetShake();
 
 		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す
 		void SetLookTarget(std::optional<DirectX::XMFLOAT3> target, bool automatic = false) {
@@ -85,7 +97,11 @@ namespace Game {
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followViewDirection = {0.0f, 0.0f, -1.0f};
 
-		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする
+		float m_shakePhase = 0.0f;
+		float m_flightShakeDegrees = 0.0f;
+		float m_impactDegrees = 0.0f;
+		float m_impactSeconds = 0.0f;
+		float m_impactDuration = 0.0f;
 
 		CameraSettings m_settings;
 		Engine::Camera m_camera;

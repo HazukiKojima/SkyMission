@@ -446,6 +446,16 @@ namespace Game {
 		}
 
 		m_cameraController.SetLookTarget(lookTarget, automatic);
+		const bool flying = m_combat.result == CombatResult::Active && m_scene.FindObject(m_playerId);
+		m_cameraController.UpdateShake(dt, {
+			.acceleration = flying ? input.throttle : 0.0f,
+			.highG = flying && input.highGTurn && std::max(std::abs(input.turn), std::abs(input.yaw)) > 0.05f,
+			.gunFired = m_combat.firedVolleys > 0,
+			.missileLaunched = m_combat.audio.missileLaunches > 0,
+			.gunHit = m_combat.audio.gunHits > 0,
+			.heavyHit = m_combat.audio.missileHits > 0,
+			.enemyDestroyed = m_combat.enemyAircraftDestroyed > 0,
+		});
 		m_cameraController.Update(dt, cameraInput);
 		m_carrierLookSeconds = std::max(0.0f, m_carrierLookSeconds - dt);
 		m_scene.SetCamera(m_cameraController.GetCamera());
