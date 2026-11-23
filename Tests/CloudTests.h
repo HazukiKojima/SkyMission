@@ -398,6 +398,7 @@ void TestCloudRendering(const fs::path& repository, const fs::path& fixture,
 		const auto horizonDifference = [&](const auto& first, const auto& second) {
 			size_t pixels = 0;
 
+			// 水平線付近の帯だけを比較し、画面の他の領域の差が判定に混ざるのを防ぐ
 			for (UINT row = height * 47 / 100; row < height * 58 / 100; ++row)
 				for (UINT column = 0; column < width; ++column) {
 					const auto offset = (row * width + column) * 4;

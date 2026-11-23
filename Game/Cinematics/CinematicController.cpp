@@ -134,7 +134,7 @@ namespace Game {
 		const float seconds = m_presentation.elapsedSeconds;
 		RefreshRadio();
 
-		// 経過時間に対応するカットの表示内容を選ぶ
+		// カットの終了時刻を積み上げ、1フレームで複数の境界を越えても現在のカットを選ぶ
 		if (!m_settings.shots.empty()) {
 			float end = m_settings.shots.front().durationSeconds;
 			m_presentation.shotIndex = 0;

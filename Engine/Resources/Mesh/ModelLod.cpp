@@ -48,6 +48,7 @@ namespace Engine::ModelProcessing {
 		std::vector<uint32_t> remap(source.vertices.size()), counts;
 		counts.reserve(source.vertices.size());
 
+		// 位置が近くても、UV区画・法線の主方向・接線の符号が異なる頂点は別のクラスタにする
 		for (size_t i = 0; i < source.vertices.size(); ++i) {
 			const auto& v = source.vertices[i];
 			const float n[] = {v.normal.x, v.normal.y, v.normal.z};

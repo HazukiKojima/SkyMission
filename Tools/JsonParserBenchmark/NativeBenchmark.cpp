@@ -189,6 +189,7 @@ namespace {
 	int Calibrate(const std::function<double()>& action) {
 		int iterations = 1;
 
+		// 短すぎる計測値で反復回数を見積もらないよう、試行を倍増してから目標時間に換算する
 		while (true) {
 			const double seconds = Batch(action, iterations);
 
