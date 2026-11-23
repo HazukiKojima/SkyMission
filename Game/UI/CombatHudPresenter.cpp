@@ -194,6 +194,7 @@ namespace Game {
 				top + (height - m_settings.fontSize) * 0.5f, text);
 		};
 
+		// 速度の表示倍率はHUDの数値にだけ適用する
 		constexpr float speedDisplayScale = 0.1f;
 		drawFlightValue(m_tuning.layout.speedPanelX, true, m_text.Text("速度 km/h"),
 			snapshot.playerSpeedMetersPerSecond * 3.6f * speedDisplayScale);

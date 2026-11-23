@@ -91,7 +91,7 @@ namespace Game {
 		const auto start = projectile.position;
 		Advance(projectile, valid);
 
-		// 最初に接触する対象を選ぶ
+		// 弾が動いた時間帯で対象の姿勢を補間し、最初の接触を選ぶ。同時ならIDの小さい対象を優先する
 		std::optional<float> first;
 		Engine::ObjectId hit = Engine::InvalidObjectId;
 

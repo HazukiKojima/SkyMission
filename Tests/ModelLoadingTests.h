@@ -5,7 +5,7 @@ void TestPreparedModelCache(const fs::path& repository, const fs::path& fixture)
 	using namespace Engine::ModelProcessing;
 
 	const auto source = fixture / (L"prepared-model-" + std::to_wstring(GetTickCount64()) + L".fbx");
-	fs::copy_file(repository / L"Assets/Aircraft/N1K2JShidenKai/N1K2JShidenKai.fbx", source);
+	fs::copy_file(repository / L"Assets/Aircraft/N1K2JShidenKai/A6M5Zero.fbx", source);
 	const auto directory = fs::temp_directory_path() / L"SkyMissionModelCache";
 	const auto files = [&] {
 		std::vector<fs::path> paths;

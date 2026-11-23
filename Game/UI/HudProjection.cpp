@@ -53,6 +53,7 @@ namespace Game {
 		float enter = 0;
 		float exit = 1;
 
+		// 各面の内側にある区間を重ね合わせ、すべての面の内側にある部分だけを残す
 		for (size_t plane = 0; plane < std::size(headDistances); ++plane) {
 			const float from = headDistances[plane];
 			const float to = tailDistances[plane];

@@ -9,7 +9,7 @@ namespace Game {
 		bool nextTarget = false;
 		bool retry = false;
 
-		// フレーム間に発生した右クリック回数。短い押下や複数回の入力を失わない
+		// 右クリックとパッドの発射ボタンの押下回数を合算し、フレーム間の短い押下も保持する
 		unsigned missilePressCount = 0;
 		bool skipOpening = false;
 	};

@@ -119,6 +119,7 @@ namespace Game {
 				// 初回は前方を優先するが、選択対象の撃墜・喪失後は後方の敵も引き継ぐ
 				if (dot <= 0 && previousSelectedId == Engine::InvalidObjectId) continue;
 
+				// 機首方向との角度が小さい敵を優先し、同角度なら距離、IDの順で決める
 				const auto score = std::tuple{1 - dot, distance(*candidate), candidate->id};
 
 				if (score < best) {

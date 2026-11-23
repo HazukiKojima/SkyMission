@@ -56,6 +56,7 @@ namespace Game {
 		m_renderer = std::make_unique<Renderer>();
 		const HWND hwnd = m_window->GetHandle();
 		const UINT width = m_window->GetWidth(), height = m_window->GetHeight();
+		// ワーカーは最新の進捗だけを記録し、ロード画面の更新はUIスレッドで行う
 		using LoadingProgress = std::pair<int, std::wstring>;
 		std::mutex progressMutex;
 		std::optional<LoadingProgress> pendingProgress;
@@ -240,13 +241,13 @@ namespace Game {
 			const bool gamepadInput = pad.buttons != 0 || pad.northTapped ||
 				std::ranges::any_of(pad.presses, std::identity{}) || pad.leftX != 0 || pad.leftY != 0 ||
 				pad.rightX != 0 || pad.rightY != 0 || pad.leftTrigger != 0 || pad.rightTrigger != 0;
-			// 入力がないフレームでも直前の操作方式を維持し、同時入力時はキーボード・マウスを優先する
+			// 無入力時やフォーカス喪失時も表示方式を維持し、同時入力時はキーボード・マウスを優先する
 			if (input.active && keyboardOrMouse)
 				m_usingGamepad = false;
 			else if (input.active && gamepadInput)
 				m_usingGamepad = true;
 
-			// タイトルとクリア画面ではEnterによる画面遷移だけを処理する
+			// タイトルとクリア画面では決定入力による画面遷移だけを処理する
 			if (m_screen == Screen::Title || m_screen == Screen::Clear) {
 				if (input.WasConfirmPressed()) {
 					m_combatAudio.ResetPlayback();
@@ -266,7 +267,7 @@ namespace Game {
 					return;
 				}
 
-				// 開始のEnterをオープニングのスキップ操作として再利用しない
+				// 開始に使った入力を同じフレームのスキップ判定に渡さない
 				m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
 				m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
 				m_hudPresenter.Build(m_scene->GetCombatSnapshot(),
@@ -293,6 +294,7 @@ namespace Game {
 			const auto& combatState = m_scene->GetCombatSnapshot();
 			const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
 				combatState.result == CombatResult::Victory;
+			// 表示方式を保持したまま、フォーカス喪失時やクリア画面への切り替え時は振動を止める
 			const auto rumble = m_combatRumble.Update(deltaSeconds, input.active && m_usingGamepad && !showClearScreen,
 				flight, combatState, combatState.playerHealth < previousHealth);
 			m_window->SetGamepadRumble(rumble.lowFrequency, rumble.highFrequency);
@@ -336,6 +338,7 @@ namespace Game {
 		};
 
 		centered(m_screen == Screen::Title ? "SkyMission" : "ミッションクリア", height * 0.4f, 48 * scale);
+		// コントローラーの機種にかかわらず、操作ガイドはPS4表記に統一する
 		const auto confirm = m_usingGamepad ? "×" : "Enter";
 		const auto action = m_screen == Screen::Title ? " でスタート" : " でタイトルに戻る";
 		centered(std::string(confirm) + action, height * 0.56f, 26 * scale);
