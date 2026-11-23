@@ -13,7 +13,7 @@ namespace Game {
 		m_automaticLook = false;
 		m_lookYaw = m_lookPitch = 0;
 		m_lookTarget.reset();
-		UpdateView();
+		ResetShake();
 	}
 
 	void AircraftCameraController::OnResize(UINT width, UINT height) {
@@ -110,7 +110,7 @@ namespace Game {
 		m_lookPitch = 0;
 		UpdateFollowOrientation(0, true);
 		UpdateFollowPosition(0, true);
-		UpdateView();
+		ResetShake();
 	}
 
 	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
@@ -217,11 +217,59 @@ namespace Game {
 		XMStoreFloat3(&m_followLookAt, XMVectorLerp(XMLoadFloat3(&m_followLookAt), desiredLookAt, blend));
 	}
 
+	void AircraftCameraController::ResetShake() {
+		m_shakePhase = m_flightShakeDegrees = m_impactDegrees = m_impactSeconds = m_impactDuration = 0;
+		UpdateView();
+	}
+
+	void AircraftCameraController::UpdateShake(float deltaSeconds, const AircraftCameraShakeInput& input) {
+		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
+
+		const auto& settings = m_settings.shake;
+		const float acceleration = std::clamp(input.acceleration, 0.0f, 1.0f);
+		const float flightDegrees = std::max(settings.accelerationDegrees * acceleration * acceleration,
+			input.highG ? settings.highGDegrees : 0.0f);
+		m_flightShakeDegrees = std::lerp(m_flightShakeDegrees, flightDegrees,
+			1.0f - std::exp(-settings.responsePerSecond * deltaSeconds));
+		m_shakePhase = std::fmod(m_shakePhase + XM_2PI * settings.frequencyHz * deltaSeconds, XM_2PI);
+		m_impactSeconds = std::max(0.0f, m_impactSeconds - deltaSeconds);
+
+		// 同時に起きた衝撃は最も強いものを採用し、連続被弾でも加算しない
+		const auto startImpact = [&](float degrees, float duration) {
+			const float current = m_impactSeconds > 0 ? m_impactDegrees * m_impactSeconds / m_impactDuration : 0;
+			if (duration > 0 && degrees > 0 && degrees >= current) {
+				m_impactDegrees = degrees;
+				m_impactSeconds = m_impactDuration = duration;
+			}
+		};
+		if (input.gunFired) startImpact(settings.gunFireDegrees, settings.gunFireSeconds);
+		if (input.missileLaunched) startImpact(settings.missileLaunchDegrees, settings.missileLaunchSeconds);
+		if (input.gunHit) startImpact(settings.gunHitDegrees, settings.hitSeconds);
+		if (input.heavyHit) startImpact(settings.heavyHitDegrees, settings.hitSeconds);
+		if (input.enemyDestroyed) startImpact(settings.enemyDestroyedDegrees, settings.enemyDestroyedSeconds);
+	}
+
 	void AircraftCameraController::UpdateView() {
 		XMVECTOR pos = XMLoadFloat3(&m_position);
 
 		if (m_following) {
-			m_camera.LookTo(m_position, m_followViewDirection);
+			const float remaining = m_impactSeconds > 0 ? m_impactSeconds / m_impactDuration : 0;
+			// 飛行中の振動に、射撃や被弾などの短い衝撃を重ねる
+			const float amplitude = XMConvertToRadians(
+				m_flightShakeDegrees + m_impactDegrees * remaining);
+			if (amplitude == 0.0f) {
+				m_camera.LookTo(m_position, m_followViewDirection);
+				return;
+			}
+
+			const XMVECTOR forward = XMVector3Normalize(XMLoadFloat3(&m_followViewDirection));
+			const XMVECTOR right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0, 1, 0, 0), forward));
+			const XMVECTOR up = XMVector3Cross(forward, right);
+			// 追従位置や補間状態に揺れを戻さず、描画する視線だけをずらす
+			XMFLOAT3 direction;
+			XMStoreFloat3(&direction, forward + right * (std::sin(m_shakePhase) * amplitude * 0.65f) +
+				up * (std::cos(m_shakePhase) * amplitude));
+			m_camera.LookTo(m_position, direction);
 			return;
 		}
 

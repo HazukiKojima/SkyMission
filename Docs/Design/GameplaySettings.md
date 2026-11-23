@@ -15,7 +15,7 @@
 | `Aircraft/F4U4Corsair/aiParameters.json` | 既存AI設定に加え、離脱時間、防衛半径、連続旋回時間、後方判定、非ロック機の攻撃性倍率、経路・再進入位置・旋回方向、機体別行動パターン、再進入時間・経路のばらつき、離脱角度、低高度回避余裕、衝突回避と操縦のしきい値 |
 | `Sound/audio.json` | 飛行音・機銃・ミサイル・被弾・爆発・戦闘BGMのファイル名と音量、警告音の音量と繰り返し間隔 |
 | `Effects/combatEffects.json` | `gun`・`impact`・`explosion`・`carrier`・`rocket`・`deck`ごとの寿命、半径、太さ、不透明度、移動・上昇速度、発生間隔、破片や煙のサンプル数、煙・曳光弾・閃光・炎・破片・排気のRGBA色と色の補間端点 |
-| `Camera/aircraftCamera.json` | 通常カメラのFOV、移動速度、マウス感度、追従距離・高さ・補間、見回し復帰、ピッチ制限、高速時の距離変化、注視点の先行距離 |
+| `Camera/aircraftCamera.json` | 通常カメラのFOV、移動速度、マウス感度、追従距離・高さ・補間、見回し復帰、ピッチ制限、高速時の距離変化、注視点の先行距離、カメラシェイク |
 | `UI/combatHud.json` | 既存HUD設定に加え、レーダー範囲、レーダー・演出の基本色、選択・警告・注意のRGBA色、`layout`内のパネル位置・寸法・余白・操作説明文字サイズ・通知位置・マーカー倍率 |
 | `UI/labels.json` | 操作説明、任務文、警告文、敵の表示名。`labels`内の元の日本語をキーとして、表示する文字列を指定 |
 | `Cinematics/*.json` | `textScale`、`briefingFontSize`、`titleFontSize`、`subtitleFontSize`、`hintFontSize`、`lineSpacing`、`barHeightFraction`、`titleBottomOffset`、`subtitleBottomOffset`、`skipHint` |
@@ -26,6 +26,11 @@
 弾速・威力・再装填時間は引き続き`Combat/mission.json`で設定する。
 
 ## 追加の調整例
+
+`Camera/aircraftCamera.json` の `shake` では、加速・ハイG旋回・機銃射撃・ミサイル発射・機銃被弾・その他の被弾・敵機撃破の強さを個別に調整できる。
+`Degrees` で終わる各項目は0〜5度。個別に停止するには対応する強さを `0` にする。
+`gunFireSeconds`、`missileLaunchSeconds`、`hitSeconds`、`enemyDestroyedSeconds` は機銃射撃・ミサイル発射・被弾・敵機撃破の揺れが収まるまでの秒数。
+`frequencyHz` は揺れの周波数、`responsePerSecond` は加速・旋回の揺れが強まる速さと収まる速さを指定する。
 
 HUDの座標・寸法は`UI/combatHud.json`の`layout`内にある。省略した項目は既定値を使う。
 

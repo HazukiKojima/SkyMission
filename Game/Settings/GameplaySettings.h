@@ -24,6 +24,23 @@ namespace Game {
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};
 
+	struct CameraShakeSettings {
+		// 強さは角度（度）。0でその場面の揺れを無効化する
+		float accelerationDegrees = 0.03f;
+		float highGDegrees = 0.096f;
+		float gunFireDegrees = 0.07f;
+		float gunFireSeconds = 0.10f;
+		float missileLaunchDegrees = 0.42f;
+		float missileLaunchSeconds = 0.24f;
+		float gunHitDegrees = 0.65f;
+		float heavyHitDegrees = 1.35f;
+		float hitSeconds = 0.42f;
+		float enemyDestroyedDegrees = 0.25f;
+		float enemyDestroyedSeconds = 0.32f;
+		float frequencyHz = 9.0f;
+		float responsePerSecond = 9.0f;
+	};
+
 	struct CameraSettings {
 		float fovDegrees = 60.0f;
 		float moveSpeed = 100.0f;
@@ -41,6 +58,7 @@ namespace Game {
 		float pitchFollowLimit = 0.35f;
 		float speedDistanceStart = 60.0f;
 		float lookAheadMeters = 12.0f;
+		CameraShakeSettings shake;
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};
 

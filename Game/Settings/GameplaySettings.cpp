@@ -35,6 +35,19 @@ namespace Game {
 		r.Number("pitchFollowLimit", pitchFollowLimit, 0.000001f, 1000000);
 		r.Number("speedDistanceStart", speedDistanceStart, 0, 1000000);
 		r.Number("lookAheadMeters", lookAheadMeters, 0.000001f, 1000000);
+		r.Number("/shake/accelerationDegrees", shake.accelerationDegrees, 0, 5);
+		r.Number("/shake/highGDegrees", shake.highGDegrees, 0, 5);
+		r.Number("/shake/gunFireDegrees", shake.gunFireDegrees, 0, 5);
+		r.Number("/shake/gunFireSeconds", shake.gunFireSeconds, 0, 5);
+		r.Number("/shake/missileLaunchDegrees", shake.missileLaunchDegrees, 0, 5);
+		r.Number("/shake/missileLaunchSeconds", shake.missileLaunchSeconds, 0, 5);
+		r.Number("/shake/gunHitDegrees", shake.gunHitDegrees, 0, 5);
+		r.Number("/shake/heavyHitDegrees", shake.heavyHitDegrees, 0, 5);
+		r.Number("/shake/hitSeconds", shake.hitSeconds, 0, 5);
+		r.Number("/shake/enemyDestroyedDegrees", shake.enemyDestroyedDegrees, 0, 5);
+		r.Number("/shake/enemyDestroyedSeconds", shake.enemyDestroyedSeconds, 0, 5);
+		r.Number("/shake/frequencyHz", shake.frequencyHz, 1, 20);
+		r.Number("/shake/responsePerSecond", shake.responsePerSecond, 0.1f, 100);
 		r.Require(maxFollowDistance >= followDistance, "CameraSettings", "inconsistent settings");
 		r.Require(fovDegrees > 1 && fovDegrees < 120, "CameraSettings", "inconsistent settings");
 		r.Require(lookPitchLimit < 1.5f && orbitPitchLimit < 1.5f && pitchFollowLimit < 1.5f,

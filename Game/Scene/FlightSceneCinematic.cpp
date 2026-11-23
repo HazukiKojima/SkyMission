@@ -152,6 +152,7 @@ namespace Game {
 		const CinematicSettings& settings, const std::string& id, bool briefing) {
 		m_activeCinematicSettings = settings;
 		m_cinematicOrigin = m_player.GetPosition();
+		m_cameraController.ResetShake();
 		m_cinematic.Start(settings, id);
 		InitializeCinematicShot();
 
