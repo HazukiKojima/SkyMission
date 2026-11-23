@@ -176,6 +176,7 @@ namespace Game {
 		r.Number("titleBottomOffset", titleBottomOffset, 0.000001f, 1000000);
 		r.Number("subtitleBottomOffset", subtitleBottomOffset, 0.000001f, 1000000);
 		r.Text("skipHint", skipHint);
+		r.Text("gamepadSkipHint", gamepadSkipHint);
 		r.Require(barHeightFraction < 0.4f, "CinematicTextSettings", "inconsistent settings");
 		r.Require(lineSpacing >= 1, "CinematicTextSettings", "inconsistent settings");
 		r.Require(textScale <= 4, "CinematicTextSettings", "inconsistent settings");

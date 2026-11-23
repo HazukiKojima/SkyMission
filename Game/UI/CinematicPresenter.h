@@ -9,7 +9,7 @@ namespace Game {
 	  public:
 		explicit CinematicPresenter(DirectX::XMFLOAT4 ink = HudStyle::Ink) : m_ink(ink) {}
 		void Build(const CinematicPresentation& presentation, const Engine::RenderView& view,
-			Engine::HudDrawList& list) const;
+			Engine::HudDrawList& list, bool usingGamepad = false) const;
 
 	  private:
 		DirectX::XMFLOAT4 m_ink;

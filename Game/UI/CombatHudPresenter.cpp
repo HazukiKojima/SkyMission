@@ -12,12 +12,12 @@ namespace Game {
 	using namespace DirectX;
 
 	void CombatHudPresenter::Build(
-		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
+		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list, bool usingGamepad) const {
 		if (view.width == 0 || view.height == 0) return;
 
 		// 映像演出中は通常HUDを専用の表示へ切り替える
 		if (snapshot.cinematic.active) {
-			CinematicPresenter{m_tuning.ink}.Build(snapshot.cinematic, view, list);
+			CinematicPresenter{m_tuning.ink}.Build(snapshot.cinematic, view, list, usingGamepad);
 
 			if (snapshot.enemyRadio.clip >= 0 && snapshot.cinematic.radioLine < 0 && snapshot.cinematic.briefingLine < 0)
 				RadioCaptionPresenter{}.Build(snapshot.enemyRadio.caption, view, list,
@@ -30,9 +30,9 @@ namespace Game {
 		DrawFlightStatus(snapshot, view, list);
 		DrawGunSight(snapshot, view, list);
 		DrawEnemyMarkers(snapshot, view, list);
-		DrawMissionStatus(snapshot, view, list);
-		DrawControls(snapshot, view, list);
-		DrawCombatGuide(snapshot, view, list);
+		DrawMissionStatus(snapshot, view, list, usingGamepad);
+		DrawControls(snapshot, view, list, usingGamepad);
+		DrawCombatGuide(snapshot, view, list, usingGamepad);
 		DrawDebugCollisions(snapshot, view, list);
 
 		// 最後に現在の無線字幕を重ねる
@@ -43,7 +43,7 @@ namespace Game {
 	}
 
 	void CombatHudPresenter::DrawCombatGuide(
-		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
+		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list, bool usingGamepad) const {
 		if (snapshot.result != CombatResult::Active) return;
 
 		// 任務の段階に合った操作案内を選ぶ
@@ -51,13 +51,15 @@ namespace Game {
 		bool locked = false;
 
 		if (snapshot.missionPhase == MissionPhase::Patrol && snapshot.elapsedSeconds < 5 && !snapshot.enemies.empty()) {
-			title = m_text.Text("左クリックで射撃");
+			title = m_text.Text(usingGamepad ? "×で射撃" : "左クリックで射撃");
 			detail = m_text.Text("敵機に照準を合わせて撃墜せよ");
 		} else if (snapshot.missionPhase == MissionPhase::CarrierAttack && snapshot.carrierPresent &&
 			!snapshot.deckDisabled && snapshot.selected != Engine::InvalidObjectId) {
 			locked = snapshot.lockState == LockState::Locked;
-			title = m_text.Text(locked ? "右クリックで射撃" : "母艦に照準を合わせてロックオン");
-			detail = m_text.Text(locked ? "ロックオン完了" : "ロックオン後、右クリックで射撃");
+			title = locked ? m_text.Text(usingGamepad ? "○で射撃" : "右クリックで射撃")
+						   : m_text.Text("母艦に照準を合わせてロックオン");
+			detail = locked ? m_text.Text("ロックオン完了")
+							: m_text.Text(usingGamepad ? "ロックオン後、○で射撃" : "ロックオン後、右クリックで射撃");
 
 		} else return;
 
@@ -118,15 +120,20 @@ namespace Game {
 	}
 
 	void CombatHudPresenter::DrawControls(
-		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
+		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list, bool usingGamepad) const {
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		const float fontSize = m_tuning.layout.controlsFontSize * scale;
 		const float lineHeight = m_tuning.layout.controlsLineHeight * scale;
-		std::vector<std::string_view> controls{m_text.Text("WASD：操縦"), m_text.Text("Q / E：ヨー"),
-			m_text.Text("Ctrl / Space：加速 / 減速"), m_text.Text("ホイール押込 + マウス：見回し"),
-			m_text.Text("Z長押し：選択中の敵機を注視"), m_text.Text("左クリック：機銃"), m_text.Text("Tab：目標切替")};
+		std::vector<std::string_view> controls{
+			m_text.Text(usingGamepad ? "左スティック：操縦" : "WASD：操縦"),
+			m_text.Text(usingGamepad ? "L1 / R1：ヨー" : "Q / E：ヨー"),
+			m_text.Text(usingGamepad ? "R2 / L2：加速 / 減速" : "Ctrl / Space：加速 / 減速"),
+			m_text.Text(usingGamepad ? "右スティック：見回し" : "ホイール押込 + マウス：見回し"),
+			m_text.Text(usingGamepad ? "△ / △長押し：目標切替 / 目標を注視" : "Z長押し：選択中の敵機を注視"),
+			m_text.Text(usingGamepad ? "×：機銃" : "左クリック：機銃")};
+		if (!usingGamepad) controls.push_back(m_text.Text("Tab：目標切替"));
 		if (snapshot.missionPhase == MissionPhase::CarrierAttack && snapshot.result == CombatResult::Active)
-			controls.push_back(m_text.Text("右クリック：ミサイル (ロック後)"));
+			controls.push_back(m_text.Text(usingGamepad ? "○：ミサイル (ロック後)" : "右クリック：ミサイル (ロック後)"));
 
 		float width = Engine::HudDrawList::MeasureTextWidth(m_text.Text("操作方法"), fontSize);
 
@@ -365,7 +372,7 @@ namespace Game {
 	}
 
 	void CombatHudPresenter::DrawMissionStatus(
-		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list) const {
+		const CombatSnapshot& snapshot, const Engine::RenderView& view, Engine::HudDrawList& list, bool usingGamepad) const {
 		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
 		const float lineWidth = std::max(1.0f, m_settings.lineWidth * scale);
 		const float fontSize = m_settings.fontSize * scale;
@@ -494,7 +501,7 @@ namespace Game {
 				bomb << m_text.Text("ミサイル ") << snapshot.carrierMissileAmmo << "/"
 					 << snapshot.carrierMissileCapacity << " ";
 				if (snapshot.missileCooldownSeconds <= 0)
-					bomb << (snapshot.lockState == LockState::Locked ? m_text.Text("[右クリック]")
+					bomb << (snapshot.lockState == LockState::Locked ? m_text.Text(usingGamepad ? "[○]" : "[右クリック]")
 																	 : m_text.Text("ロックなし"));
 				else
 					bomb << m_text.Text("再装填 ") << std::fixed << std::setprecision(1)

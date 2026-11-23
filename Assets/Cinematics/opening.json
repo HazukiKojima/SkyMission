@@ -104,5 +104,6 @@
   "barHeightFraction": 0.1,
   "titleBottomOffset": 120,
   "subtitleBottomOffset": 58,
-  "skipHint": "Enter：スキップ"
+  "skipHint": "Enter：スキップ",
+  "gamepadSkipHint": "OPTIONS：スキップ"
 }
