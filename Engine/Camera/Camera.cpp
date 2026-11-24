@@ -28,9 +28,10 @@ namespace Engine {
 		m_proj = DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, m_farZ);
 	}
 
-	void Camera::LookTo(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& direction) {
+	void Camera::LookTo(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& direction,
+		const DirectX::XMFLOAT3& up) {
 		m_position = position;
 		m_view = DirectX::XMMatrixLookToLH(DirectX::XMLoadFloat3(&position),
-			DirectX::XMLoadFloat3(&direction), DirectX::XMVectorSet(0, 1, 0, 0));
+			DirectX::XMLoadFloat3(&direction), DirectX::XMLoadFloat3(&up));
 	}
 } // namespace Engine

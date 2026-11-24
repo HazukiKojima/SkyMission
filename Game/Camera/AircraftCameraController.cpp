@@ -87,6 +87,7 @@ namespace Game {
 		m_followPitchInputActive = target.pitchInputActive;
 		m_followSpeed = target.speed;
 		m_followMaximumSpeed = target.maximumSpeed;
+		m_targetBank = std::sin(target.rollRadians);
 	}
 
 	void AircraftCameraController::UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input) {
@@ -183,6 +184,7 @@ namespace Game {
 			-m_settings.pitchFollowLimit, m_settings.pitchFollowLimit);
 		const float pitchBlend = yawBlend;
 		m_followCameraPitch += (targetPitch - m_followCameraPitch) * pitchBlend;
+		m_followBank += (m_targetBank - m_followBank) * yawBlend;
 	}
 
 	void AircraftCameraController::UpdateFollowPosition(float deltaSeconds, bool snap) {
@@ -203,8 +205,15 @@ namespace Game {
 			std::clamp((m_followSpeed - m_settings.speedDistanceStart) / speedRange, 0.0f, 1.0f);
 		const float followDistance = m_settings.followDistance +
 			(m_settings.maxFollowDistance - m_settings.followDistance) * speedRatio;
+		// 見回しと目標注視では旋回時の構図補正を徐々に弱める
+		const float chaseWeight = 1.0f -
+			std::clamp(std::hypot(m_lookYaw, m_lookPitch) / 0.5f, 0.0f, 1.0f);
+		const float bank = m_followBank * chaseWeight;
+		m_viewRoll = -bank * XMConvertToRadians(m_settings.bankRollDegrees);
+		const XMVECTOR right = XMVectorSet(-std::cos(orbitYaw), 0, -std::sin(orbitYaw), 0);
 		const XMVECTOR desiredPosition =
-			target - smoothedDirection * followDistance + worldUp * m_settings.followHeight;
+			target - smoothedDirection * followDistance + worldUp * m_settings.followHeight -
+			right * (bank * m_settings.bankOffsetMeters);
 		const XMVECTOR desiredLookAt =
 			target + smoothedDirection * m_settings.lookAheadMeters + worldUp * m_settings.followLookHeight;
 
@@ -257,11 +266,6 @@ namespace Game {
 			// 飛行中の振動に、射撃や被弾などの短い衝撃を重ねる
 			const float amplitude = XMConvertToRadians(
 				m_flightShakeDegrees + m_impactDegrees * remaining);
-			if (amplitude == 0.0f) {
-				m_camera.LookTo(m_position, m_followViewDirection);
-				return;
-			}
-
 			const XMVECTOR forward = XMVector3Normalize(XMLoadFloat3(&m_followViewDirection));
 			const XMVECTOR right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0, 1, 0, 0), forward));
 			const XMVECTOR up = XMVector3Cross(forward, right);
@@ -269,7 +273,9 @@ namespace Game {
 			XMFLOAT3 direction;
 			XMStoreFloat3(&direction, forward + right * (std::sin(m_shakePhase) * amplitude * 0.65f) +
 				up * (std::cos(m_shakePhase) * amplitude));
-			m_camera.LookTo(m_position, direction);
+			XMFLOAT3 cameraUp;
+			XMStoreFloat3(&cameraUp, XMVector3Rotate(up, XMQuaternionRotationNormal(forward, m_viewRoll)));
+			m_camera.LookTo(m_position, direction, cameraUp);
 			return;
 		}
 

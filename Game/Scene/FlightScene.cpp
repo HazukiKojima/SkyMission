@@ -438,7 +438,8 @@ namespace Game {
 				.forward = m_player.GetForward(),
 				.pitchInputActive = input.pitch > 0.01f || input.pitch < -0.01f,
 				.speed = m_player.GetSpeed(),
-				.maximumSpeed = m_player.GetMaximumSpeed()});
+				.maximumSpeed = m_player.GetMaximumSpeed(),
+				.rollRadians = m_player.GetRoll()});
 		}
 
 		// 手動の敵機注視と任務による自動注視を選ぶ
