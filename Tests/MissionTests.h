@@ -1072,17 +1072,42 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			const auto enemies = victoryMovie.GetCombatSnapshot().enemies;
 
 			for (const auto& enemy : enemies) victoryMovie.RemoveObject(enemy.id);
-			victoryMovie.Update({}, 0.01f);
+			victoryMovie.SetPlayerAircraftPosition({100000, 1500, 0});
+			const CombatInput fire{.weapon = {.fire = true}};
+			victoryMovie.Update({}, 0.25f, {}, fire);
 			Require(victoryMovie.GetCombatSnapshot().result == CombatResult::Victory &&
 				victoryMovie.GetCombatSnapshot().enemies.empty() && !victoryMovie.GetCombatSnapshot().cinematic.active,
 				"Four reinforcements did not end the mission or ending skipped its quiet pause");
-			for (int frame = 0; frame < 4; ++frame) victoryMovie.Update({}, 0.25f);
+			const auto& objects = victoryMovie.GetObjects();
+			const auto projectile = std::find_if(objects.begin(), objects.end(), [&](const auto& object) {
+				return object.model == player && object.id != playerId;
+			});
+			Require(victoryMovie.GetProjectileCount() > 0 && projectile != objects.end(),
+				"Victory fixture did not leave a projectile in flight");
+			const auto projectileId = projectile->id;
+			const auto previousPosition = projectile->worldTransform;
+			const auto previousMuzzle = victoryMovie.GetCombatSnapshot().muzzle;
+			victoryMovie.Update({}, 0.25f, {}, fire);
+			const auto muzzle = victoryMovie.GetCombatSnapshot().muzzle;
+			Require(muzzle.x != previousMuzzle.x || muzzle.y != previousMuzzle.y || muzzle.z != previousMuzzle.z,
+				"Gun sight stopped following the aircraft during the victory pause");
+			const auto moved = std::find_if(objects.begin(), objects.end(), [&](const auto& object) {
+				return object.id == projectileId;
+			});
+			Require(moved != objects.end() && (moved->worldTransform._41 != previousPosition._41 ||
+				moved->worldTransform._42 != previousPosition._42 ||
+				moved->worldTransform._43 != previousPosition._43) &&
+				victoryMovie.GetCombatSnapshot().firedVolleys == 0,
+				"Victory froze an in-flight projectile or accepted another shot");
+			for (int frame = 0; frame < 3; ++frame) victoryMovie.Update({}, 0.25f);
 			Require(victoryMovie.GetCombatSnapshot().cinematic.active &&
 				victoryMovie.GetCombatSnapshot().cinematic.cinematicId == "ending" &&
 				victoryMovie.GetCombatSnapshot().cinematic.radioLine == 0,
 				"Final mission report did not start after the quiet pause");
 			for (int frame = 0; frame < 28; ++frame) victoryMovie.Update({}, 0.25f);
 			Require(!victoryMovie.GetCombatSnapshot().cinematic.active, "Mission ending did not finish naturally");
+			Require(victoryMovie.GetProjectileCount() == 0 && victoryMovie.GetHostileProjectileCount() == 0,
+				"Expired rounds remained after the ending");
 			victoryMovie.StartNewMission();
 			const auto& restarted = victoryMovie.GetCombatSnapshot();
 			Require(restarted.result == CombatResult::Active && restarted.missionPhase == MissionPhase::Patrol &&

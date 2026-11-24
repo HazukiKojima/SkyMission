@@ -182,6 +182,8 @@ namespace Game {
 		void UpdateEnemyRadio(float dt);
 		EnemyRadioController m_enemyRadio;
 		void UpdateGunEffects();
+		void UpdateGunTracers();
+		void UpdateVictoryOrdnance(float dt);
 		void ApplyRenderStates();
 		void RefreshCombatSnapshot();
 		void RefreshDebugCollisions();

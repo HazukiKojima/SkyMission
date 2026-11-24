@@ -155,12 +155,6 @@ namespace Game {
 		m_hostileProjectiles.Update(m_scene, dt, playerTargets);
 		UpdateEnemyGuns();
 		m_mission.UpdateAntiAircraftGuns(m_scene, m_player, m_hostileProjectiles, m_battleSeconds, dt);
-
-		// 自機と敵機の曳光線を同じ描画情報へまとめる
-		auto tracers = m_effects.GetSnapshot().gunTracers;
-		auto hostileTracers = m_hostileProjectiles.TakeTracers();
-		tracers.insert(tracers.end(), hostileTracers.begin(), hostileTracers.end());
-		m_effects.SetGunTracers(std::move(tracers));
 	}
 
 	void FlightScene::UpdateEnemyGuns() {

@@ -168,6 +168,10 @@ namespace Game {
 
 		// 演出中は専用の更新へ切り替える
 		if (m_cinematic.GetPresentation().active) {
+			if (m_combat.result == CombatResult::Victory) {
+				m_effects.Update(dt);
+				UpdateVictoryOrdnance(dt);
+			}
 			UpdateCinematic(dt, combatInput.skipOpening);
 			UpdateEnemyRadio(dt);
 			return;
@@ -187,8 +191,10 @@ namespace Game {
 				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
 
 				if (m_combat.result == CombatResult::Victory) {
+					UpdateVictoryOrdnance(dt);
 					UpdatePlayer({}, dt);
 					ApplyRenderStates();
+					RefreshCombatSnapshot();
 					UpdateCamera({}, dt, {});
 					m_combat.audio.flying = m_scene.FindObject(m_playerId) != nullptr;
 				}
@@ -248,6 +254,22 @@ namespace Game {
 		UpdateGunEffects();
 		UpdateCarrierMissiles(input, dt);
 		UpdateHostileWeapons(dt);
+		UpdateGunTracers();
+	}
+
+	void FlightScene::UpdateVictoryOrdnance(float dt) {
+		// 勝利確定後は発射と命中判定を止め、飛翔中の弾だけを進める
+		m_projectiles.Update(m_scene, dt);
+		m_hostileProjectiles.Update(m_scene, dt);
+		UpdateCarrierMissiles({}, dt);
+		UpdateGunTracers();
+	}
+
+	void FlightScene::UpdateGunTracers() {
+		auto tracers = m_projectiles.TakeTracers();
+		auto hostileTracers = m_hostileProjectiles.TakeTracers();
+		tracers.insert(tracers.end(), hostileTracers.begin(), hostileTracers.end());
+		m_effects.SetGunTracers(std::move(tracers));
 	}
 
 	void FlightScene::FirePlayerGun(const CombatInput& input, float dt, const CombatGeometry& geometry,
@@ -308,7 +330,6 @@ namespace Game {
 			m_effects.SpawnGunShot(shot);
 		}
 
-		m_effects.SetGunTracers(m_projectiles.TakeTracers());
 		const auto* aircraft = m_scene.FindObject(m_playerId);
 
 		if (!m_weaponConfigured || !aircraft) {
