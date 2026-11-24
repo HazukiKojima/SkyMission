@@ -958,7 +958,12 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			arrival.Update({}, 0.25f);
 			Require(!arrival.GetCombatSnapshot().cinematic.active, "Arrival interrupted the completion report pause");
 
-			for (int frame = 0; frame < 8 && !arrival.GetCombatSnapshot().cinematic.active; ++frame) arrival.Update({}, 0.25f);
+			for (int frame = 0; frame < 8 && !arrival.GetCombatSnapshot().cinematic.active; ++frame) {
+				Require(arrival.GetCombatSnapshot().enemies.empty() &&
+					arrival.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack,
+					"Reinforcements appeared before their arrival cinematic");
+				arrival.Update({}, 0.25f);
+			}
 			Require(arrival.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount &&
 				arrival.GetCombatSnapshot().cinematic.active &&
 				arrival.GetCombatSnapshot().cinematic.cinematicId == "reinforcements",

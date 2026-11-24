@@ -351,15 +351,7 @@ namespace Game {
 			m_endingPlayed = true;
 			PlayCinematic("defeat");
 		} else if (m_combat.result == CombatResult::Active && !m_reinforcementsPlayed) {
-			if (m_carrierCompleteReported && m_combat.cinematic.cinematicId == "carrierComplete" &&
-				m_combat.cinematic.radioLine < 0) {
-				if (m_reinforcementHoldSeconds < 0) m_reinforcementHoldSeconds = 1;
-				else m_reinforcementHoldSeconds = std::max(0.0f, m_reinforcementHoldSeconds - dt);
-			}
-
 			if (m_mission.GetPhase() != MissionPhase::FinalFighters) return;
-			if (m_combat.cinematic.cinematicId == "carrierComplete" &&
-				(m_combat.cinematic.radioLine >= 0 || m_reinforcementHoldSeconds > 0)) return;
 
 			m_reinforcementsPlayed = true;
 			m_carrierLookSeconds = 0;

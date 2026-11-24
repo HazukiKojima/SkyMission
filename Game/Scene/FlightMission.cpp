@@ -23,7 +23,7 @@ namespace Game {
 		m_missionEnemyScale = enemyScale;
 	}
 
-	bool FlightMission::Advance(size_t remaining, bool alive, float dt) {
+	bool FlightMission::Advance(size_t remaining, bool alive, float dt, bool reinforcementsReady) {
 		m_missionMessageSeconds = std::max(0.0f, m_missionMessageSeconds - dt);
 
 		// 空母撃破後は増援までの間を空ける
@@ -32,7 +32,7 @@ namespace Game {
 				m_reinforcementElapsedSeconds = 0;
 			else
 				m_reinforcementElapsedSeconds += dt;
-			if (m_reinforcementElapsedSeconds + 1e-6f < 4.0f) return false;
+			if (m_reinforcementElapsedSeconds + 1e-6f < 4.0f || !reinforcementsReady) return false;
 		}
 
 		const bool changed = m_mission.Advance(remaining, alive);
