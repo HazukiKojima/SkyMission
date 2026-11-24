@@ -880,7 +880,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 					volley.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
 					volley.GetCombatSnapshot().enemies.empty() &&
 					volley.GetCombatSnapshot().audio.shipExplosions == 1,
-				"Two fast missiles did not destroy the rotated carrier exactly once");
+				"A two-missile salvo did not destroy the rotated carrier exactly once");
 			Require(volley.GetCombatSnapshot().cinematic.cinematicId == "carrierComplete" &&
 				volley.GetCombatSnapshot().cinematic.radioLine == 0,
 				"Double-shot carrier disable did not play completion voice");
@@ -888,42 +888,16 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 
 		configureCarrierDialogue(scene);
 
-		for (int missileIndex = 0; missileIndex < 2; ++missileIndex) {
-			lockCarrier(scene);
-			const float before = scene.GetCombatSnapshot().carrierHealth;
-			scene.Update({}, 0.01f, {}, drop);
-
-			for (int i = 0; i < 32 && scene.GetCombatSnapshot().carrierHealth == before; ++i)
-				scene.Update({}, 0.25f);
-			Require(scene.GetCombatSnapshot().carrierHealth == 150 - missileIndex * 150,
-				"Carrier did not require exactly two missile hits");
-			if (missileIndex == 0) {
-				Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
-						!scene.GetCombatSnapshot().audio.shipExplosions &&
-						scene.GetEffectSnapshot().deckSmoke.empty(),
-					"First missile prematurely destroyed carrier");
-				{
-					auto quickSecond = scene;
-					quickSecond.Update({}, 0.01f, {}, drop);
-
-					for (int frame = 0; frame < 32 && !quickSecond.GetCombatSnapshot().deckDisabled; ++frame) {
-						quickSecond.Update({}, 0.25f);
-						Require(quickSecond.GetCombatSnapshot().cinematic.cinematicId != "carrierHit",
-							"Rapid second shot after impact did not cancel first-hit encouragement");
-					}
-
-					Require(quickSecond.GetCombatSnapshot().deckDisabled &&
-						quickSecond.GetCombatSnapshot().cinematic.cinematicId == "carrierComplete",
-						"Rapid second shot did not produce the completion voice");
-				}
-
-				for (int frame = 0; frame < 3; ++frame) scene.Update({}, 0.25f);
-				Require(scene.GetCombatSnapshot().cinematic.cinematicId == "carrierHit" &&
-					scene.GetCombatSnapshot().cinematic.radioLine == 0,
-					"Single first hit did not play encouragement");
-				checkDefeatRetry(scene);
-			}
-		}
+		lockCarrier(scene);
+		scene.Update({}, 0.01f, {}, drop);
+		Require(scene.GetCombatSnapshot().audio.missileLaunches == 1 &&
+				scene.GetCombatSnapshot().carrierMissileAmmo == 1,
+			"Single launch did not consume exactly one missile");
+		for (int frame = 0; frame < 32 && !scene.GetCombatSnapshot().deckDisabled; ++frame)
+			scene.Update({}, 0.25f);
+		Require(scene.GetCombatSnapshot().carrierHealth == 0 &&
+				scene.GetCombatSnapshot().carrierMissileAmmo == 1,
+			"One missile hit did not destroy the carrier");
 
 		Require(scene.GetCombatSnapshot().deckDisabled &&
 				scene.GetCombatSnapshot().enemies.empty() &&
@@ -1147,7 +1121,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 	}
 
 	DestroyWindow(window);
-	std::cout << "PASS: full mission scene, automatic carrier selection, timed lock, launch gate, two-hit "
+	std::cout << "PASS: full mission scene, automatic carrier selection, timed lock, launch gate, one-hit "
 				 "carrier, one-time waves "
 				 "and retry\n";
 }
