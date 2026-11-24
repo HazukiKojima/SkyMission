@@ -221,6 +221,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				crash.GetCombatSnapshot().playerHealth == 0 &&
 				crash.GetCombatSnapshot().audio.aircraftExplosions == 1 &&
 				!crash.GetCombatSnapshot().cinematic.active &&
+				crash.GetCombatSnapshot().cinematic.cinematicId == "defeat" &&
+				crash.GetCombatSnapshot().cinematic.radioLine == 0 &&
 				!crash.GetEffectSnapshot().explosions.empty() &&
 				crash.GetEffectSnapshot().explosions.back().position.y >= 0,
 				"Sea crash failed to explode visibly and end mission");
@@ -562,7 +564,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			reusable.RemoveObject(initialPlayerId);
 			reusable.Update({}, 0.01f);
 			Require(reusable.GetCombatSnapshot().cinematic.cinematicId == "defeat" &&
-					reusable.GetCombatSnapshot().cinematic.active,
+					reusable.GetCombatSnapshot().cinematic.active &&
+					reusable.GetCombatSnapshot().cinematic.radioLine == 0,
 				"Defeat did not select its ending");
 			for (int frame = 0; frame < 16; ++frame)
 				reusable.Update({}, 0.25f);

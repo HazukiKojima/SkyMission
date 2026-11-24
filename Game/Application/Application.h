@@ -34,7 +34,7 @@ namespace Game {
 		void InitializeFlightScene(const FlightSceneDefinition& assets);
 		void ConfigureResizeHandling();
 		void BuildMenuHud();
-		enum class Screen { Title, Playing, Clear };
+		enum class Screen { Title, Playing, Clear, GameOver };
 		Screen m_screen = Screen::Title;
 		const Engine::Scene& PrepareCaptureScene();
 		HINSTANCE m_hInstance;

@@ -176,10 +176,10 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					Require(audio.GetLoadedSoundCount() == 21, "Carrier impact and completion voices were not decoded");
 					std::map<std::string, CinematicSettings> finaleCommands;
 
-					for (const auto* id : {"reinforcements", "finalRally", "finalEncouragement", "ending"})
+					for (const auto* id : {"reinforcements", "finalRally", "finalEncouragement", "ending", "defeat"})
 						finaleCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
 					audio.Initialize(repository / L"Assets/Sound", finaleCommands);
-					Require(audio.GetLoadedSoundCount() == 24, "The five finale voice files were not decoded");
+					Require(audio.GetLoadedSoundCount() == 25, "Victory and defeat voice files were not decoded");
 					const auto carrierCommand = LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics/midMission.json");
 					audio.Initialize(repository / L"Assets/Sound", std::map<std::string, CinematicSettings>{{"midMission", carrierCommand}});
 					Require(audio.GetLoadedSoundCount() == 20, "Carrier command voice was not decoded");

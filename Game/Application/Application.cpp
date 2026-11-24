@@ -247,8 +247,8 @@ namespace Game {
 			else if (input.active && gamepadInput)
 				m_usingGamepad = true;
 
-			// タイトルとクリア画面では決定入力による画面遷移だけを処理する
-			if (m_screen == Screen::Title || m_screen == Screen::Clear) {
+			// メニュー画面では決定入力による画面遷移だけを処理する
+			if (m_screen != Screen::Playing) {
 				if (input.WasConfirmPressed()) {
 					m_combatAudio.ResetPlayback();
 
@@ -280,27 +280,34 @@ namespace Game {
 				Log("Capture view: {} (0=normal, 1=environment+ships, 2=environment)\n", m_captureMode);
 			}
 
-			// 入力から戦闘を進め、演出終了時にクリア画面へ切り替える
+			// 入力から戦闘を進め、演出終了時に結果画面へ切り替える
 			auto combat = CombatController{}.ReadInput(input);
 
-			if (m_scene->GetCombatSnapshot().result == CombatResult::Victory) combat.retry = false;
+			const bool defeated = m_scene->GetCombatSnapshot().result == CombatResult::Defeat;
+			if (defeated) combat.skipOpening = false;
 			const float simulationSeconds =
-				m_scene->GetCombatSnapshot().cinematic.active && !input.active ? 0 : deltaSeconds;
+				(m_scene->GetCombatSnapshot().cinematic.active || defeated) && !input.active ? 0 : deltaSeconds;
 			const bool endingWasActive = m_scene->GetCombatSnapshot().cinematic.active &&
 				m_scene->GetCombatSnapshot().cinematic.cinematicId == "ending";
 			const float previousHealth = m_scene->GetCombatSnapshot().playerHealth;
 			const auto flight = m_aircraftController.ReadInput(input);
 			m_scene->Update(flight, simulationSeconds, input, combat);
 			const auto& combatState = m_scene->GetCombatSnapshot();
+			if (combatState.result == CombatResult::Defeat) m_captureMode = 0;
+			const bool defeatRadioActive =
+				combatState.cinematic.cinematicId == "defeat" && combatState.cinematic.radioLine >= 0;
 			const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
 				combatState.result == CombatResult::Victory;
-			// 表示方式を保持したまま、フォーカス喪失時やクリア画面への切り替え時は振動を止める
-			const auto rumble = m_combatRumble.Update(deltaSeconds, input.active && m_usingGamepad && !showClearScreen,
+			const bool showGameOver = combatState.result == CombatResult::Defeat &&
+				!combatState.cinematic.active && !defeatRadioActive;
+			const bool showResultScreen = showClearScreen || showGameOver;
+			// フォーカス喪失時や結果画面への切り替え時は振動を止める
+			const auto rumble = m_combatRumble.Update(deltaSeconds, input.active && m_usingGamepad && !showResultScreen,
 				flight, combatState, combatState.playerHealth < previousHealth);
 			m_window->SetGamepadRumble(rumble.lowFrequency, rumble.highFrequency);
 
-			if (showClearScreen) {
-				m_screen = Screen::Clear;
+			if (showResultScreen) {
+				m_screen = showGameOver ? Screen::GameOver : Screen::Clear;
 				m_captureMode = 0;
 				m_combatAudio.ResetPlayback();
 				m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
@@ -337,10 +344,18 @@ namespace Game {
 				{(width - HudDrawList::MeasureTextWidth(text, size)) * 0.5f, y}, text, size, {1, 1, 1, 1});
 		};
 
-		centered(m_screen == Screen::Title ? "SkyMission" : "ミッションクリア", height * 0.4f, 48 * scale);
+		const char* title = "SkyMission";
+		const char* action = " でスタート";
+		if (m_screen == Screen::GameOver) {
+			title = "ゲームオーバー";
+			action = " で再挑戦";
+		} else if (m_screen == Screen::Clear) {
+			title = "ミッションクリア";
+			action = " でタイトルに戻る";
+		}
+		centered(title, height * 0.4f, 48 * scale);
 		// コントローラーの機種にかかわらず、操作ガイドはPS4表記に統一する
 		const auto confirm = m_usingGamepad ? "×" : "Enter";
-		const auto action = m_screen == Screen::Title ? " でスタート" : " でタイトルに戻る";
 		centered(std::string(confirm) + action, height * 0.56f, 26 * scale);
 	}
 

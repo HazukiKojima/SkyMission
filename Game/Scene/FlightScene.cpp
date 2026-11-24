@@ -809,8 +809,9 @@ namespace Game {
 		m_combat.result = CombatResult::Defeat;
 		m_carrierLookSeconds = 0;
 
-		// 爆発が見える通常画面のままゲームオーバーにする
+		// 墜落の爆発を表示しながら、司令官の無線を流す
 		m_endingPlayed = true;
+		StartCommandRadio("defeat");
 	}
 
 	void FlightScene::UpdateEnemyRadio(float dt) {

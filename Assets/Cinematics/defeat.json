@@ -12,5 +12,15 @@
       "cameraStartOffsetMeters": [180, 100, 360],
       "cameraEndOffsetMeters": [100, 75, 320]
     }
+  ],
+  "radio": [
+    {
+      "speaker": "司令官",
+      "side": "friendly",
+      "text": "聞こえるか？応答せよ！",
+      "audio": "../Sound/聞こえるか？応答せよ！.wav",
+      "startSeconds": 0,
+      "durationSeconds": 3
+    }
   ]
 }
