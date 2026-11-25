@@ -5,7 +5,7 @@
 
 namespace Game {
 	void CombatEffectPresenter::Build(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
-		Engine::HudDrawList& list) const {
+		const DirectX::XMFLOAT3& playerPosition, Engine::HudDrawList& list) const {
 		if (view.width == 0 || view.height == 0) return;
 
 		EffectDrawContext context(view, list, m_settings);
@@ -48,8 +48,8 @@ namespace Game {
 			if (!context.HasVertexBudget(fireVertexBudget)) break;
 			const auto origin = XMLoadFloat3(&fire.position);
 			const auto wake = -XMLoadFloat3(&fire.direction);
-			const float pulse = 0.88f + 0.12f * std::sin(fire.seconds * 39.0f);
-			const float minimumRadius = 5.0f * context.GetScale();
+			const float pulse = fire.size * (0.88f + 0.12f * std::sin(fire.seconds * 39.0f));
+			const float minimumRadius = 5.0f * fire.size * context.GetScale();
 			context.DrawGlow(origin + wake * 6.0f, 13.0f * pulse, {1.0f, 0.24f, 0.02f, 0.82f});
 			for (unsigned i = 0; i < 6; ++i) {
 				const float offset = static_cast<float>(5 - i);
@@ -137,6 +137,12 @@ namespace Game {
 				random.Sample(4) * XM_2PI, static_cast<unsigned>(random.Sample(5) * 64.0f),
 				{0.80f, 0.85f, 0.92f, opacity}, EffectClipMode::BoundsVisible,
 				minimumContrailRadius * widthScale);
+		}
+
+		const float flash = EvaluateExplosionFeedback(snapshot, playerPosition).flash;
+		if (flash > 0 && context.HasVertexBudget(6)) {
+			list.FilledRect({0, 0}, {static_cast<float>(view.width), static_cast<float>(view.height)},
+				{1.0f, 0.77f, 0.46f, flash * 0.28f});
 		}
 	}
 } // namespace Game

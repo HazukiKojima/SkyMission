@@ -146,6 +146,8 @@ namespace Game {
 			DirectX::XMFLOAT3 forward{};
 		};
 
+		enum class CrashEffect { WingBreak, EngineBursts, FuelFire, FuselageBreak, Standard, Count };
+
 		struct EnemyAircraft {
 			AircraftFlightModel flightModel;
 			AircraftAIController controller;
@@ -159,6 +161,10 @@ namespace Game {
 			unsigned crashVariant = 0;
 			DirectX::XMFLOAT3 crashVelocity{};
 			DirectX::XMFLOAT3 crashSmokeOrigin{};
+			CrashEffect crashEffect = CrashEffect::Standard;
+			Engine::ObjectId detachedPartId = Engine::InvalidObjectId;
+			DirectX::XMFLOAT3 detachedPartPivot{};
+			DirectX::XMFLOAT3 detachedPartVelocity{};
 			size_t slot = 0;
 			bool fire = false;
 			float weaponCooldownSeconds = 0;
@@ -173,6 +179,10 @@ namespace Game {
 		void UpdatePlayer(const AircraftInput& input, float dt);
 		void UpdateEnemies(float dt);
 		void UpdateCrashingEnemies(float dt);
+		void DetachAircraftPart(EnemyAircraft& enemy, bool wing);
+		void UpdateDetachedAircraftPart(EnemyAircraft& enemy, float dt, bool explode);
+		void UpdateCrashEffect(EnemyAircraft& enemy, const Engine::SceneObject& object,
+			float previousSeconds, float duration);
 		void UpdateCombatTimers(float dt);
 		void UpdateMission(float dt);
 		void UpdateWeapons(const CombatInput& input, float dt);

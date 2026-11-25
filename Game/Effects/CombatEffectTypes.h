@@ -35,6 +35,7 @@ namespace Game {
 		DirectX::XMFLOAT3 position{};
 		DirectX::XMFLOAT3 direction{};
 		float seconds = 0;
+		float size = 1.0f;
 	};
 
 	struct WingtipVaporSegment {
@@ -66,11 +67,14 @@ namespace Game {
 		DirectX::XMFLOAT3 direction{0, 0, -1};
 	};
 
+	enum class ExplosionStyle { Standard, BacklitSmoke, FallingDebris };
+
 	struct ExplosionEffect {
 		DirectX::XMFLOAT3 position{}, velocity{};
 		float age = 0;
 		float radius = ExplosionEffectSettings::minRadius;
 		float flashDurationMultiplier = 1.0f;
+		ExplosionStyle style = ExplosionStyle::Standard;
 	};
 
 	// 敵機が削除された後も描画できるよう、位置と速度を値として保持する
@@ -88,4 +92,12 @@ namespace Game {
 		std::vector<WingtipVaporSegment> wingtipVapor;
 		std::vector<ContrailPuff> contrails;
 	};
+
+	struct ExplosionFeedback {
+		float impact = 0;
+		float flash = 0;
+	};
+
+	ExplosionFeedback EvaluateExplosionFeedback(const CombatEffectSnapshot& snapshot,
+		const DirectX::XMFLOAT3& playerPosition);
 } // namespace Game

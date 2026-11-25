@@ -13,7 +13,7 @@ namespace Game {
 
 		// 呼び出し側で初期化した描画リストに追記し、照準より先に描く
 		void Build(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
-			Engine::HudDrawList& list) const;
+			const DirectX::XMFLOAT3& playerPosition, Engine::HudDrawList& list) const;
 
 	  private:
 		EffectSettings m_settings;

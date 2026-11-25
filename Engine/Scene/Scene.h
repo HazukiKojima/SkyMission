@@ -25,6 +25,8 @@ namespace Engine {
 		float nodeRotationRadians = 0.0f;
 		std::shared_ptr<Model> model;
 		DirectX::XMFLOAT4X4 worldTransform;
+		// モデル空間で平面の正側を描画する
+		DirectX::XMFLOAT4 localClipPlane{0, 0, 0, 1};
 	};
 
 	struct SceneEnvironment {

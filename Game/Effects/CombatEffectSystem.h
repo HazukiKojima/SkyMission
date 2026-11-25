@@ -36,10 +36,11 @@ namespace Game {
 		void SetRocketExhausts(std::vector<RocketExhaust> exhausts);
 		void SpawnImpact(const HitEvent& hit, const DirectX::XMFLOAT3& targetVelocity);
 		void SpawnExplosion(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity,
-			float radiusMultiplier = 1.0f, float flashDurationMultiplier = 1.0f);
+			float radiusMultiplier = 1.0f, float flashDurationMultiplier = 1.0f,
+			ExplosionStyle style = ExplosionStyle::Standard);
 		void SpawnExplosion(
 			const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale,
-			float radiusMultiplier = 1.0f);
+			float radiusMultiplier = 1.0f, ExplosionStyle style = ExplosionStyle::Standard);
 
 		// 内部の演出状態への参照。更新・生成操作で内容が変わるため描画するフレーム内で使う
 		const CombatEffectSnapshot& GetSnapshot() const {

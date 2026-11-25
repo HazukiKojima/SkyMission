@@ -21,6 +21,31 @@ namespace Game {
 		}
 	} // namespace
 
+	ExplosionFeedback EvaluateExplosionFeedback(const CombatEffectSnapshot& snapshot,
+		const DirectX::XMFLOAT3& playerPosition) {
+		using namespace DirectX;
+		constexpr float nearDistance = 150.0f;
+		constexpr float farDistance = 1200.0f;
+		const auto player = XMLoadFloat3(&playerPosition);
+		ExplosionFeedback feedback;
+
+		for (const auto& explosion : snapshot.explosions) {
+			if (explosion.style == ExplosionStyle::Standard) continue;
+			const bool finalBlast = explosion.style == ExplosionStyle::FallingDebris;
+			const float flashSeconds = finalBlast ? 0.22f : 0.16f;
+			if (explosion.age >= flashSeconds) continue;
+
+			const float distance = XMVectorGetX(XMVector3Length(XMLoadFloat3(&explosion.position) - player));
+			const float proximity = std::clamp((farDistance - distance) / (farDistance - nearDistance), 0.0f, 1.0f);
+			const float strength = proximity * proximity * (3.0f - 2.0f * proximity);
+			const float intensity = strength * (finalBlast ? 1.0f : 0.72f);
+			const float decay = 1.0f - explosion.age / flashSeconds;
+			feedback.flash = std::max(feedback.flash, intensity * decay * decay);
+			if (explosion.age == 0) feedback.impact = std::max(feedback.impact, intensity);
+		}
+		return feedback;
+	}
+
 	void CombatEffectSystem::Update(float deltaSeconds) {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0) return;
 
@@ -124,14 +149,14 @@ namespace Game {
 
 	void CombatEffectSystem::SpawnExplosion(
 		const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity, float radiusMultiplier,
-		float flashDurationMultiplier) {
+		float flashDurationMultiplier, ExplosionStyle style) {
 		AddExplosion({position, velocity, 0, m_settings.explosion.minRadius * radiusMultiplier,
-			flashDurationMultiplier});
+			flashDurationMultiplier, style});
 	}
 
 	void CombatEffectSystem::SpawnExplosion(
 		const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale,
-		float radiusMultiplier) {
+		float radiusMultiplier, ExplosionStyle style) {
 		using namespace DirectX;
 
 		ExplosionEffect explosion{
@@ -151,6 +176,7 @@ namespace Game {
 		}
 
 		explosion.radius *= radiusMultiplier;
+		explosion.style = style;
 		AddExplosion(explosion);
 	}
 

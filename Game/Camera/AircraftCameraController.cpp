@@ -255,7 +255,7 @@ namespace Game {
 		if (input.missileLaunched) startImpact(settings.missileLaunchDegrees, settings.missileLaunchSeconds);
 		if (input.gunHit) startImpact(settings.gunHitDegrees, settings.hitSeconds);
 		if (input.heavyHit) startImpact(settings.heavyHitDegrees, settings.hitSeconds);
-		if (input.enemyDestroyed) startImpact(settings.enemyDestroyedDegrees, settings.enemyDestroyedSeconds);
+		startImpact(settings.enemyDestroyedDegrees * 4.0f * input.explosionImpact, settings.enemyDestroyedSeconds);
 	}
 
 	void AircraftCameraController::UpdateView() {

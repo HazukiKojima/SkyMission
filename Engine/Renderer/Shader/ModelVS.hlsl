@@ -6,6 +6,13 @@ cbuffer MatrixBuffer : register(b0)
     float3 padding;
     float3 cameraPos;
     float pad2;
+    float3 sunDirection;
+    float sunIntensity;
+    float3 sunColor;
+    float ambientIntensity;
+    float3 ambientColor;
+    float pad3;
+    float4 localClipPlane;
 };
 
 cbuffer NodeRotationBuffer : register(b1)
@@ -31,6 +38,7 @@ struct PS_INPUT
     float3 worldPos : TEXCOORD1;
     float3 normal : NORMAL;
     float4 tangent : TANGENT;
+    float clipDistance : SV_ClipDistance0;
 };
 
 float3 RotateNodeVector(float3 value)
@@ -63,5 +71,6 @@ PS_INPUT VS(VS_INPUT input)
     output.worldPos = mul(float4(localPosition, 1.0f), world).xyz;
     output.normal = normalize(mul(float4(localNormal, 0.0f), world).xyz);
     output.tangent = float4(normalize(mul(float4(localTangent, 0.0f), world).xyz), input.tangent.w);
+    output.clipDistance = dot(float4(localPosition, 1.0f), localClipPlane);
     return output;
 }

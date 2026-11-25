@@ -38,8 +38,13 @@ namespace Game {
 		std::optional<float> GetLowestAircraftY(const Engine::SceneObject& aircraft) {
 			using namespace DirectX;
 			if (!aircraft.model) return std::nullopt;
-			const auto bounds = aircraft.model->GetLocalBounds();
+			auto bounds = aircraft.model->GetLocalBounds();
 			if (!bounds) return std::nullopt;
+			const auto& plane = aircraft.localClipPlane;
+			if (plane.x > 0) bounds->minimum.x = -plane.w;
+			if (plane.x < 0) bounds->maximum.x = plane.w;
+			if (plane.z > 0) bounds->minimum.z = -plane.w;
+			if (plane.z < 0) bounds->maximum.z = plane.w;
 
 			float lowestY = std::numeric_limits<float>::infinity();
 			const auto world = XMLoadFloat4x4(&aircraft.worldTransform);
@@ -544,7 +549,10 @@ namespace Game {
 		}
 
 		m_cameraController.SetLookTarget(lookTarget, automatic);
-		const bool flying = m_combat.result == CombatResult::Active && m_scene.FindObject(m_playerId);
+		const bool hasPlayer = m_scene.FindObject(m_playerId) != nullptr;
+		const bool flying = m_combat.result == CombatResult::Active && hasPlayer;
+		const float explosionImpact = hasPlayer
+			? EvaluateExplosionFeedback(m_effects.GetSnapshot(), m_player.GetPosition()).impact : 0.0f;
 		m_cameraController.UpdateShake(dt, {
 			.acceleration = flying ? input.throttle : 0.0f,
 			.highG = flying && input.highGTurn && std::max(std::abs(input.turn), std::abs(input.yaw)) > 0.05f,
@@ -552,7 +560,7 @@ namespace Game {
 			.missileLaunched = m_combat.audio.missileLaunches > 0,
 			.gunHit = m_combat.audio.gunHits > 0,
 			.heavyHit = m_combat.audio.missileHits > 0,
-			.enemyDestroyed = m_combat.enemyAircraftDestroyed > 0,
+			.explosionImpact = explosionImpact,
 		});
 		m_cameraController.Update(dt, cameraInput);
 		m_carrierLookSeconds = std::max(0.0f, m_carrierLookSeconds - dt);
@@ -855,6 +863,8 @@ namespace Game {
 		if (enemy->health <= 0) {
 			using namespace DirectX;
 			enemy->crashVariant = m_combat.enemyAircraftDestroyed;
+			enemy->crashEffect = static_cast<CrashEffect>(
+				enemy->crashVariant % static_cast<unsigned>(CrashEffect::Count));
 			++m_combat.enemyAircraftDestroyed;
 			enemy->crashVelocity = enemy->flightModel.GetVelocity();
 			constexpr float horizontalSpeedRetention = 0.92f;
@@ -867,12 +877,123 @@ namespace Game {
 					XMVector3TransformCoord(XMLoadFloat3(&hit.position), inverse));
 			}
 			// 爆煙は被弾地点に残し、燃えている機体だけがそこから落ちていく
-			m_effects.SpawnExplosion(hit.position, {}, 2.5f, 2.2f);
+			m_effects.SpawnExplosion(hit.position, {}, 2.5f, 2.2f, ExplosionStyle::BacklitSmoke);
 			m_effects.SpawnAircraftSmoke({hit.position, 0});
+			if (enemy->crashEffect == CrashEffect::WingBreak) DetachAircraftPart(*enemy, true);
 			if (hit.kind == ProjectileKind::Gun) ++m_combat.audio.gunHits;
 			else ++m_combat.audio.missileHits;
 			destroyed.push_back(enemy->objectId);
 			m_combat.destroyedSeconds = m_combatSettings.feedback.destroyedSeconds;
+		}
+	}
+
+	void FlightScene::DetachAircraftPart(EnemyAircraft& enemy, bool wing) {
+		using namespace DirectX;
+		auto* object = m_scene.FindObject(enemy.objectId);
+		if (!object || !object->model) return;
+		const auto bounds = object->model->GetLocalBounds();
+		if (!bounds) return;
+
+		const auto center = bounds->Center();
+		const float side = enemy.crashSmokeOrigin.x < center.x ? -1.0f : 1.0f;
+		const float cut = wing
+			? std::lerp(center.x, side < 0 ? bounds->minimum.x : bounds->maximum.x, 0.27f)
+			: std::lerp(bounds->minimum.z, bounds->maximum.z, 0.57f);
+		const XMFLOAT4 plane = wing ? XMFLOAT4{side, 0, 0, -side * cut} : XMFLOAT4{0, 0, 1, -cut};
+		object->localClipPlane = {-plane.x, -plane.y, -plane.z, -plane.w};
+		// 火元を機体側に残し、切り離した側の空間に炎が浮かないようにする
+		if (wing && side * (enemy.crashSmokeOrigin.x - cut) > 0) {
+			enemy.crashSmokeOrigin.x = cut;
+		} else if (!wing) {
+			enemy.crashSmokeOrigin.z = std::min(enemy.crashSmokeOrigin.z, cut);
+		}
+		auto part = *object;
+		part.localClipPlane = plane;
+		enemy.detachedPartPivot = wing
+			? XMFLOAT3{std::lerp(cut, side < 0 ? bounds->minimum.x : bounds->maximum.x, 0.4f), center.y, center.z}
+			: XMFLOAT3{center.x, center.y, std::lerp(cut, bounds->maximum.z, 0.4f)};
+
+		const auto world = XMLoadFloat4x4(&part.worldTransform);
+		const auto localKick = wing ? XMVectorSet(side * 48.0f, 8.0f, -8.0f, 0)
+			: XMVectorSet(side * 30.0f, 14.0f, 54.0f, 0);
+		const auto kick = XMVector3TransformNormal(localKick, world) / enemy.visualScale;
+		XMStoreFloat3(&enemy.detachedPartVelocity, XMLoadFloat3(&enemy.crashVelocity) * 0.68f + kick);
+		enemy.detachedPartId = m_scene.AddObject(part.model, part.worldTransform);
+		part.id = enemy.detachedPartId;
+		*m_scene.FindObject(enemy.detachedPartId) = std::move(part);
+
+		XMFLOAT3 breakPoint;
+		XMStoreFloat3(&breakPoint, XMVector3TransformCoord(
+			wing ? XMVectorSet(cut, center.y, center.z, 1) : XMVectorSet(center.x, center.y, cut, 1), world));
+		m_effects.SpawnExplosion(breakPoint, {}, wing ? 0.8f : 1.6f, 1.5f);
+		if (!wing) ++m_combat.audio.missileHits;
+	}
+
+	void FlightScene::UpdateDetachedAircraftPart(EnemyAircraft& enemy, float dt, bool explode) {
+		using namespace DirectX;
+		auto* part = m_scene.FindObject(enemy.detachedPartId);
+		if (!part) return;
+
+		const auto pivot = XMLoadFloat3(&enemy.detachedPartPivot);
+		const auto world = XMLoadFloat4x4(&part->worldTransform);
+		const auto spin = XMMatrixTranslationFromVector(-pivot) *
+			XMMatrixRotationRollPitchYaw(dt * 3.0f, dt * 1.8f, dt * 4.5f) *
+			XMMatrixTranslationFromVector(pivot);
+		auto& velocity = enemy.detachedPartVelocity;
+		const auto movement = XMVectorSet(velocity.x * dt, (velocity.y - 18.0f * dt) * dt, velocity.z * dt, 0);
+		const auto nextWorld = spin * world * XMMatrixTranslationFromVector(movement);
+		XMStoreFloat4x4(&part->worldTransform, nextWorld);
+		velocity.y -= 36.0f * dt;
+
+		XMFLOAT3 position;
+		XMStoreFloat3(&position, XMVector3TransformCoord(pivot, nextWorld));
+		if (!explode && position.y > 0) return;
+
+		position.y = std::max(position.y, 0.0f);
+		m_effects.SpawnExplosion(position, {}, enemy.crashEffect == CrashEffect::FuselageBreak ? 1.7f : 0.85f);
+		++m_combat.audio.aircraftExplosions;
+		m_scene.RemoveObject(enemy.detachedPartId);
+		enemy.detachedPartId = Engine::InvalidObjectId;
+	}
+
+	void FlightScene::UpdateCrashEffect(EnemyAircraft& enemy, const Engine::SceneObject& object,
+		float previousSeconds, float duration) {
+		using namespace DirectX;
+		if (!object.model) return;
+		const auto bounds = object.model->GetLocalBounds();
+		if (!bounds) return;
+		const auto world = XMLoadFloat4x4(&object.worldTransform);
+		const auto center = bounds->Center();
+		const float progress = enemy.crashSeconds / duration;
+
+		if (enemy.crashEffect == CrashEffect::EngineBursts) {
+			const XMFLOAT3 engine{center.x, center.y, std::lerp(bounds->minimum.z, center.z, 0.20f)};
+			XMFLOAT3 position;
+			XMStoreFloat3(&position, XMVector3TransformCoord(XMLoadFloat3(&engine), world));
+			constexpr std::array burstTimes{0.22f, 0.56f};
+			for (const float fraction : burstTimes) {
+				if (previousSeconds < duration * fraction && progress >= fraction) {
+					m_effects.SpawnExplosion(position, {}, 1.5f + fraction, 1.65f);
+					m_effects.SpawnAircraftSmoke({position, 0});
+					++m_combat.audio.missileHits;
+				}
+			}
+		} else if (enemy.crashEffect == CrashEffect::FuelFire) {
+			const float spread = std::clamp((progress - 0.20f) / 0.65f, 0.0f, 1.0f);
+			if (spread <= 0) return;
+			const float side = enemy.crashSmokeOrigin.x < center.x ? -1.0f : 1.0f;
+			const float wingtip = side < 0 ? bounds->minimum.x : bounds->maximum.x;
+			const auto position = XMVectorSet(std::lerp(center.x, wingtip, 0.24f + 0.50f * spread),
+				center.y, center.z, 1);
+			AircraftFire fire;
+			XMStoreFloat3(&fire.position, XMVector3TransformCoord(position, world));
+			XMStoreFloat3(&fire.direction, XMVector3Normalize(XMLoadFloat3(&enemy.crashVelocity)));
+			fire.seconds = enemy.crashSeconds;
+			fire.size = 0.8f + spread * 1.35f;
+			m_effects.AddAircraftFire(fire);
+			constexpr float flashTime = 0.82f;
+			if (previousSeconds < duration * flashTime && progress >= flashTime)
+				m_effects.SpawnExplosion(fire.position, {}, 1.6f, 2.0f);
 		}
 	}
 
@@ -882,16 +1003,23 @@ namespace Game {
 
 		std::erase_if(m_enemies, [&](EnemyAircraft& enemy) {
 			if (enemy.health > 0) return false;
+			const auto& profile = enemyCrashProfiles[enemy.crashVariant % enemyCrashProfiles.size()];
+			const float previousSeconds = enemy.crashSeconds;
+			const float step = std::min(dt, profile.duration - previousSeconds);
+			const float breakupTime = profile.duration * 0.53f;
+			const float partExplosionTime = profile.duration * (enemy.crashEffect == CrashEffect::WingBreak ? 0.66f : 0.86f);
+			UpdateDetachedAircraftPart(enemy, step, previousSeconds + step >= partExplosionTime);
+			if (enemy.crashEffect == CrashEffect::FuselageBreak &&
+				previousSeconds < breakupTime && previousSeconds + step >= breakupTime)
+				DetachAircraftPart(enemy, false);
 			auto* object = m_scene.FindObject(enemy.objectId);
 			if (object) {
 				auto& world = object->worldTransform;
 				const auto smokeOrigin = XMLoadFloat3(&enemy.crashSmokeOrigin);
 				const auto previousSmoke = XMVector3TransformCoord(smokeOrigin, XMLoadFloat4x4(&world));
 				auto& velocity = enemy.crashVelocity;
-				const auto& profile = enemyCrashProfiles[enemy.crashVariant % enemyCrashProfiles.size()];
-				const float side = (enemy.crashVariant / enemyCrashProfiles.size()) % 2 ? -1.0f : 1.0f;
-				const float previousSeconds = enemy.crashSeconds;
-				const float step = std::min(dt, profile.duration - previousSeconds);
+				const float side = enemy.crashEffect == CrashEffect::WingBreak && object->localClipPlane.x != 0
+					? object->localClipPlane.x : ((enemy.crashVariant / enemyCrashProfiles.size()) % 2 ? -1.0f : 1.0f);
 				enemy.crashSeconds += step;
 				const XMFLOAT3 previousPosition{world._41, world._42, world._43};
 				const auto previousVelocity = XMLoadFloat3(&velocity);
@@ -922,6 +1050,7 @@ namespace Game {
 
 				const float lowestY = GetLowestAircraftY(*object).value_or(position.y);
 				if (lowestY > 0 && enemy.crashSeconds < profile.duration) {
+					UpdateCrashEffect(enemy, *object, previousSeconds, profile.duration);
 					const auto nextSmoke = XMVector3TransformCoord(smokeOrigin, XMLoadFloat4x4(&world));
 					AircraftFire fire;
 					XMStoreFloat3(&fire.position, nextSmoke);
@@ -939,10 +1068,12 @@ namespace Game {
 				}
 
 				world._42 -= std::min(lowestY, 0.0f);
-				m_effects.SpawnExplosion(*object, {}, scale, 2.8f);
+				m_effects.SpawnExplosion(*object, lowestY > 0 ? velocity : XMFLOAT3{}, scale, 2.8f,
+					ExplosionStyle::FallingDebris);
 				++m_combat.audio.aircraftExplosions;
 				m_scene.RemoveObject(enemy.objectId);
 			}
+			UpdateDetachedAircraftPart(enemy, 0, true);
 			m_enemyRadio.NotifyCrashImpact(enemy.objectId);
 			return true;
 		});
@@ -988,8 +1119,10 @@ namespace Game {
 
 	void FlightScene::RemoveObject(Engine::ObjectId id) {
 		m_scene.RemoveObject(id);
-		std::erase_if(m_enemies, [id](const EnemyAircraft& e) {
-			return e.objectId == id;
+		std::erase_if(m_enemies, [&](const EnemyAircraft& e) {
+			if (e.objectId != id) return false;
+			m_scene.RemoveObject(e.detachedPartId);
+			return true;
 		});
 
 		if (m_playerId == id) {

@@ -340,7 +340,7 @@ namespace Game {
 
 		if (m_captureMode == 0) {
 			if (!m_scene->GetCombatSnapshot().cinematic.active)
-				m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);
+				m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, combatState.playerPosition, m_hud);
 			m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud, m_usingGamepad);
 		}
 	}
