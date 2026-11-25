@@ -206,11 +206,26 @@ namespace Game {
 	}
 
 	void Application::Update() {
+		const float deltaSeconds = UpdateFrameTiming();
+		if (!m_scene) return;
+
+		const InputSnapshot input = m_window->ConsumeInput();
+		m_combatAudio.SetSuspended(!input.active);
+		UpdateInputDevice(input);
+
+		if (m_screen == Screen::Playing) {
+			UpdateGameplay(input, deltaSeconds);
+		} else {
+			UpdateMenu(input);
+		}
+	}
+
+	float Application::UpdateFrameTiming() {
 		// 経過時間を測り、一定間隔でFPSとGPU時間の表示を更新する
-		auto now = std::chrono::steady_clock::now();
-		std::chrono::duration<float> dt = now - m_lastTime;
+		const auto now = std::chrono::steady_clock::now();
+		const std::chrono::duration<float> dt = now - m_lastTime;
 		m_lastTime = now;
-		float deltaSeconds = dt.count();
+		const float deltaSeconds = dt.count();
 		m_fpsTimer += deltaSeconds;
 		++m_fpsFrameCount;
 
@@ -229,109 +244,110 @@ namespace Game {
 		}
 
 		m_elapsedTime += deltaSeconds;
+		return deltaSeconds;
+	}
 
-		if (m_scene) {
-			const InputSnapshot input = m_window->ConsumeInput();
-			m_combatAudio.SetSuspended(!input.active);
+	void Application::UpdateInputDevice(const InputSnapshot& input) {
+		const bool keyboardOrMouse = std::ranges::any_of(input.keys, std::identity{}) ||
+			std::ranges::any_of(input.pressedKeys, std::identity{}) || input.leftMouseDown ||
+			input.middleMouseDown || input.rightMouseDown || input.rightMousePressCount != 0;
+		const auto& pad = input.gamepad;
+		const bool gamepadInput = pad.buttons != 0 || pad.northTapped ||
+			std::ranges::any_of(pad.presses, std::identity{}) || pad.leftX != 0 || pad.leftY != 0 ||
+			pad.rightX != 0 || pad.rightY != 0 || pad.leftTrigger != 0 || pad.rightTrigger != 0;
+		// 無入力時やフォーカス喪失時も表示方式を維持し、同時入力時はキーボード・マウスを優先する
+		if (input.active && keyboardOrMouse)
+			m_usingGamepad = false;
+		else if (input.active && gamepadInput)
+			m_usingGamepad = true;
+	}
 
-			const bool keyboardOrMouse = std::ranges::any_of(input.keys, std::identity{}) ||
-				std::ranges::any_of(input.pressedKeys, std::identity{}) || input.leftMouseDown ||
-				input.middleMouseDown || input.rightMouseDown || input.rightMousePressCount != 0;
-			const auto& pad = input.gamepad;
-			const bool gamepadInput = pad.buttons != 0 || pad.northTapped ||
-				std::ranges::any_of(pad.presses, std::identity{}) || pad.leftX != 0 || pad.leftY != 0 ||
-				pad.rightX != 0 || pad.rightY != 0 || pad.leftTrigger != 0 || pad.rightTrigger != 0;
-			// 無入力時やフォーカス喪失時も表示方式を維持し、同時入力時はキーボード・マウスを優先する
-			if (input.active && keyboardOrMouse)
-				m_usingGamepad = false;
-			else if (input.active && gamepadInput)
-				m_usingGamepad = true;
-
-			// メニュー画面では決定入力による画面遷移だけを処理する
-			if (m_screen != Screen::Playing) {
-				if (input.WasConfirmPressed()) {
-					m_combatAudio.ResetPlayback();
-
-					if (m_screen == Screen::Clear) {
-						m_screen = Screen::Title;
-					} else {
-						m_scene->StartNewMission();
-						m_screen = Screen::Playing;
-						m_captureMode = 0;
-					}
-				}
-
-				if (m_screen != Screen::Playing) {
-					m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
-					BuildMenuHud();
-					return;
-				}
-
-				// 開始に使った入力を同じフレームのスキップ判定に渡さない
-				m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
-				m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
-				m_hudPresenter.Build(m_scene->GetCombatSnapshot(),
-					{.width = m_window->GetWidth(), .height = m_window->GetHeight()}, m_hud, m_usingGamepad);
-				return;
-			}
-
-			if (input.WasKeyPressed(VK_F6)) {
-				m_captureMode = (m_captureMode + 1) % 3;
-				Log("Capture view: {} (0=normal, 1=environment+ships, 2=environment)\n", m_captureMode);
-			}
-
-			// 入力から戦闘を進め、演出終了時に結果画面へ切り替える
-			auto combat = CombatController{}.ReadInput(input);
-
-			const bool defeated = m_scene->GetCombatSnapshot().result == CombatResult::Defeat;
-			if (defeated) combat.skipOpening = false;
-			const float simulationSeconds =
-				(m_scene->GetCombatSnapshot().cinematic.active || defeated) && !input.active ? 0 : deltaSeconds;
-			const bool endingWasActive = m_scene->GetCombatSnapshot().cinematic.active &&
-				m_scene->GetCombatSnapshot().cinematic.cinematicId == "ending";
-			const float previousHealth = m_scene->GetCombatSnapshot().playerHealth;
-			const auto flight = m_aircraftController.ReadInput(input);
-			m_scene->Update(flight, simulationSeconds, input, combat);
-			const auto& combatState = m_scene->GetCombatSnapshot();
-			if (combatState.result == CombatResult::Defeat) m_captureMode = 0;
-			const bool defeatRadioActive =
-				combatState.cinematic.cinematicId == "defeat" && combatState.cinematic.radioLine >= 0;
-			const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
-				combatState.result == CombatResult::Victory;
-			const bool showGameOver = combatState.result == CombatResult::Defeat &&
-				!combatState.cinematic.active && !defeatRadioActive;
-			const bool showResultScreen = showClearScreen || showGameOver;
-			// フォーカス喪失時や結果画面への切り替え時は振動を止める
-			const auto rumble = m_combatRumble.Update(deltaSeconds, input.active && m_usingGamepad && !showResultScreen,
-				flight, combatState, combatState.playerHealth < previousHealth);
-			m_window->SetGamepadRumble(rumble.lowFrequency, rumble.highFrequency);
-
-			if (showResultScreen) {
-				m_screen = showGameOver ? Screen::GameOver : Screen::Clear;
-				m_captureMode = 0;
-				m_combatAudio.ResetPlayback();
-				m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
-				BuildMenuHud();
-				return;
-			}
-
-			// シーンの状態で音声を更新し、再生状況を台詞の進行へ返す
-			if (combatState.audio.restarted) m_combatAudio.ResetPlayback();
-			const auto voice = m_combatAudio.UpdateCinematic(combatState.cinematic);
-			m_combatAudio.UpdateEnemyRadio(combatState.enemyRadio);
-			m_scene->UpdateCinematicBriefing(voice, input.active ? deltaSeconds : 0);
-			m_combatAudio.Update(combatState.audio, combatState.hitCount, false, false, deltaSeconds);
-			const auto view = m_renderer->UpdateFrameConstants(PrepareCaptureScene(), m_elapsedTime);
-
-			// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
-			m_hud.Reset(view.width, view.height);
-
-			if (m_captureMode == 0) {
-				if (!m_scene->GetCombatSnapshot().cinematic.active)
-					m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);
-				m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud, m_usingGamepad);
-			}
+	void Application::UpdateMenu(const InputSnapshot& input) {
+		if (!input.WasConfirmPressed()) {
+			UpdateMenuFrame();
+			return;
 		}
+
+		m_combatAudio.ResetPlayback();
+		if (m_screen == Screen::Clear) {
+			m_screen = Screen::Title;
+			UpdateMenuFrame();
+			return;
+		}
+
+		m_scene->StartNewMission();
+		m_screen = Screen::Playing;
+		m_captureMode = 0;
+
+		// 開始に使った入力を同じフレームのスキップ判定に渡さない
+		m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
+		m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
+		m_hudPresenter.Build(m_scene->GetCombatSnapshot(),
+			{.width = m_window->GetWidth(), .height = m_window->GetHeight()}, m_hud, m_usingGamepad);
+	}
+
+	void Application::UpdateGameplay(const InputSnapshot& input, float deltaSeconds) {
+		if (input.WasKeyPressed(VK_F6)) {
+			m_captureMode = (m_captureMode + 1) % 3;
+			Log("Capture view: {} (0=normal, 1=environment+ships, 2=environment)\n", m_captureMode);
+		}
+
+		// 入力から戦闘を進め、演出終了時に結果画面へ切り替える
+		auto combat = CombatController{}.ReadInput(input);
+
+		const auto& previousState = m_scene->GetCombatSnapshot();
+		const bool defeated = previousState.result == CombatResult::Defeat;
+		if (defeated) combat.skipOpening = false;
+		const float simulationSeconds =
+			(previousState.cinematic.active || defeated) && !input.active ? 0 : deltaSeconds;
+		const bool endingWasActive = previousState.cinematic.active &&
+			previousState.cinematic.cinematicId == "ending";
+		const float previousHealth = previousState.playerHealth;
+		const auto flight = m_aircraftController.ReadInput(input);
+		m_scene->Update(flight, simulationSeconds, input, combat);
+		const auto& combatState = m_scene->GetCombatSnapshot();
+		if (combatState.result == CombatResult::Defeat) m_captureMode = 0;
+		const bool defeatRadioActive =
+			combatState.cinematic.cinematicId == "defeat" && combatState.cinematic.radioLine >= 0;
+		const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
+			combatState.result == CombatResult::Victory;
+		const bool showGameOver = combatState.result == CombatResult::Defeat &&
+			!combatState.cinematic.active && !defeatRadioActive;
+		const bool showResultScreen = showClearScreen || showGameOver;
+		// フォーカス喪失時や結果画面への切り替え時は振動を止める
+		const auto rumble = m_combatRumble.Update(deltaSeconds, input.active && m_usingGamepad && !showResultScreen,
+			flight, combatState, combatState.playerHealth < previousHealth);
+		m_window->SetGamepadRumble(rumble.lowFrequency, rumble.highFrequency);
+
+		if (showResultScreen) {
+			m_screen = showGameOver ? Screen::GameOver : Screen::Clear;
+			m_captureMode = 0;
+			m_combatAudio.ResetPlayback();
+			UpdateMenuFrame();
+			return;
+		}
+
+		// シーンの状態で音声を更新し、再生状況を台詞の進行へ返す
+		if (combatState.audio.restarted) m_combatAudio.ResetPlayback();
+		const auto voice = m_combatAudio.UpdateCinematic(combatState.cinematic);
+		m_combatAudio.UpdateEnemyRadio(combatState.enemyRadio);
+		m_scene->UpdateCinematicBriefing(voice, input.active ? deltaSeconds : 0);
+		m_combatAudio.Update(combatState.audio, combatState.hitCount, false, false, deltaSeconds);
+		const auto view = m_renderer->UpdateFrameConstants(PrepareCaptureScene(), m_elapsedTime);
+
+		// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
+		m_hud.Reset(view.width, view.height);
+
+		if (m_captureMode == 0) {
+			if (!m_scene->GetCombatSnapshot().cinematic.active)
+				m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, m_hud);
+			m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud, m_usingGamepad);
+		}
+	}
+
+	void Application::UpdateMenuFrame() {
+		m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
+		BuildMenuHud();
 	}
 
 	void Application::BuildMenuHud() {
