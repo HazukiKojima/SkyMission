@@ -19,8 +19,9 @@ namespace Game {
 
 		// 経過秒数を進め、寿命を終えた演出を除去する
 		void Update(float deltaSeconds);
-		void UpdateWingtipVapor(float deltaSeconds);
+		void UpdateAircraftVapor(float deltaSeconds);
 		void SpawnWingtipVapor(const WingtipVaporSegment& segment);
+		void SpawnContrail(const ContrailPuff& puff);
 		void SpawnGunShot(const GunShotEvent& shot);
 		void SetGunMuzzlePose(
 			const std::array<DirectX::XMFLOAT3, 4>& positions, const DirectX::XMFLOAT3& forward);

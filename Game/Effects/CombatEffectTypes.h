@@ -36,6 +36,14 @@ namespace Game {
 		DirectX::XMFLOAT3 position{}, direction{0, 0, -1};
 	};
 
+	struct ContrailPuff {
+		static constexpr float lifetimeSeconds = 3.6f;
+		static constexpr size_t maximumCount = 4096;
+		DirectX::XMFLOAT3 position{};
+		DirectX::XMFLOAT3 direction{};
+		float age = 0;
+	};
+
 	struct ImpactEffect {
 		DirectX::XMFLOAT3 position{};
 		float age = 0;
@@ -62,5 +70,6 @@ namespace Game {
 		std::vector<RocketTrailSample> rocketSmoke;
 		std::vector<RocketExhaust> rocketExhausts;
 		std::vector<WingtipVaporSegment> wingtipVapor;
+		std::vector<ContrailPuff> contrails;
 	};
 } // namespace Game

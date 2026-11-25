@@ -1,8 +1,10 @@
 #include "FlightScene.h"
 #include "FlightSceneLoader.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include "Game/Combat/Targeting/GunAimSolver.h"
 #include "Game/Combat/CombatSnapshotBuilder.h"
 #include "Game/Weapons/Projectile/ProjectileCollision.h"
@@ -18,26 +20,36 @@ namespace Game {
 			object.nodeRotationRadians = angle;
 		}
 
+		std::optional<std::array<DirectX::XMFLOAT3, 2>> FindWingtips(const Engine::SceneObject& object) {
+			using namespace DirectX;
+			if (!object.model) return std::nullopt;
+
+			const auto left = object.model->FindNodePosition("Wingtip_L");
+			const auto right = object.model->FindNodePosition("Wingtip_R");
+			if (left && right) return std::array{*left, *right};
+			const auto bounds = object.model->GetLocalBounds();
+			if (!bounds) return std::nullopt;
+
+			const auto center = bounds->Center();
+			return std::array{
+				left.value_or(XMFLOAT3{std::lerp(center.x, bounds->maximum.x, 0.97f), center.y, center.z}),
+				right.value_or(XMFLOAT3{std::lerp(center.x, bounds->minimum.x, 0.97f), center.y, center.z})};
+		}
+
 		void EmitWingtipVapor(CombatEffectSystem& effects, const Engine::SceneObject& object,
 			const DirectX::XMFLOAT4X4& previous, const AircraftFlightModel& aircraft, float scale,
-			float dt, float visibility = 1.0f) {
+			float dt) {
 			using namespace DirectX;
 			const auto current = aircraft.GetWorldTransform();
 			// 機首方向の変化で急旋回と引き起こしを拾い、軸回りのロールは除く
 			const float turnRate = XMVectorGetX(XMVector3Length(XMVectorSet(
 				current._31 - previous._31, current._32 - previous._32, current._33 - previous._33, 0))) / dt;
-			const float strength = std::clamp((turnRate - 0.30f) / 0.40f, 0.0f, 1.0f) * visibility;
-			if (strength <= 0 || !object.model) return;
+			const float strength = std::clamp((turnRate - 0.30f) / 0.40f, 0.0f, 1.0f);
+			if (strength <= 0) return;
 
-			const auto bounds = object.model->GetLocalBounds();
-			if (!bounds) return;
-
-			const auto center = bounds->Center();
-			const auto left = object.model->FindNodePosition("Wingtip_L").value_or(
-				XMFLOAT3{center.x + (bounds->maximum.x - center.x) * 0.97f, center.y, center.z});
-			const auto right = object.model->FindNodePosition("Wingtip_R").value_or(
-				XMFLOAT3{center.x + (bounds->minimum.x - center.x) * 0.97f, center.y, center.z});
-			for (const auto& localTip : {left, right}) {
+			const auto tips = FindWingtips(object);
+			if (!tips) return;
+			for (const auto& localTip : *tips) {
 				const auto tip = XMLoadFloat3(&localTip) * scale;
 				WingtipVaporSegment segment;
 				XMStoreFloat3(&segment.head, XMVector3TransformCoord(tip, XMLoadFloat4x4(&current)));
@@ -45,6 +57,29 @@ namespace Game {
 				segment.strength = strength;
 				effects.SpawnWingtipVapor(segment);
 			}
+		}
+
+		void EmitContrail(CombatEffectSystem& effects, DirectX::FXMVECTOR start,
+			DirectX::FXMVECTOR end, float dt, float& metersUntilPuff) {
+			using namespace DirectX;
+			constexpr float spacingMeters = 4.0f;
+			const auto displacement = end - start;
+			const float traveled = XMVectorGetX(XMVector3Length(displacement));
+			if (traveled <= 0) return;
+			XMFLOAT3 direction;
+			XMStoreFloat3(&direction, displacement / traveled);
+
+			// 飛行距離で粒を配置して、フレームレートによる密度の変化を防ぐ
+			for (; metersUntilPuff < traveled; metersUntilPuff += spacingMeters) {
+				const float fraction = metersUntilPuff / traveled;
+				const auto position = XMVectorLerp(start, end, fraction);
+				ContrailPuff puff;
+				XMStoreFloat3(&puff.position, position);
+				puff.direction = direction;
+				puff.age = dt * (1.0f - fraction);
+				effects.SpawnContrail(puff);
+			}
+			metersUntilPuff -= traveled;
 		}
 	} // namespace
 	FlightScene FlightScene::CreateMission(const FlightSceneDefinition& assets,
@@ -160,7 +195,7 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0) return;
 
 		dt = std::min(dt, 0.25f);
-		m_effects.UpdateWingtipVapor(dt);
+		m_effects.UpdateAircraftVapor(dt);
 
 		if (!m_initialState) {
 			SaveInitialState();
@@ -417,14 +452,17 @@ namespace Game {
 			enemy.previousPosition = enemy.flightModel.GetPosition();
 			const auto previousPose = enemy.flightModel.GetWorldTransform();
 			enemy.flightModel.Update(input, dt);
-			const auto playerPosition = m_player.GetPosition();
-			const auto enemyPosition = enemy.flightModel.GetPosition();
-			const float distance = DirectX::XMVectorGetX(DirectX::XMVector3Length(DirectX::XMVectorSubtract(
-				DirectX::XMLoadFloat3(&enemyPosition), DirectX::XMLoadFloat3(&playerPosition))));
-			const float visibility = std::clamp((1800.0f - distance) / 500.0f, 0.0f, 1.0f);
-			if (visibility > 0)
-				EmitWingtipVapor(m_effects, *object, previousPose, enemy.flightModel, enemy.visualScale, dt,
-					visibility);
+			if (const auto tips = FindWingtips(*object)) {
+				using namespace DirectX;
+				const auto currentPose = enemy.flightModel.GetWorldTransform();
+				const auto previousMatrix = XMLoadFloat4x4(&previousPose);
+				const auto currentMatrix = XMLoadFloat4x4(&currentPose);
+				for (size_t wing = 0; wing < tips->size(); ++wing) {
+					const auto tip = XMLoadFloat3(&(*tips)[wing]) * enemy.visualScale;
+					EmitContrail(m_effects, XMVector3TransformCoord(tip, previousMatrix),
+						XMVector3TransformCoord(tip, currentMatrix), dt, enemy.metersUntilContrailPuff[wing]);
+				}
+			}
 			enemy.propellerAngle =
 				m_enemyAnimation.AdvancePropeller(enemy.propellerAngle, enemy.flightModel.GetSpeed(), dt);
 		}

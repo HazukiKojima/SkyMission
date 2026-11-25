@@ -35,12 +35,17 @@ namespace Game {
 		AdvanceEffects(m_snapshot.explosions, step, m_settings.explosion.lifetimeSeconds);
 	}
 
-	void CombatEffectSystem::UpdateWingtipVapor(float deltaSeconds) {
+	void CombatEffectSystem::UpdateAircraftVapor(float deltaSeconds) {
 		AdvanceEffects(m_snapshot.wingtipVapor, deltaSeconds, WingtipVaporSegment::lifetimeSeconds);
+		AdvanceEffects(m_snapshot.contrails, deltaSeconds, ContrailPuff::lifetimeSeconds);
 	}
 
 	void CombatEffectSystem::SpawnWingtipVapor(const WingtipVaporSegment& segment) {
 		AddBoundedEffect(m_snapshot.wingtipVapor, segment, WingtipVaporSegment::maximumCount);
+	}
+
+	void CombatEffectSystem::SpawnContrail(const ContrailPuff& puff) {
+		AddBoundedEffect(m_snapshot.contrails, puff, ContrailPuff::maximumCount);
 	}
 
 	void CombatEffectSystem::SpawnGunShot(const GunShotEvent& shot) {

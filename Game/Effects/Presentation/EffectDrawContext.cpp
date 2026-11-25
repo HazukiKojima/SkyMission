@@ -42,7 +42,7 @@ namespace Game {
 	}
 
 	std::optional<EffectDrawContext::ProjectedBillboard> EffectDrawContext::ProjectBillboard(
-		DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode) const {
+		DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode, float minimumPixelRadius) const {
 		using namespace DirectX;
 
 		// 中心と半径の端を投影して画面上の大きさを求める
@@ -55,8 +55,8 @@ namespace Game {
 
 		if (projectedCenter.behind || projectedEdge.behind) return std::nullopt;
 
-		const float pixels = std::hypot(
-			projectedEdge.pixel.x - projectedCenter.pixel.x, projectedEdge.pixel.y - projectedCenter.pixel.y);
+		const float pixels = std::max(minimumPixelRadius, std::hypot(
+			projectedEdge.pixel.x - projectedCenter.pixel.x, projectedEdge.pixel.y - projectedCenter.pixel.y));
 		const auto point = projectedCenter.pixel;
 
 		// 中心が画面内にある場合だけ採用する
@@ -73,8 +73,8 @@ namespace Game {
 	}
 
 	void EffectDrawContext::DrawCloud(DirectX::FXMVECTOR position, float radius, float rotation,
-		unsigned seed, DirectX::XMFLOAT4 color, EffectClipMode clipMode) {
-		if (const auto billboard = ProjectBillboard(position, radius, clipMode))
+		unsigned seed, DirectX::XMFLOAT4 color, EffectClipMode clipMode, float minimumPixelRadius) {
+		if (const auto billboard = ProjectBillboard(position, radius, clipMode, minimumPixelRadius))
 			m_list.CloudPuff(billboard->center, billboard->radius, rotation, seed, color);
 	}
 

@@ -160,6 +160,7 @@ namespace Game {
 			float weaponCooldownSeconds = 0;
 			std::string name;
 			DirectX::XMFLOAT3 previousPosition{};
+			std::array<float, 2> metersUntilContrailPuff{};
 		};
 
 		using SquadronKind = FlightMission::SquadronKind;
