@@ -112,5 +112,39 @@ namespace Game {
 			impact.flashOuterRadius >= impact.flashInnerRadius, "effects", "inconsistent radii or widths");
 		r.Require(gun.tracerOuterWidth >= gun.tracerInnerWidth, "effects", "inconsistent radii or widths");
 		r.Require(gun.smokeEndRadius >= gun.smokeStartRadius, "effects", "inconsistent radii or widths");
+
+		r.Number("/explosionFeedback/nearDistanceMeters", explosionFeedback.nearDistanceMeters, 0);
+		r.Number("/explosionFeedback/farDistanceMeters", explosionFeedback.farDistanceMeters);
+		r.Require(explosionFeedback.farDistanceMeters > explosionFeedback.nearDistanceMeters,
+			"/explosionFeedback/farDistanceMeters", "must exceed nearDistanceMeters");
+		r.Number("/explosionFeedback/initialFlashSeconds", explosionFeedback.initialFlashSeconds, 0.01f, 5);
+		r.Number("/explosionFeedback/finalFlashSeconds", explosionFeedback.finalFlashSeconds, 0.01f, 5);
+		r.Number("/explosionFeedback/initialStrength", explosionFeedback.initialStrength, 0, 1);
+		r.Number("/explosionFeedback/cameraShakeMultiplier", explosionFeedback.cameraShakeMultiplier, 0, 10);
+		r.Color("/explosionFeedback/flashColor", explosionFeedback.flashColor);
+
+		r.Number("/aircraftCrash/horizontalSpeedRetention", aircraftCrash.horizontalSpeedRetention, 0, 1);
+		r.Number("/aircraftCrash/initialDownwardSpeed", aircraftCrash.initialDownwardSpeed, 0, 1000);
+		r.Number("/aircraftCrash/initialExplosionRadiusMultiplier", aircraftCrash.initialExplosionRadiusMultiplier, 0.01f, 10);
+		r.Number("/aircraftCrash/initialFlashDurationMultiplier", aircraftCrash.initialFlashDurationMultiplier, 0.01f, 10);
+		r.Number("/aircraftCrash/finalExplosionRadiusMultiplier", aircraftCrash.finalExplosionRadiusMultiplier, 0.01f, 10);
+		constexpr std::array profileNames{"rollingDive", "bankedDive", "spin"};
+		for (size_t i = 0; i < profileNames.size(); ++i) {
+			const auto path = std::string("/aircraftCrash/") + profileNames[i];
+			auto& profile = aircraftCrash.profiles[i];
+			r.Number(path + "/durationSeconds", profile.durationSeconds, 0.1f, 30);
+			r.Number(path + "/downwardAcceleration", profile.downwardAcceleration, 0, 1000);
+			r.Number(path + "/drag", profile.drag, 0, 20);
+			r.Number(path + "/turnRate", profile.turnRate, 0, 20);
+			r.Number(path + "/bank", profile.bank, 0, DirectX::XM_PI);
+			r.Number(path + "/rollRate", profile.rollRate, 0, 20);
+			r.Number(path + "/spinRate", profile.spinRate, 0, 20);
+		}
+
+		r.Number("/aircraftTrail/contrailSpacingMeters", aircraftTrail.contrailSpacingMeters, 1, 100);
+		r.Number("/aircraftTrail/smokeIntervalSeconds", aircraftTrail.smokeIntervalSeconds, 0.01f, 1);
+		r.Number("/aircraftTrail/smokeStartRadius", aircraftTrail.smokeStartRadius, 0.01f, 100);
+		r.Number("/aircraftTrail/smokeRadiusGrowth", aircraftTrail.smokeRadiusGrowth, 0, 100);
+		r.Color("/aircraftTrail/smokeColor", aircraftTrail.smokeColor);
 	}
 } // namespace Game

@@ -21,7 +21,9 @@ namespace Game {
 		void Update(float deltaSeconds);
 		void UpdateAircraftVapor(float deltaSeconds);
 		void SpawnWingtipVapor(const WingtipVaporSegment& segment);
-		void SpawnContrail(const ContrailPuff& puff);
+		void EmitContrail(DirectX::FXMVECTOR start, DirectX::FXMVECTOR end, float dt, float& metersUntilPuff);
+		void EmitAircraftSmokeTrail(DirectX::FXMVECTOR start, DirectX::FXMVECTOR end,
+			float previousSeconds, float currentSeconds);
 		void SpawnGunShot(const GunShotEvent& shot);
 		void SetGunMuzzlePose(
 			const std::array<DirectX::XMFLOAT3, 4>& positions, const DirectX::XMFLOAT3& forward);

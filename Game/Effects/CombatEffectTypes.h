@@ -99,5 +99,5 @@ namespace Game {
 	};
 
 	ExplosionFeedback EvaluateExplosionFeedback(const CombatEffectSnapshot& snapshot,
-		const DirectX::XMFLOAT3& playerPosition);
+		const DirectX::XMFLOAT3& playerPosition, const EffectSettings::ExplosionFeedbackTuning& settings);
 } // namespace Game

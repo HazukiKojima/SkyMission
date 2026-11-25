@@ -188,4 +188,14 @@ namespace Game {
 		if (effect.style != ExplosionStyle::BacklitSmoke) DrawExplosionFlash(effect, context);
 		DrawExplosionFragments(effect, context, fragmentScale);
 	}
+
+	void CombatEffectPresenter::DrawExplosionScreenFlash(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
+		const DirectX::XMFLOAT3& playerPosition, EffectDrawContext& context, Engine::HudDrawList& list) const {
+		const auto& settings = context.Settings().explosionFeedback;
+		const float flash = EvaluateExplosionFeedback(snapshot, playerPosition, settings).flash;
+		if (flash > 0 && context.HasVertexBudget(6)) {
+			list.FilledRect({0, 0}, {static_cast<float>(view.width), static_cast<float>(view.height)},
+				EffectTint(settings.flashColor, flash));
+		}
+	}
 } // namespace Game

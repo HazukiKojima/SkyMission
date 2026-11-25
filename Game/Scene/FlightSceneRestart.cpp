@@ -85,6 +85,7 @@ namespace Game {
 		m_combat = initial.combat;
 		m_effects = initial.effects;
 		m_enemySequence = initial.enemySequence;
+		m_crashSequence = 0;
 
 		// 再挑戦に合わせて表示を更新する
 		OnResize(m_width, m_height);

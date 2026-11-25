@@ -179,6 +179,7 @@ namespace Game {
 		void UpdatePlayer(const AircraftInput& input, float dt);
 		void UpdateEnemies(float dt);
 		void UpdateCrashingEnemies(float dt);
+		void BeginEnemyCrash(EnemyAircraft& enemy, const HitEvent& hit);
 		void DetachAircraftPart(EnemyAircraft& enemy, bool wing);
 		void UpdateDetachedAircraftPart(EnemyAircraft& enemy, float dt, bool explode);
 		void UpdateCrashEffect(EnemyAircraft& enemy, const Engine::SceneObject& object,
@@ -282,6 +283,7 @@ namespace Game {
 		CombatSnapshot m_combat;
 		CombatEffectSystem m_effects;
 		size_t m_enemySequence = 0;
+		unsigned m_crashSequence = 0;
 		bool m_carrierTargetReady = true;
 		void UpdateCarrierCommand();
 		float m_carrierHitSpeakAtSeconds = -1;

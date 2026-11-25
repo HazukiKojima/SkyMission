@@ -19,26 +19,37 @@ namespace Game {
 			if (effects.size() >= maximumCount) effects.erase(effects.begin());
 			effects.push_back(std::move(effect));
 		}
+
+		struct TrailPoint {
+			DirectX::XMFLOAT3 position;
+			float age;
+		};
+
+		TrailPoint SampleTrail(DirectX::FXMVECTOR start, DirectX::FXMVECTOR end, float fraction, float dt) {
+			TrailPoint sample;
+			DirectX::XMStoreFloat3(&sample.position, DirectX::XMVectorLerp(start, end, fraction));
+			sample.age = dt * (1.0f - fraction);
+			return sample;
+		}
 	} // namespace
 
 	ExplosionFeedback EvaluateExplosionFeedback(const CombatEffectSnapshot& snapshot,
-		const DirectX::XMFLOAT3& playerPosition) {
+		const DirectX::XMFLOAT3& playerPosition, const EffectSettings::ExplosionFeedbackTuning& settings) {
 		using namespace DirectX;
-		constexpr float nearDistance = 150.0f;
-		constexpr float farDistance = 1200.0f;
 		const auto player = XMLoadFloat3(&playerPosition);
 		ExplosionFeedback feedback;
 
 		for (const auto& explosion : snapshot.explosions) {
 			if (explosion.style == ExplosionStyle::Standard) continue;
 			const bool finalBlast = explosion.style == ExplosionStyle::FallingDebris;
-			const float flashSeconds = finalBlast ? 0.22f : 0.16f;
+			const float flashSeconds = finalBlast ? settings.finalFlashSeconds : settings.initialFlashSeconds;
 			if (explosion.age >= flashSeconds) continue;
 
 			const float distance = XMVectorGetX(XMVector3Length(XMLoadFloat3(&explosion.position) - player));
-			const float proximity = std::clamp((farDistance - distance) / (farDistance - nearDistance), 0.0f, 1.0f);
+			const float proximity = std::clamp((settings.farDistanceMeters - distance) /
+				(settings.farDistanceMeters - settings.nearDistanceMeters), 0.0f, 1.0f);
 			const float strength = proximity * proximity * (3.0f - 2.0f * proximity);
-			const float intensity = strength * (finalBlast ? 1.0f : 0.72f);
+			const float intensity = strength * (finalBlast ? 1.0f : settings.initialStrength);
 			const float decay = 1.0f - explosion.age / flashSeconds;
 			feedback.flash = std::max(feedback.flash, intensity * decay * decay);
 			if (explosion.age == 0) feedback.impact = std::max(feedback.impact, intensity);
@@ -70,8 +81,35 @@ namespace Game {
 		AddBoundedEffect(m_snapshot.wingtipVapor, segment, WingtipVaporSegment::maximumCount);
 	}
 
-	void CombatEffectSystem::SpawnContrail(const ContrailPuff& puff) {
-		AddBoundedEffect(m_snapshot.contrails, puff, ContrailPuff::maximumCount);
+	void CombatEffectSystem::EmitContrail(
+		DirectX::FXMVECTOR start, DirectX::FXMVECTOR end, float dt, float& metersUntilPuff) {
+		using namespace DirectX;
+		const float spacingMeters = m_settings.aircraftTrail.contrailSpacingMeters;
+		const auto displacement = end - start;
+		const float traveled = XMVectorGetX(XMVector3Length(displacement));
+		if (traveled <= 0) return;
+		XMFLOAT3 direction;
+		XMStoreFloat3(&direction, displacement / traveled);
+
+		// 飛行距離で粒を配置して、フレームレートによる密度の変化を防ぐ
+		for (; metersUntilPuff < traveled; metersUntilPuff += spacingMeters) {
+			const auto sample = SampleTrail(start, end, metersUntilPuff / traveled, dt);
+			AddBoundedEffect(m_snapshot.contrails, ContrailPuff{sample.position, direction, sample.age},
+				ContrailPuff::maximumCount);
+		}
+		metersUntilPuff -= traveled;
+	}
+
+	void CombatEffectSystem::EmitAircraftSmokeTrail(DirectX::FXMVECTOR start, DirectX::FXMVECTOR end,
+		float previousSeconds, float currentSeconds) {
+		const float smokeInterval = m_settings.aircraftTrail.smokeIntervalSeconds;
+		const float dt = currentSeconds - previousSeconds;
+		if (dt <= 0) return;
+		for (float time = (std::floor(previousSeconds / smokeInterval) + 1) * smokeInterval;
+			time <= currentSeconds; time += smokeInterval) {
+			const auto sample = SampleTrail(start, end, (time - previousSeconds) / dt, dt);
+			SpawnAircraftSmoke({sample.position, sample.age});
+		}
 	}
 
 	void CombatEffectSystem::SpawnGunShot(const GunShotEvent& shot) {
