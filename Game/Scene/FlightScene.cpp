@@ -11,6 +11,21 @@
 #include "Game/Combat/Enemy/EnemyEngagementProfile.h"
 namespace Game {
 	namespace {
+		struct EnemyCrashProfile {
+			float duration;
+			float downwardAcceleration;
+			float drag;
+			float turnRate;
+			float bank;
+			float rollRate;
+			float spinRate;
+		};
+
+		constexpr std::array<EnemyCrashProfile, 3> enemyCrashProfiles{{
+			{2.145f, 164.0f, 0.53f, 0.12f, 0.65f, 5.4f, 0.0f}, // 横転しながら急降下
+			{2.21f, 136.0f, 0.65f, 0.85f, 1.65f, 0.55f, 0.0f}, // 片翼を落として沈み込む
+			{2.08f, 149.0f, 1.25f, 0.04f, 0.48f, 0.0f, 5.8f}, // 失速してきりもみ落下
+		}};
 
 		void ApplyAircraftPose(
 			Engine::SceneObject& object, const AircraftFlightModel& aircraft, float scale, float angle) {
@@ -18,6 +33,24 @@ namespace Game {
 			DirectX::XMStoreFloat4x4(&object.worldTransform,
 				DirectX::XMMatrixScaling(scale, scale, scale) * DirectX::XMLoadFloat4x4(&transform));
 			object.nodeRotationRadians = angle;
+		}
+
+		std::optional<float> GetLowestAircraftY(const Engine::SceneObject& aircraft) {
+			using namespace DirectX;
+			if (!aircraft.model) return std::nullopt;
+			const auto bounds = aircraft.model->GetLocalBounds();
+			if (!bounds) return std::nullopt;
+
+			float lowestY = std::numeric_limits<float>::infinity();
+			const auto world = XMLoadFloat4x4(&aircraft.worldTransform);
+			for (int corner = 0; corner < 8; ++corner) {
+				const auto point = XMVector3TransformCoord(XMVectorSet(
+					corner & 1 ? bounds->maximum.x : bounds->minimum.x,
+					corner & 2 ? bounds->maximum.y : bounds->minimum.y,
+					corner & 4 ? bounds->maximum.z : bounds->minimum.z, 1), world);
+				lowestY = std::min(lowestY, XMVectorGetY(point));
+			}
+			return lowestY;
 		}
 
 		std::optional<std::array<DirectX::XMFLOAT3, 2>> FindWingtips(const Engine::SceneObject& object) {
@@ -196,6 +229,7 @@ namespace Game {
 
 		dt = std::min(dt, 0.25f);
 		m_effects.UpdateAircraftVapor(dt);
+		m_effects.ClearAircraftFires();
 
 		if (!m_initialState) {
 			SaveInitialState();
@@ -207,6 +241,7 @@ namespace Game {
 				m_effects.Update(dt);
 				UpdateVictoryOrdnance(dt);
 			}
+			UpdateCrashingEnemies(dt);
 			UpdateCinematic(dt, combatInput.skipOpening);
 			UpdateEnemyRadio(dt);
 			return;
@@ -221,8 +256,9 @@ namespace Game {
 			if (combatInput.retry) {
 				Restart(dt);
 			} else {
-				UpdateEnemyRadio(dt);
 				m_effects.Update(dt);
+				UpdateCrashingEnemies(dt);
+				UpdateEnemyRadio(dt);
 				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
 
 				if (m_combat.result == CombatResult::Victory) {
@@ -244,6 +280,7 @@ namespace Game {
 
 		// 既存の演出を進めてから、このフレームの新しい演出を生成する
 		m_effects.Update(dt);
+		UpdateCrashingEnemies(dt);
 
 		// 更新後の機体位置・姿勢をカメラと描画状態へ反映する
 		const auto previousPlayerPose = m_player.GetWorldTransform();
@@ -413,6 +450,7 @@ namespace Game {
 
 	void FlightScene::UpdateEnemies(float dt) {
 		for (auto& enemy : m_enemies) {
+			if (enemy.health <= 0) continue;
 			const auto* object = m_scene.FindObject(enemy.objectId);
 			if (!object) continue;
 
@@ -527,7 +565,7 @@ namespace Game {
 		}
 
 		for (const auto& enemy : m_enemies) {
-			if (auto* object = m_scene.FindObject(enemy.objectId)) {
+			if (auto* object = m_scene.FindObject(enemy.objectId); enemy.health > 0 && object) {
 				ApplyAircraftPose(*object, enemy.flightModel, enemy.visualScale, enemy.propellerAngle);
 			}
 		}
@@ -594,6 +632,7 @@ namespace Game {
 		std::vector<CollisionTarget> targets;
 
 		for (const auto& enemy : m_enemies) {
+			if (enemy.health <= 0) continue;
 			if (const auto* object = m_scene.FindObject(enemy.objectId);
 				object && object->model->GetLocalBounds()) {
 				targets.push_back({.id = enemy.objectId,
@@ -612,7 +651,7 @@ namespace Game {
 		for (const auto& enemy : m_enemies) {
 			const auto* object = m_scene.FindObject(enemy.objectId);
 
-			if (!object) continue;
+			if (enemy.health <= 0 || !object) continue;
 
 			const auto bounds = object->model->GetLocalBounds();
 			const XMFLOAT3 center = bounds ? bounds->Center() : XMFLOAT3{};
@@ -740,11 +779,6 @@ namespace Game {
 			}
 		}
 
-		// 命中の走査中は敵を削除せず、後続の命中でも耐久値を参照できるようにする
-		for (const auto id : destroyed) {
-			RemoveObject(id);
-		}
-
 		std::vector<Engine::ObjectId> survivors;
 
 		for (const auto& enemy : m_enemies)
@@ -807,7 +841,7 @@ namespace Game {
 
 		if (enemy == m_enemies.end() || enemy->health <= 0) return;
 
-		enemy->health -= hit.damage;
+		enemy->health = std::max(0.0f, enemy->health - hit.damage);
 		++m_combat.hitCount;
 
 		if (hit.kind == ProjectileKind::Gun) {
@@ -819,44 +853,106 @@ namespace Game {
 		m_combat.hitSeconds = m_combatSettings.feedback.hitSeconds;
 
 		if (enemy->health <= 0) {
+			using namespace DirectX;
+			enemy->crashVariant = m_combat.enemyAircraftDestroyed;
 			++m_combat.enemyAircraftDestroyed;
-			++m_combat.audio.aircraftExplosions;
-
-			if (const auto* aircraft = m_scene.FindObject(enemy->objectId)) {
-				m_effects.SpawnExplosion(*aircraft, enemy->flightModel.GetVelocity(), enemy->visualScale);
-			} else {
-				m_effects.SpawnExplosion(
-					enemy->flightModel.GetPosition(), enemy->flightModel.GetVelocity());
+			enemy->crashVelocity = enemy->flightModel.GetVelocity();
+			constexpr float horizontalSpeedRetention = 0.92f;
+			enemy->crashVelocity.x *= horizontalSpeedRetention;
+			enemy->crashVelocity.z *= horizontalSpeedRetention;
+			enemy->crashVelocity.y = std::min(enemy->crashVelocity.y, 0.0f) - 62.0f;
+			if (const auto* object = m_scene.FindObject(enemy->objectId)) {
+				const auto inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&object->worldTransform));
+				XMStoreFloat3(&enemy->crashSmokeOrigin,
+					XMVector3TransformCoord(XMLoadFloat3(&hit.position), inverse));
 			}
-
+			// 爆煙は被弾地点に残し、燃えている機体だけがそこから落ちていく
+			m_effects.SpawnExplosion(hit.position, {}, 2.5f, 2.2f);
+			m_effects.SpawnAircraftSmoke({hit.position, 0});
+			if (hit.kind == ProjectileKind::Gun) ++m_combat.audio.gunHits;
+			else ++m_combat.audio.missileHits;
 			destroyed.push_back(enemy->objectId);
 			m_combat.destroyedSeconds = m_combatSettings.feedback.destroyedSeconds;
 		}
 	}
 
-	void FlightScene::ApplySeaCollision() {
+	void FlightScene::UpdateCrashingEnemies(float dt) {
 		using namespace DirectX;
+		constexpr float smokeInterval = 0.028f;
 
+		std::erase_if(m_enemies, [&](EnemyAircraft& enemy) {
+			if (enemy.health > 0) return false;
+			auto* object = m_scene.FindObject(enemy.objectId);
+			if (object) {
+				auto& world = object->worldTransform;
+				const auto smokeOrigin = XMLoadFloat3(&enemy.crashSmokeOrigin);
+				const auto previousSmoke = XMVector3TransformCoord(smokeOrigin, XMLoadFloat4x4(&world));
+				auto& velocity = enemy.crashVelocity;
+				const auto& profile = enemyCrashProfiles[enemy.crashVariant % enemyCrashProfiles.size()];
+				const float side = (enemy.crashVariant / enemyCrashProfiles.size()) % 2 ? -1.0f : 1.0f;
+				const float previousSeconds = enemy.crashSeconds;
+				const float step = std::min(dt, profile.duration - previousSeconds);
+				enemy.crashSeconds += step;
+				const XMFLOAT3 previousPosition{world._41, world._42, world._43};
+				const auto previousVelocity = XMLoadFloat3(&velocity);
+				const auto horizontalVelocity = XMVector3TransformNormal(
+					XMVectorSet(velocity.x, 0, velocity.z, 0),
+					XMMatrixRotationY(side * profile.turnRate * step)) * std::exp(-profile.drag * step);
+				const auto nextVelocity = XMVectorSetY(horizontalVelocity,
+					velocity.y - profile.downwardAcceleration * step);
+				XMStoreFloat3(&velocity, nextVelocity);
+				XMFLOAT3 position;
+				XMStoreFloat3(&position, XMLoadFloat3(&previousPosition) + (previousVelocity + nextVelocity) * (0.5f * step));
+
+				const float divePitch = std::atan2(velocity.y, std::hypot(velocity.x, velocity.z));
+				const float pitch = profile.spinRate > 0 ? -0.85f + 0.16f * std::sin(enemy.crashSeconds * 5.0f)
+					: std::min(divePitch, -0.50f);
+				const float yaw = std::atan2(-velocity.x, -velocity.z) + side * profile.spinRate * enemy.crashSeconds;
+				const float roll = side * (profile.bank + profile.rollRate * enemy.crashSeconds);
+				const auto flightPose = enemy.flightModel.GetWorldTransform();
+				const auto initial = XMQuaternionRotationMatrix(XMLoadFloat4x4(&flightPose));
+				const auto crashAttitude = XMQuaternionRotationRollPitchYaw(pitch, yaw, roll);
+				const float blend = 1.0f - std::exp(-enemy.crashSeconds * 18.0f);
+				const float scale = enemy.visualScale;
+				XMStoreFloat4x4(&world, XMMatrixScaling(scale, scale, scale) *
+					XMMatrixRotationQuaternion(XMQuaternionSlerp(initial, crashAttitude, blend)));
+				world._41 = position.x;
+				world._42 = position.y;
+				world._43 = position.z;
+
+				const float lowestY = GetLowestAircraftY(*object).value_or(position.y);
+				if (lowestY > 0 && enemy.crashSeconds < profile.duration) {
+					const auto nextSmoke = XMVector3TransformCoord(smokeOrigin, XMLoadFloat4x4(&world));
+					AircraftFire fire;
+					XMStoreFloat3(&fire.position, nextSmoke);
+					XMStoreFloat3(&fire.direction, XMVector3Normalize(nextVelocity));
+					fire.seconds = enemy.crashSeconds;
+					m_effects.AddAircraftFire(fire);
+					for (float time = (std::floor(previousSeconds / smokeInterval) + 1) * smokeInterval;
+						time <= enemy.crashSeconds; time += smokeInterval) {
+						XMFLOAT3 sample;
+						XMStoreFloat3(&sample, XMVectorLerp(previousSmoke, nextSmoke,
+							(time - previousSeconds) / step));
+						m_effects.SpawnAircraftSmoke({sample, enemy.crashSeconds - time});
+					}
+					return false;
+				}
+
+				world._42 -= std::min(lowestY, 0.0f);
+				m_effects.SpawnExplosion(*object, {}, scale, 2.8f);
+				++m_combat.audio.aircraftExplosions;
+				m_scene.RemoveObject(enemy.objectId);
+			}
+			m_enemyRadio.NotifyCrashImpact(enemy.objectId);
+			return true;
+		});
+	}
+
+	void FlightScene::ApplySeaCollision() {
 		const auto* aircraft = m_scene.FindObject(m_playerId);
+		if (m_combat.playerHealth <= 0 || !aircraft) return;
 
-		if (m_combat.playerHealth <= 0 || !aircraft || !aircraft->model) return;
-
-		const auto bounds = aircraft->model->GetLocalBounds();
-
-		if (!bounds) return;
-
-		// 変換後の境界8頂点から機体の下端と海面の接触を判定する
-		float lowestY = std::numeric_limits<float>::infinity();
-
-		for (int corner = 0; corner < 8; ++corner) {
-			const auto point = XMVector3TransformCoord(XMVectorSet(
-				corner & 1 ? bounds->maximum.x : bounds->minimum.x,
-				corner & 2 ? bounds->maximum.y : bounds->minimum.y,
-				corner & 4 ? bounds->maximum.z : bounds->minimum.z, 1),
-				XMLoadFloat4x4(&aircraft->worldTransform));
-			lowestY = std::min(lowestY, XMVectorGetY(point));
-		}
-
+		const float lowestY = GetLowestAircraftY(*aircraft).value_or(std::numeric_limits<float>::infinity());
 		if (lowestY > 0 || !std::isfinite(lowestY)) return;
 
 		// 大きい更新幅でも爆発を海中に埋めず、機体下端を海面に合わせる

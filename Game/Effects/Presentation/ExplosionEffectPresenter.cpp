@@ -80,8 +80,13 @@ namespace Game {
 			const auto origin = XMLoadFloat3(&effect.position);
 
 			// 白熱はごく短くし、均一な衝撃波の輪は描かない
-			if (ageSeconds < context.Settings().explosion.flashSeconds) {
-				const float flash = 1 - ageSeconds / context.Settings().explosion.flashSeconds;
+			const float flashSeconds = context.Settings().explosion.flashSeconds * effect.flashDurationMultiplier;
+			if (ageSeconds < flashSeconds) {
+				const float flash = 1 - ageSeconds / flashSeconds;
+				if (effect.flashDurationMultiplier > 1.0f) {
+					context.DrawGlow(origin, radiusScale * (1.25f + ageSeconds * 3.0f),
+						{1.0f, 0.36f, 0.04f, 0.8f * flash});
+				}
 				context.DrawGlow(origin, radiusScale * (0.65f + ageSeconds * 2),
 					EffectTint(context.Settings().explosion.flashColor, flash));
 			}

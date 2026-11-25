@@ -155,6 +155,10 @@ namespace Game {
 			float visualScale = 1;
 			float propellerAngle = 0;
 			float health = 100;
+			float crashSeconds = 0;
+			unsigned crashVariant = 0;
+			DirectX::XMFLOAT3 crashVelocity{};
+			DirectX::XMFLOAT3 crashSmokeOrigin{};
 			size_t slot = 0;
 			bool fire = false;
 			float weaponCooldownSeconds = 0;
@@ -168,6 +172,7 @@ namespace Game {
 		// 更新処理
 		void UpdatePlayer(const AircraftInput& input, float dt);
 		void UpdateEnemies(float dt);
+		void UpdateCrashingEnemies(float dt);
 		void UpdateCombatTimers(float dt);
 		void UpdateMission(float dt);
 		void UpdateWeapons(const CombatInput& input, float dt);

@@ -31,6 +31,7 @@ namespace Game {
 		m_snapshot.gunTracers.clear();
 		AdvanceEffects(m_snapshot.impacts, step, m_settings.impact.lifetimeSeconds);
 		AdvanceEffects(m_snapshot.rocketSmoke, step, m_settings.rocket.smokeLifetimeSeconds);
+		AdvanceEffects(m_snapshot.aircraftSmoke, step, AircraftSmokePuff::lifetimeSeconds);
 		AdvanceEffects(m_snapshot.deckSmoke, step, m_settings.carrier.smokeLifetimeSeconds);
 		AdvanceEffects(m_snapshot.explosions, step, m_settings.explosion.lifetimeSeconds);
 	}
@@ -101,6 +102,10 @@ namespace Game {
 		AddExplosion({position, {}, 0, m_settings.carrier.explosionRadius});
 	}
 
+	void CombatEffectSystem::SpawnAircraftSmoke(const AircraftSmokePuff& puff) {
+		AddBoundedEffect(m_snapshot.aircraftSmoke, puff, AircraftSmokePuff::maximumCount);
+	}
+
 	void CombatEffectSystem::SpawnDeckSmoke(const DirectX::XMFLOAT3& position) {
 		AddBoundedEffect(
 			m_snapshot.deckSmoke, RocketTrailSample{position, 0}, CarrierEffectSettings::maxSmokeCount);
@@ -118,12 +123,15 @@ namespace Game {
 	}
 
 	void CombatEffectSystem::SpawnExplosion(
-		const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity) {
-		AddExplosion({position, velocity, 0, m_settings.explosion.minRadius});
+		const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity, float radiusMultiplier,
+		float flashDurationMultiplier) {
+		AddExplosion({position, velocity, 0, m_settings.explosion.minRadius * radiusMultiplier,
+			flashDurationMultiplier});
 	}
 
 	void CombatEffectSystem::SpawnExplosion(
-		const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale) {
+		const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale,
+		float radiusMultiplier) {
 		using namespace DirectX;
 
 		ExplosionEffect explosion{
@@ -142,6 +150,7 @@ namespace Game {
 			}
 		}
 
+		explosion.radius *= radiusMultiplier;
 		AddExplosion(explosion);
 	}
 

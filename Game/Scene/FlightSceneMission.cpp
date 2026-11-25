@@ -173,7 +173,7 @@ namespace Game {
 
 	void FlightScene::UpdateEnemyGuns() {
 		for (auto& enemy : m_enemies) {
-			if (!enemy.fire || enemy.weaponCooldownSeconds > 0) continue;
+			if (enemy.health <= 0 || !enemy.fire || enemy.weaponCooldownSeconds > 0) continue;
 
 			const CombatTarget player{m_playerId, m_player.GetPosition(), m_player.GetVelocity()};
 			const auto enemyVelocity = enemy.flightModel.GetVelocity();

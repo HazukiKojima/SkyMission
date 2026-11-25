@@ -1,6 +1,7 @@
 #include "CombatEffectPresenter.h"
 #include "EffectDrawContext.h"
 #include <algorithm>
+#include <cmath>
 
 namespace Game {
 	void CombatEffectPresenter::Build(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
@@ -14,8 +15,24 @@ namespace Game {
 				GunEffectSettings::flashVertexBudget +
 			std::min(snapshot.gunTracers.size(), GunEffectSettings::maxTracerCount) *
 				GunEffectSettings::tracerVertexBudget;
-		context.SetAdditionalReservedVertices(gunBudget);
+		constexpr size_t fireVertexBudget = 2 * 72 + 6 * 6;
+		context.SetAdditionalReservedVertices(gunBudget + snapshot.aircraftFires.size() * fireVertexBudget);
 		DrawGunSmoke(snapshot, context);
+
+		for (const auto& smoke : snapshot.aircraftSmoke) {
+			using namespace DirectX;
+			if (!context.HasVertexBudget(6)) break;
+			const EffectRandom random(smoke.position);
+			const float progress = smoke.age / AircraftSmokePuff::lifetimeSeconds;
+			const float radius = (3.5f + 14.0f * progress) * (0.8f + 0.4f * random.Sample(0));
+			const auto position = XMLoadFloat3(&smoke.position) +
+				XMVectorSet((2.0f + random.Sample(1)) * smoke.age, 3.0f * smoke.age,
+					(random.Sample(2) - 0.5f) * radius, 0);
+			const float fade = 1.0f - progress;
+			context.DrawCloud(position, radius, random.Sample(3) * XM_2PI + smoke.age * 0.25f,
+				static_cast<unsigned>(random.Sample(4) * 64.0f),
+				{0.075f, 0.066f, 0.060f, 0.88f * fade * fade}, EffectClipMode::BoundsVisible);
+		}
 
 		// 煙と火球を先に描き、命中の閃光と金属片を手前へ重ねる
 		for (const auto& explosion : snapshot.explosions) {
@@ -23,6 +40,29 @@ namespace Game {
 			if (!context.HasVertexBudget(EffectDrawSettings::explosionVertexBudget)) continue;
 
 			DrawExplosion(explosion, context, view.height / EffectDrawSettings::referenceHeight);
+		}
+
+		context.SetAdditionalReservedVertices(gunBudget);
+		for (const auto& fire : snapshot.aircraftFires) {
+			using namespace DirectX;
+			if (!context.HasVertexBudget(fireVertexBudget)) break;
+			const auto origin = XMLoadFloat3(&fire.position);
+			const auto wake = -XMLoadFloat3(&fire.direction);
+			const float pulse = 0.88f + 0.12f * std::sin(fire.seconds * 39.0f);
+			const float minimumRadius = 5.0f * context.GetScale();
+			context.DrawGlow(origin + wake * 6.0f, 13.0f * pulse, {1.0f, 0.24f, 0.02f, 0.82f});
+			for (unsigned i = 0; i < 6; ++i) {
+				const float offset = static_cast<float>(5 - i);
+				const float heat = 1.0f - offset * 0.2f;
+				const float flutter = std::sin(fire.seconds * 33.0f + offset * 2.1f);
+				const auto position = origin + wake * (offset * 4.6f * pulse) +
+					XMVectorSet(flutter * offset * 0.45f, offset * 0.25f, 0, 0);
+				context.DrawCloud(position, (5.8f - offset * 0.5f) * pulse,
+					flutter * 0.5f, 27 + i * 11,
+					{1.0f, 0.24f + heat * 0.68f, 0.03f + heat * 0.52f, 0.42f + heat * 0.56f},
+					EffectClipMode::BoundsVisible, minimumRadius * (0.6f + 0.4f * heat));
+			}
+			context.DrawGlow(origin, 5.0f * pulse, {1.0f, 0.89f, 0.50f, 0.94f});
 		}
 
 		DrawDeckSmoke(snapshot, context);
