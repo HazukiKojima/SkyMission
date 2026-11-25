@@ -14,17 +14,17 @@ namespace Game {
 	};
 
 	inline constexpr std::array<EnemyRadioClip, 11> EnemyRadioClips{{
-		{L"It's on fire! Aaah!.wav", "燃えてる！うわああっ！", 2.6f},
-		{L"Mayday! Mayday! I'm going down!.wav", "メーデー！メーデー！墜落する！", 3.15f},
-		{L"No way! Not by this guy!.wav", "嘘だろ、こいつにやられるなんて！", 2.85f},
-		{L"Oh, shi—!.wav", "くそっ、しまっ……！", 1.75f},
-		{L"Stay away! GET AWAY FROM ME!.wav", "来るな！こっちに来るなあっ！", 2.85f},
-		{L"That's no pilot… That's a monster!.wav", "あいつはパイロットじゃない……化け物だ！", 3.1f},
-		{L"Too fast! I can't shake him!.wav", "速すぎる！振り切れない！", 2.8f},
-		{L"Aaah! No!.wav", "うわあっ！やめろ！", 1.9f},
-		{L"Engine's gone. Ejecting..wav", "エンジンがやられた。脱出する！", 2.6f},
-		{L"I don't wanna die! Please—!.wav", "死にたくない！頼む、やめ……！", 2.6f},
-		{L"I'm hit! What do I do!.wav", "被弾した！どうすればいい！？", 2.4f}
+		{L"Voice/Enemy/It's on fire! Aaah!.wav", "燃えてる！うわああっ！", 2.6f},
+		{L"Voice/Enemy/Mayday! Mayday! I'm going down!.wav", "メーデー！メーデー！墜落する！", 3.15f},
+		{L"Voice/Enemy/No way! Not by this guy!.wav", "嘘だろ、こいつにやられるなんて！", 2.85f},
+		{L"Voice/Enemy/Oh, shi—!.wav", "くそっ、しまっ……！", 1.75f},
+		{L"Voice/Enemy/Stay away! GET AWAY FROM ME!.wav", "来るな！こっちに来るなあっ！", 2.85f},
+		{L"Voice/Enemy/That's no pilot… That's a monster!.wav", "あいつはパイロットじゃない……化け物だ！", 3.1f},
+		{L"Voice/Enemy/Too fast! I can't shake him!.wav", "速すぎる！振り切れない！", 2.8f},
+		{L"Voice/Enemy/Aaah! No!.wav", "うわあっ！やめろ！", 1.9f},
+		{L"Voice/Enemy/Engine's gone. Ejecting..wav", "エンジンがやられた。脱出する！", 2.6f},
+		{L"Voice/Enemy/I don't wanna die! Please—!.wav", "死にたくない！頼む、やめ……！", 2.6f},
+		{L"Voice/Enemy/I'm hit! What do I do!.wav", "被弾した！どうすればいい！？", 2.4f}
 	}};
 	struct EnemyRadioPresentation {
 		int clip = -1;

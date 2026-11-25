@@ -139,10 +139,10 @@ namespace Game {
 	void CombatAudio::Initialize(const std::filesystem::path& soundDirectory) {
 		// 単独利用時も従来のSoundディレクトリ基準の既定値を維持する
 		CinematicSettings opening;
-		opening.audio.bgm = soundDirectory / L"Opening/空襲BGM.wav";
+		opening.audio.bgm = soundDirectory / L"Music/空襲BGM.wav";
 
 		for (auto& entry : opening.briefing)
-			entry.audio = soundDirectory / L"Opening" / entry.audio.filename();
+			entry.audio = soundDirectory / L"Voice/Commander/Opening" / entry.audio.filename();
 		Initialize(soundDirectory, opening);
 	}
 

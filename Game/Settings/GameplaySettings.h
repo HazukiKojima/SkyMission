@@ -201,14 +201,14 @@ namespace Game {
 		float warningVolume = 0.45f;
 		float missileWarningIntervalSeconds = 0.22f;
 		float lockWarningIntervalSeconds = 0.65f;
-		std::string flightFile = "プレイヤー飛行音(50秒).mp3";
-		std::string gunFile = "プレイヤー機関銃発射音(5秒間).mp3";
-		std::string launchFile = "プレイヤーミサイル発射音.mp3";
-		std::string gunHitFile = "プレイヤー機関銃被弾.mp3";
-		std::string missileHitFile = "プレイヤーミサイル被弾.mp3";
-		std::string aircraftFile = "敵航空機爆発.mp3";
-		std::string shipFile = "敵戦艦爆発.mp3";
-		std::string battleBgmFile = "BattleBGM.mp3";
+		std::string flightFile = "Effects/プレイヤー飛行音(50秒).mp3";
+		std::string gunFile = "Effects/プレイヤー機関銃発射音(5秒間).mp3";
+		std::string launchFile = "Effects/プレイヤーミサイル発射音.mp3";
+		std::string gunHitFile = "Effects/プレイヤー機関銃被弾.mp3";
+		std::string missileHitFile = "Effects/プレイヤーミサイル被弾.mp3";
+		std::string aircraftFile = "Effects/敵航空機爆発.mp3";
+		std::string shipFile = "Effects/敵戦艦爆発.mp3";
+		std::string battleBgmFile = "Music/BattleBGM.mp3";
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};
 

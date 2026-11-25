@@ -1,7 +1,7 @@
 #include "Texture.h"
 #include "../../Log.h"
 #include <DirectXTex.h>
-#include "d3dx12.h"
+#include "External/DirectX/d3dx12.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>

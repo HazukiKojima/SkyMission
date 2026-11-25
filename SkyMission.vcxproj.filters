@@ -1,6 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Assets\Sound\Effects">
+      <UniqueIdentifier>{bf580d5d-bcb8-531d-ba00-b36870a337d6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Sound\Music">
+      <UniqueIdentifier>{2670a956-a8e7-5008-a8bc-813c6b574ae4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Sound\Voice">
+      <UniqueIdentifier>{80e387fe-4d64-50ea-a49c-6ec190da0023}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Sound\Voice\Commander">
+      <UniqueIdentifier>{a5708e7e-da8f-54a9-876c-0fd6b9596329}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Sound\Voice\Commander\Opening">
+      <UniqueIdentifier>{74fa4218-beb0-59c4-925e-0069c1214653}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Sound\Voice\Enemy">
+      <UniqueIdentifier>{806f23f6-28a4-5b5c-b32a-01c51acf8d7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External">
+      <UniqueIdentifier>{8759133d-5489-5bae-8662-732850be7584}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\DirectX">
+      <UniqueIdentifier>{e49becec-a561-545e-a6a6-8652cc68281d}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Assets">
       <UniqueIdentifier>{6885f2c9-a204-469c-a702-1b3ab80670f3}</UniqueIdentifier>
     </Filter>
@@ -252,7 +276,7 @@
     <ClCompile Include="Game\Weapons\ProjectileSystem.cpp">
       <Filter>Game\Weapons</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Game\Application\main.cpp"><Filter>Game\Application</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Camera\Camera.h">
@@ -658,27 +682,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Assets\Sound\プレイヤーミサイル発射音.mp3">
-      <Filter>Assets\Sound</Filter>
-    </None>
-    <None Include="Assets\Sound\プレイヤーミサイル被弾.mp3">
-      <Filter>Assets\Sound</Filter>
-    </None>
-    <None Include="Assets\Sound\プレイヤー機関銃発射音(5秒間).mp3">
-      <Filter>Assets\Sound</Filter>
-    </None>
-    <None Include="Assets\Sound\プレイヤー機関銃被弾.mp3">
-      <Filter>Assets\Sound</Filter>
-    </None>
-    <None Include="Assets\Sound\プレイヤー飛行音(50秒).mp3">
-      <Filter>Assets\Sound</Filter>
-    </None>
-    <None Include="Assets\Sound\敵戦艦爆発.mp3">
-      <Filter>Assets\Sound</Filter>
-    </None>
-    <None Include="Assets\Sound\敵航空機爆発.mp3">
-      <Filter>Assets\Sound</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Scene\CloudSettings.cpp"><Filter>Engine\Scene</Filter></ClCompile>
@@ -701,6 +704,8 @@
     <Filter Include="Assets\Camera"><UniqueIdentifier>{61a24252-ce08-5da1-ba39-37a510844d37}</UniqueIdentifier></Filter>
     <Filter Include="Assets\Effects"><UniqueIdentifier>{02b1efd7-b719-5e54-ad5f-8484959052cf}</UniqueIdentifier></Filter>
     <ClCompile Include="Engine\Precompiled.cpp"><Filter>Engine</Filter></ClCompile>
+    <ClInclude Include="Engine\EngineCommon.h"><Filter>Engine</Filter></ClInclude>
+    <ClInclude Include="External\DirectX\d3dx12.h"><Filter>External\DirectX</Filter></ClInclude>
     <ClInclude Include="Engine\Precompiled.h"><Filter>Engine</Filter></ClInclude>
     <ClInclude Include="Engine\Renderer\Device\RenderVisibility.h"><Filter>Engine\Renderer\Device</Filter></ClInclude>
     <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h"><Filter>Engine\Renderer\Device</Filter></ClInclude>
@@ -737,6 +742,41 @@
     <None Include="Assets\Effects\combatEffects.json"><Filter>Assets\Effects</Filter></None>
     <None Include="Assets\Combat\rumble.json"><Filter>Assets\Combat</Filter></None>
     <None Include="Assets\Combat\enemyWeapon.json"><Filter>Assets\Combat</Filter></None>
+    <None Include="Assets\Sound\Effects\プレイヤーミサイル発射音.mp3"><Filter>Assets\Sound\Effects</Filter></None>
+    <None Include="Assets\Sound\Effects\プレイヤーミサイル被弾.mp3"><Filter>Assets\Sound\Effects</Filter></None>
+    <None Include="Assets\Sound\Effects\プレイヤー機関銃発射音(5秒間).mp3"><Filter>Assets\Sound\Effects</Filter></None>
+    <None Include="Assets\Sound\Effects\プレイヤー機関銃被弾.mp3"><Filter>Assets\Sound\Effects</Filter></None>
+    <None Include="Assets\Sound\Effects\プレイヤー飛行音(50秒).mp3"><Filter>Assets\Sound\Effects</Filter></None>
+    <None Include="Assets\Sound\Effects\敵戦艦爆発.mp3"><Filter>Assets\Sound\Effects</Filter></None>
+    <None Include="Assets\Sound\Effects\敵航空機爆発.mp3"><Filter>Assets\Sound\Effects</Filter></None>
+    <None Include="Assets\Sound\Music\BattleBGM.mp3"><Filter>Assets\Sound\Music</Filter></None>
+    <None Include="Assets\Sound\Music\空襲BGM.wav"><Filter>Assets\Sound\Music</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\Opening\君、一機で護衛機を排除し、母艦を撃沈せよ.wav"><Filter>Assets\Sound\Voice\Commander\Opening</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\Opening\基地は現在も攻撃を受けており、増援は出せない.wav"><Filter>Assets\Sound\Voice\Commander\Opening</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\Opening\敵母艦と護衛機を確認。基地を襲った部隊の発進元だ.wav"><Filter>Assets\Sound\Voice\Commander\Opening</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\いいぞ、その調子だ！残りの敵機も頼む！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\いい動きだ！そのまま押し切れ！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\ここを切り抜けろ。お前の帰りを待っている！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\命中を確認！いいぞ、もう一撃だ！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\待て、新たな敵機を確認！４機、接近中だ！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\敵機4機、接近！直ちに迎撃せよ！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\敵機の全滅を確認。任務完了だ。……よく生き残った。帰還せよ！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\敵機４機の撃墜を確認。よくやった！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\敵母艦の発進能力を奪った。よくやった！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\次は敵母艦だ。爆撃で敵機の発進を阻止せよ！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Commander\聞こえるか？応答せよ！.wav"><Filter>Assets\Sound\Voice\Commander</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\Aaah! No!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\Engine's gone. Ejecting..wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\I don't wanna die! Please—!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\I'm hit! What do I do!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\It's on fire! Aaah!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\Mayday! Mayday! I'm going down!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\No way! Not by this guy!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\Oh, shi—!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\Stay away! GET AWAY FROM ME!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\That's no pilot… That's a monster!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\Too fast! I can't shake him!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
+    <None Include="Assets\Sound\Voice\Enemy\You’ll pay for what you did to our carrier…! Bring him down—no matter what!.wav"><Filter>Assets\Sound\Voice\Enemy</Filter></None>
     <None Include="Assets\Sound\audio.json"><Filter>Assets\Sound</Filter></None>
     <None Include="Assets\UI\labels.json"><Filter>Assets\UI</Filter></None>
   </ItemGroup>

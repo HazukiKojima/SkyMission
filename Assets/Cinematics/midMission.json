@@ -9,7 +9,7 @@
       "speaker": "司令官",
       "side": "friendly",
       "text": "次は敵母艦だ。爆撃で敵機の発進を阻止せよ！",
-      "audio": "../Sound/次は敵母艦だ。爆撃で敵機の発進を阻止せよ！.wav",
+      "audio": "../Sound/Voice/Commander/次は敵母艦だ。爆撃で敵機の発進を阻止せよ！.wav",
       "startSeconds": 0,
       "durationSeconds": 4.6
     }

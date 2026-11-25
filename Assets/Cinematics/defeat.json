@@ -18,7 +18,7 @@
       "speaker": "司令官",
       "side": "friendly",
       "text": "聞こえるか？応答せよ！",
-      "audio": "../Sound/聞こえるか？応答せよ！.wav",
+      "audio": "../Sound/Voice/Commander/聞こえるか？応答せよ！.wav",
       "startSeconds": 0,
       "durationSeconds": 3
     }

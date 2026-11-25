@@ -1,7 +1,7 @@
 #pragma once
 #include "../../EngineCommon.h"
 #include <DirectXTex.h>
-#include "d3dx12.h"
+#include "External/DirectX/d3dx12.h"
 #include <memory>
 #include <filesystem>
 #include <span>

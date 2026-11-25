@@ -16,7 +16,7 @@
 #include <memory>
 #include <iomanip>
 #include <sstream>
-#include "d3dx12.h"
+#include "External/DirectX/d3dx12.h"
 
 using Microsoft::WRL::ComPtr;
 
