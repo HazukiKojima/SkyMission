@@ -428,6 +428,7 @@
   <ItemGroup>
     <ClInclude Include="Game\Scene\FlightScene.h" />
     <ClCompile Include="Game\Scene\FlightScene.cpp" />
+    <ClCompile Include="Game\Scene\FlightSceneCrash.cpp" />
     <ClCompile Include="Game\Scene\FlightSceneMission.cpp" />
     <ClInclude Include="Game\Mission\MissionState.h" />
     <ClInclude Include="Game\Weapons\Bomb\BombFlight.h" />
@@ -492,6 +493,7 @@
     <ClCompile Include="Game\Effects\Presentation\EffectDrawContext.cpp" />
     <ClInclude Include="Game\Effects\Presentation\CombatEffectPresenter.h" />
     <ClCompile Include="Game\Effects\Presentation\CombatEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\Presentation\AircraftEffectPresenter.cpp" />
     <ClCompile Include="Game\Effects\Presentation\ExplosionEffectPresenter.cpp" />
     <ClCompile Include="Game\Effects\Presentation\ImpactEffectPresenter.cpp" />
     <ClInclude Include="Game\UI\HudProjection.h" />

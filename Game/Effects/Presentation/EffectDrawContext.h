@@ -36,7 +36,8 @@ namespace Game {
 		void SetAdditionalReservedVertices(size_t vertices);
 		float GetScale() const;
 		void DrawCloud(DirectX::FXMVECTOR position, float radius, float rotation, unsigned seed,
-			DirectX::XMFLOAT4 color, EffectClipMode clipMode = EffectClipMode::BoundsVisible);
+			DirectX::XMFLOAT4 color, EffectClipMode clipMode = EffectClipMode::BoundsVisible,
+			float minimumPixelRadius = 0);
 		void DrawGlow(DirectX::FXMVECTOR position, float radius, DirectX::XMFLOAT4 color,
 			EffectClipMode clipMode = EffectClipMode::BoundsVisible);
 		std::optional<ProjectedEffectSegment> ProjectSegment(
@@ -53,7 +54,7 @@ namespace Game {
 		};
 
 		std::optional<ProjectedBillboard> ProjectBillboard(
-			DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode) const;
+			DirectX::FXMVECTOR position, float radius, EffectClipMode clipMode, float minimumPixelRadius = 0) const;
 
 		// 借用参照のため、viewとlistはこのコンテキストより長く生存させる
 		EffectSettings m_settings;

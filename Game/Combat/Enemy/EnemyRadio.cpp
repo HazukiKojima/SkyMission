@@ -17,6 +17,13 @@ namespace Game {
 		}
 	}
 
+	void EnemyRadioController::NotifyCrashImpact(Engine::ObjectId victim) {
+		// 爆発時点で再生中の台詞は流し切り、未再生の台詞だけを取り消す
+		std::erase_if(m_pending, [victim](const Message& message) {
+			return !message.reaction && message.actor == victim;
+		});
+	}
+
 	void EnemyRadioController::Update(float dt, std::span<const Engine::ObjectId> survivors, bool blocked) {
 		if (blocked) {
 			StopCurrent();

@@ -24,7 +24,7 @@ namespace Game {
 		bool missileLaunched = false;
 		bool gunHit = false;
 		bool heavyHit = false;
-		bool enemyDestroyed = false;
+		float explosionImpact = 0.0f;
 	};
 
 	class AircraftCameraController {

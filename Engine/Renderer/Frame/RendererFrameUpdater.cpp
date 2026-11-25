@@ -174,6 +174,7 @@ namespace Engine {
 			modelData->ambientIntensity = environment.ambientIntensity;
 			modelData->ambientColor = environment.ambientColor;
 			modelData->pad3 = 0.0f;
+			modelData->localClipPlane = object.localClipPlane;
 		}
 	}
 

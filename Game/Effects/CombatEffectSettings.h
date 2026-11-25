@@ -184,6 +184,43 @@ namespace Game {
 			float fragmentTrailSeconds = ExplosionEffectSettings::fragmentTrailSeconds;
 			float fragmentVelocityInheritance = ExplosionEffectSettings::fragmentVelocityInheritance;
 		} explosion;
+		struct ExplosionFeedbackTuning {
+			float nearDistanceMeters = 150.0f;
+			float farDistanceMeters = 1200.0f;
+			float initialFlashSeconds = 0.16f;
+			float finalFlashSeconds = 0.22f;
+			float initialStrength = 0.72f;
+			float cameraShakeMultiplier = 4.0f;
+			DirectX::XMFLOAT4 flashColor{1.0f, 0.77f, 0.46f, 0.28f};
+		} explosionFeedback;
+		struct AircraftCrashProfile {
+			float durationSeconds;
+			float downwardAcceleration;
+			float drag;
+			float turnRate;
+			float bank;
+			float rollRate;
+			float spinRate;
+		};
+		struct AircraftCrashTuning {
+			float horizontalSpeedRetention = 0.92f;
+			float initialDownwardSpeed = 62.0f;
+			float initialExplosionRadiusMultiplier = 2.5f;
+			float initialFlashDurationMultiplier = 2.2f;
+			float finalExplosionRadiusMultiplier = 2.8f;
+			std::array<AircraftCrashProfile, 3> profiles{{
+				{2.145f, 164.0f, 0.53f, 0.12f, 0.65f, 5.4f, 0.0f},
+				{2.21f, 136.0f, 0.65f, 0.85f, 1.65f, 0.55f, 0.0f},
+				{2.08f, 149.0f, 1.25f, 0.04f, 0.48f, 0.0f, 5.8f},
+			}};
+		} aircraftCrash;
+		struct AircraftTrailTuning {
+			float contrailSpacingMeters = 4.0f;
+			float smokeIntervalSeconds = 0.028f;
+			float smokeStartRadius = 3.5f;
+			float smokeRadiusGrowth = 14.0f;
+			DirectX::XMFLOAT4 smokeColor{0.075f, 0.066f, 0.060f, 0.88f};
+		} aircraftTrail;
 		struct CarrierEffectTuning : CarrierEffectSettings {
 			DirectX::XMFLOAT4 smokeColor{0.18f, 0.17f, 0.16f, 1.0f};
 

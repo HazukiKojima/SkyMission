@@ -36,6 +36,7 @@ namespace Game {
 	class EnemyRadioController {
 	  public:
 		void NotifyDestroyed(Engine::ObjectId victim, std::span<const Engine::ObjectId> survivors);
+		void NotifyCrashImpact(Engine::ObjectId victim);
 
 		void Update(float dt, std::span<const Engine::ObjectId> survivors, bool blocked);
 

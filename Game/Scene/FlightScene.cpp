@@ -1,15 +1,15 @@
 #include "FlightScene.h"
 #include "FlightSceneLoader.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
-#include <limits>
+#include <optional>
 #include "Game/Combat/Targeting/GunAimSolver.h"
 #include "Game/Combat/CombatSnapshotBuilder.h"
 #include "Game/Weapons/Projectile/ProjectileCollision.h"
 #include "Game/Combat/Enemy/EnemyEngagementProfile.h"
 namespace Game {
 	namespace {
-
 		void ApplyAircraftPose(
 			Engine::SceneObject& object, const AircraftFlightModel& aircraft, float scale, float angle) {
 			const auto transform = aircraft.GetWorldTransform();
@@ -18,26 +18,36 @@ namespace Game {
 			object.nodeRotationRadians = angle;
 		}
 
+		std::optional<std::array<DirectX::XMFLOAT3, 2>> FindWingtips(const Engine::SceneObject& object) {
+			using namespace DirectX;
+			if (!object.model) return std::nullopt;
+
+			const auto left = object.model->FindNodePosition("Wingtip_L");
+			const auto right = object.model->FindNodePosition("Wingtip_R");
+			if (left && right) return std::array{*left, *right};
+			const auto bounds = object.model->GetLocalBounds();
+			if (!bounds) return std::nullopt;
+
+			const auto center = bounds->Center();
+			return std::array{
+				left.value_or(XMFLOAT3{std::lerp(center.x, bounds->maximum.x, 0.97f), center.y, center.z}),
+				right.value_or(XMFLOAT3{std::lerp(center.x, bounds->minimum.x, 0.97f), center.y, center.z})};
+		}
+
 		void EmitWingtipVapor(CombatEffectSystem& effects, const Engine::SceneObject& object,
 			const DirectX::XMFLOAT4X4& previous, const AircraftFlightModel& aircraft, float scale,
-			float dt, float visibility = 1.0f) {
+			float dt) {
 			using namespace DirectX;
 			const auto current = aircraft.GetWorldTransform();
 			// 機首方向の変化で急旋回と引き起こしを拾い、軸回りのロールは除く
 			const float turnRate = XMVectorGetX(XMVector3Length(XMVectorSet(
 				current._31 - previous._31, current._32 - previous._32, current._33 - previous._33, 0))) / dt;
-			const float strength = std::clamp((turnRate - 0.30f) / 0.40f, 0.0f, 1.0f) * visibility;
-			if (strength <= 0 || !object.model) return;
+			const float strength = std::clamp((turnRate - 0.30f) / 0.40f, 0.0f, 1.0f);
+			if (strength <= 0) return;
 
-			const auto bounds = object.model->GetLocalBounds();
-			if (!bounds) return;
-
-			const auto center = bounds->Center();
-			const auto left = object.model->FindNodePosition("Wingtip_L").value_or(
-				XMFLOAT3{center.x + (bounds->maximum.x - center.x) * 0.97f, center.y, center.z});
-			const auto right = object.model->FindNodePosition("Wingtip_R").value_or(
-				XMFLOAT3{center.x + (bounds->minimum.x - center.x) * 0.97f, center.y, center.z});
-			for (const auto& localTip : {left, right}) {
+			const auto tips = FindWingtips(object);
+			if (!tips) return;
+			for (const auto& localTip : *tips) {
 				const auto tip = XMLoadFloat3(&localTip) * scale;
 				WingtipVaporSegment segment;
 				XMStoreFloat3(&segment.head, XMVector3TransformCoord(tip, XMLoadFloat4x4(&current)));
@@ -46,6 +56,7 @@ namespace Game {
 				effects.SpawnWingtipVapor(segment);
 			}
 		}
+
 	} // namespace
 	FlightScene FlightScene::CreateMission(const FlightSceneDefinition& assets,
 		const std::function<std::shared_ptr<Engine::Model>(const std::string&)>& resolveModel, UINT width,
@@ -160,7 +171,8 @@ namespace Game {
 		if (!std::isfinite(dt) || dt <= 0) return;
 
 		dt = std::min(dt, 0.25f);
-		m_effects.UpdateWingtipVapor(dt);
+		m_effects.UpdateAircraftVapor(dt);
+		m_effects.ClearAircraftFires();
 
 		if (!m_initialState) {
 			SaveInitialState();
@@ -172,6 +184,7 @@ namespace Game {
 				m_effects.Update(dt);
 				UpdateVictoryOrdnance(dt);
 			}
+			UpdateCrashingEnemies(dt);
 			UpdateCinematic(dt, combatInput.skipOpening);
 			UpdateEnemyRadio(dt);
 			return;
@@ -186,8 +199,9 @@ namespace Game {
 			if (combatInput.retry) {
 				Restart(dt);
 			} else {
-				UpdateEnemyRadio(dt);
 				m_effects.Update(dt);
+				UpdateCrashingEnemies(dt);
+				UpdateEnemyRadio(dt);
 				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
 
 				if (m_combat.result == CombatResult::Victory) {
@@ -209,6 +223,7 @@ namespace Game {
 
 		// 既存の演出を進めてから、このフレームの新しい演出を生成する
 		m_effects.Update(dt);
+		UpdateCrashingEnemies(dt);
 
 		// 更新後の機体位置・姿勢をカメラと描画状態へ反映する
 		const auto previousPlayerPose = m_player.GetWorldTransform();
@@ -378,6 +393,7 @@ namespace Game {
 
 	void FlightScene::UpdateEnemies(float dt) {
 		for (auto& enemy : m_enemies) {
+			if (enemy.health <= 0) continue;
 			const auto* object = m_scene.FindObject(enemy.objectId);
 			if (!object) continue;
 
@@ -417,14 +433,17 @@ namespace Game {
 			enemy.previousPosition = enemy.flightModel.GetPosition();
 			const auto previousPose = enemy.flightModel.GetWorldTransform();
 			enemy.flightModel.Update(input, dt);
-			const auto playerPosition = m_player.GetPosition();
-			const auto enemyPosition = enemy.flightModel.GetPosition();
-			const float distance = DirectX::XMVectorGetX(DirectX::XMVector3Length(DirectX::XMVectorSubtract(
-				DirectX::XMLoadFloat3(&enemyPosition), DirectX::XMLoadFloat3(&playerPosition))));
-			const float visibility = std::clamp((1800.0f - distance) / 500.0f, 0.0f, 1.0f);
-			if (visibility > 0)
-				EmitWingtipVapor(m_effects, *object, previousPose, enemy.flightModel, enemy.visualScale, dt,
-					visibility);
+			if (const auto tips = FindWingtips(*object)) {
+				using namespace DirectX;
+				const auto currentPose = enemy.flightModel.GetWorldTransform();
+				const auto previousMatrix = XMLoadFloat4x4(&previousPose);
+				const auto currentMatrix = XMLoadFloat4x4(&currentPose);
+				for (size_t wing = 0; wing < tips->size(); ++wing) {
+					const auto tip = XMLoadFloat3(&(*tips)[wing]) * enemy.visualScale;
+					m_effects.EmitContrail(XMVector3TransformCoord(tip, previousMatrix),
+						XMVector3TransformCoord(tip, currentMatrix), dt, enemy.metersUntilContrailPuff[wing]);
+				}
+			}
 			enemy.propellerAngle =
 				m_enemyAnimation.AdvancePropeller(enemy.propellerAngle, enemy.flightModel.GetSpeed(), dt);
 		}
@@ -468,7 +487,13 @@ namespace Game {
 		}
 
 		m_cameraController.SetLookTarget(lookTarget, automatic);
-		const bool flying = m_combat.result == CombatResult::Active && m_scene.FindObject(m_playerId);
+		const bool hasPlayer = m_scene.FindObject(m_playerId) != nullptr;
+		const bool flying = m_combat.result == CombatResult::Active && hasPlayer;
+		const auto& feedbackSettings = m_effects.GetSettings().explosionFeedback;
+		const float explosionImpact = hasPlayer
+			? EvaluateExplosionFeedback(m_effects.GetSnapshot(), m_player.GetPosition(), feedbackSettings).impact *
+				feedbackSettings.cameraShakeMultiplier
+			: 0.0f;
 		m_cameraController.UpdateShake(dt, {
 			.acceleration = flying ? input.throttle : 0.0f,
 			.highG = flying && input.highGTurn && std::max(std::abs(input.turn), std::abs(input.yaw)) > 0.05f,
@@ -476,7 +501,7 @@ namespace Game {
 			.missileLaunched = m_combat.audio.missileLaunches > 0,
 			.gunHit = m_combat.audio.gunHits > 0,
 			.heavyHit = m_combat.audio.missileHits > 0,
-			.enemyDestroyed = m_combat.enemyAircraftDestroyed > 0,
+			.explosionImpact = explosionImpact,
 		});
 		m_cameraController.Update(dt, cameraInput);
 		m_carrierLookSeconds = std::max(0.0f, m_carrierLookSeconds - dt);
@@ -489,7 +514,7 @@ namespace Game {
 		}
 
 		for (const auto& enemy : m_enemies) {
-			if (auto* object = m_scene.FindObject(enemy.objectId)) {
+			if (auto* object = m_scene.FindObject(enemy.objectId); enemy.health > 0 && object) {
 				ApplyAircraftPose(*object, enemy.flightModel, enemy.visualScale, enemy.propellerAngle);
 			}
 		}
@@ -556,6 +581,7 @@ namespace Game {
 		std::vector<CollisionTarget> targets;
 
 		for (const auto& enemy : m_enemies) {
+			if (enemy.health <= 0) continue;
 			if (const auto* object = m_scene.FindObject(enemy.objectId);
 				object && object->model->GetLocalBounds()) {
 				targets.push_back({.id = enemy.objectId,
@@ -574,7 +600,7 @@ namespace Game {
 		for (const auto& enemy : m_enemies) {
 			const auto* object = m_scene.FindObject(enemy.objectId);
 
-			if (!object) continue;
+			if (enemy.health <= 0 || !object) continue;
 
 			const auto bounds = object->model->GetLocalBounds();
 			const XMFLOAT3 center = bounds ? bounds->Center() : XMFLOAT3{};
@@ -702,11 +728,6 @@ namespace Game {
 			}
 		}
 
-		// 命中の走査中は敵を削除せず、後続の命中でも耐久値を参照できるようにする
-		for (const auto id : destroyed) {
-			RemoveObject(id);
-		}
-
 		std::vector<Engine::ObjectId> survivors;
 
 		for (const auto& enemy : m_enemies)
@@ -769,7 +790,7 @@ namespace Game {
 
 		if (enemy == m_enemies.end() || enemy->health <= 0) return;
 
-		enemy->health -= hit.damage;
+		enemy->health = std::max(0.0f, enemy->health - hit.damage);
 		++m_combat.hitCount;
 
 		if (hit.kind == ProjectileKind::Gun) {
@@ -781,62 +802,10 @@ namespace Game {
 		m_combat.hitSeconds = m_combatSettings.feedback.hitSeconds;
 
 		if (enemy->health <= 0) {
-			++m_combat.enemyAircraftDestroyed;
-			++m_combat.audio.aircraftExplosions;
-
-			if (const auto* aircraft = m_scene.FindObject(enemy->objectId)) {
-				m_effects.SpawnExplosion(*aircraft, enemy->flightModel.GetVelocity(), enemy->visualScale);
-			} else {
-				m_effects.SpawnExplosion(
-					enemy->flightModel.GetPosition(), enemy->flightModel.GetVelocity());
-			}
-
+			BeginEnemyCrash(*enemy, hit);
 			destroyed.push_back(enemy->objectId);
 			m_combat.destroyedSeconds = m_combatSettings.feedback.destroyedSeconds;
 		}
-	}
-
-	void FlightScene::ApplySeaCollision() {
-		using namespace DirectX;
-
-		const auto* aircraft = m_scene.FindObject(m_playerId);
-
-		if (m_combat.playerHealth <= 0 || !aircraft || !aircraft->model) return;
-
-		const auto bounds = aircraft->model->GetLocalBounds();
-
-		if (!bounds) return;
-
-		// 変換後の境界8頂点から機体の下端と海面の接触を判定する
-		float lowestY = std::numeric_limits<float>::infinity();
-
-		for (int corner = 0; corner < 8; ++corner) {
-			const auto point = XMVector3TransformCoord(XMVectorSet(
-				corner & 1 ? bounds->maximum.x : bounds->minimum.x,
-				corner & 2 ? bounds->maximum.y : bounds->minimum.y,
-				corner & 4 ? bounds->maximum.z : bounds->minimum.z, 1),
-				XMLoadFloat4x4(&aircraft->worldTransform));
-			lowestY = std::min(lowestY, XMVectorGetY(point));
-		}
-
-		if (lowestY > 0 || !std::isfinite(lowestY)) return;
-
-		// 大きい更新幅でも爆発を海中に埋めず、機体下端を海面に合わせる
-		auto impact = *aircraft;
-		impact.worldTransform._42 -= lowestY;
-		auto position = m_player.GetPosition();
-		position.y -= lowestY;
-		m_player.SetPosition(position);
-		m_effects.SpawnExplosion(impact, m_player.GetVelocity(), m_playerVisualScale);
-		++m_combat.audio.aircraftExplosions;
-		m_combat.playerHealth = 0;
-		RemoveObject(m_playerId);
-		m_combat.result = CombatResult::Defeat;
-		m_carrierLookSeconds = 0;
-
-		// 墜落の爆発を表示しながら、司令官の無線を流す
-		m_endingPlayed = true;
-		StartCommandRadio("defeat");
 	}
 
 	void FlightScene::UpdateEnemyRadio(float dt) {
@@ -854,8 +823,10 @@ namespace Game {
 
 	void FlightScene::RemoveObject(Engine::ObjectId id) {
 		m_scene.RemoveObject(id);
-		std::erase_if(m_enemies, [id](const EnemyAircraft& e) {
-			return e.objectId == id;
+		std::erase_if(m_enemies, [&](const EnemyAircraft& e) {
+			if (e.objectId != id) return false;
+			m_scene.RemoveObject(e.detachedPartId);
+			return true;
 		});
 
 		if (m_playerId == id) {

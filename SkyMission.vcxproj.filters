@@ -639,6 +639,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game\Scene\FlightSceneMission.cpp"><Filter>Game\Scene</Filter></ClCompile>
+    <ClCompile Include="Game\Scene\FlightSceneCrash.cpp"><Filter>Game\Scene</Filter></ClCompile>
+    <ClCompile Include="Game\Effects\Presentation\AircraftEffectPresenter.cpp"><Filter>Game\Effects\Presentation</Filter></ClCompile>
     <ClInclude Include="Game\Mission\MissionState.h"><Filter>Game\Mission</Filter></ClInclude>
     <ClInclude Include="Game\Weapons\Bomb\BombFlight.h"><Filter>Game\Weapons\Bomb</Filter></ClInclude>
     <None Include="Assets\Combat\mission.json"><Filter>Assets\Combat</Filter></None>

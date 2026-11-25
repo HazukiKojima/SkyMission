@@ -19,21 +19,30 @@ namespace Game {
 
 		// 経過秒数を進め、寿命を終えた演出を除去する
 		void Update(float deltaSeconds);
-		void UpdateWingtipVapor(float deltaSeconds);
+		void UpdateAircraftVapor(float deltaSeconds);
 		void SpawnWingtipVapor(const WingtipVaporSegment& segment);
+		void EmitContrail(DirectX::FXMVECTOR start, DirectX::FXMVECTOR end, float dt, float& metersUntilPuff);
+		void EmitAircraftSmokeTrail(DirectX::FXMVECTOR start, DirectX::FXMVECTOR end,
+			float previousSeconds, float currentSeconds);
 		void SpawnGunShot(const GunShotEvent& shot);
 		void SetGunMuzzlePose(
 			const std::array<DirectX::XMFLOAT3, 4>& positions, const DirectX::XMFLOAT3& forward);
 		void ClearGunFlashes();
 		void SetGunTracers(std::vector<GunTracerSegment> tracers);
 		void SpawnRocketSmoke(const DirectX::XMFLOAT3& position, float age);
+		void SpawnAircraftSmoke(const AircraftSmokePuff& puff);
+		void ClearAircraftFires() { m_snapshot.aircraftFires.clear(); }
+		void AddAircraftFire(const AircraftFire& fire) { m_snapshot.aircraftFires.push_back(fire); }
 		void SpawnCarrierExplosion(const DirectX::XMFLOAT3& position);
 		void SpawnDeckSmoke(const DirectX::XMFLOAT3& position);
 		void SetRocketExhausts(std::vector<RocketExhaust> exhausts);
 		void SpawnImpact(const HitEvent& hit, const DirectX::XMFLOAT3& targetVelocity);
-		void SpawnExplosion(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity);
+		void SpawnExplosion(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity,
+			float radiusMultiplier = 1.0f, float flashDurationMultiplier = 1.0f,
+			ExplosionStyle style = ExplosionStyle::Standard);
 		void SpawnExplosion(
-			const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale);
+			const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale,
+			float radiusMultiplier = 1.0f, ExplosionStyle style = ExplosionStyle::Standard);
 
 		// 内部の演出状態への参照。更新・生成操作で内容が変わるため描画するフレーム内で使う
 		const CombatEffectSnapshot& GetSnapshot() const {

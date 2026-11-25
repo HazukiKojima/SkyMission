@@ -13,10 +13,17 @@ namespace Game {
 
 		// 呼び出し側で初期化した描画リストに追記し、照準より先に描く
 		void Build(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
-			Engine::HudDrawList& list) const;
+			const DirectX::XMFLOAT3& playerPosition, Engine::HudDrawList& list) const;
 
 	  private:
+		static constexpr size_t aircraftFireVertexBudget = 2 * 72 + 6 * 6;
 		EffectSettings m_settings;
+		void DrawAircraftSmoke(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
+		void DrawAircraftFire(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
+		void DrawAircraftVapor(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
+			EffectDrawContext& context) const;
+		void DrawExplosionScreenFlash(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
+			const DirectX::XMFLOAT3& playerPosition, EffectDrawContext& context, Engine::HudDrawList& list) const;
 		void DrawRocketEffects(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
 		void DrawExplosion(
 			const ExplosionEffect& effect, EffectDrawContext& context, float fragmentScale) const;

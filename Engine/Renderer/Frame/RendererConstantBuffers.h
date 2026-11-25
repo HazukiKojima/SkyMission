@@ -70,6 +70,7 @@ namespace Engine {
 		float ambientIntensity;
 		DirectX::XMFLOAT3 ambientColor;
 		float pad3;
+		DirectX::XMFLOAT4 localClipPlane;
 	};
 
 	struct FilmConstantBufferData {
