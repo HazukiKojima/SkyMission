@@ -1,5 +1,5 @@
 #include "ModelGeometry.h"
-#include "Engine/Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include <assimp/scene.h>
 #include <assimp/matrix3x3.h>
 #include <algorithm>

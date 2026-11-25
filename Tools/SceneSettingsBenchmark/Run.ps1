@@ -23,13 +23,13 @@ $installation = & $vswhere -latest -requires Microsoft.VisualStudio.Component.VC
 
 if (!$installation) { throw 'Visual Studio C++ tools required.' }
 $sources = @('Tools/SceneSettingsBenchmark/Benchmark.cpp', 'Game/Scene/FlightSceneLoader.cpp',
-    'Engine/StartupTiming.cpp', 'Engine/Resources/JsonAssetReader.cpp', 'Engine/Interop/Redox/RedoxBridge.cpp',
+    'Engine/Diagnostics/StartupTiming.cpp', 'Engine/Resources/JsonAssetReader.cpp', 'Engine/Interop/Redox/RedoxBridge.cpp',
     'Game/Settings/SettingsReader.cpp', 'Game/Settings/GameplaySettings.cpp',
     'Game/Settings/UiTextSettings.cpp', 'Game/Effects/CombatEffectSettings.cpp',
     'Game/Aircraft/ValidateFlightParameters.cpp', 'Game/Weapons/WeaponDefinition.cpp',
-    'Game/Combat/MissionState.cpp', 'Game/Cinematics/CinematicSettings.cpp',
-    'Game/Scene/CloudSettingsLoader.cpp', 'Game/Combat/CombatSettingsLoader.cpp', 'Engine/Scene/CloudSettings.cpp',
-    'Game/Combat/TargetingSystem.cpp', 'Game/Combat/GunAimSolver.cpp')
+    'Game/Mission/MissionState.cpp', 'Game/Cinematics/CinematicSettings.cpp',
+    'Game/Scene/CloudSettingsLoader.cpp', 'Game/Combat/CombatSettingsLoader.cpp', 'Engine/Renderer/Environment/CloudSettings.cpp',
+    'Game/Combat/Targeting/TargetingSystem.cpp', 'Game/Combat/Targeting/GunAimSolver.cpp')
 $flags = @('/nologo','/O2','/DNDEBUG','/std:c++20','/EHsc','/MD','/utf-8','/DNOMINMAX','/DUNICODE',
     ('/I"{0}"' -f $repository), ('/I"{0}"' -f $output),
     ('/I"{0}"' -f (Join-Path $repository 'packages/directxtex_desktop_win10.2026.5.8.1/include')),

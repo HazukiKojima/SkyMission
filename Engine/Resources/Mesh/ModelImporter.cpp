@@ -1,5 +1,5 @@
 #include "ModelImporter.h"
-#include "Engine/Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include <Windows.h>
 #include <assimp/Importer.hpp>
 #include <assimp/Exporter.hpp>

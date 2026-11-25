@@ -5,7 +5,7 @@
 #include <chrono>
 #include "Game/Audio/CombatAudio.h"
 #include "Game/UI/CombatHudPresenter.h"
-#include "Game/Effects/CombatEffectPresenter.h"
+#include "Game/Effects/Presentation/CombatEffectPresenter.h"
 #include "Game/Combat/CombatRumble.h"
 
 namespace Engine {

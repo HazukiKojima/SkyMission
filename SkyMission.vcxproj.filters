@@ -1,6 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Engine\Diagnostics">
+      <UniqueIdentifier>{7dd8e186-4282-5a6f-bd8f-2ed2eb51e25e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Environment">
+      <UniqueIdentifier>{e0033a78-20cd-5a4c-a213-7351b3c28bca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Frame">
+      <UniqueIdentifier>{23248319-7f28-5cd1-9f07-5157f1dd298f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Combat\Enemy">
+      <UniqueIdentifier>{8230a47a-9137-58bd-b6ac-0098149351fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Combat\Targeting">
+      <UniqueIdentifier>{41c495c1-d4f7-5f22-bb67-a334ff64ece2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Effects\Presentation">
+      <UniqueIdentifier>{c7c40d83-c67b-59d2-9b35-6b0619043c30}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Mission">
+      <UniqueIdentifier>{152a20e3-8b49-50a4-92d4-127dbb7dc53b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Weapons\Bomb">
+      <UniqueIdentifier>{a9a2410a-fd22-562f-80a3-4f2495660dda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Weapons\Gun">
+      <UniqueIdentifier>{a7ff02f3-1595-586e-bb2d-15d4fb2fb1e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Weapons\Projectile">
+      <UniqueIdentifier>{dae2326e-8dc0-5a70-8607-d50408ee9872}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Assets\Sound\Effects">
       <UniqueIdentifier>{bf580d5d-bcb8-531d-ba00-b36870a337d6}</UniqueIdentifier>
     </Filter>
@@ -142,9 +172,6 @@
     <Filter Include="Game\Weapons">
       <UniqueIdentifier>{920976bd-1bae-48ba-b6ca-b893f0aa8308}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Tests">
-      <UniqueIdentifier>{9d55585f-57a6-401d-aa70-6578e2d5fb92}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Camera\Camera.cpp">
@@ -153,29 +180,29 @@
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp">
       <Filter>Engine\Renderer\Device</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\OceanGeometry.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClCompile Include="Engine\Renderer\Environment\OceanGeometry.cpp">
+      <Filter>Engine\Renderer\Environment</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp">
       <Filter>Engine\Renderer\Device</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\Renderer.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClCompile Include="Engine\Renderer\Renderer.cpp">
+      <Filter>Engine\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererAssets.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClCompile Include="Engine\Renderer\RendererAssets.cpp">
+      <Filter>Engine\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererConstantBuffers.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClCompile Include="Engine\Renderer\Frame\RendererConstantBuffers.cpp">
+      <Filter>Engine\Renderer\Frame</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererFrameUpdater.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClCompile Include="Engine\Renderer\Frame\RendererFrameUpdater.cpp">
+      <Filter>Engine\Renderer\Frame</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererPasses.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClCompile Include="Engine\Renderer\Frame\RendererPasses.cpp">
+      <Filter>Engine\Renderer\Frame</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RendererPipelines.cpp">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClCompile Include="Engine\Renderer\Pipeline\RendererPipelines.cpp">
+      <Filter>Engine\Renderer\Pipeline</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Renderer\Hud\HudDrawList.cpp">
       <Filter>Engine\Renderer\Hud</Filter>
@@ -198,8 +225,8 @@
     <ClCompile Include="Engine\Resources\Mesh\Model.cpp">
       <Filter>Engine\Resources\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp">
-      <Filter>Engine\Resources\Mesh</Filter>
+    <ClCompile Include="Engine\Renderer\Environment\SkySphere.cpp">
+      <Filter>Engine\Renderer\Environment</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp">
       <Filter>Engine\Resources\Texture</Filter>
@@ -231,29 +258,29 @@
     <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp">
       <Filter>Game\Combat</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Combat\GunAimSolver.cpp">
-      <Filter>Game\Combat</Filter>
+    <ClCompile Include="Game\Combat\Targeting\GunAimSolver.cpp">
+      <Filter>Game\Combat\Targeting</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Combat\ProjectileCollision.cpp">
-      <Filter>Game\Combat</Filter>
+    <ClCompile Include="Game\Weapons\Projectile\ProjectileCollision.cpp">
+      <Filter>Game\Weapons\Projectile</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Combat\TargetingSystem.cpp">
-      <Filter>Game\Combat</Filter>
+    <ClCompile Include="Game\Combat\Targeting\TargetingSystem.cpp">
+      <Filter>Game\Combat\Targeting</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Effects\CombatEffectPresenter.cpp">
-      <Filter>Game\Effects</Filter>
+    <ClCompile Include="Game\Effects\Presentation\CombatEffectPresenter.cpp">
+      <Filter>Game\Effects\Presentation</Filter>
     </ClCompile>
     <ClCompile Include="Game\Effects\CombatEffectSystem.cpp">
       <Filter>Game\Effects</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Effects\EffectDrawContext.cpp">
-      <Filter>Game\Effects</Filter>
+    <ClCompile Include="Game\Effects\Presentation\EffectDrawContext.cpp">
+      <Filter>Game\Effects\Presentation</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Effects\ExplosionEffectPresenter.cpp">
-      <Filter>Game\Effects</Filter>
+    <ClCompile Include="Game\Effects\Presentation\ExplosionEffectPresenter.cpp">
+      <Filter>Game\Effects\Presentation</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Effects\ImpactEffectPresenter.cpp">
-      <Filter>Game\Effects</Filter>
+    <ClCompile Include="Game\Effects\Presentation\ImpactEffectPresenter.cpp">
+      <Filter>Game\Effects\Presentation</Filter>
     </ClCompile>
     <ClCompile Include="Game\Scene\FlightScene.cpp">
       <Filter>Game\Scene</Filter>
@@ -270,11 +297,11 @@
     <ClCompile Include="Game\UI\HudProjection.cpp">
       <Filter>Game\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Weapons\AircraftGun.cpp">
-      <Filter>Game\Weapons</Filter>
+    <ClCompile Include="Game\Weapons\Gun\AircraftGun.cpp">
+      <Filter>Game\Weapons\Gun</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Weapons\ProjectileSystem.cpp">
-      <Filter>Game\Weapons</Filter>
+    <ClCompile Include="Game\Weapons\Projectile\ProjectileSystem.cpp">
+      <Filter>Game\Weapons\Projectile</Filter>
     </ClCompile>
     <ClCompile Include="Game\Application\main.cpp"><Filter>Game\Application</Filter></ClCompile>
   </ItemGroup>
@@ -297,35 +324,35 @@
     <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h">
       <Filter>Engine\Interop\Redox</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Log.h">
-      <Filter>Engine</Filter>
+    <ClInclude Include="Engine\Diagnostics\Log.h">
+      <Filter>Engine\Diagnostics</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Renderer\Device\CommandContext.h">
       <Filter>Engine\Renderer\Device</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\OceanGeometry.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Engine\Renderer\Environment\OceanGeometry.h">
+      <Filter>Engine\Renderer\Environment</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h">
       <Filter>Engine\Renderer\Device</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\Renderer.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Engine\Renderer\Renderer.h">
+      <Filter>Engine\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererAssets.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Engine\Renderer\RendererAssets.h">
+      <Filter>Engine\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererConstantBuffers.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Engine\Renderer\Frame\RendererConstantBuffers.h">
+      <Filter>Engine\Renderer\Frame</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererFrameUpdater.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Engine\Renderer\Frame\RendererFrameUpdater.h">
+      <Filter>Engine\Renderer\Frame</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererPasses.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Engine\Renderer\Frame\RendererPasses.h">
+      <Filter>Engine\Renderer\Frame</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RendererPipelines.h">
-      <Filter>Engine\Renderer\Device</Filter>
+    <ClInclude Include="Engine\Renderer\Pipeline\RendererPipelines.h">
+      <Filter>Engine\Renderer\Pipeline</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Renderer\Hud\HudDrawList.h">
       <Filter>Engine\Renderer\Hud</Filter>
@@ -345,8 +372,8 @@
     <ClInclude Include="Engine\Renderer\RetroFilmParameters.h">
       <Filter>Engine\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Renderer\RootBindings.h">
-      <Filter>Engine\Renderer</Filter>
+    <ClInclude Include="Engine\Renderer\Pipeline\RootBindings.h">
+      <Filter>Engine\Renderer\Pipeline</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h">
       <Filter>Engine\Resources\Buffer</Filter>
@@ -366,8 +393,8 @@
     <ClInclude Include="Engine\Resources\Mesh\ModelLoadOptions.h">
       <Filter>Engine\Resources\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Resources\Mesh\SkySphere.h">
-      <Filter>Engine\Resources\Mesh</Filter>
+    <ClInclude Include="Engine\Renderer\Environment\SkySphere.h">
+      <Filter>Engine\Renderer\Environment</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Resources\Texture\Texture.h">
       <Filter>Engine\Resources\Texture</Filter>
@@ -375,14 +402,14 @@
     <ClInclude Include="Engine\Scene\Bounds3.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Scene\OceanParameters.h">
-      <Filter>Engine\Scene</Filter>
+    <ClInclude Include="Engine\Renderer\Environment\OceanParameters.h">
+      <Filter>Engine\Renderer\Environment</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Scene\Scene.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Scene\SkyParameters.h">
-      <Filter>Engine\Scene</Filter>
+    <ClInclude Include="Engine\Renderer\Environment\SkyParameters.h">
+      <Filter>Engine\Renderer\Environment</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Window\Window.h">
       <Filter>Engine\Window</Filter>
@@ -420,20 +447,20 @@
     <ClInclude Include="Game\Combat\CombatTypes.h">
       <Filter>Game\Combat</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Combat\EnemyGunBehavior.h">
-      <Filter>Game\Combat</Filter>
+    <ClInclude Include="Game\Combat\Enemy\EnemyGunBehavior.h">
+      <Filter>Game\Combat\Enemy</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Combat\GunAimSolver.h">
-      <Filter>Game\Combat</Filter>
+    <ClInclude Include="Game\Combat\Targeting\GunAimSolver.h">
+      <Filter>Game\Combat\Targeting</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Combat\ProjectileCollision.h">
-      <Filter>Game\Combat</Filter>
+    <ClInclude Include="Game\Weapons\Projectile\ProjectileCollision.h">
+      <Filter>Game\Weapons\Projectile</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Combat\TargetingSystem.h">
-      <Filter>Game\Combat</Filter>
+    <ClInclude Include="Game\Combat\Targeting\TargetingSystem.h">
+      <Filter>Game\Combat\Targeting</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Effects\CombatEffectPresenter.h">
-      <Filter>Game\Effects</Filter>
+    <ClInclude Include="Game\Effects\Presentation\CombatEffectPresenter.h">
+      <Filter>Game\Effects\Presentation</Filter>
     </ClInclude>
     <ClInclude Include="Game\Effects\CombatEffectSettings.h">
       <Filter>Game\Effects</Filter>
@@ -444,8 +471,8 @@
     <ClInclude Include="Game\Effects\CombatEffectTypes.h">
       <Filter>Game\Effects</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Effects\EffectDrawContext.h">
-      <Filter>Game\Effects</Filter>
+    <ClInclude Include="Game\Effects\Presentation\EffectDrawContext.h">
+      <Filter>Game\Effects\Presentation</Filter>
     </ClInclude>
     <ClInclude Include="Game\Scene\FlightScene.h">
       <Filter>Game\Scene</Filter>
@@ -465,26 +492,17 @@
     <ClInclude Include="Game\UI\HudProjection.h">
       <Filter>Game\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Weapons\AircraftGun.h">
-      <Filter>Game\Weapons</Filter>
+    <ClInclude Include="Game\Weapons\Gun\AircraftGun.h">
+      <Filter>Game\Weapons\Gun</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Weapons\ProjectileSystem.h">
-      <Filter>Game\Weapons</Filter>
+    <ClInclude Include="Game\Weapons\Projectile\ProjectileSystem.h">
+      <Filter>Game\Weapons\Projectile</Filter>
     </ClInclude>
     <ClInclude Include="Game\Weapons\WeaponController.h">
       <Filter>Game\Weapons</Filter>
     </ClInclude>
     <ClInclude Include="Game\Weapons\WeaponDefinition.h">
       <Filter>Game\Weapons</Filter>
-    </ClInclude>
-    <ClInclude Include="Tests\CombatEffectTests.h">
-      <Filter>Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="Tests\CombatTests.h">
-      <Filter>Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="Tests\WeaponTests.h">
-      <Filter>Tests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -595,25 +613,16 @@
     <None Include="Engine\Renderer\Shader\CommonLighting.hlsli">
       <Filter>Engine\Renderer\Shader</Filter>
     </None>
-    <None Include="Tests\RegressionTests.cpp">
-      <Filter>Tests</Filter>
-    </None>
-    <None Include="Tests\RunRegressionTests.ps1">
-      <Filter>Tests</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Game\Effects\GunEffectPresenter.cpp">
-      <Filter>Game\Effects</Filter>
+    <ClCompile Include="Game\Effects\Presentation\GunEffectPresenter.cpp">
+      <Filter>Game\Effects\Presentation</Filter>
     </ClCompile>
-    <ClInclude Include="Tests\GunEffectTests.h">
-      <Filter>Tests</Filter>
-    </ClInclude>
     <None Include="Docs\Design\GunFireEffects.md">
       <Filter>Docs\Design</Filter>
     </None>
-    <ClInclude Include="Game\Weapons\GunShotEvent.h">
-      <Filter>Game\Weapons</Filter>
+    <ClInclude Include="Game\Weapons\Gun\GunShotEvent.h">
+      <Filter>Game\Weapons\Gun</Filter>
     </ClInclude>
     <None Include="Assets\Ammunition\Rocket\ammunition.json">
       <Filter>Assets\Ammunition\Rocket</Filter>
@@ -627,33 +636,30 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="global.json" />
-    <ClInclude Include="Tests\EnvironmentSettingsTests.h"><Filter>Tests</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game\Scene\FlightSceneMission.cpp"><Filter>Game\Scene</Filter></ClCompile>
-    <ClInclude Include="Game\Combat\MissionState.h"><Filter>Game\Combat</Filter></ClInclude>
-    <ClInclude Include="Game\Weapons\BombFlight.h"><Filter>Game\Weapons</Filter></ClInclude>
-    <ClInclude Include="Tests\MissionTests.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="Game\Mission\MissionState.h"><Filter>Game\Mission</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\Bomb\BombFlight.h"><Filter>Game\Weapons\Bomb</Filter></ClInclude>
     <None Include="Assets\Combat\mission.json"><Filter>Assets\Combat</Filter></None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Game\Weapons\BombSystem.h"><Filter>Game\Weapons</Filter></ClInclude>
-    <ClInclude Include="Game\Weapons\BombDefinition.h"><Filter>Game\Weapons</Filter></ClInclude>
-    <ClInclude Include="Tests\BombTests.h"><Filter>Tests</Filter></ClInclude>
-    <ClCompile Include="Game\Weapons\BombSystem.cpp"><Filter>Game\Weapons</Filter></ClCompile>
-    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp"><Filter>Game\Effects</Filter></ClCompile>
-    <ClCompile Include="Game\Effects\DeckSmokePresenter.cpp"><Filter>Game\Effects</Filter></ClCompile>
+    <ClInclude Include="Game\Weapons\Bomb\BombSystem.h"><Filter>Game\Weapons\Bomb</Filter></ClInclude>
+    <ClInclude Include="Game\Weapons\Bomb\BombDefinition.h"><Filter>Game\Weapons\Bomb</Filter></ClInclude>
+    <ClCompile Include="Game\Weapons\Bomb\BombSystem.cpp"><Filter>Game\Weapons\Bomb</Filter></ClCompile>
+    <ClCompile Include="Game\Effects\Presentation\RocketEffectPresenter.cpp"><Filter>Game\Effects\Presentation</Filter></ClCompile>
+    <ClCompile Include="Game\Effects\Presentation\DeckSmokePresenter.cpp"><Filter>Game\Effects\Presentation</Filter></ClCompile>
     <None Include="Assets\Ammunition\Bomb\ammunition.json"><Filter>Assets\Ammunition\Bomb</Filter></None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Game\Scene\FlightMission.cpp"><Filter>Game\Scene</Filter></ClCompile>
+    <ClCompile Include="Game\Mission\FlightMission.cpp"><Filter>Game\Mission</Filter></ClCompile>
     <ClCompile Include="Game\Scene\FlightSceneRestart.cpp"><Filter>Game\Scene</Filter></ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\ModelGeometry.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\ModelGeometryCache.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
     <ClInclude Include="Engine\Resources\Mesh\ModelGeometryCache.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
     <ClCompile Include="Engine\Resources\Mesh\ModelLod.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\ModelImporter.cpp"><Filter>Engine\Resources\Mesh</Filter></ClCompile>
-    <ClInclude Include="Game\Scene\FlightMission.h"><Filter>Game\Scene</Filter></ClInclude>
+    <ClInclude Include="Game\Mission\FlightMission.h"><Filter>Game\Mission</Filter></ClInclude>
     <ClInclude Include="Engine\Resources\Mesh\ModelGeometry.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
     <ClInclude Include="Engine\Resources\Mesh\ModelImporter.h"><Filter>Engine\Resources\Mesh</Filter></ClInclude>
   </ItemGroup>
@@ -672,8 +678,8 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Game\Weapons\ProjectilePose.h">
-      <Filter>Game\Weapons</Filter>
+    <ClInclude Include="Game\Weapons\Projectile\ProjectilePose.h">
+      <Filter>Game\Weapons\Projectile</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -684,8 +690,8 @@
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Scene\CloudSettings.cpp"><Filter>Engine\Scene</Filter></ClCompile>
-    <ClInclude Include="Engine\Scene\CloudSettings.h"><Filter>Engine\Scene</Filter></ClInclude>
+    <ClCompile Include="Engine\Renderer\Environment\CloudSettings.cpp"><Filter>Engine\Renderer\Environment</Filter></ClCompile>
+    <ClInclude Include="Engine\Renderer\Environment\CloudSettings.h"><Filter>Engine\Renderer\Environment</Filter></ClInclude>
     <ClCompile Include="Game\Scene\CloudSettingsLoader.cpp"><Filter>Game\Scene</Filter></ClCompile>
     <ClInclude Include="Game\Scene\CloudSettingsLoader.h"><Filter>Game\Scene</Filter></ClInclude>
     <None Include="Engine\Renderer\Shader\VolumetricClouds.hlsli"><Filter>Engine\Renderer\Shader</Filter></None>
@@ -707,10 +713,10 @@
     <ClInclude Include="Engine\EngineCommon.h"><Filter>Engine</Filter></ClInclude>
     <ClInclude Include="External\DirectX\d3dx12.h"><Filter>External\DirectX</Filter></ClInclude>
     <ClInclude Include="Engine\Precompiled.h"><Filter>Engine</Filter></ClInclude>
-    <ClInclude Include="Engine\Renderer\Device\RenderVisibility.h"><Filter>Engine\Renderer\Device</Filter></ClInclude>
+    <ClInclude Include="Engine\Renderer\Frame\RenderVisibility.h"><Filter>Engine\Renderer\Frame</Filter></ClInclude>
     <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h"><Filter>Engine\Renderer\Device</Filter></ClInclude>
     <None Include="Engine\Renderer\Shader\OceanFog.hlsli"><Filter>Engine\Renderer\Shader</Filter></None>
-    <ClInclude Include="Engine\StartupTiming.h"><Filter>Engine</Filter></ClInclude>
+    <ClInclude Include="Engine\Diagnostics\StartupTiming.h"><Filter>Engine\Diagnostics</Filter></ClInclude>
     <None Include="Assets\Environment\Clouds.json"><Filter>Assets\Environment</Filter></None>
     <ClCompile Include="Game\Cinematics\CinematicSettings.cpp"><Filter>Game\Cinematics</Filter></ClCompile>
     <ClCompile Include="Game\Cinematics\CinematicController.cpp"><Filter>Game\Cinematics</Filter></ClCompile>
@@ -723,16 +729,13 @@
     <ClInclude Include="Game\Cinematics\CinematicScene.h"><Filter>Game\Cinematics</Filter></ClInclude>
     <ClInclude Include="Game\UI\CinematicPresenter.h"><Filter>Game\UI</Filter></ClInclude>
     <ClInclude Include="Game\UI\RadioCaptionPresenter.h"><Filter>Game\UI</Filter></ClInclude>
-    <ClInclude Include="Game\Combat\EnemyRadio.h"><Filter>Game\Combat</Filter></ClInclude>
-    <ClInclude Include="Tests\CinematicTests.h"><Filter>Tests</Filter></ClInclude>
-    <ClInclude Include="Game\Combat\EnemyEngagementProfile.h"><Filter>Game\Combat</Filter></ClInclude>
-    <ClInclude Include="Tests\CinematicVisualTests.h"><Filter>Tests</Filter></ClInclude>
+    <ClInclude Include="Game\Combat\Enemy\EnemyRadio.h"><Filter>Game\Combat\Enemy</Filter></ClInclude>
+    <ClInclude Include="Game\Combat\Enemy\EnemyEngagementProfile.h"><Filter>Game\Combat\Enemy</Filter></ClInclude>
     <None Include="Assets\Cinematics\opening.json"><Filter>Assets\Cinematics</Filter></None>
     <None Include="Assets\Cinematics\cinematics.json"><Filter>Assets\Cinematics</Filter></None>
     <None Include="Assets\Cinematics\midMission.json"><Filter>Assets\Cinematics</Filter></None>
     <None Include="Assets\Cinematics\ending.json"><Filter>Assets\Cinematics</Filter></None>
     <None Include="Assets\Cinematics\defeat.json"><Filter>Assets\Cinematics</Filter></None>
-    <ClInclude Include="Tests\GameplaySettingsTests.h"><Filter>Tests</Filter></ClInclude>
     <ClInclude Include="Game\Settings\SettingsReader.h"><Filter>Game\Settings</Filter></ClInclude>
     <ClInclude Include="Game\Settings\GameplaySettings.h"><Filter>Game\Settings</Filter></ClInclude>
     <ClInclude Include="Game\Settings\RumbleSettings.h"><Filter>Game\Settings</Filter></ClInclude>
@@ -785,26 +788,26 @@
     <ClCompile Include="Engine\Input\GamepadInput.cpp"><Filter>Engine\Input</Filter></ClCompile>
     <ClCompile Include="Engine\Interop\Redox\RedoxBridge.cpp"><Filter>Engine\Interop\Redox</Filter></ClCompile>
     <ClCompile Include="Engine\Renderer\Device\GpuFrameProfiler.cpp"><Filter>Engine\Renderer\Device</Filter></ClCompile>
-    <ClCompile Include="Engine\Renderer\Device\RenderVisibility.cpp"><Filter>Engine\Renderer\Device</Filter></ClCompile>
+    <ClCompile Include="Engine\Renderer\Frame\RenderVisibility.cpp"><Filter>Engine\Renderer\Frame</Filter></ClCompile>
     <ClCompile Include="Engine\ExecutablePath.cpp"><Filter>Engine</Filter></ClCompile>
     <ClCompile Include="Game\Aircraft\ValidateFlightParameters.cpp"><Filter>Game\Aircraft</Filter></ClCompile>
-    <ClCompile Include="Game\Combat\EnemyGunBehavior.cpp"><Filter>Game\Combat</Filter></ClCompile>
-    <ClCompile Include="Game\Combat\EnemyRadio.cpp"><Filter>Game\Combat</Filter></ClCompile>
-    <ClCompile Include="Game\Combat\MissionState.cpp"><Filter>Game\Combat</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\Enemy\EnemyGunBehavior.cpp"><Filter>Game\Combat\Enemy</Filter></ClCompile>
+    <ClCompile Include="Game\Combat\Enemy\EnemyRadio.cpp"><Filter>Game\Combat\Enemy</Filter></ClCompile>
+    <ClCompile Include="Game\Mission\MissionState.cpp"><Filter>Game\Mission</Filter></ClCompile>
     <ClCompile Include="Game\Settings\GameplaySettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
     <ClCompile Include="Game\Settings\RumbleSettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
     <ClCompile Include="Game\Combat\CombatRumble.cpp"><Filter>Game\Combat</Filter></ClCompile>
     <ClCompile Include="Game\Settings\SettingsReader.cpp"><Filter>Game\Settings</Filter></ClCompile>
     <ClCompile Include="Game\Settings\UiTextSettings.cpp"><Filter>Game\Settings</Filter></ClCompile>
     <ClCompile Include="Game\Effects\CombatEffectSettings.cpp"><Filter>Game\Effects</Filter></ClCompile>
-    <ClCompile Include="Game\Weapons\BombFlight.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\Bomb\BombFlight.cpp"><Filter>Game\Weapons\Bomb</Filter></ClCompile>
     <ClCompile Include="Game\UI\RadioCaptionPresenter.cpp"><Filter>Game\UI</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\StartupTiming.cpp"><Filter>Engine</Filter></ClCompile>
+    <ClCompile Include="Engine\Diagnostics\StartupTiming.cpp"><Filter>Engine\Diagnostics</Filter></ClCompile>
     <ClCompile Include="Engine\Resources\Buffer\BufferUtilities.cpp"><Filter>Engine\Resources\Buffer</Filter></ClCompile>
     <ClCompile Include="Engine\Renderer\Hud\HudFont.cpp"><Filter>Engine\Renderer\Hud</Filter></ClCompile>
-    <ClCompile Include="Game\Weapons\ProjectilePose.cpp"><Filter>Game\Weapons</Filter></ClCompile>
+    <ClCompile Include="Game\Weapons\Projectile\ProjectilePose.cpp"><Filter>Game\Weapons\Projectile</Filter></ClCompile>
     <ClCompile Include="Game\Weapons\WeaponDefinition.cpp"><Filter>Game\Weapons</Filter></ClCompile>
   </ItemGroup>
 </Project>

@@ -1,5 +1,5 @@
 #include "Texture.h"
-#include "../../Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include <DirectXTex.h>
 #include "External/DirectX/d3dx12.h"
 #include <algorithm>

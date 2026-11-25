@@ -1,17 +1,17 @@
-#include "../../Renderer/RootBindings.h"
+#include "Engine/Renderer/Pipeline/RootBindings.h"
 #include "Model.h"
 #include "ModelGeometry.h"
 #include "ModelGeometryCache.h"
 #include "MaterialTexturePaths.h"
 #include "../Buffer/BufferUtilities.h"
-#include "../../Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include "../../Renderer/Device/RenderDevice.h"
 #include <assimp/material.h>
 #include <algorithm>
 #include <cmath>
 #include <cwctype>
 #include <limits>
-#include "Engine/StartupTiming.h"
+#include "Engine/Diagnostics/StartupTiming.h"
 
 namespace Engine {
 	using namespace ModelProcessing;

@@ -1,7 +1,7 @@
 #include "FlightScene.h"
-#include "Game/Combat/GunAimSolver.h"
-#include "Game/Combat/ProjectileCollision.h"
-#include "Game/Combat/EnemyEngagementProfile.h"
+#include "Game/Combat/Targeting/GunAimSolver.h"
+#include "Game/Weapons/Projectile/ProjectileCollision.h"
+#include "Game/Combat/Enemy/EnemyEngagementProfile.h"
 #include <algorithm>
 #include <cmath>
 namespace Game {

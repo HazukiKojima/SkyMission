@@ -1,6 +1,6 @@
 #include "CarrierMissileSystem.h"
-#include "ProjectilePose.h"
-#include "Game/Combat/ProjectileCollision.h"
+#include "Game/Weapons/Projectile/ProjectilePose.h"
+#include "Game/Weapons/Projectile/ProjectileCollision.h"
 #include <stdexcept>
 
 namespace Game {

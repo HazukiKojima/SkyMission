@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Engine/Scene/OceanParameters.h"
+#include "../../../Engine/Renderer/Environment/OceanParameters.h"
 #include <cstddef>
 #include <type_traits>
 

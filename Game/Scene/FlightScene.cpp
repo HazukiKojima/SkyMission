@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include "Game/Combat/GunAimSolver.h"
+#include "Game/Combat/Targeting/GunAimSolver.h"
 #include "Game/Combat/CombatSnapshotBuilder.h"
-#include "Game/Combat/ProjectileCollision.h"
-#include "Game/Combat/EnemyEngagementProfile.h"
+#include "Game/Weapons/Projectile/ProjectileCollision.h"
+#include "Game/Combat/Enemy/EnemyEngagementProfile.h"
 namespace Game {
 	namespace {
 

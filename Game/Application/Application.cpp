@@ -1,6 +1,6 @@
 #include "Application.h"
 #include "Engine/Window/Window.h"
-#include "Engine/Renderer/Device/Renderer.h"
+#include "Engine/Renderer/Renderer.h"
 #include "Game/Scene/FlightSceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
@@ -10,8 +10,8 @@
 #include <mutex>
 #include <optional>
 #include <algorithm>
-#include "Engine/Log.h"
-#include "Engine/StartupTiming.h"
+#include "Engine/Diagnostics/Log.h"
+#include "Engine/Diagnostics/StartupTiming.h"
 #include "Engine/ExecutablePath.h"
 #include "Engine/Interop/Redox/RedoxBridge.h"
 #include "Game/Weapons/WeaponController.h"

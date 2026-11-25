@@ -6,7 +6,7 @@
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Engine/Renderer/RendererDefinition.h"
 #include "Game/Weapons/WeaponDefinition.h"
-#include "Game/Weapons/BombDefinition.h"
+#include "Game/Weapons/Bomb/BombDefinition.h"
 #include "Game/Combat/CombatTypes.h"
 #include "Engine/Renderer/Hud/HudDrawList.h"
 #include "Game/Cinematics/CinematicSettings.h"

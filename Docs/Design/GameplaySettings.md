@@ -91,15 +91,3 @@ HUDの座標・寸法は`UI/combatHud.json`の`layout`内にある。省略し�
 
 GPUバインド番号、物理計算の時間刻み、ゼロ除算回避値、ハッシュ定数、頂点予算・容量上限はコードに残す。
 AIの追加設定は既存のREDox連携構造体の外に保持し、ネイティブとC#間のレイアウトを変えない。
-
-## 検証
-
-`Tests/GameplaySettingsTests.h`で省略時の初期値、不正値の拒否、配列、表示文字列、演出文字の受け渡し、
-エフェクト寿命、レーダー範囲、ミサイル容量・発射位置、射撃時間、インスタンス間の独立性に加え、入れ子配列・RGBA、設定したHUDの頂点座標、実際の曳光弾の描画色、距離表示、追加AI設定とプロペラ倍率を検証する。
-`Tests/MissionTests.h`では本番のシーン生成経路で自機開始位置・ミサイル搭載数の反映、プロペラ停止とリトライ時の維持を確認する。
-`Tests/CombatTests.h`では命中・撃墜通知の秒数が実際の命中イベントから反映されることを確認する。
-
-```powershell
-./Tests/RunRegressionTests.ps1 -BuildDirectory out/json-tuning-regression `
-  -RedoxDll External/REDoxWrapper/bin/Release/net10.0/win-x64/publish/REDoxWrapper.dll
-```

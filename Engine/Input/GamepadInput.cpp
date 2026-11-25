@@ -1,5 +1,5 @@
 #include "GamepadInput.h"
-#include "Engine/Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include <algorithm>
 #include <bit>
 #include <cmath>

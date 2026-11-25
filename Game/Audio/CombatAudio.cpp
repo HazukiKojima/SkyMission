@@ -1,5 +1,5 @@
 #include "CombatAudio.h"
-#include "Engine/Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include "Engine/Interop/Redox/RedoxBridge.h"
 #include <mfapi.h>
 #include <mfidl.h>

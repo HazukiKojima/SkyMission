@@ -1,5 +1,5 @@
 #include "CombatSnapshotBuilder.h"
-#include "GunAimSolver.h"
+#include "Game/Combat/Targeting/GunAimSolver.h"
 #include <algorithm>
 namespace Game {
 	void BuildCombatSnapshot(CombatSnapshot& snapshot, const CombatSnapshotInput& input) {
