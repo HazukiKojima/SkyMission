@@ -1,6 +1,6 @@
 #pragma once
 #include "Game/Settings/GameplaySettings.h"
-#include "BombFlight.h"
+#include "Game/Weapons/Bomb/BombFlight.h"
 #include "Game/Combat/CombatTypes.h"
 
 namespace Game {

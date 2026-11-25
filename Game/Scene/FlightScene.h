@@ -2,18 +2,18 @@
 #pragma once
 #include <functional>
 #include <map>
-#include "FlightMission.h"
+#include "Game/Mission/FlightMission.h"
 #include "Engine/Scene/Scene.h"
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Game/Camera/AircraftCameraController.h"
-#include "Game/Weapons/AircraftGun.h"
-#include "Game/Weapons/ProjectileSystem.h"
+#include "Game/Weapons/Gun/AircraftGun.h"
+#include "Game/Weapons/Projectile/ProjectileSystem.h"
 #include "Game/Combat/CombatController.h"
-#include "Game/Combat/TargetingSystem.h"
+#include "Game/Combat/Targeting/TargetingSystem.h"
 #include "Game/Effects/CombatEffectSystem.h"
 #include "Game/Weapons/CarrierMissileSystem.h"
-#include "Game/Combat/EnemyGunBehavior.h"
-#include "Game/Weapons/BombDefinition.h"
+#include "Game/Combat/Enemy/EnemyGunBehavior.h"
+#include "Game/Weapons/Bomb/BombDefinition.h"
 #include "Game/Cinematics/CinematicScene.h"
 
 namespace Game {
@@ -178,6 +178,9 @@ namespace Game {
 		void UpdateTargeting(const CombatGeometry& geometry, bool next, float dt);
 		void UpdateCamera(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput);
 		void ApplyHits();
+		void ApplyCarrierHit(const HitEvent& hit);
+		void ApplyPlayerHit(const HitEvent& hit);
+		void ApplyEnemyHit(const HitEvent& hit, std::vector<Engine::ObjectId>& destroyed);
 		void ApplySeaCollision();
 		void UpdateEnemyRadio(float dt);
 		EnemyRadioController m_enemyRadio;

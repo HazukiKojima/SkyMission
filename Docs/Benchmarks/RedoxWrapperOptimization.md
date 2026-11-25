@@ -70,15 +70,10 @@ dotnet run --project Tools/RedoxWrapperTests/RedoxWrapperTests.csproj -c Release
   -OutputDirectory x64/JsonParserOptimizationBenchmark/summary
 ```
 
-新しいNative AOT DLLを`-RedoxDll`で指定し、C++から以下も確認した。
-
-```powershell
-./Tests/RunRegressionTests.ps1 -BuildDirectory x64/RedoxOptimizationTests `
-  -RedoxDll x64/RedoxOptimization/REDoxWrapper.dll -JsonReview
-```
+当時は新しいNative AOT DLLを使い、C++から以下を確認した。
 
 - JSON・AI配置・環境設定・艦船・開始ムービー設定の既存テストを通過。
-- 同じDLLで敵AI・武器・任務遷移・HUDの`--mission-review`も通過。
+- 同じDLLで敵AI・武器・任務遷移・HUDの検証も通過。
 - 項目順、未知の項目、大小のスキーマの重複キー、欠落、不正型、非有限値、配列長、エラー時の出力不変を検証。
 - 入力UTF-8バッファを破棄しても文書が有効であること、日本語キーと文字列、呼び出し元による出力変更からの独立性を検証。
 - ハンドル解放後の拒否、複数スレッドによる作成・取得・解放を検証。

@@ -1,5 +1,5 @@
 #include "Window.h"
-#include "../Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include <algorithm>
 #include <cstddef>
 #include <vector>

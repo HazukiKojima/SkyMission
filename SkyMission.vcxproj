@@ -22,8 +22,10 @@
     <ClCompile Include="Engine\Precompiled.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClInclude Include="Engine\EngineCommon.h" />
+    <ClInclude Include="External\DirectX\d3dx12.h" />
     <ClInclude Include="Engine\Precompiled.h" />
-    <ClInclude Include="Engine\Renderer\Device\RenderVisibility.h" />
+    <ClInclude Include="Engine\Renderer\Frame\RenderVisibility.h" />
     <ClInclude Include="Engine\Renderer\Device\GpuFrameProfiler.h" />
     <None Include="Engine\Renderer\Shader\OceanFog.hlsli" />
     <ClCompile Include="Game\Aircraft\AircraftFlightModel.cpp" />
@@ -37,13 +39,13 @@
     <ClCompile Include="Engine\Window\Window.cpp" />
     <ClCompile Include="Engine\Renderer\Device\CommandContext.cpp" />
     <ClCompile Include="Engine\Renderer\Device\RenderDevice.cpp" />
-    <ClCompile Include="Engine\Renderer\Device\RendererConstantBuffers.cpp" />
-    <ClCompile Include="Engine\Renderer\Device\OceanGeometry.cpp" />
-    <ClCompile Include="Engine\Renderer\Device\RendererPipelines.cpp" />
-    <ClCompile Include="Engine\Renderer\Device\RendererAssets.cpp" />
-    <ClCompile Include="Engine\Renderer\Device\RendererFrameUpdater.cpp" />
-    <ClCompile Include="Engine\Renderer\Device\RendererPasses.cpp" />
-    <ClCompile Include="Engine\Renderer\Device\Renderer.cpp" />
+    <ClCompile Include="Engine\Renderer\Frame\RendererConstantBuffers.cpp" />
+    <ClCompile Include="Engine\Renderer\Environment\OceanGeometry.cpp" />
+    <ClCompile Include="Engine\Renderer\Pipeline\RendererPipelines.cpp" />
+    <ClCompile Include="Engine\Renderer\RendererAssets.cpp" />
+    <ClCompile Include="Engine\Renderer\Frame\RendererFrameUpdater.cpp" />
+    <ClCompile Include="Engine\Renderer\Frame\RendererPasses.cpp" />
+    <ClCompile Include="Engine\Renderer\Renderer.cpp" />
     <ClCompile Include="Engine\Renderer\Pipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\VertexBuffer.cpp" />
     <ClCompile Include="Engine\Resources\JsonAssetReader.cpp" />
@@ -52,9 +54,9 @@
       <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
       <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Engine\Resources\Mesh\SkySphere.cpp" />
+    <ClCompile Include="Engine\Renderer\Environment\SkySphere.cpp" />
     <ClCompile Include="Engine\Resources\Texture\Texture.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Game\Application\main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Aircraft\AircraftAIController.h" />
@@ -63,28 +65,28 @@
     <ClInclude Include="Game\Aircraft\AircraftFlightParameters.h" />
     <ClInclude Include="Engine\Interop\Redox\JsonParametersLoader.h" />
     <ClInclude Include="Engine\Interop\Redox\RedoxBridge.h" />
-    <ClInclude Include="Engine\Scene\OceanParameters.h" />
+    <ClInclude Include="Engine\Renderer\Environment\OceanParameters.h" />
     <ClInclude Include="Game\Aircraft\AircraftFlightModel.h" />
     <ClInclude Include="Engine\Camera\Camera.h" />
     <ClInclude Include="Engine\Scene\Scene.h" />
     <ClInclude Include="Game\Scene\FlightSceneLoader.h" />
-    <ClInclude Include="Engine\Scene\SkyParameters.h" />
+    <ClInclude Include="Engine\Renderer\Environment\SkyParameters.h" />
     <ClInclude Include="Engine\Renderer\RetroFilmParameters.h" />
     <ClInclude Include="Engine\Window\Window.h" />
     <ClInclude Include="Engine\Renderer\Device\CommandContext.h" />
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h" />
-    <ClInclude Include="Engine\Renderer\Device\RendererConstantBuffers.h" />
-    <ClInclude Include="Engine\Renderer\Device\OceanGeometry.h" />
-    <ClInclude Include="Engine\Renderer\Device\RendererPipelines.h" />
-    <ClInclude Include="Engine\Renderer\Device\RendererAssets.h" />
-    <ClInclude Include="Engine\Renderer\Device\RendererFrameUpdater.h" />
-    <ClInclude Include="Engine\Renderer\Device\RendererPasses.h" />
-    <ClInclude Include="Engine\Renderer\Device\Renderer.h" />
+    <ClInclude Include="Engine\Renderer\Frame\RendererConstantBuffers.h" />
+    <ClInclude Include="Engine\Renderer\Environment\OceanGeometry.h" />
+    <ClInclude Include="Engine\Renderer\Pipeline\RendererPipelines.h" />
+    <ClInclude Include="Engine\Renderer\RendererAssets.h" />
+    <ClInclude Include="Engine\Renderer\Frame\RendererFrameUpdater.h" />
+    <ClInclude Include="Engine\Renderer\Frame\RendererPasses.h" />
+    <ClInclude Include="Engine\Renderer\Renderer.h" />
     <ClInclude Include="Engine\Renderer\Pipeline\GraphicsPipeline.h" />
     <ClInclude Include="Engine\Resources\Buffer\VertexBuffer.h" />
     <ClInclude Include="Engine\Resources\JsonAssetReader.h" />
     <ClInclude Include="Engine\Resources\Mesh\Model.h" />
-    <ClInclude Include="Engine\Resources\Mesh\SkySphere.h" />
+    <ClInclude Include="Engine\Renderer\Environment\SkySphere.h" />
     <ClInclude Include="Engine\Resources\Texture\Texture.h" />
   </ItemGroup>
   <ItemGroup>
@@ -385,8 +387,8 @@
     <REDoxWrapperPublishInput Include="$(ProjectDir)tools\AircraftParameterGenerator\AircraftParameterGenerator.csproj" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)Game\Aircraft\AircraftFlightParameters.h" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)Game\Aircraft\AircraftAIController.h" />
-    <REDoxWrapperPublishInput Include="$(ProjectDir)Engine\Scene\OceanParameters.h" />
-    <REDoxWrapperPublishInput Include="$(ProjectDir)Engine\Scene\SkyParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Engine\Renderer\Environment\OceanParameters.h" />
+    <REDoxWrapperPublishInput Include="$(ProjectDir)Engine\Renderer\Environment\SkyParameters.h" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)Directory.Build.props" Condition="Exists('$(ProjectDir)Directory.Build.props')" />
     <REDoxWrapperPublishInput Include="$(ProjectDir)Directory.Build.targets" Condition="Exists('$(ProjectDir)Directory.Build.targets')" />
   </ItemGroup>
@@ -404,7 +406,7 @@
   </Target>
 
   <ItemGroup>
-    <ClInclude Include="Engine\Log.h" />
+    <ClInclude Include="Engine\Diagnostics\Log.h" />
     <ClInclude Include="Engine\ExecutablePath.h" />
     <ClInclude Include="Game\Aircraft\ValidateFlightParameters.h" />
     <ClInclude Include="Engine\Resources\Buffer\BufferUtilities.h" />
@@ -417,8 +419,6 @@
   <ItemGroup>
     <None Include="Assets\Aircraft\F4U4Corsair\modelImport.json" />
     <None Include="Assets\Aircraft\N1K2JShidenKai\modelImport.json" />
-    <None Include="Tests\RegressionTests.cpp" />
-    <None Include="Tests\RunRegressionTests.ps1" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Input\RawInputState.h" />
@@ -429,30 +429,28 @@
     <ClInclude Include="Game\Scene\FlightScene.h" />
     <ClCompile Include="Game\Scene\FlightScene.cpp" />
     <ClCompile Include="Game\Scene\FlightSceneMission.cpp" />
-    <ClInclude Include="Game\Combat\MissionState.h" />
-    <ClInclude Include="Game\Weapons\BombFlight.h" />
-    <ClInclude Include="Tests\MissionTests.h" />
+    <ClInclude Include="Game\Mission\MissionState.h" />
+    <ClInclude Include="Game\Weapons\Bomb\BombFlight.h" />
     <None Include="Assets\Combat\mission.json" />
     <ClInclude Include="Game\Camera\AircraftCameraController.h" />
     <ClCompile Include="Game\Camera\AircraftCameraController.cpp" />
     <ClInclude Include="Engine\Renderer\RendererDefinition.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine\Renderer\RootBindings.h" />
+    <ClInclude Include="Engine\Renderer\Pipeline\RootBindings.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Weapons\WeaponController.h" />
     <ClInclude Include="Game\Weapons\WeaponDefinition.h" />
-    <ClInclude Include="Game\Weapons\AircraftGun.h" />
-    <ClInclude Include="Game\Weapons\ProjectileSystem.h" />
+    <ClInclude Include="Game\Weapons\Gun\AircraftGun.h" />
+    <ClInclude Include="Game\Weapons\Projectile\ProjectileSystem.h" />
     <ClInclude Include="Game\Audio\CombatAudio.h" />
-    <ClCompile Include="Game\Weapons\AircraftGun.cpp" />
-    <ClCompile Include="Game\Weapons\ProjectileSystem.cpp" />
+    <ClCompile Include="Game\Weapons\Gun\AircraftGun.cpp" />
+    <ClCompile Include="Game\Weapons\Projectile\ProjectileSystem.cpp" />
     <None Include="Assets\Aircraft\N1K2JShidenKai\weapon.json" />
     <None Include="Assets\Ammunition\20mmAmmo\ammunition.json" />
     <None Include="Assets\Ammunition\20mmAmmo\modelImport.json" />
     <None Include="Docs\Design\PlayerAircraftGun.md" />
-    <ClInclude Include="Tests\WeaponTests.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Scene\Bounds3.h" />
@@ -463,13 +461,13 @@
     <ClCompile Include="Engine\Renderer\Hud\HudRenderer.cpp" />
     <ClInclude Include="Game\Combat\CombatTypes.h" />
     <ClInclude Include="Game\Combat\CombatController.h" />
-    <ClInclude Include="Game\Combat\EnemyGunBehavior.h" />
-    <ClInclude Include="Game\Combat\GunAimSolver.h" />
-    <ClCompile Include="Game\Combat\GunAimSolver.cpp" />
-    <ClInclude Include="Game\Combat\TargetingSystem.h" />
-    <ClCompile Include="Game\Combat\TargetingSystem.cpp" />
-    <ClInclude Include="Game\Combat\ProjectileCollision.h" />
-    <ClCompile Include="Game\Combat\ProjectileCollision.cpp" />
+    <ClInclude Include="Game\Combat\Enemy\EnemyGunBehavior.h" />
+    <ClInclude Include="Game\Combat\Targeting\GunAimSolver.h" />
+    <ClCompile Include="Game\Combat\Targeting\GunAimSolver.cpp" />
+    <ClInclude Include="Game\Combat\Targeting\TargetingSystem.h" />
+    <ClCompile Include="Game\Combat\Targeting\TargetingSystem.cpp" />
+    <ClInclude Include="Game\Weapons\Projectile\ProjectileCollision.h" />
+    <ClCompile Include="Game\Weapons\Projectile\ProjectileCollision.cpp" />
     <ClInclude Include="Game\Combat\CombatSettingsLoader.h" />
     <ClCompile Include="Game\Combat\CombatSettingsLoader.cpp" />
     <ClInclude Include="Game\UI\CombatHudPresenter.h" />
@@ -484,55 +482,43 @@
     <FxCompile Include="Engine\Renderer\Shader\HudPS.hlsl"><ShaderType>Pixel</ShaderType><ShaderModel>5.0</ShaderModel><EntryPointName>PS</EntryPointName></FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Tests\CombatTests.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Effects\CombatEffectSettings.h" />
     <ClInclude Include="Game\Effects\CombatEffectTypes.h" />
     <ClInclude Include="Game\Effects\CombatEffectSystem.h" />
     <ClCompile Include="Game\Effects\CombatEffectSystem.cpp" />
-    <ClInclude Include="Game\Effects\EffectDrawContext.h" />
-    <ClCompile Include="Game\Effects\EffectDrawContext.cpp" />
-    <ClInclude Include="Game\Effects\CombatEffectPresenter.h" />
-    <ClCompile Include="Game\Effects\CombatEffectPresenter.cpp" />
-    <ClCompile Include="Game\Effects\ExplosionEffectPresenter.cpp" />
-    <ClCompile Include="Game\Effects\ImpactEffectPresenter.cpp" />
+    <ClInclude Include="Game\Effects\Presentation\EffectDrawContext.h" />
+    <ClCompile Include="Game\Effects\Presentation\EffectDrawContext.cpp" />
+    <ClInclude Include="Game\Effects\Presentation\CombatEffectPresenter.h" />
+    <ClCompile Include="Game\Effects\Presentation\CombatEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\Presentation\ExplosionEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\Presentation\ImpactEffectPresenter.cpp" />
     <ClInclude Include="Game\UI\HudProjection.h" />
     <ClCompile Include="Game\UI\HudProjection.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Tests\CombatEffectTests.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Game\Effects\GunEffectPresenter.cpp" />
-    <ClInclude Include="Game\Weapons\GunShotEvent.h" />
-    <ClInclude Include="Tests\GunEffectTests.h" />
+    <ClCompile Include="Game\Effects\Presentation\GunEffectPresenter.cpp" />
+    <ClInclude Include="Game\Weapons\Gun\GunShotEvent.h" />
     <None Include="Docs\Design\GunFireEffects.md" />
     <None Include="Assets\Ammunition\Rocket\ammunition.json" />
     <None Include="Assets\Ammunition\Rocket\modelImport.json" />
   </ItemGroup>
   <ItemGroup>
     <None Include="global.json" />
-    <None Include="Assets\Sound\プレイヤーミサイル発射音.mp3" />
-    <None Include="Assets\Sound\プレイヤーミサイル被弾.mp3" />
-    <None Include="Assets\Sound\プレイヤー機関銃発射音(5秒間).mp3" />
-    <None Include="Assets\Sound\プレイヤー機関銃被弾.mp3" />
-    <None Include="Assets\Sound\プレイヤー飛行音(50秒).mp3" />
-    <None Include="Assets\Sound\敵戦艦爆発.mp3" />
-    <None Include="Assets\Sound\敵航空機爆発.mp3" />
-    <ClInclude Include="Tests\EnvironmentSettingsTests.h"></ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Game\Weapons\BombSystem.h" />
-    <ClInclude Include="Game\Weapons\BombDefinition.h" />
-    <ClInclude Include="Tests\BombTests.h" />
-    <ClCompile Include="Game\Weapons\BombSystem.cpp" />
-    <ClCompile Include="Game\Effects\RocketEffectPresenter.cpp" />
-    <ClCompile Include="Game\Effects\DeckSmokePresenter.cpp" />
+    <ClInclude Include="Game\Weapons\Bomb\BombSystem.h" />
+    <ClInclude Include="Game\Weapons\Bomb\BombDefinition.h" />
+    <ClCompile Include="Game\Weapons\Bomb\BombSystem.cpp" />
+    <ClCompile Include="Game\Effects\Presentation\RocketEffectPresenter.cpp" />
+    <ClCompile Include="Game\Effects\Presentation\DeckSmokePresenter.cpp" />
     <None Include="Assets\Ammunition\Bomb\ammunition.json" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Game\Scene\FlightMission.cpp" />
+    <ClCompile Include="Game\Mission\FlightMission.cpp" />
     <ClCompile Include="Game\Scene\FlightSceneRestart.cpp" />
     <!-- Keep CPU-heavy model preparation fast in Debug, retaining symbols and the debug CRT. -->
     <ClCompile Include="Engine\Resources\Mesh\ModelGeometry.cpp">
@@ -546,14 +532,14 @@
       <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClInclude Include="Engine\Resources\Mesh\ModelGeometryCache.h" />
-    <ClInclude Include="Engine\StartupTiming.h" />
+    <ClInclude Include="Engine\Diagnostics\StartupTiming.h" />
     <ClCompile Include="Engine\Resources\Mesh\ModelLod.cpp">
       <Optimization Condition="'$(Configuration)'=='Debug'">MaxSpeed</Optimization>
       <BasicRuntimeChecks Condition="'$(Configuration)'=='Debug'">Default</BasicRuntimeChecks>
       <PrecompiledHeader Condition="'$(Configuration)'=='Debug'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Engine\Resources\Mesh\ModelImporter.cpp" />
-    <ClInclude Include="Game\Scene\FlightMission.h" />
+    <ClInclude Include="Game\Mission\FlightMission.h" />
     <ClInclude Include="Engine\Resources\Mesh\ModelGeometry.h" />
     <ClInclude Include="Engine\Resources\Mesh\ModelImporter.h" />
   </ItemGroup>
@@ -568,11 +554,11 @@
     <ClInclude Include="Game\Weapons\CarrierMissileSystem.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Game\Weapons\ProjectilePose.h" />
+    <ClInclude Include="Game\Weapons\Projectile\ProjectilePose.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Scene\CloudSettings.cpp" />
-    <ClInclude Include="Engine\Scene\CloudSettings.h" />
+    <ClCompile Include="Engine\Renderer\Environment\CloudSettings.cpp" />
+    <ClInclude Include="Engine\Renderer\Environment\CloudSettings.h" />
     <ClCompile Include="Game\Scene\CloudSettingsLoader.cpp" />
     <ClInclude Include="Game\Scene\CloudSettingsLoader.h" />
     <None Include="Assets\Environment\Clouds.json" />
@@ -600,10 +586,8 @@
     <ClInclude Include="Game\Cinematics\CinematicScene.h" />
     <ClInclude Include="Game\UI\CinematicPresenter.h" />
     <ClInclude Include="Game\UI\RadioCaptionPresenter.h" />
-    <ClInclude Include="Game\Combat\EnemyRadio.h" />
-    <ClInclude Include="Tests\CinematicTests.h" />
-    <ClInclude Include="Game\Combat\EnemyEngagementProfile.h" />
-    <ClInclude Include="Tests\CinematicVisualTests.h" />
+    <ClInclude Include="Game\Combat\Enemy\EnemyRadio.h" />
+    <ClInclude Include="Game\Combat\Enemy\EnemyEngagementProfile.h" />
     <None Include="Assets\Cinematics\opening.json" />
     <None Include="Assets\Cinematics\cinematics.json" />
     <None Include="Assets\Cinematics\midMission.json" />
@@ -611,7 +595,6 @@
     <None Include="Assets\Cinematics\defeat.json" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Tests\GameplaySettingsTests.h" />
     <ClInclude Include="Game\Settings\SettingsReader.h" />
     <ClInclude Include="Game\Settings\GameplaySettings.h" />
     <ClInclude Include="Game\Settings\RumbleSettings.h" />
@@ -621,6 +604,41 @@
     <None Include="Assets\Effects\combatEffects.json" />
     <None Include="Assets\Combat\rumble.json" />
     <None Include="Assets\Combat\enemyWeapon.json" />
+    <None Include="Assets\Sound\Effects\プレイヤーミサイル発射音.mp3" />
+    <None Include="Assets\Sound\Effects\プレイヤーミサイル被弾.mp3" />
+    <None Include="Assets\Sound\Effects\プレイヤー機関銃発射音(5秒間).mp3" />
+    <None Include="Assets\Sound\Effects\プレイヤー機関銃被弾.mp3" />
+    <None Include="Assets\Sound\Effects\プレイヤー飛行音(50秒).mp3" />
+    <None Include="Assets\Sound\Effects\敵戦艦爆発.mp3" />
+    <None Include="Assets\Sound\Effects\敵航空機爆発.mp3" />
+    <None Include="Assets\Sound\Music\BattleBGM.mp3" />
+    <None Include="Assets\Sound\Music\空襲BGM.wav" />
+    <None Include="Assets\Sound\Voice\Commander\Opening\君、一機で護衛機を排除し、母艦を撃沈せよ.wav" />
+    <None Include="Assets\Sound\Voice\Commander\Opening\基地は現在も攻撃を受けており、増援は出せない.wav" />
+    <None Include="Assets\Sound\Voice\Commander\Opening\敵母艦と護衛機を確認。基地を襲った部隊の発進元だ.wav" />
+    <None Include="Assets\Sound\Voice\Commander\いいぞ、その調子だ！残りの敵機も頼む！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\いい動きだ！そのまま押し切れ！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\ここを切り抜けろ。お前の帰りを待っている！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\命中を確認！いいぞ、もう一撃だ！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\待て、新たな敵機を確認！４機、接近中だ！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\敵機4機、接近！直ちに迎撃せよ！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\敵機の全滅を確認。任務完了だ。……よく生き残った。帰還せよ！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\敵機４機の撃墜を確認。よくやった！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\敵母艦の発進能力を奪った。よくやった！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\次は敵母艦だ。爆撃で敵機の発進を阻止せよ！.wav" />
+    <None Include="Assets\Sound\Voice\Commander\聞こえるか？応答せよ！.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\Aaah! No!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\Engine's gone. Ejecting..wav" />
+    <None Include="Assets\Sound\Voice\Enemy\I don't wanna die! Please—!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\I'm hit! What do I do!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\It's on fire! Aaah!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\Mayday! Mayday! I'm going down!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\No way! Not by this guy!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\Oh, shi—!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\Stay away! GET AWAY FROM ME!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\That's no pilot… That's a monster!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\Too fast! I can't shake him!.wav" />
+    <None Include="Assets\Sound\Voice\Enemy\You’ll pay for what you did to our carrier…! Bring him down—no matter what!.wav" />
     <None Include="Assets\Sound\audio.json" />
     <None Include="Assets\UI\labels.json" />
   </ItemGroup>
@@ -629,26 +647,26 @@
     <ClCompile Include="Engine\Input\GamepadInput.cpp" />
     <ClCompile Include="Engine\Interop\Redox\RedoxBridge.cpp" />
     <ClCompile Include="Engine\Renderer\Device\GpuFrameProfiler.cpp" />
-    <ClCompile Include="Engine\Renderer\Device\RenderVisibility.cpp" />
+    <ClCompile Include="Engine\Renderer\Frame\RenderVisibility.cpp" />
     <ClCompile Include="Engine\ExecutablePath.cpp" />
     <ClCompile Include="Game\Aircraft\ValidateFlightParameters.cpp" />
-    <ClCompile Include="Game\Combat\EnemyGunBehavior.cpp" />
-    <ClCompile Include="Game\Combat\EnemyRadio.cpp" />
-    <ClCompile Include="Game\Combat\MissionState.cpp" />
+    <ClCompile Include="Game\Combat\Enemy\EnemyGunBehavior.cpp" />
+    <ClCompile Include="Game\Combat\Enemy\EnemyRadio.cpp" />
+    <ClCompile Include="Game\Mission\MissionState.cpp" />
     <ClCompile Include="Game\Settings\GameplaySettings.cpp" />
     <ClCompile Include="Game\Settings\RumbleSettings.cpp" />
     <ClCompile Include="Game\Combat\CombatRumble.cpp" />
     <ClCompile Include="Game\Settings\SettingsReader.cpp" />
     <ClCompile Include="Game\Settings\UiTextSettings.cpp" />
     <ClCompile Include="Game\Effects\CombatEffectSettings.cpp" />
-    <ClCompile Include="Game\Weapons\BombFlight.cpp" />
+    <ClCompile Include="Game\Weapons\Bomb\BombFlight.cpp" />
     <ClCompile Include="Game\UI\RadioCaptionPresenter.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\StartupTiming.cpp" />
+    <ClCompile Include="Engine\Diagnostics\StartupTiming.cpp" />
     <ClCompile Include="Engine\Resources\Buffer\BufferUtilities.cpp" />
     <ClCompile Include="Engine\Renderer\Hud\HudFont.cpp" />
-    <ClCompile Include="Game\Weapons\ProjectilePose.cpp" />
+    <ClCompile Include="Game\Weapons\Projectile\ProjectilePose.cpp" />
     <ClCompile Include="Game\Weapons\WeaponDefinition.cpp" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,6 @@
 #include "GraphicsPipeline.h"
 #include "../../ExecutablePath.h"
-#include "../../Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include <d3dcompiler.h> // シェーダーバイナリの読み込みに使用する
 
 namespace {

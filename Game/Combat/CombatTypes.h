@@ -4,9 +4,9 @@
 #include <array>
 #include <optional>
 #include <span>
-#include "MissionState.h"
+#include "Game/Mission/MissionState.h"
 #include "Game/Cinematics/CinematicTypes.h"
-#include "EnemyRadio.h"
+#include "Game/Combat/Enemy/EnemyRadio.h"
 
 namespace Game {
 	// 距離はワールド単位、時間は秒、角度は度。捕捉条件と維持条件を分けて揺れを抑える

@@ -1,6 +1,6 @@
 #include "ModelGeometryCache.h"
-#include "Engine/Log.h"
-#include "Engine/StartupTiming.h"
+#include "Engine/Diagnostics/Log.h"
+#include "Engine/Diagnostics/StartupTiming.h"
 #include "ModelImporter.h"
 #include <assimp/Importer.hpp>
 #include <assimp/material.h>

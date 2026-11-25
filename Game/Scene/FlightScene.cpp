@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include "Game/Combat/GunAimSolver.h"
+#include "Game/Combat/Targeting/GunAimSolver.h"
 #include "Game/Combat/CombatSnapshotBuilder.h"
-#include "Game/Combat/ProjectileCollision.h"
-#include "Game/Combat/EnemyEngagementProfile.h"
+#include "Game/Weapons/Projectile/ProjectileCollision.h"
+#include "Game/Combat/Enemy/EnemyEngagementProfile.h"
 namespace Game {
 	namespace {
 
@@ -692,85 +692,13 @@ namespace Game {
 		std::vector<Engine::ObjectId> destroyed;
 
 		for (const auto& hit : hits) {
-			// 空母への有効な命中から耐久値と撃破・追撃の通知を更新する
 			if (hit.target == m_mission.GetCarrierId() &&
 				(hit.kind == ProjectileKind::Rocket || hit.kind == ProjectileKind::Bomb)) {
-				if (m_mission.ApplyCarrierDamage(hit.damage)) {
-					if (m_mission.IsDeckDisabled()) {
-						++m_combat.audio.shipExplosions;
-
-						if (auto center = m_mission.GetCarrierCenter(m_scene)) {
-							m_effects.SpawnCarrierExplosion(*center);
-						}
-					} else {
-						m_effects.SpawnExplosion(hit.position, {});
-
-						if (!m_carrierHitReported && m_carrierMissiles.GetCount() == 0 && m_carrierMissiles.GetAmmo() > 0)
-							m_carrierHitSpeakAtSeconds = m_battleSeconds + 0.5f;
-					}
-				}
-
-				continue;
-			}
-
-			// 自機の被害と音声・被弾方向を更新する
-			if (hit.target == m_playerId && m_playerId != Engine::InvalidObjectId) {
-				if (m_combat.playerHealth <= 0) continue;
-
-				m_combat.playerHealth = std::max(0.0f, m_combat.playerHealth - hit.damage);
-
-				if (hit.kind == ProjectileKind::Gun) {
-					++m_combat.audio.gunHits;
-				} else {
-					++m_combat.audio.missileHits;
-				}
-
-				m_combat.playerHitSeconds = m_combatSettings.feedback.playerHitSeconds;
-				m_combat.playerHitDirection = {-hit.direction.x, -hit.direction.y, -hit.direction.z};
-				m_effects.SpawnExplosion(hit.position, m_player.GetVelocity());
-
-				if (m_combat.playerHealth <= 0) {
-					++m_combat.audio.aircraftExplosions;
-
-					if (const auto* object = m_scene.FindObject(m_playerId)) {
-						m_effects.SpawnExplosion(*object, m_player.GetVelocity(), m_playerVisualScale);
-					}
-				}
-
-				continue;
-			}
-
-			// 敵機の被害を反映し、撃破したIDを後で削除するために集める
-			auto enemy = std::find_if(m_enemies.begin(), m_enemies.end(), [&](const EnemyAircraft& e) {
-				return e.objectId == hit.target;
-			});
-
-			if (enemy == m_enemies.end() || enemy->health <= 0) continue;
-
-			enemy->health -= hit.damage;
-			++m_combat.hitCount;
-
-			if (hit.kind == ProjectileKind::Gun) {
-				m_effects.SpawnImpact(hit, enemy->flightModel.GetVelocity());
-			} else if (enemy->health > 0) {
-				m_effects.SpawnExplosion(hit.position, enemy->flightModel.GetVelocity());
-			}
-
-			m_combat.hitSeconds = m_combatSettings.feedback.hitSeconds;
-
-			if (enemy->health <= 0) {
-				++m_combat.enemyAircraftDestroyed;
-				++m_combat.audio.aircraftExplosions;
-
-				if (const auto* aircraft = m_scene.FindObject(enemy->objectId)) {
-					m_effects.SpawnExplosion(*aircraft, enemy->flightModel.GetVelocity(), enemy->visualScale);
-				} else {
-					m_effects.SpawnExplosion(
-						enemy->flightModel.GetPosition(), enemy->flightModel.GetVelocity());
-				}
-
-				destroyed.push_back(enemy->objectId);
-				m_combat.destroyedSeconds = m_combatSettings.feedback.destroyedSeconds;
+				ApplyCarrierHit(hit);
+			} else if (hit.target == m_playerId && m_playerId != Engine::InvalidObjectId) {
+				ApplyPlayerHit(hit);
+			} else {
+				ApplyEnemyHit(hit, destroyed);
 			}
 		}
 
@@ -790,6 +718,81 @@ namespace Game {
 		if (m_combat.playerHealth <= 0) {
 			RemoveObject(m_playerId);
 			m_combat.result = CombatResult::Defeat;
+		}
+	}
+
+	void FlightScene::ApplyCarrierHit(const HitEvent& hit) {
+		if (!m_mission.ApplyCarrierDamage(hit.damage)) return;
+
+		if (m_mission.IsDeckDisabled()) {
+			++m_combat.audio.shipExplosions;
+
+			if (auto center = m_mission.GetCarrierCenter(m_scene)) {
+				m_effects.SpawnCarrierExplosion(*center);
+			}
+		} else {
+			m_effects.SpawnExplosion(hit.position, {});
+
+			if (!m_carrierHitReported && m_carrierMissiles.GetCount() == 0 && m_carrierMissiles.GetAmmo() > 0)
+				m_carrierHitSpeakAtSeconds = m_battleSeconds + 0.5f;
+		}
+	}
+
+	void FlightScene::ApplyPlayerHit(const HitEvent& hit) {
+		if (m_combat.playerHealth <= 0) return;
+
+		m_combat.playerHealth = std::max(0.0f, m_combat.playerHealth - hit.damage);
+
+		if (hit.kind == ProjectileKind::Gun) {
+			++m_combat.audio.gunHits;
+		} else {
+			++m_combat.audio.missileHits;
+		}
+
+		m_combat.playerHitSeconds = m_combatSettings.feedback.playerHitSeconds;
+		m_combat.playerHitDirection = {-hit.direction.x, -hit.direction.y, -hit.direction.z};
+		m_effects.SpawnExplosion(hit.position, m_player.GetVelocity());
+
+		if (m_combat.playerHealth <= 0) {
+			++m_combat.audio.aircraftExplosions;
+
+			if (const auto* object = m_scene.FindObject(m_playerId)) {
+				m_effects.SpawnExplosion(*object, m_player.GetVelocity(), m_playerVisualScale);
+			}
+		}
+	}
+
+	void FlightScene::ApplyEnemyHit(const HitEvent& hit, std::vector<Engine::ObjectId>& destroyed) {
+		auto enemy = std::find_if(m_enemies.begin(), m_enemies.end(), [&](const EnemyAircraft& e) {
+			return e.objectId == hit.target;
+		});
+
+		if (enemy == m_enemies.end() || enemy->health <= 0) return;
+
+		enemy->health -= hit.damage;
+		++m_combat.hitCount;
+
+		if (hit.kind == ProjectileKind::Gun) {
+			m_effects.SpawnImpact(hit, enemy->flightModel.GetVelocity());
+		} else if (enemy->health > 0) {
+			m_effects.SpawnExplosion(hit.position, enemy->flightModel.GetVelocity());
+		}
+
+		m_combat.hitSeconds = m_combatSettings.feedback.hitSeconds;
+
+		if (enemy->health <= 0) {
+			++m_combat.enemyAircraftDestroyed;
+			++m_combat.audio.aircraftExplosions;
+
+			if (const auto* aircraft = m_scene.FindObject(enemy->objectId)) {
+				m_effects.SpawnExplosion(*aircraft, enemy->flightModel.GetVelocity(), enemy->visualScale);
+			} else {
+				m_effects.SpawnExplosion(
+					enemy->flightModel.GetPosition(), enemy->flightModel.GetVelocity());
+			}
+
+			destroyed.push_back(enemy->objectId);
+			m_combat.destroyedSeconds = m_combatSettings.feedback.destroyedSeconds;
 		}
 	}
 

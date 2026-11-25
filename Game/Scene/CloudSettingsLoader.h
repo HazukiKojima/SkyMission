@@ -1,5 +1,5 @@
 #pragma once
-#include "Engine/Scene/CloudSettings.h"
+#include "Engine/Renderer/Environment/CloudSettings.h"
 #include "Engine/Resources/JsonAssetReader.h"
 namespace Game {
 	Engine::CloudSettings LoadCloudSettings(

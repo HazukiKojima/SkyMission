@@ -1,5 +1,5 @@
 #include "CombatSettingsLoader.h"
-#include "TargetingSystem.h"
+#include "Game/Combat/Targeting/TargetingSystem.h"
 #include <cmath>
 
 namespace Game {

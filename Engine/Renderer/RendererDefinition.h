@@ -1,7 +1,7 @@
 #pragma once
 #include "RetroFilmParameters.h"
 #include "../Resources/Mesh/ModelLoadOptions.h"
-#include "Engine/Scene/CloudSettings.h"
+#include "Engine/Renderer/Environment/CloudSettings.h"
 #include <DirectXMath.h>
 #include <filesystem>
 #include <string>

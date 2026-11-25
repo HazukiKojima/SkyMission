@@ -1,6 +1,6 @@
 #pragma once
 #include "../../EngineCommon.h"
-#include "../RootBindings.h"
+#include "Engine/Renderer/Pipeline/RootBindings.h"
 
 namespace Engine {
 	struct PipelineOptions {

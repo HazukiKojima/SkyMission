@@ -1,5 +1,5 @@
 #include "AircraftAIController.h"
-#include "Game/Combat/EnemyGunBehavior.h"
+#include "Game/Combat/Enemy/EnemyGunBehavior.h"
 #include <algorithm>
 #include <cmath>
 #include <iterator>

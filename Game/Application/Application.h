@@ -5,7 +5,7 @@
 #include <chrono>
 #include "Game/Audio/CombatAudio.h"
 #include "Game/UI/CombatHudPresenter.h"
-#include "Game/Effects/CombatEffectPresenter.h"
+#include "Game/Effects/Presentation/CombatEffectPresenter.h"
 #include "Game/Combat/CombatRumble.h"
 
 namespace Engine {
@@ -33,6 +33,11 @@ namespace Game {
 	  private:
 		void InitializeFlightScene(const FlightSceneDefinition& assets);
 		void ConfigureResizeHandling();
+		float UpdateFrameTiming();
+		void UpdateInputDevice(const Engine::InputSnapshot& input);
+		void UpdateMenu(const Engine::InputSnapshot& input);
+		void UpdateGameplay(const Engine::InputSnapshot& input, float deltaSeconds);
+		void UpdateMenuFrame();
 		void BuildMenuHud();
 		enum class Screen { Title, Playing, Clear, GameOver };
 		Screen m_screen = Screen::Title;

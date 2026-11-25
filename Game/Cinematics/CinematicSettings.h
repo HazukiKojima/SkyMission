@@ -26,7 +26,7 @@ namespace Game {
 	};
 
 	struct CinematicAudioSettings {
-		std::filesystem::path bgm = L"../Sound/Opening/空襲BGM.wav";
+		std::filesystem::path bgm = L"../Sound/Music/空襲BGM.wav";
 		float bgmVolume = 0.12f;
 		float briefingVolume = 0.4f;
 		float flightVolumeScale = 0.4f;
@@ -57,11 +57,11 @@ namespace Game {
 	struct CinematicSettings : CinematicShotSettings {
 		std::vector<CinematicBriefingEntry> briefing{
 			{{"敵母艦と護衛機を確認。", "基地を襲った部隊の発進元だ。"},
-				L"../Sound/Opening/敵母艦と護衛機を確認。基地を襲った部隊の発進元だ.wav", 5},
+				L"../Sound/Voice/Commander/Opening/敵母艦と護衛機を確認。基地を襲った部隊の発進元だ.wav", 5},
 			{{"基地は現在も攻撃を受けており、", "増援は出せない。"},
-				L"../Sound/Opening/基地は現在も攻撃を受けており、増援は出せない.wav", 5},
+				L"../Sound/Voice/Commander/Opening/基地は現在も攻撃を受けており、増援は出せない.wav", 5},
 			{{"君、一機で護衛機を排除し、", "母艦を撃沈せよ。"},
-				L"../Sound/Opening/君、一機で護衛機を排除し、母艦を撃沈せよ.wav", 5}};
+				L"../Sound/Voice/Commander/Opening/君、一機で護衛機を排除し、母艦を撃沈せよ.wav", 5}};
 		std::vector<CinematicRadioEntry> radio;
 		CinematicAudioSettings audio;
 		CinematicTextSettings text;

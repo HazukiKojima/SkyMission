@@ -2,7 +2,7 @@
 #include <DirectXMath.h>
 #include "CombatEffectSettings.h"
 #include <vector>
-#include "Game/Weapons/GunShotEvent.h"
+#include "Game/Weapons/Gun/GunShotEvent.h"
 
 namespace Game {
 	struct GunMuzzleFlash {
