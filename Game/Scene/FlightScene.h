@@ -178,6 +178,9 @@ namespace Game {
 		void UpdateTargeting(const CombatGeometry& geometry, bool next, float dt);
 		void UpdateCamera(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput);
 		void ApplyHits();
+		void ApplyCarrierHit(const HitEvent& hit);
+		void ApplyPlayerHit(const HitEvent& hit);
+		void ApplyEnemyHit(const HitEvent& hit, std::vector<Engine::ObjectId>& destroyed);
 		void ApplySeaCollision();
 		void UpdateEnemyRadio(float dt);
 		EnemyRadioController m_enemyRadio;
