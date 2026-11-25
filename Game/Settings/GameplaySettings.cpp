@@ -35,6 +35,8 @@ namespace Game {
 		r.Number("pitchFollowLimit", pitchFollowLimit, 0.000001f, 1000000);
 		r.Number("speedDistanceStart", speedDistanceStart, 0, 1000000);
 		r.Number("lookAheadMeters", lookAheadMeters, 0.000001f, 1000000);
+		r.Number("bankRollDegrees", bankRollDegrees, 0, 45);
+		r.Number("bankOffsetMeters", bankOffsetMeters, 0, 1000000);
 		r.Number("/shake/accelerationDegrees", shake.accelerationDegrees, 0, 5);
 		r.Number("/shake/highGDegrees", shake.highGDegrees, 0, 5);
 		r.Number("/shake/gunFireDegrees", shake.gunFireDegrees, 0, 5);

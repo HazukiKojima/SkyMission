@@ -14,6 +14,7 @@ namespace Game {
 		bool pitchInputActive;
 		float speed;
 		float maximumSpeed;
+		float rollRadians = 0;
 	};
 
 	struct AircraftCameraShakeInput {
@@ -89,6 +90,9 @@ namespace Game {
 		float m_followMaximumSpeed = 800.0f;
 		float m_followCameraYaw = 0.0f;
 		float m_followCameraPitch = 0.0f;
+		float m_targetBank = 0.0f;
+		float m_followBank = 0.0f;
+		float m_viewRoll = 0.0f;
 		float m_lookYaw = 0, m_lookPitch = 0;
 		std::optional<DirectX::XMFLOAT3> m_lookTarget;
 		bool m_automaticLook = false;

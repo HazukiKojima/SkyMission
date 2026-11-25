@@ -176,10 +176,10 @@ void TestCombatAudioLifecycle(const fs::path& repository, const fs::path& fixtur
 					Require(audio.GetLoadedSoundCount() == 21, "Carrier impact and completion voices were not decoded");
 					std::map<std::string, CinematicSettings> finaleCommands;
 
-					for (const auto* id : {"reinforcements", "finalRally", "finalEncouragement", "ending"})
+					for (const auto* id : {"reinforcements", "finalRally", "finalEncouragement", "ending", "defeat"})
 						finaleCommands.emplace(id, LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics" / (std::string(id) + ".json")));
 					audio.Initialize(repository / L"Assets/Sound", finaleCommands);
-					Require(audio.GetLoadedSoundCount() == 24, "The five finale voice files were not decoded");
+					Require(audio.GetLoadedSoundCount() == 25, "Victory and defeat voice files were not decoded");
 					const auto carrierCommand = LoadCinematicSettings(JsonAssetReader{}, repository / L"Assets/Cinematics/midMission.json");
 					audio.Initialize(repository / L"Assets/Sound", std::map<std::string, CinematicSettings>{{"midMission", carrierCommand}});
 					Require(audio.GetLoadedSoundCount() == 20, "Carrier command voice was not decoded");
@@ -314,6 +314,49 @@ void TestFollowCameraLook() {
 	const auto distance = [](XMFLOAT3 a, XMFLOAT3 b) {
 		return XMVectorGetX(XMVector3Length(XMLoadFloat3(&a) - XMLoadFloat3(&b)));
 	};
+
+	{
+		CameraSettings settings;
+		settings.followDistance = 205;
+		settings.maxFollowDistance = 260;
+		settings.followHeight = 101;
+		settings.followLookHeight = 73;
+		settings.lookAheadMeters = 32;
+		settings.bankRollDegrees = 24;
+		settings.bankOffsetMeters = 30;
+		auto chase = reference;
+		chase.Configure(settings);
+		chase.Initialize(XMConvertToRadians(56.0f));
+		chase.SetFollowTarget(target);
+		chase.SnapToFollowTarget();
+		const auto levelPosition = chase.GetPosition();
+		const auto viewProjection = chase.GetView() * chase.GetCamera().GetProjection();
+		const auto aircraft = XMLoadFloat3(&target.position);
+		const auto sight = aircraft + XMLoadFloat3(&target.forward) * CombatSnapshot::gunSightDistance;
+		const float aircraftY = XMVectorGetY(XMVector3TransformCoord(aircraft, viewProjection));
+		const float sightY = XMVectorGetY(XMVector3TransformCoord(sight, viewProjection));
+		Require(aircraftY > -0.9f && aircraftY < -0.4f && sightY - aircraftY > 0.45f,
+			"Chase camera did not leave vertical clearance between the aircraft and gun sight");
+
+		auto bankedTarget = target;
+		bankedTarget.rollRadians = XM_PIDIV4;
+		chase.SetFollowTarget(bankedTarget);
+		chase.Update(0.5f);
+		const auto firstBank = chase.GetPosition().x - levelPosition.x;
+		Require(std::abs(firstBank) > 10 && std::abs(XMVectorGetY(chase.GetView().r[0])) > 0.1f,
+			"Bank did not shift and roll the chase camera");
+
+		bankedTarget.rollRadians = -XM_PIDIV4;
+		chase.SetFollowTarget(bankedTarget);
+		chase.Update(1.0f);
+		Require((chase.GetPosition().x - levelPosition.x) * firstBank < 0,
+			"Opposite bank did not reverse the camera offset");
+		chase.SetFollowTarget(target);
+		chase.SnapToFollowTarget();
+		Require(distance(chase.GetPosition(), levelPosition) < 0.01f &&
+				std::abs(XMVectorGetY(chase.GetView().r[0])) < 0.001f,
+			"Camera snap carried over the previous bank");
+	}
 
 	Engine::InputSnapshot look;
 	look.active = true;

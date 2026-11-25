@@ -221,6 +221,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 				crash.GetCombatSnapshot().playerHealth == 0 &&
 				crash.GetCombatSnapshot().audio.aircraftExplosions == 1 &&
 				!crash.GetCombatSnapshot().cinematic.active &&
+				crash.GetCombatSnapshot().cinematic.cinematicId == "defeat" &&
+				crash.GetCombatSnapshot().cinematic.radioLine == 0 &&
 				!crash.GetEffectSnapshot().explosions.empty() &&
 				crash.GetEffectSnapshot().explosions.back().position.y >= 0,
 				"Sea crash failed to explode visibly and end mission");
@@ -562,7 +564,8 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			reusable.RemoveObject(initialPlayerId);
 			reusable.Update({}, 0.01f);
 			Require(reusable.GetCombatSnapshot().cinematic.cinematicId == "defeat" &&
-					reusable.GetCombatSnapshot().cinematic.active,
+					reusable.GetCombatSnapshot().cinematic.active &&
+					reusable.GetCombatSnapshot().cinematic.radioLine == 0,
 				"Defeat did not select its ending");
 			for (int frame = 0; frame < 16; ++frame)
 				reusable.Update({}, 0.25f);
@@ -877,7 +880,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 					volley.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
 					volley.GetCombatSnapshot().enemies.empty() &&
 					volley.GetCombatSnapshot().audio.shipExplosions == 1,
-				"Two fast missiles did not destroy the rotated carrier exactly once");
+				"A two-missile salvo did not destroy the rotated carrier exactly once");
 			Require(volley.GetCombatSnapshot().cinematic.cinematicId == "carrierComplete" &&
 				volley.GetCombatSnapshot().cinematic.radioLine == 0,
 				"Double-shot carrier disable did not play completion voice");
@@ -885,42 +888,16 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 
 		configureCarrierDialogue(scene);
 
-		for (int missileIndex = 0; missileIndex < 2; ++missileIndex) {
-			lockCarrier(scene);
-			const float before = scene.GetCombatSnapshot().carrierHealth;
-			scene.Update({}, 0.01f, {}, drop);
-
-			for (int i = 0; i < 32 && scene.GetCombatSnapshot().carrierHealth == before; ++i)
-				scene.Update({}, 0.25f);
-			Require(scene.GetCombatSnapshot().carrierHealth == 150 - missileIndex * 150,
-				"Carrier did not require exactly two missile hits");
-			if (missileIndex == 0) {
-				Require(scene.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack &&
-						!scene.GetCombatSnapshot().audio.shipExplosions &&
-						scene.GetEffectSnapshot().deckSmoke.empty(),
-					"First missile prematurely destroyed carrier");
-				{
-					auto quickSecond = scene;
-					quickSecond.Update({}, 0.01f, {}, drop);
-
-					for (int frame = 0; frame < 32 && !quickSecond.GetCombatSnapshot().deckDisabled; ++frame) {
-						quickSecond.Update({}, 0.25f);
-						Require(quickSecond.GetCombatSnapshot().cinematic.cinematicId != "carrierHit",
-							"Rapid second shot after impact did not cancel first-hit encouragement");
-					}
-
-					Require(quickSecond.GetCombatSnapshot().deckDisabled &&
-						quickSecond.GetCombatSnapshot().cinematic.cinematicId == "carrierComplete",
-						"Rapid second shot did not produce the completion voice");
-				}
-
-				for (int frame = 0; frame < 3; ++frame) scene.Update({}, 0.25f);
-				Require(scene.GetCombatSnapshot().cinematic.cinematicId == "carrierHit" &&
-					scene.GetCombatSnapshot().cinematic.radioLine == 0,
-					"Single first hit did not play encouragement");
-				checkDefeatRetry(scene);
-			}
-		}
+		lockCarrier(scene);
+		scene.Update({}, 0.01f, {}, drop);
+		Require(scene.GetCombatSnapshot().audio.missileLaunches == 1 &&
+				scene.GetCombatSnapshot().carrierMissileAmmo == 1,
+			"Single launch did not consume exactly one missile");
+		for (int frame = 0; frame < 32 && !scene.GetCombatSnapshot().deckDisabled; ++frame)
+			scene.Update({}, 0.25f);
+		Require(scene.GetCombatSnapshot().carrierHealth == 0 &&
+				scene.GetCombatSnapshot().carrierMissileAmmo == 1,
+			"One missile hit did not destroy the carrier");
 
 		Require(scene.GetCombatSnapshot().deckDisabled &&
 				scene.GetCombatSnapshot().enemies.empty() &&
@@ -955,7 +932,12 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			arrival.Update({}, 0.25f);
 			Require(!arrival.GetCombatSnapshot().cinematic.active, "Arrival interrupted the completion report pause");
 
-			for (int frame = 0; frame < 8 && !arrival.GetCombatSnapshot().cinematic.active; ++frame) arrival.Update({}, 0.25f);
+			for (int frame = 0; frame < 8 && !arrival.GetCombatSnapshot().cinematic.active; ++frame) {
+				Require(arrival.GetCombatSnapshot().enemies.empty() &&
+					arrival.GetCombatSnapshot().missionPhase == MissionPhase::CarrierAttack,
+					"Reinforcements appeared before their arrival cinematic");
+				arrival.Update({}, 0.25f);
+			}
 			Require(arrival.GetCombatSnapshot().enemies.size() == definition.mission.finalFighterCount &&
 				arrival.GetCombatSnapshot().cinematic.active &&
 				arrival.GetCombatSnapshot().cinematic.cinematicId == "reinforcements",
@@ -1069,17 +1051,42 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 			const auto enemies = victoryMovie.GetCombatSnapshot().enemies;
 
 			for (const auto& enemy : enemies) victoryMovie.RemoveObject(enemy.id);
-			victoryMovie.Update({}, 0.01f);
+			victoryMovie.SetPlayerAircraftPosition({100000, 1500, 0});
+			const CombatInput fire{.weapon = {.fire = true}};
+			victoryMovie.Update({}, 0.25f, {}, fire);
 			Require(victoryMovie.GetCombatSnapshot().result == CombatResult::Victory &&
 				victoryMovie.GetCombatSnapshot().enemies.empty() && !victoryMovie.GetCombatSnapshot().cinematic.active,
 				"Four reinforcements did not end the mission or ending skipped its quiet pause");
-			for (int frame = 0; frame < 4; ++frame) victoryMovie.Update({}, 0.25f);
+			const auto& objects = victoryMovie.GetObjects();
+			const auto projectile = std::find_if(objects.begin(), objects.end(), [&](const auto& object) {
+				return object.model == player && object.id != playerId;
+			});
+			Require(victoryMovie.GetProjectileCount() > 0 && projectile != objects.end(),
+				"Victory fixture did not leave a projectile in flight");
+			const auto projectileId = projectile->id;
+			const auto previousPosition = projectile->worldTransform;
+			const auto previousMuzzle = victoryMovie.GetCombatSnapshot().muzzle;
+			victoryMovie.Update({}, 0.25f, {}, fire);
+			const auto muzzle = victoryMovie.GetCombatSnapshot().muzzle;
+			Require(muzzle.x != previousMuzzle.x || muzzle.y != previousMuzzle.y || muzzle.z != previousMuzzle.z,
+				"Gun sight stopped following the aircraft during the victory pause");
+			const auto moved = std::find_if(objects.begin(), objects.end(), [&](const auto& object) {
+				return object.id == projectileId;
+			});
+			Require(moved != objects.end() && (moved->worldTransform._41 != previousPosition._41 ||
+				moved->worldTransform._42 != previousPosition._42 ||
+				moved->worldTransform._43 != previousPosition._43) &&
+				victoryMovie.GetCombatSnapshot().firedVolleys == 0,
+				"Victory froze an in-flight projectile or accepted another shot");
+			for (int frame = 0; frame < 3; ++frame) victoryMovie.Update({}, 0.25f);
 			Require(victoryMovie.GetCombatSnapshot().cinematic.active &&
 				victoryMovie.GetCombatSnapshot().cinematic.cinematicId == "ending" &&
 				victoryMovie.GetCombatSnapshot().cinematic.radioLine == 0,
 				"Final mission report did not start after the quiet pause");
 			for (int frame = 0; frame < 28; ++frame) victoryMovie.Update({}, 0.25f);
 			Require(!victoryMovie.GetCombatSnapshot().cinematic.active, "Mission ending did not finish naturally");
+			Require(victoryMovie.GetProjectileCount() == 0 && victoryMovie.GetHostileProjectileCount() == 0,
+				"Expired rounds remained after the ending");
 			victoryMovie.StartNewMission();
 			const auto& restarted = victoryMovie.GetCombatSnapshot();
 			Require(restarted.result == CombatResult::Active && restarted.missionPhase == MissionPhase::Patrol &&
@@ -1114,7 +1121,7 @@ void TestMissionScene(const fs::path& repository, const fs::path& fixture) {
 	}
 
 	DestroyWindow(window);
-	std::cout << "PASS: full mission scene, automatic carrier selection, timed lock, launch gate, two-hit "
+	std::cout << "PASS: full mission scene, automatic carrier selection, timed lock, launch gate, one-hit "
 				 "carrier, one-time waves "
 				 "and retry\n";
 }

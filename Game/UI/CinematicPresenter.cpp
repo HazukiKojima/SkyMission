@@ -54,6 +54,9 @@ namespace Game {
 				{0, 0}, {float(view.width), float(view.height)}, {0, 0, 0, presentation.fadeOpacity});
 		if (presentation.radioLine >= 0)
 			RadioCaptionPresenter{}.Build(presentation.radio, view, list, barHeight);
+
+		if (presentation.cinematicId == "defeat") return;
+
 		const auto& hint = usingGamepad ? textSettings.gamepadSkipHint : textSettings.skipHint;
 		const float fontSize = std::min({textSettings.hintFontSize * textScale, barHeight * 0.8f,
 			(view.width - 96 * scale) / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(hint, 1))});

@@ -58,6 +58,8 @@ namespace Game {
 		float pitchFollowLimit = 0.35f;
 		float speedDistanceStart = 60.0f;
 		float lookAheadMeters = 12.0f;
+		float bankRollDegrees = 0.0f;
+		float bankOffsetMeters = 0.0f;
 		CameraShakeSettings shake;
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};

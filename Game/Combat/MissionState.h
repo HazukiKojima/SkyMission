@@ -14,7 +14,7 @@ namespace Game {
 		float bombReloadSeconds = 4;
 		float carrierMissileSpeed = 6000;
 		float carrierHealth = 300;
-		float bombDamage = 150;
+		float bombDamage = 300;
 		float commanderHealthMultiplier = 1.5f;
 		float enemyGunSpeed = 7500;
 		float enemyGunInterval = 0.10f;

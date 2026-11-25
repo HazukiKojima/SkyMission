@@ -34,7 +34,7 @@ namespace Game {
 		std::vector<AircraftSpawn> BuildWave(Engine::Scene& scene, const DirectX::XMFLOAT3& player,
 			size_t count, SquadronKind kind, float enemyHealth, const DirectX::XMFLOAT3& forward = {0, 0, -1},
 			size_t slotBase = 0);
-		bool Advance(size_t remaining, bool alive, float dt);
+		bool Advance(size_t remaining, bool alive, float dt, bool reinforcementsReady);
 		void UpdateDeckSmoke(Engine::Scene& scene, CombatEffectSystem& effects, float dt);
 		void UpdateAntiAircraftGuns(Engine::Scene& scene, const AircraftFlightModel& player,
 			ProjectileSystem& projectiles, float battleSeconds, float dt);

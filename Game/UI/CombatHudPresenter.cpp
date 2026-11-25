@@ -212,10 +212,9 @@ namespace Game {
 				warning, fontSize, m_tuning.alert);
 		}
 
-		if (snapshot.result != CombatResult::Active &&
-			(snapshot.result != CombatResult::Victory || snapshot.allDownSeconds <= 0)) {
+		if (snapshot.result == CombatResult::Victory && snapshot.allDownSeconds <= 0) {
 			drawLabel(m_tuning.layout.resultPosition[0], m_tuning.layout.resultPosition[1],
-				snapshot.result == CombatResult::Victory ? m_text.Text("任務達成") : m_text.Text("自機撃墜"));
+				m_text.Text("任務達成"));
 		}
 
 		// 自機の前方を基準に被弾方向の矢印を表示する

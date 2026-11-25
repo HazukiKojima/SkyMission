@@ -59,6 +59,7 @@ namespace Game {
 		// 機体の前方と、カメラ追従用の水平方向を返す
 		DirectX::XMFLOAT3 GetForward() const;
 		DirectX::XMFLOAT3 GetHeading() const;
+		float GetRoll() const { return m_roll; }
 
 		// 姿勢クォータニオンと位置から描画用ワールド行列を生成する
 		DirectX::XMFLOAT4X4 GetWorldTransform() const;

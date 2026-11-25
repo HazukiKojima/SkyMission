@@ -39,9 +39,23 @@ namespace Game {
 	}
 
 	void FlightScene::UpdateMission(float dt) {
+		bool reinforcementsReady = true;
+		if (m_mission.GetPhase() == MissionPhase::CarrierAttack &&
+			m_cinematics.contains("reinforcements") && m_combat.cinematic.cinematicId == "carrierComplete") {
+			// 母艦撃破の無線と余韻が終わるまで、実戦用の増援も出現させない
+			if (m_combat.cinematic.radioLine >= 0) {
+				reinforcementsReady = false;
+			} else {
+				m_reinforcementHoldSeconds = m_reinforcementHoldSeconds < 0
+					? 1.0f : std::max(0.0f, m_reinforcementHoldSeconds - dt);
+				reinforcementsReady = m_reinforcementHoldSeconds <= 0;
+			}
+		}
+
 		// 任務の段階が変わったときだけ増援生成や勝敗確定を行う
 		if (m_mission.Advance(
-				m_enemies.size(), m_combat.playerHealth > 0 && m_scene.FindObject(m_playerId), dt)) {
+				m_enemies.size(), m_combat.playerHealth > 0 && m_scene.FindObject(m_playerId), dt,
+				reinforcementsReady)) {
 			switch (m_mission.GetPhase()) {
 			case MissionPhase::FinalFighters:
 				SpawnMissionAircraft(m_mission.GetSettings().finalFighterCount, SquadronKind::Fighters);
@@ -155,12 +169,6 @@ namespace Game {
 		m_hostileProjectiles.Update(m_scene, dt, playerTargets);
 		UpdateEnemyGuns();
 		m_mission.UpdateAntiAircraftGuns(m_scene, m_player, m_hostileProjectiles, m_battleSeconds, dt);
-
-		// 自機と敵機の曳光線を同じ描画情報へまとめる
-		auto tracers = m_effects.GetSnapshot().gunTracers;
-		auto hostileTracers = m_hostileProjectiles.TakeTracers();
-		tracers.insert(tracers.end(), hostileTracers.begin(), hostileTracers.end());
-		m_effects.SetGunTracers(std::move(tracers));
 	}
 
 	void FlightScene::UpdateEnemyGuns() {
