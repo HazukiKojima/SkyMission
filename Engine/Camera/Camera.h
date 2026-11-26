@@ -19,6 +19,7 @@ namespace Engine {
 		void LookAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target);
 		void LookTo(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& direction,
 			const DirectX::XMFLOAT3& up = {0, 1, 0});
+		void InterpolateFrom(const Camera& previous, float alpha);
 
 		DirectX::XMMATRIX GetView() const {
 			return m_view;

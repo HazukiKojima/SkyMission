@@ -68,7 +68,7 @@ namespace Game {
 			m_position.z += right.z * moveSpeed;
 		}
 
-		if (input.active && input.middleMouseDown) {
+		if (input.mouseDeltaX != 0 || input.mouseDeltaY != 0) {
 			m_yaw += static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity;
 			m_pitch -= static_cast<float>(input.mouseDeltaY) * m_settings.mouseSensitivity;
 		}
@@ -117,7 +117,8 @@ namespace Game {
 	void AircraftCameraController::UpdateLookOffset(float deltaSeconds, const Engine::InputSnapshot& input) {
 		const auto& pad = input.gamepad;
 		const bool stickLook = pad.rightX != 0 || pad.rightY != 0;
-		if (input.active && !m_automaticLook && (input.middleMouseDown || stickLook)) {
+		const bool mouseLook = input.middleMouseDown || input.mouseDeltaX != 0 || input.mouseDeltaY != 0;
+		if (input.active && !m_automaticLook && (mouseLook || stickLook)) {
 			constexpr float stickLookSpeed = XM_PI;
 			const float yawDelta = static_cast<float>(input.mouseDeltaX) * m_settings.mouseSensitivity +
 				pad.rightX * stickLookSpeed * deltaSeconds;

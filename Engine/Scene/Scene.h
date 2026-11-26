@@ -65,6 +65,7 @@ namespace Engine {
 		ObjectId AddObject(std::shared_ptr<Model> model);
 		ObjectId AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& transform);
 		void RemoveObject(ObjectId id);
+		void InterpolateFrom(const Scene& previous, float alpha);
 
 	  private:
 		Camera m_camera;

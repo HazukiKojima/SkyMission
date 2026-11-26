@@ -2,6 +2,7 @@
 #include "Engine/Diagnostics/Log.h"
 #include <algorithm>
 #include <cstddef>
+#include <utility>
 #include <vector>
 
 namespace Engine {
@@ -43,8 +44,40 @@ namespace Engine {
 	InputSnapshot Window::ConsumeInput() {
 		if (GetForegroundWindow() != m_hwnd) DeactivateInput();
 		auto snapshot = m_input.ConsumeFrame();
-		if (snapshot.active) snapshot.gamepad = m_gamepad.ConsumeFrame();
+		if (m_timedInputEnabled) {
+			m_inputSamples.push_back({std::chrono::steady_clock::now(), snapshot});
+			if (snapshot.active) {
+				snapshot.gamepad = m_gamepad.ConsumeFrame([this](auto time, const auto& sample) {
+					m_inputSamples.push_back({time, sample});
+				});
+				auto held = snapshot.gamepad;
+				held.presses = {};
+				held.northTapped = false;
+				m_inputSamples.push_back({std::chrono::steady_clock::now(), held});
+			}
+		} else if (snapshot.active) {
+			snapshot.gamepad = m_gamepad.ConsumeFrame();
+		}
 		return snapshot;
+	}
+
+	void Window::SetTimedInputEnabled(bool enabled) {
+		m_timedInputEnabled = enabled;
+		m_inputSamples.clear();
+		m_lastRawInputTime = std::chrono::steady_clock::now();
+	}
+
+	std::vector<TimedInputSample> Window::TakeInputSamples() {
+		return std::exchange(m_inputSamples, {});
+	}
+
+	void Window::RecordRawInput() {
+		if (!m_timedInputEnabled) return;
+		// GetMessageTime はキューに入った時刻を返すため、描画中に届いた入力も元の時刻で扱える。
+		const DWORD age = GetTickCount() - static_cast<DWORD>(GetMessageTime());
+		const auto time = std::chrono::steady_clock::now() - std::chrono::milliseconds(age);
+		m_lastRawInputTime = std::max(m_lastRawInputTime, time);
+		m_inputSamples.push_back({m_lastRawInputTime, m_input.ConsumeFrame()});
 	}
 
 	void Window::SetGamepadRumble(float lowFrequency, float highFrequency) {
@@ -261,35 +294,45 @@ namespace Engine {
 				// 発射はRaw Inputの押下エッジで処理し、カメラのキャプチャには使わない
 				return 0;
 			case WM_INPUT:
-				if (GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT)
+				if (GET_RAWINPUT_CODE_WPARAM(wParam) == RIM_INPUT) {
 					self->ProcessRawInput(reinterpret_cast<HRAWINPUT>(lParam));
+					self->RecordRawInput();
+				}
 				// 前面のWM_INPUTは後始末のためDefWindowProcへ渡す
 				return DefWindowProcW(hwnd, message, wParam, lParam);
 			case WM_SETFOCUS:
 				self->m_input.SetActive(true);
+				self->RecordRawInput();
 				break;
 			case WM_KILLFOCUS:
 				self->DeactivateInput();
+				self->RecordRawInput();
 				break;
 			case WM_ACTIVATEAPP:
-				if (!wParam) self->DeactivateInput();
+				if (!wParam) {
+					self->DeactivateInput();
+					self->RecordRawInput();
+				}
 				break;
 			case WM_INPUT_DEVICE_CHANGE:
 				if (wParam == GIDC_REMOVAL) {
 					self->m_input.ForgetDevice(reinterpret_cast<HANDLE>(lParam));
 
 					if (!self->m_input.IsMiddleMouseDown()) self->EndCameraLook();
+					self->RecordRawInput();
 				}
 				return 0;
 			case WM_CAPTURECHANGED:
 				if (reinterpret_cast<HWND>(lParam) != hwnd && self->m_cameraMouseCaptured) {
 					self->m_cameraMouseCaptured = false;
 					self->m_input.Clear();
+					self->RecordRawInput();
 				}
 				break;
 			case WM_CANCELMODE:
 				self->m_input.Clear();
 				self->EndCameraLook();
+				self->RecordRawInput();
 				break;
 			case WM_SIZE:
 				self->m_width = LOWORD(lParam);

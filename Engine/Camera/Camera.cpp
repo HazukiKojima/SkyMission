@@ -1,6 +1,19 @@
 #include "Camera.h"
+#include <cmath>
 
 namespace Engine {
+	void Camera::InterpolateFrom(const Camera& previous, float alpha) {
+		using namespace DirectX;
+		const auto from = XMQuaternionRotationMatrix(XMMatrixTranspose(previous.m_view));
+		const auto to = XMQuaternionRotationMatrix(XMMatrixTranspose(m_view));
+		const auto rotation = XMMatrixRotationQuaternion(XMQuaternionSlerp(from, to, alpha));
+		XMFLOAT3 position, forward, up;
+		XMStoreFloat3(&position, XMVectorLerp(XMLoadFloat3(&previous.m_position), XMLoadFloat3(&m_position), alpha));
+		XMStoreFloat3(&forward, rotation.r[2]);
+		XMStoreFloat3(&up, rotation.r[1]);
+		LookTo(position, forward, up);
+		SetVerticalFov(std::lerp(previous.m_fovY, m_fovY, alpha));
+	}
 	void Camera::Initialize(float fovY, float aspect, float nearZ, float farZ) {
 		m_fovY = fovY;
 		m_aspect = aspect;
