@@ -1,11 +1,19 @@
 #pragma once
+#include <chrono>
 #include <functional>
 #include <string>
 #include <string_view>
+#include <variant>
+#include <vector>
 #include "../EngineCommon.h"
 #include "../Input/GamepadInput.h"
 
 namespace Engine {
+	struct TimedInputSample {
+		std::chrono::steady_clock::time_point time;
+		std::variant<InputSnapshot, GamepadSnapshot> state;
+	};
+
 	class Window {
 	  public:
 		Window(UINT width, UINT height, const wchar_t* title, HINSTANCE hInstance);
@@ -15,6 +23,8 @@ namespace Engine {
 		Window& operator=(const Window&) = delete;
 
 		InputSnapshot ConsumeInput();
+		void SetTimedInputEnabled(bool enabled);
+		std::vector<TimedInputSample> TakeInputSamples();
 		void SetGamepadRumble(float lowFrequency, float highFrequency);
 		void SetLoading(bool loading);
 		void SetLoadingProgress(int percent, std::wstring_view item);
@@ -43,6 +53,7 @@ namespace Engine {
 		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 		void ProcessRawInput(HRAWINPUT handle);
+		void RecordRawInput();
 		void DeactivateInput();
 		void UnregisterRawInput();
 		void BeginCameraLook();
@@ -51,6 +62,9 @@ namespace Engine {
 
 		RawInputState m_input;
 		GamepadInput m_gamepad;
+		bool m_timedInputEnabled = false;
+		std::vector<TimedInputSample> m_inputSamples;
+		std::chrono::steady_clock::time_point m_lastRawInputTime;
 		HWND m_hwnd = nullptr;
 		bool m_cameraMouseCaptured = false;
 		bool m_loading = false;

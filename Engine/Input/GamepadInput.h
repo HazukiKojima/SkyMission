@@ -1,6 +1,8 @@
 #pragma once
 #include "RawInputState.h"
 #include <GameInput.h>
+#include <chrono>
+#include <functional>
 #include <optional>
 #include <wrl/client.h>
 
@@ -12,7 +14,8 @@ namespace Engine {
 		GamepadInput(const GamepadInput&) = delete;
 		GamepadInput& operator=(const GamepadInput&) = delete;
 
-		GamepadSnapshot ConsumeFrame();
+		using SampleCallback = std::function<void(std::chrono::steady_clock::time_point, const GamepadSnapshot&)>;
+		GamepadSnapshot ConsumeFrame(const SampleCallback& onSample = {});
 		void SetRumble(float lowFrequency, float highFrequency);
 		void Reset();
 
@@ -23,6 +26,7 @@ namespace Engine {
 		Microsoft::WRL::ComPtr<IGameInputReading> m_previous;
 		unsigned m_buttons = 0;
 		std::optional<std::uint64_t> m_northPressedAt;
+		bool m_northHeldReported = false;
 		GameInputRumbleParams m_rumble{};
 		ULONGLONG m_lastRumbleUpdate = 0;
 	};

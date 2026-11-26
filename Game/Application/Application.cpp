@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <format>
 #include <future>
+#include <iterator>
 #include <mutex>
 #include <optional>
 #include <algorithm>
@@ -19,6 +20,70 @@
 
 namespace Game {
 	using namespace Engine;
+
+	namespace {
+		constexpr double kSimulationStepSeconds = 1.0 / 60.0;
+		constexpr double kMaximumFrameSeconds = 0.25;
+
+		void ClearInputEvents(InputSnapshot& input) {
+			input.pressedKeys = {};
+			input.keyPressCounts = {};
+			input.rightMousePressCount = 0;
+			input.mouseDeltaX = 0;
+			input.mouseDeltaY = 0;
+			input.gamepad.presses = {};
+			input.gamepad.northTapped = false;
+		}
+
+		void AccumulateGameplayInput(InputSnapshot& pending, const InputSnapshot& input) {
+			if (!input.active) {
+				pending = {};
+				return;
+			}
+
+			pending.active = true;
+			for (size_t key = 0; key < input.pressedKeys.size(); ++key) {
+				pending.pressedKeys[key] |= input.pressedKeys[key];
+				pending.keyPressCounts[key] = static_cast<std::uint16_t>(std::min<unsigned>(
+					pending.keyPressCounts[key] + input.keyPressCounts[key], UINT16_MAX));
+			}
+			for (size_t button = 0; button < input.gamepad.presses.size(); ++button) {
+				pending.gamepad.presses[button] = static_cast<std::uint16_t>(std::min<unsigned>(
+					pending.gamepad.presses[button] + input.gamepad.presses[button], UINT16_MAX));
+			}
+			pending.gamepad.northTapped |= input.gamepad.northTapped;
+			pending.rightMousePressCount = std::min(pending.rightMousePressCount +
+				input.rightMousePressCount, unsigned{UINT16_MAX});
+			pending.mouseDeltaX += input.mouseDeltaX;
+			pending.mouseDeltaY += input.mouseDeltaY;
+		}
+
+		void ApplyGameplaySample(InputSnapshot& input, const TimedInputSample& sample) {
+			if (const auto* raw = std::get_if<InputSnapshot>(&sample.state)) {
+				AccumulateGameplayInput(input, *raw);
+				input.keys = raw->keys;
+				input.leftMouseDown = raw->leftMouseDown;
+				input.middleMouseDown = raw->middleMouseDown;
+				input.rightMouseDown = raw->rightMouseDown;
+			} else if (input.active) {
+				const auto& pad = std::get<GamepadSnapshot>(sample.state);
+				AccumulateGameplayInput(input, InputSnapshot{.active = true, .gamepad = pad});
+				const auto presses = input.gamepad.presses;
+				const bool northTapped = input.gamepad.northTapped;
+				input.gamepad = pad;
+				input.gamepad.presses = presses;
+				input.gamepad.northTapped = northTapped;
+			}
+		}
+
+		DirectX::XMFLOAT3 InterpolatePosition(const DirectX::XMFLOAT3& before,
+			const DirectX::XMFLOAT3& after, float alpha) {
+			using namespace DirectX;
+			XMFLOAT3 position;
+			XMStoreFloat3(&position, XMVectorLerp(XMLoadFloat3(&before), XMLoadFloat3(&after), alpha));
+			return position;
+		}
+	}
 
 	Application::Application(HINSTANCE hInstance) : m_hInstance(hInstance) {}
 
@@ -169,6 +234,7 @@ namespace Game {
 
 			if (m_scene) {
 				m_scene->OnResize(w, h);
+				m_hasRenderHistory = false;
 			}
 		});
 	}
@@ -193,6 +259,11 @@ namespace Game {
 					m_lastTime = std::chrono::steady_clock::now();
 					m_fpsTimer = 0;
 					m_fpsFrameCount = 0;
+					m_pendingSimulationSeconds = 0;
+					m_gameplayInput = {};
+					m_inputSamples.clear();
+					m_window->SetTimedInputEnabled(m_screen == Screen::Playing);
+					m_hasRenderHistory = false;
 					suspended = false;
 					m_combatAudio.SetSuspended(false);
 				}
@@ -206,27 +277,28 @@ namespace Game {
 	}
 
 	void Application::Update() {
-		const float deltaSeconds = UpdateFrameTiming();
 		if (!m_scene) return;
 
 		const InputSnapshot input = m_window->ConsumeInput();
+		const double deltaSeconds = UpdateFrameTiming();
 		m_combatAudio.SetSuspended(!input.active);
 		UpdateInputDevice(input);
 
 		if (m_screen == Screen::Playing) {
 			UpdateGameplay(input, deltaSeconds);
 		} else {
+			m_sceneSeconds += std::min(deltaSeconds, kMaximumFrameSeconds);
 			UpdateMenu(input);
 		}
 	}
 
-	float Application::UpdateFrameTiming() {
+	double Application::UpdateFrameTiming() {
 		// 経過時間を測り、一定間隔でFPSとGPU時間の表示を更新する
 		const auto now = std::chrono::steady_clock::now();
-		const std::chrono::duration<float> dt = now - m_lastTime;
+		const std::chrono::duration<double> dt = now - m_lastTime;
 		m_lastTime = now;
-		const float deltaSeconds = dt.count();
-		m_fpsTimer += deltaSeconds;
+		const double deltaSeconds = dt.count();
+		m_fpsTimer += static_cast<float>(deltaSeconds);
 		++m_fpsFrameCount;
 
 		if (m_fpsTimer >= 0.25f) {
@@ -243,7 +315,6 @@ namespace Game {
 			m_fpsFrameCount = 0;
 		}
 
-		m_elapsedTime += deltaSeconds;
 		return deltaSeconds;
 	}
 
@@ -278,15 +349,53 @@ namespace Game {
 		m_scene->StartNewMission();
 		m_screen = Screen::Playing;
 		m_captureMode = 0;
+		m_pendingSimulationSeconds = 0;
+		m_gameplayInput = input;
+		ClearInputEvents(m_gameplayInput);
+		m_inputSamples.clear();
+		m_window->SetTimedInputEnabled(true);
+		m_hasRenderHistory = false;
 
 		// 開始に使った入力を同じフレームのスキップ判定に渡さない
-		m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
-		m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
-		m_hudPresenter.Build(m_scene->GetCombatSnapshot(),
-			{.width = m_window->GetWidth(), .height = m_window->GetHeight()}, m_hud, m_usingGamepad);
+		UpdateGameplayFrame();
 	}
 
-	void Application::UpdateGameplay(const InputSnapshot& input, float deltaSeconds) {
+	void Application::UpdateGameplay(const InputSnapshot& input, double deltaSeconds) {
+		if (!input.active) m_window->SetGamepadRumble(0, 0);
+
+		auto samples = m_window->TakeInputSamples();
+		m_inputSamples.insert(m_inputSamples.end(), std::make_move_iterator(samples.begin()),
+			std::make_move_iterator(samples.end()));
+		std::stable_sort(m_inputSamples.begin(), m_inputSamples.end(),
+			[](const auto& a, const auto& b) { return a.time < b.time; });
+		auto next = m_inputSamples.begin();
+
+		m_pendingSimulationSeconds += std::min(deltaSeconds, kMaximumFrameSeconds);
+
+		// 各ステップの終了時刻までに届いた入力だけを、そのステップへ渡す。
+		while (m_pendingSimulationSeconds >= kSimulationStepSeconds && m_screen == Screen::Playing) {
+			m_pendingSimulationSeconds -= kSimulationStepSeconds;
+			const auto stepEnd = m_lastTime - std::chrono::duration<double>(m_pendingSimulationSeconds);
+			while (next != m_inputSamples.end() && next->time <= stepEnd) {
+				ApplyGameplaySample(m_gameplayInput, *next);
+				++next;
+			}
+			UpdateInputDevice(m_gameplayInput);
+			StepGameplay(m_gameplayInput, static_cast<float>(kSimulationStepSeconds));
+			ClearInputEvents(m_gameplayInput);
+		}
+		m_inputSamples.erase(m_inputSamples.begin(), next);
+
+		if (m_screen == Screen::Playing) {
+			UpdateGameplayFrame();
+		} else {
+			m_window->SetTimedInputEnabled(false);
+			m_inputSamples.clear();
+			UpdateMenuFrame();
+		}
+	}
+
+	void Application::StepGameplay(const InputSnapshot& input, float deltaSeconds) {
 		if (input.WasKeyPressed(VK_F6)) {
 			m_captureMode = (m_captureMode + 1) % 3;
 			Log("Capture view: {} (0=normal, 1=environment+ships, 2=environment)\n", m_captureMode);
@@ -303,6 +412,11 @@ namespace Game {
 		const bool endingWasActive = previousState.cinematic.active &&
 			previousState.cinematic.cinematicId == "ending";
 		const float previousHealth = previousState.playerHealth;
+		const auto* previousScene = &m_scene->GetRenderScene();
+		m_previousRenderScene = *previousScene;
+		m_previousCombatState = previousState;
+		m_previousSceneSeconds = m_sceneSeconds;
+		m_sceneSeconds += simulationSeconds;
 		const auto flight = m_aircraftController.ReadInput(input);
 		m_scene->Update(flight, simulationSeconds, input, combat);
 		const auto& combatState = m_scene->GetCombatSnapshot();
@@ -323,7 +437,6 @@ namespace Game {
 			m_screen = showGameOver ? Screen::GameOver : Screen::Clear;
 			m_captureMode = 0;
 			m_combatAudio.ResetPlayback();
-			UpdateMenuFrame();
 			return;
 		}
 
@@ -333,20 +446,55 @@ namespace Game {
 		m_combatAudio.UpdateEnemyRadio(combatState.enemyRadio);
 		m_scene->UpdateCinematicBriefing(voice, input.active ? deltaSeconds : 0);
 		m_combatAudio.Update(combatState.audio, combatState.hitCount, false, false, deltaSeconds);
-		const auto view = m_renderer->UpdateFrameConstants(PrepareCaptureScene(), m_elapsedTime);
+
+		const auto& before = m_previousCombatState.cinematic;
+		const auto& after = combatState.cinematic;
+		m_hasRenderHistory = previousScene == &m_scene->GetRenderScene() && !combatState.audio.restarted &&
+			m_previousCombatState.result == combatState.result && before.active == after.active &&
+			(!after.active || (before.cinematicId == after.cinematicId && before.shotIndex == after.shotIndex));
+	}
+
+	void Application::UpdateGameplayFrame() {
+		auto combatState = m_scene->GetCombatSnapshot();
+		m_renderScene = m_scene->GetRenderScene();
+		auto renderSeconds = m_sceneSeconds;
+		if (m_hasRenderHistory) {
+			const float alpha = static_cast<float>(m_pendingSimulationSeconds / kSimulationStepSeconds);
+			m_renderScene.InterpolateFrom(m_previousRenderScene, alpha);
+			renderSeconds = std::lerp(m_previousSceneSeconds, m_sceneSeconds, alpha);
+
+			const auto& before = m_previousCombatState;
+			combatState.playerPosition = InterpolatePosition(before.playerPosition, combatState.playerPosition, alpha);
+			combatState.playerHeading = InterpolatePosition(before.playerHeading, combatState.playerHeading, alpha);
+			combatState.muzzle = InterpolatePosition(before.muzzle, combatState.muzzle, alpha);
+			combatState.forward = InterpolatePosition(before.forward, combatState.forward, alpha);
+			if (combatState.selected == before.selected && combatState.aim && before.aim)
+				combatState.aim->aimPoint = InterpolatePosition(before.aim->aimPoint, combatState.aim->aimPoint, alpha);
+			for (auto& target : combatState.enemies) {
+				const auto previous = std::ranges::find(before.enemies, target.id, &CombatTarget::id);
+				if (previous != before.enemies.end()) {
+					target.center = InterpolatePosition(previous->center, target.center, alpha);
+					target.heading = InterpolatePosition(previous->heading, target.heading, alpha);
+				}
+			}
+		}
+
+		if (m_captureMode != 0) PrepareCaptureScene();
+		const auto& scene = m_captureMode == 0 ? m_renderScene : m_captureScene;
+		const auto view = m_renderer->UpdateFrameConstants(scene, static_cast<float>(renderSeconds));
 
 		// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
 		m_hud.Reset(view.width, view.height);
 
 		if (m_captureMode == 0) {
-			if (!m_scene->GetCombatSnapshot().cinematic.active)
+			if (!combatState.cinematic.active)
 				m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, combatState.playerPosition, m_hud);
-			m_hudPresenter.Build(m_scene->GetCombatSnapshot(), view, m_hud, m_usingGamepad);
+			m_hudPresenter.Build(combatState, view, m_hud, m_usingGamepad);
 		}
 	}
 
 	void Application::UpdateMenuFrame() {
-		m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), m_elapsedTime);
+		m_renderer->UpdateFrameConstants(m_scene->GetRenderScene(), static_cast<float>(m_sceneSeconds));
 		BuildMenuHud();
 	}
 
@@ -375,18 +523,16 @@ namespace Game {
 		centered(std::string(confirm) + action, height * 0.56f, 26 * scale);
 	}
 
-	const Engine::Scene& Application::PrepareCaptureScene() {
-		const auto& source = m_scene->GetRenderScene();
-
-		if (m_captureMode == 0) return source;
-
+	void Application::PrepareCaptureScene() {
 		// 描画専用のシーンを作る。ゲーム内オブジェクト、被害、ミッション状態は変更しない
 		m_captureScene = Engine::Scene{};
-		m_captureScene.SetCamera(source.GetCamera());
-		m_captureScene.SetEnvironment(source.GetEnvironment());
+		m_captureScene.SetCamera(m_renderScene.GetCamera());
+		m_captureScene.SetEnvironment(m_renderScene.GetEnvironment());
 
 		if (m_captureMode == 1) {
-			for (const auto& object : m_scene->GetObjects()) {
+			const auto& objects = &m_scene->GetRenderScene().GetObjects() == &m_scene->GetObjects()
+				? m_renderScene.GetObjects() : m_scene->GetObjects();
+			for (const auto& object : objects) {
 				if (std::find(m_captureShipModels.begin(), m_captureShipModels.end(), object.model) ==
 					m_captureShipModels.end())
 					continue;
@@ -397,11 +543,11 @@ namespace Game {
 					copy->nodeRotationRadians = object.nodeRotationRadians;
 			}
 		}
-		return m_captureScene;
 	}
 
 	void Application::Render() {
-		const auto& scene = m_captureMode == 0 ? m_scene->GetRenderScene() : m_captureScene;
+		const auto& scene = m_screen == Screen::Playing
+			? (m_captureMode == 0 ? m_renderScene : m_captureScene) : m_scene->GetRenderScene();
 		m_renderer->Render(m_window->GetWidth(), m_window->GetHeight(), scene,
 			m_screen != Screen::Playing || m_captureMode == 0 ? &m_hud : nullptr);
 	}

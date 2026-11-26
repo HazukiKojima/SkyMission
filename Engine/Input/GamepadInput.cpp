@@ -34,6 +34,16 @@ namespace Engine {
 					std::abs(state.rightThumbstickX), std::abs(state.rightThumbstickY)}) > 0.18f ||
 				std::max(state.leftTrigger, state.rightTrigger) > 0.12f;
 		}
+
+		GamepadSnapshot MapState(const GameInputGamepadState& state) {
+			return {.leftX = ApplyDeadZone(state.leftThumbstickX, 0.18f),
+				.leftY = ApplyDeadZone(-state.leftThumbstickY, 0.18f),
+				.rightX = ApplyDeadZone(state.rightThumbstickX, 0.18f),
+				.rightY = ApplyDeadZone(-state.rightThumbstickY, 0.18f),
+				.leftTrigger = ApplyDeadZone(state.leftTrigger, 0.12f),
+				.rightTrigger = ApplyDeadZone(state.rightTrigger, 0.12f),
+				.buttons = MapButtons(state.buttons)};
+		}
 	} // namespace
 
 	GamepadInput::GamepadInput() {
@@ -79,10 +89,11 @@ namespace Engine {
 		m_device.Reset();
 		m_buttons = 0;
 		m_northPressedAt.reset();
+		m_northHeldReported = false;
 		m_lastRumbleUpdate = 0;
 	}
 
-	GamepadSnapshot GamepadInput::ConsumeFrame() {
+	GamepadSnapshot GamepadInput::ConsumeFrame(const SampleCallback& onSample) {
 		if (!m_input) return {};
 		if (m_device && !(m_device->GetDeviceStatus() & GameInputDeviceConnected)) {
 			Log("GameInput: active gamepad disconnected\n");
@@ -105,6 +116,7 @@ namespace Engine {
 		}
 
 		const auto now = m_input->GetCurrentTimestamp();
+		const auto wallNow = std::chrono::steady_clock::now();
 		if (m_device && latest->GetTimestamp() + kGamepadRescanMicroseconds < now) {
 			// 操作されていないパッドでは、同じ読み取りが返り続ける
 			// 別のパッドで新しい操作を検出したときだけ切り替える
@@ -121,13 +133,21 @@ namespace Engine {
 			}
 		}
 
-		GamepadSnapshot frame{.leftX = ApplyDeadZone(state.leftThumbstickX, 0.18f),
-			.leftY = ApplyDeadZone(-state.leftThumbstickY, 0.18f),
-			.rightX = ApplyDeadZone(state.rightThumbstickX, 0.18f),
-			.rightY = ApplyDeadZone(-state.rightThumbstickY, 0.18f),
-			.leftTrigger = ApplyDeadZone(state.leftTrigger, 0.12f),
-			.rightTrigger = ApplyDeadZone(state.rightTrigger, 0.12f),
-			.buttons = MapButtons(state.buttons)};
+		auto frame = MapState(state);
+		const auto emit = [&](std::uint64_t time, const GamepadSnapshot& sample) {
+			if (onSample) onSample(wallNow - std::chrono::microseconds(now - std::min(now, time)), sample);
+		};
+		GameInputGamepadState previousState{};
+		auto held = m_previous && m_previous->GetGamepadState(&previousState) ? MapState(previousState) : frame;
+		const auto emitNorthHold = [&](std::uint64_t until) {
+			if (!m_northPressedAt || m_northHeldReported || until < *m_northPressedAt + kLongPressMicroseconds)
+				return;
+
+			m_northHeldReported = true;
+			auto sample = held;
+			sample.northHeld = true;
+			emit(*m_northPressedAt + kLongPressMicroseconds, sample);
+		};
 
 		if (!m_previous) {
 			// 接続・フォーカス復帰時に、すでに保持しているボタンを新規押下として扱わない。
@@ -139,17 +159,26 @@ namespace Engine {
 			if (const auto* info = m_device->GetDeviceInfo())
 				Log("GameInput: active gamepad {:04x}:{:04x}\n", info->vendorId, info->productId);
 		} else if (m_previous.Get() != latest.Get()) {
-			const auto addPresses = [&](unsigned buttons, std::uint64_t timestamp) {
-				const unsigned pressed = buttons & ~m_buttons;
+			const auto addReading = [&](GamepadSnapshot sample, std::uint64_t timestamp) {
+				emitNorthHold(timestamp);
+				held = sample;
+				const unsigned pressed = sample.buttons & ~m_buttons;
 				for (unsigned i = 0; i < frame.presses.size(); ++i)
-					if (pressed & (1u << i)) ++frame.presses[i];
+					if (pressed & (1u << i)) {
+						++frame.presses[i];
+						sample.presses[i] = 1;
+					}
 				if (pressed & kNorthButtonMask) {
 					m_northPressedAt = timestamp;
-				} else if (!(buttons & kNorthButtonMask) && m_northPressedAt) {
-					frame.northTapped |= timestamp - *m_northPressedAt < kLongPressMicroseconds;
+					m_northHeldReported = false;
+				} else if (!(sample.buttons & kNorthButtonMask) && m_northPressedAt) {
+					sample.northTapped = timestamp - *m_northPressedAt < kLongPressMicroseconds;
 					m_northPressedAt.reset();
 				}
-				m_buttons = buttons;
+				frame.northTapped |= sample.northTapped;
+				sample.northHeld = m_northPressedAt && m_northHeldReported;
+				m_buttons = sample.buttons;
+				emit(timestamp, sample);
 			};
 
 			// フレーム間の短い押下と再押下を保持する。履歴が途切れたときは最新状態へ進む。
@@ -161,13 +190,13 @@ namespace Engine {
 					break;
 				GameInputGamepadState intermediate{};
 				if (next->GetGamepadState(&intermediate))
-					addPresses(MapButtons(intermediate.buttons), next->GetTimestamp());
+					addReading(MapState(intermediate), next->GetTimestamp());
 				m_previous = std::move(next);
 			}
-			addPresses(frame.buttons, latest->GetTimestamp());
+			addReading(MapState(state), latest->GetTimestamp());
 		}
-		frame.northHeld =
-			m_northPressedAt && m_input->GetCurrentTimestamp() - *m_northPressedAt >= kLongPressMicroseconds;
+		emitNorthHold(now);
+		frame.northHeld = m_northPressedAt && m_northHeldReported;
 		m_buttons = frame.buttons;
 		m_previous = std::move(latest);
 		return frame;
