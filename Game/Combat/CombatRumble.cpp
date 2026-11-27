@@ -47,7 +47,7 @@ namespace Game {
 
 		const bool flying = combat.audio.flying && combat.result == CombatResult::Active && !combat.cinematic.active;
 		const bool highG = flying && flight.highGTurn &&
-			std::max(std::abs(flight.turn), std::abs(flight.yaw)) > 0.05f;
+			std::max(std::abs(flight.turn), std::abs(flight.yaw)) > AircraftInput::kHighGTurnIntentThreshold;
 		const float acceleration = std::max(0.0f, flight.throttle);
 		const float braking = std::max(0.0f, -flight.throttle);
 		const float speedRatio = std::clamp(combat.playerSpeedMetersPerSecond / m_playerMaximumSpeed, 0.0f, 1.0f);
@@ -58,8 +58,9 @@ namespace Game {
 		m_brakingRumble = flying ?
 			std::lerp(m_brakingRumble, braking * speedRatio,
 				1.0f - std::exp(-m_settings.braking.responsePerSecond * deltaSeconds)) : 0.0f;
-		const float engineRumble = m_accelerationRumble > 0.01f ? m_accelerationRumble : 0.0f;
-		const float airflowRumble = m_brakingRumble > 0.01f ? m_brakingRumble : 0.0f;
+		constexpr float kMinimumContinuousRumble = 0.01f;
+		const float engineRumble = m_accelerationRumble > kMinimumContinuousRumble ? m_accelerationRumble : 0.0f;
+		const float airflowRumble = m_brakingRumble > kMinimumContinuousRumble ? m_brakingRumble : 0.0f;
 		const bool gunStartPulse = m_gunRumbleSeconds > 0;
 		const float gunRumbleInterval = m_settings.gunRepeatIntervalSeconds;
 		// 開始振動が終わったら、連射が続く間は各周期の末尾で短く振動させる

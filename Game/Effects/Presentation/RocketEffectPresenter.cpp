@@ -9,7 +9,7 @@ namespace Game {
 
 		// 甲板の煙に艦船用の上昇・拡大設定を重ねる
 		for (const auto& smoke : snapshot.deckSmoke) {
-			if (!context.HasVertexBudget(6)) break;
+			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;
 
 			const auto location = XMLoadFloat3(&smoke.position) +
 				XMVectorSet(smoke.age * context.Settings().carrier.smokeDriftSpeed,
@@ -26,7 +26,7 @@ namespace Game {
 
 		// 放出済みの煙は機体から独立して残し、時間とともに広げて消す
 		for (const auto& smoke : snapshot.rocketSmoke) {
-			if (!context.HasVertexBudget(6)) break;
+			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;
 
 			const float fade =
 				std::clamp(1 - smoke.age / context.Settings().rocket.smokeLifetimeSeconds, 0.0f, 1.0f);
@@ -42,14 +42,23 @@ namespace Game {
 		}
 
 		// 飛行中のロケット後端へ発光と炎を追従させる
+		constexpr size_t kExhaustVertexReservation = 222;
+		constexpr float kExhaustCoreRadius = 2.0f;
+		constexpr float kExhaustGlowOffset = 2.0f;
+		constexpr float kExhaustGlowRadius = 3.0f;
+		constexpr float kExhaustFlameOffset = 4.0f;
+		constexpr float kExhaustFlameRadius = 3.5f;
+		constexpr unsigned kExhaustFlameTextureSeed = 31;
 		for (const auto& exhaust : snapshot.rocketExhausts) {
-			if (!context.HasVertexBudget(222)) break;
+			if (!context.HasVertexBudget(kExhaustVertexReservation)) break;
 
 			const auto tail = XMLoadFloat3(&exhaust.position);
 			const auto direction = XMLoadFloat3(&exhaust.direction);
-			context.DrawGlow(tail, 2.0f, context.Settings().rocket.exhaustCoreColor);
-			context.DrawGlow(tail - direction * 2, 3.0f, context.Settings().rocket.exhaustGlowColor);
-			context.DrawCloud(tail - direction * 4, 3.5f, 0, 31, context.Settings().rocket.exhaustFlameColor);
+			context.DrawGlow(tail, kExhaustCoreRadius, context.Settings().rocket.exhaustCoreColor);
+			context.DrawGlow(tail - direction * kExhaustGlowOffset, kExhaustGlowRadius,
+				context.Settings().rocket.exhaustGlowColor);
+			context.DrawCloud(tail - direction * kExhaustFlameOffset, kExhaustFlameRadius, 0, kExhaustFlameTextureSeed,
+				context.Settings().rocket.exhaustFlameColor);
 		}
 	}
 } // namespace Game

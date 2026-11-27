@@ -8,7 +8,7 @@ namespace Game {
 		using namespace DirectX;
 
 		for (const auto& smoke : snapshot.deckSmoke) {
-			if (!context.HasVertexBudget(6)) break;
+			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;
 
 			// 上昇と横流れを加えて甲板の煙を広げる
 			const auto location = XMLoadFloat3(&smoke.position) +

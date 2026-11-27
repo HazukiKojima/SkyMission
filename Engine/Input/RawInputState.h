@@ -1,11 +1,14 @@
 #pragma once
 #include <Windows.h>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <unordered_map>
 
 namespace Engine {
+	inline constexpr std::size_t kVirtualKeyCount = 256;
+
 	enum class GamepadButton : unsigned { South, North, East, LeftShoulder, RightShoulder, Menu, Count };
 
 	struct GamepadSnapshot {
@@ -13,8 +16,9 @@ namespace Engine {
 		float leftTrigger = 0, rightTrigger = 0;
 		unsigned buttons = 0;
 		std::array<std::uint16_t, static_cast<unsigned>(GamepadButton::Count)> presses{};
-		bool northTapped = false;
+		std::uint16_t northTapCount = 0;
 		bool northHeld = false;
+		bool northHoldStarted = false;
 
 		bool IsDown(GamepadButton button) const {
 			return (buttons & (1u << static_cast<unsigned>(button))) != 0;
@@ -28,9 +32,9 @@ namespace Engine {
 	// 同じ更新内で入力スナップショットを共有する
 	struct InputSnapshot {
 		bool active = false;
-		std::array<bool, 256> keys{};
-		std::array<bool, 256> pressedKeys{};
-		std::array<std::uint16_t, 256> keyPressCounts{};
+		std::array<bool, kVirtualKeyCount> keys{};
+		std::array<bool, kVirtualKeyCount> pressedKeys{};
+		std::array<std::uint16_t, kVirtualKeyCount> keyPressCounts{};
 
 		unsigned GetKeyPressCount(UINT key) const {
 			return active && key < keyPressCounts.size() ? keyPressCounts[key] : 0;
@@ -43,6 +47,7 @@ namespace Engine {
 		bool rightMouseDown = false;
 		unsigned rightMousePressCount = 0;
 		bool leftMouseDown = false;
+		bool leftMousePressed = false;
 		bool middleMouseDown = false;
 		std::int64_t mouseDeltaX = 0;
 		std::int64_t mouseDeltaY = 0;
@@ -53,7 +58,8 @@ namespace Engine {
 		}
 
 		bool IsTargetLookDown() const {
-			return IsKeyDown('Z') || (active && gamepad.northHeld);
+			return IsKeyDown('Z') || WasKeyPressed('Z') ||
+				(active && (gamepad.northHeld || gamepad.northHoldStarted));
 		}
 
 		bool IsKeyDown(UINT key) const {
@@ -86,7 +92,7 @@ namespace Engine {
 		void ProcessMouse(HANDLE device, const RAWMOUSE& mouse, int desktopWidth, int desktopHeight);
 
 		bool IsKeyDown(UINT key) const {
-			if (!m_active || key >= 256) return false;
+			if (!m_active || key >= kVirtualKeyCount) return false;
 
 			for (const auto& [device, keys] : m_keyboards)
 				if (keys[key]) return true;
@@ -126,10 +132,11 @@ namespace Engine {
 		};
 
 		bool m_active = false;
+		bool m_leftMousePressed = false;
 		std::uint16_t m_rightMousePressCount = 0;
-		std::array<bool, 256> m_pressedKeys{};
-		std::array<std::uint16_t, 256> m_keyPressCounts{};
-		std::unordered_map<HANDLE, std::array<bool, 256>> m_keyboards;
+		std::array<bool, kVirtualKeyCount> m_pressedKeys{};
+		std::array<std::uint16_t, kVirtualKeyCount> m_keyPressCounts{};
+		std::unordered_map<HANDLE, std::array<bool, kVirtualKeyCount>> m_keyboards;
 		std::unordered_map<HANDLE, MouseState> m_mice;
 		std::int64_t m_deltaX = 0, m_deltaY = 0;
 	};

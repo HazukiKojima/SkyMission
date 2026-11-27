@@ -1,4 +1,5 @@
 #include "CinematicController.h"
+#include "Game/Settings/SimulationTiming.h"
 #include <algorithm>
 #include <cmath>
 
@@ -67,7 +68,7 @@ namespace Game {
 		// 音声終了を優先して行送りの時刻を決める
 		if (voice == CinematicVoiceStatus::Playing) return;
 
-		m_briefingSeconds += std::min(deltaSeconds, 0.25f);
+		m_briefingSeconds += std::min(deltaSeconds, kMaximumSimulationDeltaSeconds);
 		const auto index = static_cast<size_t>(m_presentation.briefingLine);
 
 		if (voice == CinematicVoiceStatus::Finished ||

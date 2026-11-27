@@ -5,6 +5,16 @@
 #include <algorithm>
 
 namespace Game {
+	namespace {
+		constexpr size_t kMaximumFormationAircraft = 32;
+		constexpr size_t kMaximumShots = 64;
+		constexpr size_t kMaximumRadioEntries = 64;
+		constexpr size_t kMaximumBriefingEntries = 64;
+		constexpr size_t kMaximumLabelBytes = 192;
+		constexpr size_t kMaximumRadioTextBytes = 384;
+		constexpr float kMaximumVerticalFovDegrees = 120.0f;
+		constexpr double kMinimumCameraHorizontalSeparationSquared = 1e-6;
+	}
 	void CinematicShotSettings::Validate() const {
 		if (target != "model" && target != "carrier")
 			throw std::invalid_argument("target must be model or carrier");
@@ -14,7 +24,7 @@ namespace Game {
 				throw std::invalid_argument(std::string(key) + " must be positive and finite");
 		};
 
-		if (formationOffsets.empty() || formationOffsets.size() > 32)
+		if (formationOffsets.empty() || formationOffsets.size() > kMaximumFormationAircraft)
 			throw std::invalid_argument("formationOffsets must contain 1..32 entries");
 
 		const auto finiteVector = [](const DirectX::XMFLOAT3& value, const std::string& field) {
@@ -29,7 +39,7 @@ namespace Game {
 		positive(durationSeconds, "durationSeconds");
 		positive(modelScale, "modelScale");
 
-		if (model.empty() || model.size() > 192)
+		if (model.empty() || model.size() > kMaximumLabelBytes)
 			throw std::invalid_argument("model must be a nonempty asset ID");
 		if (!std::isfinite(headingDegrees)) throw std::invalid_argument("headingDegrees must be finite");
 
@@ -42,7 +52,7 @@ namespace Game {
 				"flightSpeedMetersPerSecond/propellerRadiansPerSecond must be nonnegative and finite");
 		positive(verticalFovDegrees, "verticalFovDegrees");
 
-		if (verticalFovDegrees >= 120) throw std::invalid_argument("verticalFovDegrees must be below 120");
+		if (verticalFovDegrees >= kMaximumVerticalFovDegrees) throw std::invalid_argument("verticalFovDegrees must be below 120");
 
 		for (const auto offset : {cameraStartOffsetMeters, cameraEndOffsetMeters, lookAtOffsetMeters})
 			for (float value : {offset.x, offset.y, offset.z})
@@ -56,10 +66,10 @@ namespace Game {
 		const double distance = dx * dx + dz * dz;
 		const double t = distance > 0 ? std::clamp(-(x * dx + z * dz) / distance, 0.0, 1.0) : 0;
 
-		if ((x + t * dx) * (x + t * dx) + (z + t * dz) * (z + t * dz) < 1e-6)
+		if ((x + t * dx) * (x + t * dx) + (z + t * dz) * (z + t * dz) < kMinimumCameraHorizontalSeparationSquared)
 			throw std::invalid_argument(
 				"cameraStartOffsetMeters/cameraEndOffsetMeters cross the lookAtOffsetMeters vertical axis");
-		if (title.empty() || subtitle.empty() || title.size() > 192 || subtitle.size() > 192)
+		if (title.empty() || subtitle.empty() || title.size() > kMaximumLabelBytes || subtitle.size() > kMaximumLabelBytes)
 			throw std::invalid_argument("title and subtitle must contain 1..192 UTF-8 bytes");
 	}
 
@@ -76,7 +86,7 @@ namespace Game {
 	void CinematicSettings::Validate() const {
 		CinematicShotSettings::Validate();
 
-		if (shots.size() > 64) throw std::invalid_argument("shots must contain 1..64 entries");
+		if (shots.size() > kMaximumShots) throw std::invalid_argument("shots must contain 1..64 entries");
 
 		// カットごとの設定を検証してエラーに番号を添える
 		for (size_t i = 0; i < shots.size(); ++i) {
@@ -99,14 +109,14 @@ namespace Game {
 					fadeInStartSeconds + fadeInSeconds <= durationSeconds)))
 			throw std::invalid_argument("fadeOutStartSeconds < cutSeconds <= fadeInStartSeconds; "
 										"fadeInStartSeconds + fadeInSeconds <= durationSeconds required");
-		if (radio.size() > 64) throw std::invalid_argument("radio must contain at most 64 entries");
+		if (radio.size() > kMaximumRadioEntries) throw std::invalid_argument("radio must contain at most 64 entries");
 
 		// 無線の再生区間が順番どおりで重ならないか調べる
 		float previousEnd = 0;
 
 		for (const auto& entry : radio) {
-			if (entry.caption.speaker.empty() || entry.caption.speaker.size() > 192 ||
-				entry.caption.text.empty() || entry.caption.text.size() > 384 ||
+			if (entry.caption.speaker.empty() || entry.caption.speaker.size() > kMaximumLabelBytes ||
+				entry.caption.text.empty() || entry.caption.text.size() > kMaximumRadioTextBytes ||
 				(entry.caption.side != "friendly" && entry.caption.side != "enemy"))
 				throw std::invalid_argument("radio requires speaker, text and friendly/enemy side");
 
@@ -119,14 +129,14 @@ namespace Game {
 			previousEnd = end;
 		}
 
-		if (briefing.size() > 64) throw std::invalid_argument("briefing must contain at most 64 entries");
+		if (briefing.size() > kMaximumBriefingEntries) throw std::invalid_argument("briefing must contain at most 64 entries");
 
 		// ブリーフィングの文章と代替表示時間を検証する
 		for (size_t i = 0; i < briefing.size(); ++i) {
 			const auto prefix = "briefing/" + std::to_string(i);
 
 			for (const auto& line : briefing[i].lines)
-				if (line.empty() || line.size() > 192)
+				if (line.empty() || line.size() > kMaximumLabelBytes)
 					throw std::invalid_argument(prefix + "/lines must contain 1..192 UTF-8 bytes per line");
 			if (!std::isfinite(briefing[i].fallbackSeconds) || briefing[i].fallbackSeconds <= 0)
 				throw std::invalid_argument(prefix + "/fallbackSeconds must be positive and finite");
@@ -186,7 +196,7 @@ namespace Game {
 			vector("originOffsetMeters", result.originOffsetMeters);
 
 			if (auto count = reader.TryResolveArrayLength(path, "formationOffsets")) {
-				if (*count < 1 || *count > 32)
+				if (*count < 1 || *count > kMaximumFormationAircraft)
 					throw std::invalid_argument("formationOffsets must contain 1..32 entries");
 
 				result.formationOffsets.resize(*count);
@@ -203,7 +213,7 @@ namespace Game {
 
 			// 明示されたブリーフィングで既定の台詞を置き換える
 			if (auto count = reader.TryResolveArrayLength(path, "briefing")) {
-				if (*count > 64) throw std::invalid_argument("briefing must contain at most 64 entries");
+				if (*count > kMaximumBriefingEntries) throw std::invalid_argument("briefing must contain at most 64 entries");
 
 				result.briefing.clear();
 
@@ -226,7 +236,7 @@ namespace Game {
 
 			// 映像と並行して流す無線の字幕・音声・時刻を読む
 			if (auto count = reader.TryResolveArrayLength(path, "radio")) {
-				if (*count > 64) throw std::invalid_argument("radio must contain at most 64 entries");
+				if (*count > kMaximumRadioEntries) throw std::invalid_argument("radio must contain at most 64 entries");
 
 				for (size_t i = 0; i < *count; ++i) {
 					const auto key = "/radio/" + std::to_string(i) + "/";
@@ -260,7 +270,7 @@ namespace Game {
 
 			// 共通設定を引き継ぎ、カットごとの指定項目で上書きする
 			if (auto count = reader.TryResolveArrayLength(path, "shots")) {
-				if (*count < 1 || *count > 64)
+				if (*count < 1 || *count > kMaximumShots)
 					throw std::invalid_argument("shots must contain 1..64 entries");
 
 				for (size_t i = 0; i < *count; ++i) {
@@ -296,7 +306,7 @@ namespace Game {
 					vec("lookAtOffsetMeters", shot.lookAtOffsetMeters);
 
 					if (auto formations = reader.TryResolveArrayLength(path, prefix + "formationOffsets")) {
-						if (*formations < 1 || *formations > 32)
+						if (*formations < 1 || *formations > kMaximumFormationAircraft)
 							throw std::invalid_argument(
 								prefix + "formationOffsets must contain 1..32 entries");
 						shot.formationOffsets.resize(*formations);

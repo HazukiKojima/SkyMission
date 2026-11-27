@@ -8,9 +8,11 @@ namespace Game {
 				throw std::invalid_argument(std::string(name) + " must be positive and finite");
 		}
 
-		if (settings.maxProjectiles < 4) throw std::invalid_argument("maxProjectiles must be at least 4");
+		if (settings.maxProjectiles < GunSettings::kMinimumProjectileCapacity)
+			throw std::invalid_argument("maxProjectiles must be at least 4");
 
-		if (settings.muzzleNames.size() != 2 && settings.muzzleNames.size() != 4)
+		if (settings.muzzleNames.size() != GunSettings::kTwinMuzzleCount &&
+			settings.muzzleNames.size() != GunSettings::kQuadMuzzleCount)
 			throw std::invalid_argument("muzzleNames must contain two or four names");
 
 		std::unordered_set<std::string> names;

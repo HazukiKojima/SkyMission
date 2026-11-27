@@ -116,7 +116,7 @@ namespace Engine {
 	void RenderDevice::CreateDescriptorHeaps() {
 		// RTVはバックバッファ・シーンカラー・雲の順に各フレーム分を配置する
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount * 3;
+		rtvHeapDesc.NumDescriptors = FrameCount * static_cast<UINT>(RtvGroup::Count);
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
@@ -145,21 +145,18 @@ namespace Engine {
 	}
 
 	void RenderDevice::CreateBackBufferViews() {
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-
 		for (UINT i = 0; i < FrameCount; ++i) {
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i])));
-
-			m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, rtvHandle);
-
-			rtvHandle.ptr += m_rtvDescriptorSize;
+			auto handle = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+			handle.ptr += static_cast<SIZE_T>(RtvIndex(RtvGroup::BackBuffer, i)) * m_rtvDescriptorSize;
+			m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, handle);
 		}
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetSceneRtvHandle() const {
 		D3D12_CPU_DESCRIPTOR_HANDLE handle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		handle.ptr += static_cast<SIZE_T>(FrameCount + GetFrameIndex()) * m_rtvDescriptorSize;
+		handle.ptr += static_cast<SIZE_T>(RtvIndex(RtvGroup::SceneColor, GetFrameIndex())) * m_rtvDescriptorSize;
 
 		return handle;
 	}
@@ -171,14 +168,14 @@ namespace Engine {
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCloudRtvHandle() const {
 		auto handle = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
-		handle.ptr += static_cast<SIZE_T>(FrameCount * 2 + GetFrameIndex()) * m_rtvDescriptorSize;
+		handle.ptr += static_cast<SIZE_T>(RtvIndex(RtvGroup::Cloud, GetFrameIndex())) * m_rtvDescriptorSize;
 		return handle;
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RenderDevice::GetCurrentRtvHandle() const {
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		rtvHandle.ptr += GetFrameIndex() * m_rtvDescriptorSize;
+		rtvHandle.ptr += static_cast<SIZE_T>(RtvIndex(RtvGroup::BackBuffer, GetFrameIndex())) * m_rtvDescriptorSize;
 
 		return rtvHandle;
 	}
@@ -249,9 +246,7 @@ namespace Engine {
 			CD3DX12_RESOURCE_DESC colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,
 				m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
-			const FLOAT clearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
-
-			CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_R8G8B8A8_UNORM, clearColor);
+			CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_R8G8B8A8_UNORM, SceneClearColor);
 
 			ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &colorDesc,
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clearValue,
@@ -260,7 +255,7 @@ namespace Engine {
 			// シーン画像の描画先
 			D3D12_CPU_DESCRIPTOR_HANDLE rtv = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
 
-			rtv.ptr += static_cast<SIZE_T>(FrameCount + i) * m_rtvDescriptorSize;
+			rtv.ptr += static_cast<SIZE_T>(RtvIndex(RtvGroup::SceneColor, i)) * m_rtvDescriptorSize;
 
 			m_device->CreateRenderTargetView(m_sceneRenderTargets[i].Get(), nullptr, rtv);
 		}
@@ -273,7 +268,7 @@ namespace Engine {
 		CD3DX12_RESOURCE_DESC depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 			DXGI_FORMAT_R32_TYPELESS, m_width, m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
-		CD3DX12_CLEAR_VALUE depthClear(DXGI_FORMAT_D32_FLOAT, 1.0f, 0);
+		CD3DX12_CLEAR_VALUE depthClear(DXGI_FORMAT_D32_FLOAT, SceneClearDepth, 0);
 
 		ThrowIfFailed(m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &depthDesc,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &depthClear, IID_PPV_ARGS(&m_sceneDepth)));
@@ -299,7 +294,7 @@ namespace Engine {
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear,
 				IID_PPV_ARGS(&m_cloudRenderTargets[frame])));
 			auto handle = m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
-			handle.ptr += static_cast<SIZE_T>(FrameCount * 2 + frame) * m_rtvDescriptorSize;
+			handle.ptr += static_cast<SIZE_T>(RtvIndex(RtvGroup::Cloud, frame)) * m_rtvDescriptorSize;
 			m_device->CreateRenderTargetView(m_cloudRenderTargets[frame].Get(), nullptr, handle);
 		}
 	}
@@ -319,18 +314,19 @@ namespace Engine {
 		depthSrv.Texture2D.MipLevels = 1;
 
 		// 各フレームの予約領域へシーンカラー、深度、雲を連続して配置する
+		const auto handleAt = [&](UINT index) {
+			auto handle = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
+			handle.ptr += static_cast<SIZE_T>(index) * m_srvDescriptorSize;
+			return handle;
+		};
 		for (UINT i = 0; i < FrameCount; ++i) {
-			D3D12_CPU_DESCRIPTOR_HANDLE srv = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
-			srv.ptr += static_cast<SIZE_T>(SceneColorSrvIndex(i)) * m_srvDescriptorSize;
-
-			m_device->CreateShaderResourceView(m_sceneRenderTargets[i].Get(), &colorSrv, srv);
-			srv.ptr += m_srvDescriptorSize;
-			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, srv);
-			srv.ptr += m_srvDescriptorSize;
+			m_device->CreateShaderResourceView(
+				m_sceneRenderTargets[i].Get(), &colorSrv, handleAt(SceneColorSrvIndex(i)));
+			m_device->CreateShaderResourceView(m_sceneDepth.Get(), &depthSrv, handleAt(SceneDepthSrvIndex(i)));
 
 			auto cloudSrv = colorSrv;
 			cloudSrv.Format = CloudFormat;
-			m_device->CreateShaderResourceView(m_cloudRenderTargets[i].Get(), &cloudSrv, srv);
+			m_device->CreateShaderResourceView(m_cloudRenderTargets[i].Get(), &cloudSrv, handleAt(CloudSrvIndex(i)));
 		}
 	}
 

@@ -2,7 +2,8 @@
 
 namespace Engine {
 	std::filesystem::path ExecutableDirectory() {
-		std::vector<wchar_t> buffer(512);
+		constexpr size_t kInitialPathBufferCharacters = 512;
+		std::vector<wchar_t> buffer(kInitialPathBufferCharacters);
 		for (;;) {
 			const DWORD count = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
 

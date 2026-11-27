@@ -1,4 +1,5 @@
 #include "CombatEffectSystem.h"
+#include "Game/Settings/SimulationTiming.h"
 #include <algorithm>
 #include <cmath>
 
@@ -61,7 +62,7 @@ namespace Game {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0) return;
 
 		// 寿命を進めて終了した演出を取り除く
-		const float step = std::min(deltaSeconds, CombatEffectSettings::maximumFrameSeconds);
+		const float step = std::min(deltaSeconds, kMaximumSimulationDeltaSeconds);
 		AdvanceEffects(m_snapshot.gunFlashes, step, m_settings.gun.flashLifetimeSeconds);
 		AdvanceEffects(m_snapshot.gunSmoke, step, m_settings.gun.smokeLifetimeSeconds);
 		m_snapshot.gunTracers.clear();

@@ -3,12 +3,19 @@
 #include <cmath>
 
 namespace Game {
+	namespace {
+		constexpr float kPositionSeedXWeight = 0.73f;
+		constexpr float kPositionSeedYWeight = 1.37f;
+		constexpr float kPositionSeedZWeight = 0.19f;
+		constexpr float kSampleIndexStride = 127.1f;
+		constexpr float kSampleHashScale = 43758.5453f;
+	}
 	EffectRandom::EffectRandom(const DirectX::XMFLOAT3& position)
-		: m_seed(position.x * 0.73f + position.y * 1.37f + position.z * 0.19f) {}
+		: m_seed(position.x * kPositionSeedXWeight + position.y * kPositionSeedYWeight + position.z * kPositionSeedZWeight) {}
 
 	float EffectRandom::Sample(int index) const {
 		// 毎フレーム同じ乱数を使い、火花の方向や煙の模様のちらつきを防ぐ
-		const float value = std::sin(m_seed + index * 127.1f) * 43758.5453f;
+		const float value = std::sin(m_seed + index * kSampleIndexStride) * kSampleHashScale;
 		return value - std::floor(value);
 	}
 

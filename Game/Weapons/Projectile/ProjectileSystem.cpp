@@ -1,10 +1,17 @@
 #include "ProjectileSystem.h"
+#include "Game/Settings/SimulationTiming.h"
 #include <algorithm>
 #include "Game/Combat/Targeting/GunAimSolver.h"
 #include "Game/Weapons/Projectile/ProjectileCollision.h"
 #include "Game/Effects/CombatEffectSettings.h"
 
 namespace Game {
+	namespace {
+		constexpr float kMinimumModelForwardLength = 0.001f;
+		constexpr float kModelAxisAlignmentDot = 0.9999f;
+		constexpr float kShotDirectionAlignmentDot = 0.999999f;
+		constexpr float kMinimumShotSpeedSquared = 1e-8f;
+	}
 	using namespace DirectX;
 
 	void ProjectileSystem::Configure(
@@ -17,7 +24,7 @@ namespace Game {
 		const auto source = XMLoadFloat3(&modelForward);
 		const float length = XMVectorGetX(XMVector3Length(source));
 
-		if (!std::isfinite(length) || length < 0.001f)
+		if (!std::isfinite(length) || length < kMinimumModelForwardLength)
 			throw std::invalid_argument("modelForward must be a finite nonzero direction");
 
 		// 弾モデルの前方軸を補正する
@@ -26,9 +33,9 @@ namespace Game {
 		const float dot = std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f);
 		XMMATRIX rotation = XMMatrixIdentity();
 
-		if (dot < -0.9999f)
+		if (dot < -kModelAxisAlignmentDot)
 			rotation = XMMatrixRotationY(XM_PI);
-		else if (dot < 0.9999f)
+		else if (dot < kModelAxisAlignmentDot)
 			rotation = XMMatrixRotationAxis(XMVector3Cross(from, to), std::acos(dot));
 		XMStoreFloat4x4(&m_modelRotation, rotation);
 
@@ -133,7 +140,7 @@ namespace Game {
 	void ProjectileSystem::Update(Engine::Scene& scene, float dt, std::span<const CollisionTarget> targets) {
 		if (!std::isfinite(dt) || dt <= 0) return;
 
-		dt = std::min(dt, 0.25f);
+		dt = std::min(dt, kMaximumSimulationDeltaSeconds);
 
 		// 前フレームの通知と、消滅した弾の描画区間を持ち越さない
 		m_shotEvents.clear();
@@ -161,7 +168,7 @@ namespace Game {
 		const auto velocityVector = XMLoadFloat3(&velocity);
 		const float speedSquared = XMVectorGetX(XMVector3LengthSq(velocityVector));
 
-		if (!std::isfinite(speedSquared) || speedSquared < 1e-8f) return false;
+		if (!std::isfinite(speedSquared) || speedSquared < kMinimumShotSpeedSquared) return false;
 
 		// 弾モデルの前方を発射速度の方向へ合わせる
 		const auto direction = XMVector3Normalize(velocityVector);
@@ -169,9 +176,9 @@ namespace Game {
 		const float dot = std::clamp(XMVectorGetX(XMVector3Dot(forward, direction)), -1.0f, 1.0f);
 		auto rotation = XMMatrixIdentity();
 
-		if (dot < -0.999999f)
+		if (dot < -kShotDirectionAlignmentDot)
 			rotation = XMMatrixRotationY(XM_PI);
-		else if (dot < 0.999999f)
+		else if (dot < kShotDirectionAlignmentDot)
 			rotation = XMMatrixRotationAxis(XMVector3Cross(forward, direction), std::acos(dot));
 		Projectile projectile;
 		projectile.position = projectile.birthPosition = position;
@@ -238,7 +245,7 @@ namespace Game {
 			const float dot = std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f);
 			auto correction = XMMatrixIdentity();
 
-			if (dot < 0.999999f) correction = XMMatrixRotationAxis(XMVector3Cross(from, to), std::acos(dot));
+			if (dot < kShotDirectionAlignmentDot) correction = XMMatrixRotationAxis(XMVector3Cross(from, to), std::acos(dot));
 			XMFLOAT4X4 transform;
 			XMStoreFloat4x4(&transform,
 				XMLoadFloat4x4(&m_modelRotation) * aircraftRotation * correction *

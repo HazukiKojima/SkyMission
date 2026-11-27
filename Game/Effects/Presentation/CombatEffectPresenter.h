@@ -16,7 +16,10 @@ namespace Game {
 			const DirectX::XMFLOAT3& playerPosition, Engine::HudDrawList& list) const;
 
 	  private:
-		static constexpr size_t aircraftFireVertexBudget = 2 * 72 + 6 * 6;
+		static constexpr unsigned aircraftFireCloudCount = 6;
+		static constexpr size_t aircraftFireVertexBudget =
+			2 * Engine::HudDrawList::SoftDiscVertexCount +
+			aircraftFireCloudCount * Engine::HudDrawList::QuadVertexCount;
 		EffectSettings m_settings;
 		void DrawAircraftSmoke(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
 		void DrawAircraftFire(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;

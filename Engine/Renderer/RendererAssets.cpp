@@ -44,8 +44,10 @@ namespace Engine {
 
 	void RendererAssets::InitializeSkySphere(
 		ID3D12Device* device, ID3D12GraphicsCommandList* commands, float radius) {
+		constexpr UINT kSkySphereSlices = 64;
+		constexpr UINT kSkySphereStacks = 32;
 		m_skySphere = std::make_unique<SkySphere>();
-		m_skySphere->Initialize(device, commands, radius, 64, 32);
+		m_skySphere->Initialize(device, commands, radius, kSkySphereSlices, kSkySphereStacks);
 	}
 
 	void RendererAssets::Load(

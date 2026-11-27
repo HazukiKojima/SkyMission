@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <limits>
 
 namespace Engine {
 	namespace {
@@ -10,6 +11,8 @@ namespace Engine {
 		constexpr std::uint64_t kLongPressMicroseconds = 300'000;
 		constexpr std::uint64_t kGamepadRescanMicroseconds = 500'000;
 		constexpr ULONGLONG kRumbleUpdateMilliseconds = 16;
+		constexpr float kThumbstickDeadZone = 0.18f;
+		constexpr float kTriggerDeadZone = 0.12f;
 
 		float ApplyDeadZone(float value, float deadZone) {
 			const float magnitude = std::clamp((std::abs(value) - deadZone) / (1.0f - deadZone), 0.0f, 1.0f);
@@ -31,17 +34,17 @@ namespace Engine {
 		bool HasGamepadInput(const GameInputGamepadState& state) {
 			return state.buttons != GameInputGamepadNone ||
 				std::max({std::abs(state.leftThumbstickX), std::abs(state.leftThumbstickY),
-					std::abs(state.rightThumbstickX), std::abs(state.rightThumbstickY)}) > 0.18f ||
-				std::max(state.leftTrigger, state.rightTrigger) > 0.12f;
+					std::abs(state.rightThumbstickX), std::abs(state.rightThumbstickY)}) > kThumbstickDeadZone ||
+				std::max(state.leftTrigger, state.rightTrigger) > kTriggerDeadZone;
 		}
 
 		GamepadSnapshot MapState(const GameInputGamepadState& state) {
-			return {.leftX = ApplyDeadZone(state.leftThumbstickX, 0.18f),
-				.leftY = ApplyDeadZone(-state.leftThumbstickY, 0.18f),
-				.rightX = ApplyDeadZone(state.rightThumbstickX, 0.18f),
-				.rightY = ApplyDeadZone(-state.rightThumbstickY, 0.18f),
-				.leftTrigger = ApplyDeadZone(state.leftTrigger, 0.12f),
-				.rightTrigger = ApplyDeadZone(state.rightTrigger, 0.12f),
+			return {.leftX = ApplyDeadZone(state.leftThumbstickX, kThumbstickDeadZone),
+				.leftY = ApplyDeadZone(-state.leftThumbstickY, kThumbstickDeadZone),
+				.rightX = ApplyDeadZone(state.rightThumbstickX, kThumbstickDeadZone),
+				.rightY = ApplyDeadZone(-state.rightThumbstickY, kThumbstickDeadZone),
+				.leftTrigger = ApplyDeadZone(state.leftTrigger, kTriggerDeadZone),
+				.rightTrigger = ApplyDeadZone(state.rightTrigger, kTriggerDeadZone),
 				.buttons = MapButtons(state.buttons)};
 		}
 	} // namespace
@@ -146,6 +149,8 @@ namespace Engine {
 			m_northHeldReported = true;
 			auto sample = held;
 			sample.northHeld = true;
+			sample.northHoldStarted = true;
+			frame.northHoldStarted = true;
 			emit(*m_northPressedAt + kLongPressMicroseconds, sample);
 		};
 
@@ -165,28 +170,32 @@ namespace Engine {
 				const unsigned pressed = sample.buttons & ~m_buttons;
 				for (unsigned i = 0; i < frame.presses.size(); ++i)
 					if (pressed & (1u << i)) {
-						++frame.presses[i];
+						if (frame.presses[i] < std::numeric_limits<std::uint16_t>::max())
+							++frame.presses[i];
 						sample.presses[i] = 1;
 					}
 				if (pressed & kNorthButtonMask) {
 					m_northPressedAt = timestamp;
 					m_northHeldReported = false;
 				} else if (!(sample.buttons & kNorthButtonMask) && m_northPressedAt) {
-					sample.northTapped = timestamp - *m_northPressedAt < kLongPressMicroseconds;
+					sample.northTapCount = timestamp - *m_northPressedAt < kLongPressMicroseconds ? 1 : 0;
 					m_northPressedAt.reset();
 				}
-				frame.northTapped |= sample.northTapped;
+				if (sample.northTapCount && frame.northTapCount < std::numeric_limits<std::uint16_t>::max())
+					++frame.northTapCount;
 				sample.northHeld = m_northPressedAt && m_northHeldReported;
 				m_buttons = sample.buttons;
 				emit(timestamp, sample);
 			};
 
 			// フレーム間の短い押下と再押下を保持する。履歴が途切れたときは最新状態へ進む。
-			for (unsigned i = 0; i < 256; ++i) {
+			while (true) {
 				Microsoft::WRL::ComPtr<IGameInputReading> next;
 				if (FAILED(m_input->GetNextReading(
 						m_previous.Get(), GameInputKindGamepad, m_device.Get(), next.GetAddressOf())) ||
-					next.Get() == latest.Get() || next->GetTimestamp() > latest->GetTimestamp())
+					!next || next.Get() == m_previous.Get() || next.Get() == latest.Get() ||
+					next->GetTimestamp() < m_previous->GetTimestamp() ||
+					next->GetTimestamp() > latest->GetTimestamp())
 					break;
 				GameInputGamepadState intermediate{};
 				if (next->GetGamepadState(&intermediate))

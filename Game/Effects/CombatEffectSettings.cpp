@@ -42,15 +42,15 @@ namespace Game {
 		r.Color("/gun/flameInnerColor", gun.flameInnerColor);
 
 		// 煙の動きと粒子数を読み込む
-		r.Number("/deck/riseSpeed", deck.riseSpeed, 0, 1000000);
-		r.Number("/deck/driftSpeed", deck.driftSpeed, 0, 1000000);
-		r.Number("/deck/growthPerSecond", deck.growthPerSecond, 0, 1000000);
-		r.Number("/deck/startRadius", deck.startRadius, 0, 1000000);
-		r.Number("/rocket/smokeGrowthPerSecond", rocket.smokeGrowthPerSecond, 0, 1000000);
-		r.Number("/rocket/smokeStartRadius", rocket.smokeStartRadius, 0, 1000000);
-		r.Number("/rocket/smokeRiseSpeed", rocket.smokeRiseSpeed, 0, 1000000);
+		r.Number("/deck/riseSpeed", deck.riseSpeed, 0);
+		r.Number("/deck/driftSpeed", deck.driftSpeed, 0);
+		r.Number("/deck/growthPerSecond", deck.growthPerSecond, 0);
+		r.Number("/deck/startRadius", deck.startRadius, 0);
+		r.Number("/rocket/smokeGrowthPerSecond", rocket.smokeGrowthPerSecond, 0);
+		r.Number("/rocket/smokeStartRadius", rocket.smokeStartRadius, 0);
+		r.Number("/rocket/smokeRiseSpeed", rocket.smokeRiseSpeed, 0);
 		r.Number("/rocket/smokeOpacity", rocket.smokeOpacity, 0, 1);
-		r.Number("/carrier/smokeDriftSpeed", carrier.smokeDriftSpeed, 0, 1000000);
+		r.Number("/carrier/smokeDriftSpeed", carrier.smokeDriftSpeed, 0);
 		r.Number("/carrier/smokeOpacity", carrier.smokeOpacity, 0, 1);
 		r.Integer("/explosion/fragmentCount", explosion.fragmentCount, 24);
 		r.Integer("/explosion/fireCount", explosion.fireCount, 17);
@@ -59,52 +59,52 @@ namespace Game {
 		r.Integer("/impact/smokeCount", impact.smokeCount, 8);
 
 		// 発射演出の寸法と寿命を読み込む
-		r.Number("/gun/flashLifetimeSeconds", gun.flashLifetimeSeconds, 0.000001f, 1000000);
-		r.Number("/gun/flashRadius", gun.flashRadius, 0.000001f, 1000000);
-		r.Number("/gun/flameLength", gun.flameLength, 0.000001f, 1000000);
-		r.Number("/gun/tracerSeconds", gun.tracerSeconds, 0.000001f, 1000000);
-		r.Number("/gun/tracerMaxLength", gun.tracerMaxLength, 0.000001f, 1000000);
-		r.Number("/gun/tracerOuterWidth", gun.tracerOuterWidth, 0.000001f, 1000000);
-		r.Number("/gun/tracerInnerWidth", gun.tracerInnerWidth, 0.000001f, 1000000);
-		r.Number("/gun/smokeLifetimeSeconds", gun.smokeLifetimeSeconds, 0.000001f, 1000000);
-		r.Number("/gun/smokeStartRadius", gun.smokeStartRadius, 0.000001f, 1000000);
-		r.Number("/gun/smokeEndRadius", gun.smokeEndRadius, 0.000001f, 1000000);
-		r.Number("/gun/smokeOpacity", gun.smokeOpacity, 0.000001f, 1);
+		r.Number("/gun/flashLifetimeSeconds", gun.flashLifetimeSeconds);
+		r.Number("/gun/flashRadius", gun.flashRadius);
+		r.Number("/gun/flameLength", gun.flameLength);
+		r.Number("/gun/tracerSeconds", gun.tracerSeconds);
+		r.Number("/gun/tracerMaxLength", gun.tracerMaxLength);
+		r.Number("/gun/tracerOuterWidth", gun.tracerOuterWidth);
+		r.Number("/gun/tracerInnerWidth", gun.tracerInnerWidth);
+		r.Number("/gun/smokeLifetimeSeconds", gun.smokeLifetimeSeconds);
+		r.Number("/gun/smokeStartRadius", gun.smokeStartRadius);
+		r.Number("/gun/smokeEndRadius", gun.smokeEndRadius);
+		r.Number("/gun/smokeOpacity", gun.smokeOpacity, SettingsReader::kMinimumPositiveValue, 1);
 		r.Number("/gun/smokeVelocityInheritance", gun.smokeVelocityInheritance, 0, 1);
-		r.Number("/gun/smokeDrag", gun.smokeDrag, 0.000001f, 1000000);
-		r.Number("/gun/smokeRiseSpeed", gun.smokeRiseSpeed, 0, 1000000);
+		r.Number("/gun/smokeDrag", gun.smokeDrag);
+		r.Number("/gun/smokeRiseSpeed", gun.smokeRiseSpeed, 0);
 
 		// 着弾演出の寿命と破片の動きを読み込む
-		r.Number("/impact/lifetimeSeconds", impact.lifetimeSeconds, 0.000001f, 1000000);
-		r.Number("/impact/flashSeconds", impact.flashSeconds, 0.000001f, 1000000);
-		r.Number("/impact/flashOuterRadius", impact.flashOuterRadius, 0.000001f, 1000000);
-		r.Number("/impact/flashInnerRadius", impact.flashInnerRadius, 0.000001f, 1000000);
-		r.Number("/impact/smokeFadeSeconds", impact.smokeFadeSeconds, 0.000001f, 1000000);
-		r.Number("/impact/fragmentMinLifetime", impact.fragmentMinLifetime, 0.000001f, 1000000);
-		r.Number("/impact/fragmentLifetimeRange", impact.fragmentLifetimeRange, 0.000001f, 1000000);
-		r.Number("/impact/fragmentMinSpeed", impact.fragmentMinSpeed, 0.000001f, 1000000);
-		r.Number("/impact/fragmentSpeedRange", impact.fragmentSpeedRange, 0.000001f, 1000000);
-		r.Number("/impact/fragmentDrag", impact.fragmentDrag, 0.000001f, 1000000);
-		r.Number("/impact/fragmentGravity", impact.fragmentGravity, 0.000001f, 1000000);
+		r.Number("/impact/lifetimeSeconds", impact.lifetimeSeconds);
+		r.Number("/impact/flashSeconds", impact.flashSeconds);
+		r.Number("/impact/flashOuterRadius", impact.flashOuterRadius);
+		r.Number("/impact/flashInnerRadius", impact.flashInnerRadius);
+		r.Number("/impact/smokeFadeSeconds", impact.smokeFadeSeconds);
+		r.Number("/impact/fragmentMinLifetime", impact.fragmentMinLifetime);
+		r.Number("/impact/fragmentLifetimeRange", impact.fragmentLifetimeRange);
+		r.Number("/impact/fragmentMinSpeed", impact.fragmentMinSpeed);
+		r.Number("/impact/fragmentSpeedRange", impact.fragmentSpeedRange);
+		r.Number("/impact/fragmentDrag", impact.fragmentDrag);
+		r.Number("/impact/fragmentGravity", impact.fragmentGravity);
 		r.Number("/impact/fragmentVelocityInheritance", impact.fragmentVelocityInheritance, 0, 1);
 
 		// 爆発演出の寿命と煙の広がりを読み込む
-		r.Number("/explosion/lifetimeSeconds", explosion.lifetimeSeconds, 0.000001f, 1000000);
-		r.Number("/explosion/flashSeconds", explosion.flashSeconds, 0.000001f, 1000000);
-		r.Number("/explosion/smokeFadeSeconds", explosion.smokeFadeSeconds, 0.000001f, 1000000);
-		r.Number("/explosion/minRadius", explosion.minRadius, 0.000001f, 1000000);
-		r.Number("/explosion/maxRadius", explosion.maxRadius, 0.000001f, 1000000);
-		r.Number("/explosion/boundsRadiusScale", explosion.boundsRadiusScale, 0.000001f, 1000000);
-		r.Number("/explosion/fragmentGravity", explosion.fragmentGravity, 0.000001f, 1000000);
-		r.Number("/explosion/fragmentTrailSeconds", explosion.fragmentTrailSeconds, 0.000001f, 1000000);
+		r.Number("/explosion/lifetimeSeconds", explosion.lifetimeSeconds);
+		r.Number("/explosion/flashSeconds", explosion.flashSeconds);
+		r.Number("/explosion/smokeFadeSeconds", explosion.smokeFadeSeconds);
+		r.Number("/explosion/minRadius", explosion.minRadius);
+		r.Number("/explosion/maxRadius", explosion.maxRadius);
+		r.Number("/explosion/boundsRadiusScale", explosion.boundsRadiusScale);
+		r.Number("/explosion/fragmentGravity", explosion.fragmentGravity);
+		r.Number("/explosion/fragmentTrailSeconds", explosion.fragmentTrailSeconds);
 		r.Number("/explosion/fragmentVelocityInheritance", explosion.fragmentVelocityInheritance, 0, 1);
-		r.Number("/carrier/explosionRadius", carrier.explosionRadius, 0.000001f, 1000000);
-		r.Number("/carrier/smokeLifetimeSeconds", carrier.smokeLifetimeSeconds, 0.000001f, 1000000);
-		r.Number("/carrier/smokeIntervalSeconds", carrier.smokeIntervalSeconds, 0.000001f, 1000000);
-		r.Number("/carrier/smokeRiseSpeed", carrier.smokeRiseSpeed, 0, 1000000);
-		r.Number("/carrier/smokeStartRadius", carrier.smokeStartRadius, 0.000001f, 1000000);
-		r.Number("/carrier/smokeGrowthPerSecond", carrier.smokeGrowthPerSecond, 0.000001f, 1000000);
-		r.Number("/rocket/smokeLifetimeSeconds", rocket.smokeLifetimeSeconds, 0.000001f, 1000000);
+		r.Number("/carrier/explosionRadius", carrier.explosionRadius);
+		r.Number("/carrier/smokeLifetimeSeconds", carrier.smokeLifetimeSeconds);
+		r.Number("/carrier/smokeIntervalSeconds", carrier.smokeIntervalSeconds);
+		r.Number("/carrier/smokeRiseSpeed", carrier.smokeRiseSpeed, 0);
+		r.Number("/carrier/smokeStartRadius", carrier.smokeStartRadius);
+		r.Number("/carrier/smokeGrowthPerSecond", carrier.smokeGrowthPerSecond);
+		r.Number("/rocket/smokeLifetimeSeconds", rocket.smokeLifetimeSeconds);
 
 		// 内外の半径と幅が逆転していないか確認する
 		r.Require(explosion.maxRadius >= explosion.minRadius, "effects", "inconsistent radii or widths");
@@ -128,6 +128,15 @@ namespace Game {
 		r.Number("/aircraftCrash/initialExplosionRadiusMultiplier", aircraftCrash.initialExplosionRadiusMultiplier, 0.01f, 10);
 		r.Number("/aircraftCrash/initialFlashDurationMultiplier", aircraftCrash.initialFlashDurationMultiplier, 0.01f, 10);
 		r.Number("/aircraftCrash/finalExplosionRadiusMultiplier", aircraftCrash.finalExplosionRadiusMultiplier, 0.01f, 10);
+		r.Array("/aircraftCrash/engineBurstProgress", aircraftCrash.engineBurstProgress, 0, 1);
+		r.Require(aircraftCrash.engineBurstProgress.front() > 0 &&
+				aircraftCrash.engineBurstProgress.front() < aircraftCrash.engineBurstProgress.back() &&
+				aircraftCrash.engineBurstProgress.back() < 1,
+			"/aircraftCrash/engineBurstProgress", "expected increasing progress fractions between 0 and 1");
+		r.Number("/aircraftCrash/fuelFireFlashProgress", aircraftCrash.fuelFireFlashProgress, 0, 1);
+		r.Require(aircraftCrash.fuelFireFlashProgress > aircraftCrash.fuelFireStartProgress &&
+				aircraftCrash.fuelFireFlashProgress < 1,
+			"/aircraftCrash/fuelFireFlashProgress", "flash must occur after the fire starts and before the crash ends");
 		constexpr std::array profileNames{"rollingDive", "bankedDive", "spin"};
 		for (size_t i = 0; i < profileNames.size(); ++i) {
 			const auto path = std::string("/aircraftCrash/") + profileNames[i];

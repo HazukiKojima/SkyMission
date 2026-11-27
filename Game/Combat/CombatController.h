@@ -6,7 +6,7 @@ namespace Game {
 	// 1フレーム分の戦闘操作。連射用の保持状態と、対象切替などの押下を区別する
 	struct CombatInput {
 		WeaponInput weapon;
-		bool nextTarget = false;
+		unsigned targetCycleCount = 0;
 		bool retry = false;
 
 		// 右クリックとパッドの発射ボタンの押下回数を合算し、フレーム間の短い押下も保持する
@@ -21,7 +21,7 @@ namespace Game {
 			using Engine::GamepadButton;
 			const auto& pad = input.gamepad;
 			return {.weapon = WeaponController{}.ReadInput(input),
-				.nextTarget = input.WasKeyPressed(VK_TAB) || (input.active && pad.northTapped),
+				.targetCycleCount = input.GetKeyPressCount(VK_TAB) + (input.active ? pad.northTapCount : 0u),
 				.missilePressCount =
 					input.active ? input.rightMousePressCount + pad.PressCount(GamepadButton::East) : 0u,
 				.skipOpening = input.WasKeyPressed(VK_RETURN) || (input.active && pad.PressCount(GamepadButton::Menu))};

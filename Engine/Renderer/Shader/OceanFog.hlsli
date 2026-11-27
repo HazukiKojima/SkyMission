@@ -3,6 +3,20 @@
 #endif
 #include "CommonLighting.hlsli"
 
+static const float kSkySampleOpacityThreshold = 0.99f;
+static const float kOceanMaskThreshold = 0.5f;
+static const float kMinimumRayAxisDirection = 1e-5f;
+static const float kMinimumVisibleOceanFog = 0.001f;
+static const float kMinimumWorldClipW = 1e-8f;
+static const float kMinimumFogLayerThickness = 1.0f;
+static const float kMinimumHorizontalRaySpeed = 1e-6f;
+static const float kMinimumFogEdgeFadeWidth = 1e-6f;
+static const float kMinimumFogDistanceScale = 1.0f;
+static const float kFogHorizonExponent = 4.0f;
+static const float kSceneFarDepth = 1.0f;
+static const int kFogQuadraturePointCount = 4;
+static const int kSkySearchSampleCount = 8;
+
 cbuffer OceanFogConstants : register(FOG_CONSTANT_REGISTER)
 {
     float4x4 inverseViewProjection;
@@ -33,7 +47,7 @@ SamplerState gSampler : register(s0);
 bool RayBox(float3 origin, float3 direction, float3 boxMin, float3 boxMax, out float tMin, out float tMax)
 {
     // ゼロ除算を避けながら各軸の交差区間を求める
-    float3 invDirection = 1.0f / max(abs(direction), 1e-5f);
+    float3 invDirection = 1.0f / max(abs(direction), kMinimumRayAxisDirection);
     invDirection *= float3(direction.x >= 0 ? 1 : -1, direction.y >= 0 ? 1 : -1, direction.z >= 0 ? 1 : -1);
 
     float3 t0 = (boxMin - origin) * invDirection;
@@ -57,12 +71,13 @@ float3 ReconstructWorldPosition(float2 uv, float depth)
     float4 world = mul(clip, inverseViewProjection);
 
     // カメラ相対の位置をワールド座標へ戻す
-    return cameraPosition + world.xyz / max(world.w, 1e-8f);
+    return cameraPosition + world.xyz / max(world.w, kMinimumWorldClipW);
 }
 
 float OceanFogDensityAt(float3 worldPosition)
 {
-    float height = saturate((worldPosition.y - oceanFogBottom) / max(oceanFogTop - oceanFogBottom, 1.0f));
+    float height = saturate(
+        (worldPosition.y - oceanFogBottom) / max(oceanFogTop - oceanFogBottom, kMinimumFogLayerThickness));
     float heightDensity = 1.0f - smoothstep(0.0f, 1.0f, height);
 
     // 海の外周へ近づくほど霧を濃くする
@@ -94,15 +109,17 @@ float OceanHorizonFog(float3 rayOrigin, float3 rayDirection, float maxDistance)
         // 密度は3次スムーズステップの積。4点のガウス＝ルジャンドル求積で、
         // クランプ前の区間における6次多項式を積分する
         float horizontalSpeed = max(abs(rayDirection.x), abs(rayDirection.z));
-        fogEnter = max(fogEnter, oceanFogStartDistance / max(horizontalSpeed, 1e-6f));
+        fogEnter = max(fogEnter, oceanFogStartDistance / max(horizontalSpeed, kMinimumHorizontalRaySpeed));
 
         float midpoint = (fogEnter + fogExit) * 0.5f;
         float halfLength = max((fogExit - fogEnter) * 0.5f, 0.0f);
-        static const float nodes[4] = {-0.8611363116f, -0.3399810436f, 0.3399810436f, 0.8611363116f};
-        static const float weights[4] = {0.3478548451f, 0.6521451549f, 0.6521451549f, 0.3478548451f};
+        static const float nodes[kFogQuadraturePointCount] = {
+            -0.8611363116f, -0.3399810436f, 0.3399810436f, 0.8611363116f};
+        static const float weights[kFogQuadraturePointCount] = {
+            0.3478548451f, 0.6521451549f, 0.6521451549f, 0.3478548451f};
 
         float opticalDepth = 0.0f;
-        [unroll] for (int i = 0; i < 4; ++i)
+        [unroll] for (int i = 0; i < kFogQuadraturePointCount; ++i)
         {
             float t = midpoint + halfLength * nodes[i];
             opticalDepth += OceanFogDensityAt(rayOrigin + rayDirection * t) * weights[i];
@@ -110,7 +127,7 @@ float OceanHorizonFog(float3 rayOrigin, float3 rayDirection, float maxDistance)
 
         opticalDepth *= oceanFogDensity * halfLength;
 
-        float horizonMask = pow(1.0f - saturate(abs(rayDirection.y)), 4.0f);
+        float horizonMask = pow(1.0f - saturate(abs(rayDirection.y)), kFogHorizonExponent);
         fogAmount = saturate((1.0f - exp(-opticalDepth)) * horizonMask);
     }
     return fogAmount;
@@ -122,7 +139,7 @@ float3 SampleSceneSkyAbove(float2 uv, float pixelHeight, float3 fallback)
     bool foundSky = false;
 
     // 最初に見つけた空の色を保持し、見つからなければ代替色を使う
-    [unroll] for (int i = 0; i < 8; ++i)
+    [unroll] for (int i = 0; i < kSkySearchSampleCount; ++i)
     {
         if (!foundSky)
         {
@@ -130,10 +147,10 @@ float3 SampleSceneSkyAbove(float2 uv, float pixelHeight, float3 fallback)
             float2 sampleUv = float2(uv.x, max(uv.y - sampleOffset, pixelHeight * 0.5f));
             float sampleDepth = gSceneDepth.SampleLevel(gSampler, sampleUv, 0).r;
 
-            if (sampleDepth >= 1.0f)
+            if (sampleDepth >= kSceneFarDepth)
             {
                 float4 sampleColor = gSceneColor.SampleLevel(gSampler, sampleUv, 0);
-                if (sampleColor.a > 0.99f)
+                if (sampleColor.a > kSkySampleOpacityThreshold)
                 {
                     skyColor = sampleColor.rgb;
                     foundSky = true;
@@ -157,7 +174,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
 
     float4 sceneSample = gSceneColor.SampleLevel(gSampler, uv, 0);
     float3 sceneColor = sceneSample.rgb;
-    bool isOceanPixel = sceneSample.a < 0.5f;
+    bool isOceanPixel = sceneSample.a < kOceanMaskThreshold;
     float sceneDepth = gSceneDepth.SampleLevel(gSampler, uv, 0).r;
 
     // 逆行列から視線を復元し、霧を積分する方向を求める
@@ -172,17 +189,18 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
     // 海面は視線との交点、その他の物体は深度から距離を求める
     if (isOceanPixel)
     {
-        if (abs(rayDirection.y) > 1e-5f)
+        if (abs(rayDirection.y) > kMinimumRayAxisDirection)
             sceneDistance = max(-cameraPosition.y / rayDirection.y, 0.0f);
 
         float3 oceanPosition = cameraPosition + rayDirection * sceneDistance;
         float2 oceanLocalPosition = oceanPosition.xz - cameraPosition.xz;
         float oceanEdgeDistance =
-            max(abs(oceanLocalPosition.x), abs(oceanLocalPosition.y)) / max(oceanFogEndDistance, 1.0f);
+            max(abs(oceanLocalPosition.x), abs(oceanLocalPosition.y)) /
+            max(oceanFogEndDistance, kMinimumFogDistanceScale);
         oceanEdgeFade = smoothstep(
-            oceanEdgeFadeStart, oceanEdgeFadeStart + max(oceanEdgeFadeWidth, 1e-6f), oceanEdgeDistance);
+            oceanEdgeFadeStart, oceanEdgeFadeStart + max(oceanEdgeFadeWidth, kMinimumFogEdgeFadeWidth), oceanEdgeDistance);
     }
-    else if (sceneDepth < 1.0f)
+    else if (sceneDepth < kSceneFarDepth)
     {
         float3 scenePosition = ReconstructWorldPosition(uv, sceneDepth);
         sceneDistance = dot(scenePosition - cameraPosition, rayDirection);
@@ -191,7 +209,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
     oceanFogDistanceLimit = min(oceanFogDistanceLimit, sceneDistance);
 
     float oceanFogFactor = 0.0f;
-    if (isOceanPixel || sceneDepth < 1.0f)
+    if (isOceanPixel || sceneDepth < kSceneFarDepth)
     {
         oceanFogFactor = OceanHorizonFog(cameraPosition, rayDirection, oceanFogDistanceLimit);
         oceanFogFactor = max(oceanFogFactor, oceanEdgeFade);
@@ -200,7 +218,7 @@ float4 ApplyOceanFog(float2 uv, float pixelHeight)
     // 海面では画面内の空の色へなじませ、見つからなければ計算した空色を使う
     float3 horizonFallback = ToneMapReinhard(GetSkyColor(rayDirection, lighting));
     float3 horizonColor = horizonFallback;
-    if (isOceanPixel && oceanFogFactor > 0.001f)
+    if (isOceanPixel && oceanFogFactor > kMinimumVisibleOceanFog)
         horizonColor = SampleSceneSkyAbove(uv, pixelHeight, horizonFallback);
 
     sceneColor = lerp(sceneColor, horizonColor, oceanFogFactor);

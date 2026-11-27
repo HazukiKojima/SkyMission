@@ -110,7 +110,7 @@ namespace Engine {
 		std::unique_ptr<Texture> m_fallbackMetallicTexture;
 		std::unique_ptr<Texture> m_fallbackRoughnessTexture;
 		std::unique_ptr<Texture> m_fallbackNormalTexture;
-		std::array<std::vector<Mesh>, 3> m_lodMeshes;
+		std::array<std::vector<Mesh>, kModelLodCount> m_lodMeshes;
 		unsigned m_lodCount = 1;
 
 		float m_cullingRadius = 0;

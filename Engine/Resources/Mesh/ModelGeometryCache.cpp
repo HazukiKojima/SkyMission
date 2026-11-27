@@ -19,6 +19,10 @@ namespace Engine::ModelProcessing {
 	namespace {
 		// 読み込み、形状、LODの処理を変えたときに更新する
 		constexpr uint64_t Magic = 0x534d47454f4d3033ULL;
+		constexpr uint32_t kMaximumCachedCollectionEntries = 1'000'000;
+		constexpr std::streamoff kMaximumCacheBytes = 512LL * 1024 * 1024;
+		constexpr uint64_t kFnvOffsetBasis = 14695981039346656037ULL;
+		constexpr uint64_t kFnvPrime = 1099511628211ULL;
 
 		std::filesystem::path CachePath(
 			const std::filesystem::path& source, const ModelLoadOptions& options) {
@@ -51,11 +55,11 @@ namespace Engine::ModelProcessing {
 				std::to_string(static_cast<unsigned>(options.origin)) + "|" +
 				std::to_string(options.generateLods) + "|" + std::to_string(aiGetVersionMajor()) + "." +
 				std::to_string(aiGetVersionMinor()) + "." + std::to_string(aiGetVersionRevision());
-			uint64_t hash = 14695981039346656037ULL;
+			uint64_t hash = kFnvOffsetBasis;
 
 			for (unsigned char value : key) {
 				hash ^= value;
-				hash *= 1099511628211ULL;
+				hash *= kFnvPrime;
 			}
 
 			const auto temporary = std::filesystem::temp_directory_path(error);
@@ -69,7 +73,7 @@ namespace Engine::ModelProcessing {
 				: input(path, std::ios::binary | std::ios::ate) {
 				const auto size = input.tellg();
 
-				if (size < 0 || size > 512LL * 1024 * 1024)
+				if (size < 0 || size > kMaximumCacheBytes)
 					throw std::runtime_error("Invalid geometry cache size");
 				remaining = static_cast<uint64_t>(size);
 				input.seekg(0);
@@ -121,7 +125,8 @@ namespace Engine::ModelProcessing {
 			if (!std::isfinite(data.cullingRadius) || data.cullingRadius < 0)
 				throw std::runtime_error("Invalid cached bounds");
 			const auto materials = input.Value<uint32_t>();
-			if (materials > 1000000) throw std::runtime_error("Invalid cached material count");
+			if (materials > kMaximumCachedCollectionEntries)
+				throw std::runtime_error("Invalid cached material count");
 
 			for (uint32_t material = 0; material < materials; ++material) {
 				PreparedMaterial source;
@@ -137,7 +142,8 @@ namespace Engine::ModelProcessing {
 
 			// 銃口などの補助ノード位置を復元する
 			const auto nodes = input.Value<uint32_t>();
-			if (nodes > 1000000) throw std::runtime_error("Invalid cached node count");
+			if (nodes > kMaximumCachedCollectionEntries)
+				throw std::runtime_error("Invalid cached node count");
 
 			for (uint32_t node = 0; node < nodes; ++node) {
 				const auto name = input.Vector<char>();
@@ -148,7 +154,7 @@ namespace Engine::ModelProcessing {
 			// LODごとに形状を復元してデータの整合性を調べる
 			for (unsigned level = 0; level < lodCount; ++level) {
 				const auto count = input.Value<uint32_t>();
-				if (!count || count > 1000000 || (level && count != data.levels[0].size()))
+				if (!count || count > kMaximumCachedCollectionEntries || (level && count != data.levels[0].size()))
 					throw std::runtime_error("Invalid cached mesh count");
 				for (uint32_t mesh = 0; mesh < count; ++mesh) {
 					MeshGeometry geometry;
@@ -242,7 +248,7 @@ namespace Engine::ModelProcessing {
 		const std::filesystem::path& source, const ModelLoadOptions& options) {
 		StartupTiming timing("model.prepared_cache");
 		const auto cache = CachePath(source, options);
-		const unsigned lodCount = options.generateLods ? 3 : 1;
+		const unsigned lodCount = options.generateLods ? kModelLodCount : 1;
 
 		// 処理済みの形状を優先して読み込む
 		if (!cache.empty()) {
@@ -268,8 +274,7 @@ namespace Engine::ModelProcessing {
 		if (!scene) return data;
 
 		timing.Mark("model.geometry_and_lods");
-		constexpr aiTextureType types[] = {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE,
-			aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_NORMALS};
+		const auto& types = ModelImport::MaterialTextureTypes;
 		for (unsigned i = 0; i < scene->mNumMaterials; ++i) {
 			PreparedMaterial material;
 			aiString name;

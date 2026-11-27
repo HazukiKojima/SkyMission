@@ -1,6 +1,9 @@
 #include "SettingsReader.h"
 
 namespace Game {
+	namespace {
+		constexpr size_t kMaximumSettingsTextBytes = 192;
+	}
 	void SettingsReader::Number(const std::string& key, float& value, float minimum, float maximum) const {
 		if (!exists) return;
 		if (auto values = Read(key, [&] {
@@ -31,7 +34,7 @@ namespace Game {
 		if (auto text = Read(key, [&] {
 				return reader.TryResolveString(path, key);
 			})) {
-			Require(!text->empty() && text->size() <= 192, key, "expected 1..192 UTF-8 bytes");
+			Require(!text->empty() && text->size() <= kMaximumSettingsTextBytes, key, "expected 1..192 UTF-8 bytes");
 			value = *text;
 		}
 	}

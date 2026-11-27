@@ -30,6 +30,9 @@ struct PS_INPUT
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
+    const float kSurfaceRoughness = 0.35f;
+    const float kFogStartMeters = 1500.0f;
+    const float kFogEndMeters = 12000.0f;
     CommonLightingParameters lighting;
 
     lighting.sunDirection = sunDirection;
@@ -57,17 +60,14 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float3 ambient = albedo * GetAmbientRadiance(lighting);
 
-    float3 sunSpecular = CalculateSunSpecular(N, V, L, 0.35f, lighting);
+    float3 sunSpecular = CalculateSunSpecular(N, V, L, kSurfaceRoughness, lighting);
 
     float3 color = diffuse + ambient + sunSpecular;
 
     // 距離に応じた大気の霧
 
     float distanceToCamera = length(cameraPos - input.worldPos);
-    float fogStart = 1500.0f;
-    float fogEnd = 12000.0f;
-
-    float fogFactor = saturate((distanceToCamera - fogStart) / (fogEnd - fogStart));
+    float fogFactor = saturate((distanceToCamera - kFogStartMeters) / (kFogEndMeters - kFogStartMeters));
 
     float3 atmosphere = GetSkyColor(V, lighting);
 

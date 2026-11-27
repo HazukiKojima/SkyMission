@@ -4,6 +4,8 @@
 
 namespace Engine {
 	enum class ModelOrigin { Ground, BoundsCenter };
+	enum class ModelDetailLevel : unsigned { Full, Medium, Low, Count };
+	inline constexpr unsigned kModelLodCount = static_cast<unsigned>(ModelDetailLevel::Count);
 
 	// アセットの命名規則はゲーム側の設定から渡す
 	struct ModelLoadOptions {

@@ -43,7 +43,7 @@ namespace Engine {
 		// 以前の形状とGPUリソースを破棄する
 		for (auto& meshes : m_lodMeshes)
 			meshes.clear();
-		m_lodCount = options.generateLods ? 3u : 1u;
+		m_lodCount = options.generateLods ? kModelLodCount : 1u;
 		m_cullingRadius = 0;
 		m_nodePositions.clear();
 		m_localBounds.reset();
@@ -84,7 +84,7 @@ namespace Engine {
 		};
 
 		// 同じ材質の静的メッシュをLODごとにまとめる
-		std::array<std::vector<Batch>, 3> batches;
+		std::array<std::vector<Batch>, kModelLodCount> batches;
 		std::vector<TextureDescriptorSet> textureDescriptorSets;
 		std::unordered_map<unsigned, Mesh> materials;
 		for (size_t geometryIndex = 0; geometryIndex < prepared.levels[0].size(); ++geometryIndex) {
@@ -270,8 +270,7 @@ namespace Engine {
 		aiMaterial materialData;
 		const aiString sourceName(source.name);
 		materialData.AddProperty(&sourceName, AI_MATKEY_NAME);
-		constexpr aiTextureType types[] = {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE,
-			aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_NORMALS};
+		const auto& types = ModelImport::MaterialTextureTypes;
 		for (size_t type = 0; type < std::size(types); ++type) {
 			if (source.textures[type].empty()) continue;
 

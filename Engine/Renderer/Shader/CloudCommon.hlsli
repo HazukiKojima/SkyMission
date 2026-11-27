@@ -1,3 +1,8 @@
+static const float kUnboundedCloudRayDistance = 1e8f;
+static const float kMinimumCloudClipW = 1e-8f;
+static const float kCloudParallelRayTolerance = 1e-6f;
+static const float kCloudEnabledThreshold = 0.5f;
+
 float3 CloudViewRay(float2 uv)
 {
     // 画面UVからカメラ相対の視線方向を復元する
@@ -8,7 +13,7 @@ float3 CloudViewRay(float2 uv)
 
 float CloudSceneDistance(float2 uv, float3 ray)
 {
-    float distanceToSurface = 1e8f;
+    float distanceToSurface = kUnboundedCloudRayDistance;
     uint width, height;
     gSceneDepth.GetDimensions(width, height);
 
@@ -20,7 +25,7 @@ float CloudSceneDistance(float2 uv, float3 ray)
 
         // 深度を視線方向の距離へ戻して雲の描画限界に使う
         float4 hitH = mul(float4(ndc, depth, 1), inverseViewProjection);
-        distanceToSurface = max(0, dot(hitH.xyz / max(hitH.w, 1e-8f), ray));
+        distanceToSurface = max(0, dot(hitH.xyz / max(hitH.w, kMinimumCloudClipW), ray));
     }
     return distanceToSurface;
 }
@@ -29,7 +34,7 @@ float CloudSceneDistance(float2 uv, float3 ray)
 void CloudShellIntervals(float3 ray, out float4 intervals)
 {
     intervals = 0;
-    if (abs(ray.y) > 1e-6f)
+    if (abs(ray.y) > kCloudParallelRayTolerance)
     {
         float bottom = (cloudLayer.x - cameraPosition.y) / ray.y;
         float top = (cloudLayer.y - cameraPosition.y) / ray.y;
@@ -40,7 +45,7 @@ void CloudShellIntervals(float3 ray, out float4 intervals)
             intervals.xy = float2(begin, end);
     }
     else if (cameraPosition.y > cloudLayer.x && cameraPosition.y < cloudLayer.y)
-        intervals.xy = float2(0, 1e8f);
+        intervals.xy = float2(0, kUnboundedCloudRayDistance);
 }
 
 float FirstCloudDistance(float3 ray)
@@ -48,7 +53,7 @@ float FirstCloudDistance(float3 ray)
     float4 intervals = 0;
     CloudShellIntervals(ray, intervals);
 
-    float begin = 1e8f;
+    float begin = kUnboundedCloudRayDistance;
     if (intervals.y > intervals.x)
         begin = intervals.x;
     if (intervals.w > intervals.z)

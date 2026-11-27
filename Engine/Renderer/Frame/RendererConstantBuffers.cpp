@@ -7,7 +7,8 @@ namespace Engine {
 	namespace {
 		UINT64 AlignConstantBufferSize(size_t size) {
 			// 定数バッファのサイズを256バイト単位へ切り上げる
-			return (static_cast<UINT64>(size) + 255) & ~static_cast<UINT64>(255);
+			constexpr UINT64 alignmentMask = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT - 1;
+			return (static_cast<UINT64>(size) + alignmentMask) & ~alignmentMask;
 		}
 
 	} // namespace

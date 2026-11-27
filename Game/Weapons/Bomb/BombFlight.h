@@ -5,6 +5,9 @@
 #include <optional>
 
 namespace Game {
+	inline constexpr float kMinimumOrdnanceReloadSeconds = 1.0f;
+	inline constexpr float kMaximumOrdnanceReloadSeconds = 120.0f;
+
 	struct BombTuning {
 		static constexpr float releaseOffsetMeters = 12;
 		static constexpr float lifetimeSeconds = 120;

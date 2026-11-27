@@ -3,11 +3,16 @@
 
 namespace Engine {
 	class RenderDevice {
+		enum class SceneSrvSlot : UINT { Color, Depth, Cloud, Count };
+		static constexpr UINT SceneSrvCountPerFrame = static_cast<UINT>(SceneSrvSlot::Count);
+
 	  public:
 		// バックバッファ数
 		static const UINT FrameCount = 2;
 		static constexpr DXGI_FORMAT CloudFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		static constexpr UINT CloudResolutionDivisor = 3;
+		static constexpr float SceneClearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
+		static constexpr float SceneClearDepth = D3D12_MAX_DEPTH;
 
 		RenderDevice() = default;
 		~RenderDevice() = default;
@@ -94,18 +99,18 @@ namespace Engine {
 
 		// SRVはフレーム別の［シーンカラー、深度、低解像度の雲］を配置する
 		static constexpr UINT SceneColorSrvIndex(UINT frame) {
-			return frame * 3;
+			return frame * SceneSrvCountPerFrame + static_cast<UINT>(SceneSrvSlot::Color);
 		}
 
 		static constexpr UINT SceneDepthSrvIndex(UINT frame) {
-			return SceneColorSrvIndex(frame) + 1;
+			return frame * SceneSrvCountPerFrame + static_cast<UINT>(SceneSrvSlot::Depth);
 		}
 
 		static constexpr UINT CloudSrvIndex(UINT frame) {
-			return SceneColorSrvIndex(frame) + 2;
+			return frame * SceneSrvCountPerFrame + static_cast<UINT>(SceneSrvSlot::Cloud);
 		}
 
-		static constexpr UINT ReservedSrvCount = FrameCount * 3;
+		static constexpr UINT ReservedSrvCount = FrameCount * SceneSrvCountPerFrame;
 
 		UINT GetSceneColorSrvIndex() const {
 			return SceneColorSrvIndex(GetFrameIndex());
@@ -116,6 +121,11 @@ namespace Engine {
 		}
 
 	  private:
+		enum class RtvGroup : UINT { BackBuffer, SceneColor, Cloud, Count };
+		static constexpr UINT RtvIndex(RtvGroup group, UINT frame) {
+			return static_cast<UINT>(group) * FrameCount + frame;
+		}
+
 		static constexpr UINT SrvDescriptorCapacity = 4096;
 		bool TryCreateHardwareDevice();
 		void CreateDevice();

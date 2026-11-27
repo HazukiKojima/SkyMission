@@ -1,5 +1,6 @@
 #pragma once
 #include "SettingsReader.h"
+#include "Game/Settings/SimulationTiming.h"
 #include <algorithm>
 namespace Game {
 	struct CombatFeedbackSettings {
@@ -18,7 +19,7 @@ namespace Game {
 		float AdvancePropeller(float angle, float speed, float dt) const {
 			// 回転角を1周の範囲へ戻して値の増大を防ぐ
 			return std::fmod(
-				angle + speed * propellerAngularSpeedPerSpeed * std::min(dt, 0.25f), DirectX::XM_2PI);
+				angle + speed * propellerAngularSpeedPerSpeed * std::min(dt, kMaximumSimulationDeltaSeconds), DirectX::XM_2PI);
 		}
 
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);

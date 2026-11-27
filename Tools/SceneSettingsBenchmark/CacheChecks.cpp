@@ -51,6 +51,20 @@ int main(int argc, char** argv) try {
     catch (const std::exception& error) { rejected = std::string(error.what()).find("flightVolume") != std::string::npos; }
     Require(rejected, "Cached audio path lost validation or field error context");
 
+    const auto arrayFile = fixture / "array.json";
+    const std::array<float, 3> defaults{1, 2, 3};
+    auto values = defaults;
+    for (const char* invalidArray : {R"({"values":[4,5,"bad"]})", R"({"values":[4,5,14]})", R"({"values":[4,5]})"}) {
+        std::ofstream(arrayFile) << invalidArray;
+        bool arrayRejected = false;
+        try {
+            Game::SettingsReader(Engine::JsonAssetReader{}, arrayFile).Array("values", values, 0, 10);
+        } catch (const std::runtime_error& error) {
+            arrayRejected = std::string(error.what()).find("values") != std::string::npos;
+        }
+        Require(arrayRejected && values == defaults, "Invalid settings array lost defaults or error context");
+    }
+
     // 移動後も文書を保持し、移動元に古い参照を残さないことを確かめる
     Engine::JsonDocumentCache moved(std::move(documents));
     Require(Engine::JsonAssetReader(moved).ResolveFloat(first,"value") == 1, "Moving cache lost parsed documents");

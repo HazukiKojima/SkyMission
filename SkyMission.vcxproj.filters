@@ -333,6 +333,9 @@
     <ClInclude Include="Engine\Renderer\Environment\OceanGeometry.h">
       <Filter>Engine\Renderer\Environment</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Renderer\Environment\OceanWaveConstants.h">
+      <Filter>Engine\Renderer\Environment</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h">
       <Filter>Engine\Renderer\Device</Filter>
     </ClInclude>
@@ -740,6 +743,7 @@
     <None Include="Assets\Cinematics\defeat.json"><Filter>Assets\Cinematics</Filter></None>
     <ClInclude Include="Game\Settings\SettingsReader.h"><Filter>Game\Settings</Filter></ClInclude>
     <ClInclude Include="Game\Settings\GameplaySettings.h"><Filter>Game\Settings</Filter></ClInclude>
+    <ClInclude Include="Game\Settings\SimulationTiming.h"><Filter>Game\Settings</Filter></ClInclude>
     <ClInclude Include="Game\Settings\RumbleSettings.h"><Filter>Game\Settings</Filter></ClInclude>
     <ClInclude Include="Game\Combat\CombatRumble.h"><Filter>Game\Combat</Filter></ClInclude>
     <ClInclude Include="Game\Settings\UiTextSettings.h"><Filter>Game\Settings</Filter></ClInclude>

@@ -1,3 +1,5 @@
+#include "../Environment/OceanWaveConstants.h"
+
 cbuffer MatrixBuffer : register(b0)
 {
     float4x4 mvp;
@@ -44,10 +46,10 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
     inout float3 binormal, float phaseOffset)
 {
     float k = 2.0f * 3.14159265359f / wavelength;
-    float c = sqrt(9.8f / k);
+    float c = sqrt(kOceanWaveGravity / k);
     float2 d = normalize(dir);
 
-    float f = k * (dot(d, p.xz) - c * time * 3.0f) + phaseOffset;
+    float f = k * (dot(d, p.xz) - c * time * kOceanWaveTimeScale) + phaseOffset;
     float a = steepness / k;
 
     float sinf = sin(f);
@@ -67,6 +69,11 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
 
 PS_INPUT VS(VS_INPUT input)
 {
+    const float minimumWavelength = 1e-4f;
+    const float gridWaveFadeStart = 0.20f;
+    const float gridWaveFadeEnd = 0.45f;
+    const float distanceFadeStartWavelengths = 16.0f;
+    const float distanceFadeEndWavelengths = 64.0f;
     PS_INPUT result;
 
     float3 wavePos = input.position + oceanOffset;
@@ -80,41 +87,42 @@ PS_INPUT VS(VS_INPUT input)
 
     // 波の設定
 
-    float2 baseWindDir = normalize(float2(1.0f, 0.6f));
-    float wavelength = max(oceanWaveLength, 1e-4f);
+    float2 baseWindDir = normalize(float2(1.0f, kOceanWindZ));
+    float wavelength = max(oceanWaveLength, minimumWavelength);
     float steepness = max(oceanWaveSteepness, 0.0f);
 
-    const int NUM_WAVES = 6;
+    const float gridHalfIntervals = (kOceanGridResolution - 1) * 0.5f;
     // 頂点を増やさずに、257点の指数格子へ合わせる。短い波は、
     // 疎な外側のセルが変位をサンプリングしきれなくなる前に、減衰させる
-    float gridBase = oceanSize * 0.5f / (exp(5.5f) - 1.0f);
+    float gridBase = oceanSize * 0.5f / (exp(kOceanGridExponent) - 1.0f);
     float gridSpacing = (max(abs(input.position.x), abs(input.position.z)) + gridBase) *
-        (exp(5.5f / 128.0f) - 1.0f);
+        (exp(kOceanGridExponent / gridHalfIntervals) - 1.0f);
 
     // 複数の波を重ねる
 
-    for (int i = 0; i < NUM_WAVES; ++i)
+    for (int i = 0; i < kOceanWaveCount; ++i)
     {
-        float phaseOffset = (float)i * 21.53f;
-        float randomAngle = sin((float)i * 7.3f) * 0.22f;
+        float phaseOffset = (float)i * kOceanWavePhaseStride;
+        float randomAngle = sin((float)i * kOceanWaveDirectionStride) * kOceanWaveDirectionSpread;
 
         float s_rot = sin(randomAngle);
         float c_rot = cos(randomAngle);
 
         float2 waveDir = mul(float2x2(c_rot, -s_rot, s_rot, c_rot), baseWindDir);
 
-        float resolvedWave = 1.0f - smoothstep(0.20f, 0.45f, gridSpacing / wavelength);
+        float resolvedWave = 1.0f - smoothstep(gridWaveFadeStart, gridWaveFadeEnd, gridSpacing / wavelength);
         pos += CalculateGerstnerWave(waveDir, steepness * resolvedWave, wavelength,
             wavePos, tangent, binormal, phaseOffset);
 
-        wavelength *= 0.82f;
-        steepness *= 0.72f;
+        wavelength *= kOceanWavelengthDecay;
+        steepness *= kOceanWaveSteepnessDecay;
     }
 
     pos.y -= oceanWaveHeightOffset;
     // 遠方の波はサブピクセルになる。疎な外側の格子でエイリアシングが出る前に、幾何的な変位を減衰させる
-    float waveDetail =
-        1.0f - smoothstep(oceanWaveLength * 16.0f, oceanWaveLength * 64.0f, length(input.position.xz));
+    float waveDetail = 1.0f - smoothstep(
+        oceanWaveLength * distanceFadeStartWavelengths, oceanWaveLength * distanceFadeEndWavelengths,
+        length(input.position.xz));
     pos = lerp(float3(wavePos.x, -oceanWaveHeightOffset, wavePos.z), pos, waveDetail);
     tangent = lerp(float3(1, 0, 0), tangent, waveDetail);
     binormal = lerp(float3(0, 0, 1), binormal, waveDetail);

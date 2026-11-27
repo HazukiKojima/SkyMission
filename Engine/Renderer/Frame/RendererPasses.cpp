@@ -5,6 +5,10 @@
 #include <cmath>
 
 namespace Engine {
+	namespace {
+		constexpr UINT kFullscreenTriangleVertexCount = 3;
+	}
+
 	void SkyRenderPass::Record(const FrameContext& frame, RendererAssets& assets) const {
 		auto* commandList = frame.commandList;
 		auto* device = frame.device;
@@ -133,7 +137,7 @@ namespace Engine {
 		commands->SetGraphicsRootConstantBufferView(RootBinding::FrameConstants,
 			frame.constantBuffers.GetOceanFogResource(frame.frameIndex)->GetGPUVirtualAddress());
 		commands->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		commands->DrawInstanced(3, 1, 0, 0);
+		commands->DrawInstanced(kFullscreenTriangleVertexCount, 1, 0, 0);
 
 		// 描いた雲を後続の合成処理から読める状態に戻す
 		barrier = CD3DX12_RESOURCE_BARRIER::Transition(device->GetCloudRenderTarget(),
@@ -166,6 +170,6 @@ namespace Engine {
 		commandList->SetGraphicsRootConstantBufferView(RootBinding::FogConstants,
 			constantBuffers.GetOceanFogResource(frameIndex)->GetGPUVirtualAddress());
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		commandList->DrawInstanced(3, 1, 0, 0);
+		commandList->DrawInstanced(kFullscreenTriangleVertexCount, 1, 0, 0);
 	}
 } // namespace Engine

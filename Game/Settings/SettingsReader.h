@@ -18,10 +18,14 @@ namespace Game {
 		}
 
 	  public:
+		static constexpr float kMinimumPositiveValue = 0.000001f;
+		static constexpr float kMaximumDefaultMagnitude = 1000000.0f;
+
 		SettingsReader(const Engine::JsonAssetReader& reader, std::filesystem::path path)
 			: reader(reader), path(std::move(path)), exists(std::filesystem::exists(this->path)) {}
 		void Number(
-			const std::string& key, float& value, float minimum = 0.000001f, float maximum = 1000000) const;
+			const std::string& key, float& value, float minimum = kMinimumPositiveValue,
+			float maximum = kMaximumDefaultMagnitude) const;
 
 		template <class T> void Integer(const std::string& key, T& value, unsigned maximum) const {
 			float number = static_cast<float>(value);
@@ -33,8 +37,8 @@ namespace Game {
 		}
 
 		template <size_t N>
-		void Array(const std::string& key, std::array<float, N>& value, float minimum = -1000000,
-			float maximum = 1000000) const {
+		void Array(const std::string& key, std::array<float, N>& value, float minimum = -kMaximumDefaultMagnitude,
+			float maximum = kMaximumDefaultMagnitude) const {
 			if (!exists) return;
 
 			// JsonAssetReaderの一括取得は最大3成分のため、各要素をJSON Pointerで読む
@@ -46,9 +50,11 @@ namespace Game {
 
 			Require(*length == N, key, "unexpected array length");
 
+			auto next = value;
 			for (size_t i = 0; i < N; ++i)
-				Number((key.starts_with("/") ? key : "/" + key) + "/" + std::to_string(i), value[i], minimum,
+				Number((key.starts_with("/") ? key : "/" + key) + "/" + std::to_string(i), next[i], minimum,
 					maximum);
+			value = next;
 		}
 
 		void Vector(const std::string& key, DirectX::XMFLOAT3& value) const;

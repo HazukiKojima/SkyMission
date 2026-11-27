@@ -4,6 +4,14 @@
 #include <cfloat>
 
 namespace Game {
+	namespace {
+		constexpr float kCarrierCommandDelaySeconds = 0.5f;
+		constexpr float kCarrierLookSeconds = 3.0f;
+		constexpr float kVictoryHoldSeconds = 1.0f;
+		constexpr size_t kPatrolEncouragementKillCount = 2;
+		constexpr size_t kFinalEncouragementKillCount = 2;
+	}
+
 	void FlightScene::ConfigureCinematics(const std::map<std::string, CinematicSettings>& definitions,
 		CinematicModelResolver resolve, float farZ) {
 		if (!resolve || !std::isfinite(farZ) || farZ <= 1 || m_cinematic.GetPresentation().active)
@@ -194,11 +202,11 @@ namespace Game {
 
 			if (id == "patrolComplete" && !m_patrolPraiseComplete) {
 				m_patrolPraiseComplete = true;
-				m_carrierCommandDelay = 0.5f;
+				m_carrierCommandDelay = kCarrierCommandDelaySeconds;
 			}
 
 			if (id == "midMission") m_carrierTargetReady = true;
-			if (id == "carrierComplete") m_reinforcementHoldSeconds = 1;
+			if (id == "carrierComplete") m_reinforcementHoldSeconds = kReinforcementHoldSeconds;
 			if (id == "patrolComplete" || id == "patrolEncouragement" || id == "midMission" ||
 				id == "carrierHit" || id == "carrierComplete" || id == "finalRally" ||
 				id == "finalEncouragement") m_cinematic.StopRadio();
@@ -263,7 +271,8 @@ namespace Game {
 		const bool speaking = m_cinematic.GetPresentation().radioLine >= 0;
 
 		if (phase == MissionPhase::Patrol) {
-			if (m_patrolKills >= 2 && !m_patrolEncouraged && !m_enemyRadio.IsBusy() && !speaking)
+			if (m_patrolKills >= kPatrolEncouragementKillCount &&
+				!m_patrolEncouraged && !m_enemyRadio.IsBusy() && !speaking)
 				m_patrolEncouraged = StartCommandRadio("patrolEncouragement");
 			return;
 		}
@@ -291,7 +300,7 @@ namespace Game {
 
 		if (!m_patrolPraiseComplete) {
 			// 音声デバイスやファイルがない場合は、字幕の表示時間で代替する
-			if (!speaking) { m_patrolPraiseComplete = true; m_carrierCommandDelay = 0.5f; }
+			if (!speaking) { m_patrolPraiseComplete = true; m_carrierCommandDelay = kCarrierCommandDelaySeconds; }
 			return;
 		}
 
@@ -300,7 +309,7 @@ namespace Game {
 		if (m_carrierCommandDelay > 0) return;
 
 		m_midMissionPlayed = true;
-		m_carrierLookSeconds = 3;
+		m_carrierLookSeconds = kCarrierLookSeconds;
 
 		if (m_mission.GetCarrierCenter(m_scene)) StartCommandRadio("midMission");
 	}
@@ -331,7 +340,8 @@ namespace Game {
 
 	void FlightScene::UpdateFinalCommand() {
 		if (m_combat.result == CombatResult::Active && m_mission.GetPhase() == MissionPhase::FinalFighters &&
-			!m_cinematic.GetPresentation().active && m_finalKills >= 2 && !m_finalEncouraged &&
+			!m_cinematic.GetPresentation().active && m_finalKills >= kFinalEncouragementKillCount &&
+			!m_finalEncouraged &&
 			!m_enemyRadio.IsBusy() && m_cinematic.GetPresentation().radioLine < 0)
 			m_finalEncouraged = StartCommandRadio("finalEncouragement");
 	}
@@ -340,7 +350,7 @@ namespace Game {
 		// 勝利時は無線の終了を待ち、余韻を置いて終了演出へ進む
 		if (m_combat.result == CombatResult::Victory && !m_endingPlayed) {
 			if (m_enemyRadio.IsBusy() || m_combat.cinematic.radioLine >= 0) return;
-			if (m_victoryHoldSeconds < 0) { m_victoryHoldSeconds = 1; return; }
+			if (m_victoryHoldSeconds < 0) { m_victoryHoldSeconds = kVictoryHoldSeconds; return; }
 			m_victoryHoldSeconds = std::max(0.0f, m_victoryHoldSeconds - dt);
 
 			if (m_victoryHoldSeconds > 0) return;

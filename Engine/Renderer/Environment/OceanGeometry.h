@@ -1,11 +1,12 @@
 #pragma once
+#include "OceanWaveConstants.h"
 #include "../../EngineCommon.h"
 #include "../../Resources/Buffer/VertexBuffer.h"
 
 namespace Engine {
 	class OceanGeometry {
 	  public:
-		static constexpr int GridResolution = 257;
+		static constexpr int GridResolution = kOceanGridResolution;
 		static float GridCoordinate(int index, float size);
 		void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize);
 

@@ -1,13 +1,16 @@
 #include "Application.h"
+#include "Game/Settings/SimulationTiming.h"
 #include "Engine/Window/Window.h"
 #include "Engine/Renderer/Renderer.h"
 #include "Game/Scene/FlightSceneLoader.h"
 #include <DirectXMath.h>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <format>
 #include <future>
 #include <iterator>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <algorithm>
@@ -22,17 +25,28 @@ namespace Game {
 	using namespace Engine;
 
 	namespace {
+		constexpr int kInitialWindowWidth = 800;
+		constexpr int kInitialWindowHeight = 600;
+		constexpr int kLoadingSceneSettingsPercent = 5;
+		constexpr int kLoadingRendererStartPercent = 10;
+		constexpr int kLoadingRendererEndPercent = 85;
+		constexpr int kLoadingAudioPercent = 95;
+		constexpr int kLoadingCompletePercent = 100;
+		constexpr DWORD kLoadingMessageWaitMilliseconds = 16;
 		constexpr double kSimulationStepSeconds = 1.0 / 60.0;
-		constexpr double kMaximumFrameSeconds = 0.25;
+		constexpr float kFpsUpdateIntervalSeconds = 0.25f;
+		constexpr unsigned kMaxInputPressCount = std::numeric_limits<std::uint16_t>::max();
 
 		void ClearInputEvents(InputSnapshot& input) {
 			input.pressedKeys = {};
 			input.keyPressCounts = {};
 			input.rightMousePressCount = 0;
+			input.leftMousePressed = false;
 			input.mouseDeltaX = 0;
 			input.mouseDeltaY = 0;
 			input.gamepad.presses = {};
-			input.gamepad.northTapped = false;
+			input.gamepad.northTapCount = 0;
+			input.gamepad.northHoldStarted = false;
 		}
 
 		void AccumulateGameplayInput(InputSnapshot& pending, const InputSnapshot& input) {
@@ -45,15 +59,18 @@ namespace Game {
 			for (size_t key = 0; key < input.pressedKeys.size(); ++key) {
 				pending.pressedKeys[key] |= input.pressedKeys[key];
 				pending.keyPressCounts[key] = static_cast<std::uint16_t>(std::min<unsigned>(
-					pending.keyPressCounts[key] + input.keyPressCounts[key], UINT16_MAX));
+					pending.keyPressCounts[key] + input.keyPressCounts[key], kMaxInputPressCount));
 			}
 			for (size_t button = 0; button < input.gamepad.presses.size(); ++button) {
 				pending.gamepad.presses[button] = static_cast<std::uint16_t>(std::min<unsigned>(
-					pending.gamepad.presses[button] + input.gamepad.presses[button], UINT16_MAX));
+					pending.gamepad.presses[button] + input.gamepad.presses[button], kMaxInputPressCount));
 			}
-			pending.gamepad.northTapped |= input.gamepad.northTapped;
+			pending.gamepad.northTapCount = static_cast<std::uint16_t>(std::min<unsigned>(
+				pending.gamepad.northTapCount + input.gamepad.northTapCount, kMaxInputPressCount));
+			pending.gamepad.northHoldStarted |= input.gamepad.northHoldStarted;
 			pending.rightMousePressCount = std::min(pending.rightMousePressCount +
-				input.rightMousePressCount, unsigned{UINT16_MAX});
+				input.rightMousePressCount, kMaxInputPressCount);
+			pending.leftMousePressed |= input.leftMousePressed;
 			pending.mouseDeltaX += input.mouseDeltaX;
 			pending.mouseDeltaY += input.mouseDeltaY;
 		}
@@ -69,10 +86,12 @@ namespace Game {
 				const auto& pad = std::get<GamepadSnapshot>(sample.state);
 				AccumulateGameplayInput(input, InputSnapshot{.active = true, .gamepad = pad});
 				const auto presses = input.gamepad.presses;
-				const bool northTapped = input.gamepad.northTapped;
+				const auto northTapCount = input.gamepad.northTapCount;
+				const bool northHoldStarted = input.gamepad.northHoldStarted;
 				input.gamepad = pad;
 				input.gamepad.presses = presses;
-				input.gamepad.northTapped = northTapped;
+				input.gamepad.northTapCount = northTapCount;
+				input.gamepad.northHoldStarted = northHoldStarted;
 			}
 		}
 
@@ -93,7 +112,7 @@ namespace Game {
 		// 読み込み用のウィンドウを表示する
 		StartupTiming timing("application.window_and_json");
 		const auto startupTime = std::chrono::steady_clock::now();
-		m_window = std::make_unique<Window>(800, 600, L"SkyMission", m_hInstance);
+		m_window = std::make_unique<Window>(kInitialWindowWidth, kInitialWindowHeight, L"SkyMission", m_hInstance);
 		m_window->SetLoading(true);
 		m_window->SetLoadingProgress(0, L"読み込みエンジンの準備");
 		ShowWindow(m_window->GetHandle(), SW_SHOW);
@@ -102,7 +121,7 @@ namespace Game {
 		timing.Mark("application.redox_warmup");
 		RedoxModule::WarmUp();
 		timing.Mark("application.scene_settings");
-		m_window->SetLoadingProgress(5, L"マップとミッションの設定");
+		m_window->SetLoadingProgress(kLoadingSceneSettingsPercent, L"マップとミッションの設定");
 
 		// 起動に必要な設定を読み込む
 		const auto assetsDir = AssetsDirectory();
@@ -135,7 +154,9 @@ namespace Game {
 			m_renderer->Initialize(hwnd, width, height, assets.BuildRendererDefinition(),
 				[&](size_t completed, size_t total, std::wstring_view item) {
 					const std::lock_guard lock(progressMutex);
-					pendingProgress.emplace(10 + static_cast<int>(75 * completed / total), item);
+					const int rendererProgressSpan = kLoadingRendererEndPercent - kLoadingRendererStartPercent;
+					pendingProgress.emplace(kLoadingRendererStartPercent +
+						static_cast<int>(rendererProgressSpan * completed / total), item);
 				});
 		});
 
@@ -154,7 +175,7 @@ namespace Game {
 				progress.swap(pendingProgress);
 			}
 			if (progress) m_window->SetLoadingProgress(progress->first, progress->second);
-			MsgWaitForMultipleObjectsEx(0, nullptr, 16, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+			MsgWaitForMultipleObjectsEx(0, nullptr, kLoadingMessageWaitMilliseconds, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 		}
 
 		// 読み込み後の画面寸法を反映する
@@ -163,7 +184,7 @@ namespace Game {
 			m_window->SetLoading(false);
 			return;
 		}
-		m_window->SetLoadingProgress(85, L"ミッションと機体の準備");
+		m_window->SetLoadingProgress(kLoadingRendererEndPercent, L"ミッションと機体の準備");
 		if (width != m_window->GetWidth() || height != m_window->GetHeight()) {
 			if (m_window->GetWidth() && m_window->GetHeight())
 				m_renderer->Resize(m_window->GetWidth(), m_window->GetHeight());
@@ -175,12 +196,12 @@ namespace Game {
 		// シーンと音声を初期化する
 		InitializeFlightScene(assets);
 		timing.Mark("application.audio");
-		m_window->SetLoadingProgress(95, L"効果音と音声");
+		m_window->SetLoadingProgress(kLoadingAudioPercent, L"効果音と音声");
 		m_combatAudio.Initialize(assetsDir / L"Sound", assets.cinematics);
 		ConfigureResizeHandling();
 		// 読み込み中の決定入力でタイトル画面を飛ばさない
 		m_window->ConsumeInput();
-		m_window->SetLoadingProgress(100, L"読み込み完了");
+		m_window->SetLoadingProgress(kLoadingCompletePercent, L"読み込み完了");
 		m_window->SetLoading(false);
 
 		m_lastTime = std::chrono::steady_clock::now();
@@ -287,7 +308,7 @@ namespace Game {
 		if (m_screen == Screen::Playing) {
 			UpdateGameplay(input, deltaSeconds);
 		} else {
-			m_sceneSeconds += std::min(deltaSeconds, kMaximumFrameSeconds);
+			m_sceneSeconds += std::min<double>(deltaSeconds, kMaximumSimulationDeltaSeconds);
 			UpdateMenu(input);
 		}
 	}
@@ -301,9 +322,9 @@ namespace Game {
 		m_fpsTimer += static_cast<float>(deltaSeconds);
 		++m_fpsFrameCount;
 
-		if (m_fpsTimer >= 0.25f) {
+		if (m_fpsTimer >= kFpsUpdateIntervalSeconds) {
 			const float fps = static_cast<float>(m_fpsFrameCount) / m_fpsTimer;
-			std::wstring title = m_windowTitle + L" | FPS: " + std::to_wstring(static_cast<int>(fps + 0.5f));
+			std::wstring title = m_windowTitle + L" | FPS: " + std::to_wstring(static_cast<int>(std::round(fps)));
 			const auto& gpu = m_renderer->GetGpuTimings();
 
 			if (gpu.valid)
@@ -320,10 +341,11 @@ namespace Game {
 
 	void Application::UpdateInputDevice(const InputSnapshot& input) {
 		const bool keyboardOrMouse = std::ranges::any_of(input.keys, std::identity{}) ||
-			std::ranges::any_of(input.pressedKeys, std::identity{}) || input.leftMouseDown ||
-			input.middleMouseDown || input.rightMouseDown || input.rightMousePressCount != 0;
+			std::ranges::any_of(input.pressedKeys, std::identity{}) || input.leftMouseDown || input.leftMousePressed ||
+			input.middleMouseDown || input.rightMouseDown || input.rightMousePressCount != 0 ||
+			input.mouseDeltaX != 0 || input.mouseDeltaY != 0;
 		const auto& pad = input.gamepad;
-		const bool gamepadInput = pad.buttons != 0 || pad.northTapped ||
+		const bool gamepadInput = pad.buttons != 0 || pad.northTapCount != 0 ||
 			std::ranges::any_of(pad.presses, std::identity{}) || pad.leftX != 0 || pad.leftY != 0 ||
 			pad.rightX != 0 || pad.rightY != 0 || pad.leftTrigger != 0 || pad.rightTrigger != 0;
 		// 無入力時やフォーカス喪失時も表示方式を維持し、同時入力時はキーボード・マウスを優先する
@@ -348,7 +370,7 @@ namespace Game {
 
 		m_scene->StartNewMission();
 		m_screen = Screen::Playing;
-		m_captureMode = 0;
+		m_captureMode = CaptureMode::Normal;
 		m_pendingSimulationSeconds = 0;
 		m_gameplayInput = input;
 		ClearInputEvents(m_gameplayInput);
@@ -370,7 +392,7 @@ namespace Game {
 			[](const auto& a, const auto& b) { return a.time < b.time; });
 		auto next = m_inputSamples.begin();
 
-		m_pendingSimulationSeconds += std::min(deltaSeconds, kMaximumFrameSeconds);
+		m_pendingSimulationSeconds += std::min<double>(deltaSeconds, kMaximumSimulationDeltaSeconds);
 
 		// 各ステップの終了時刻までに届いた入力だけを、そのステップへ渡す。
 		while (m_pendingSimulationSeconds >= kSimulationStepSeconds && m_screen == Screen::Playing) {
@@ -396,9 +418,12 @@ namespace Game {
 	}
 
 	void Application::StepGameplay(const InputSnapshot& input, float deltaSeconds) {
-		if (input.WasKeyPressed(VK_F6)) {
-			m_captureMode = (m_captureMode + 1) % 3;
-			Log("Capture view: {} (0=normal, 1=environment+ships, 2=environment)\n", m_captureMode);
+		if (const auto presses = input.GetKeyPressCount(VK_F6); presses != 0) {
+			constexpr std::array modeNames{"normal", "environment and ships", "environment only"};
+			static_assert(modeNames.size() == static_cast<size_t>(CaptureMode::Count));
+			const auto index = (static_cast<size_t>(m_captureMode) + presses) % modeNames.size();
+			m_captureMode = static_cast<CaptureMode>(index);
+			Log("Capture view: {}\n", modeNames[index]);
 		}
 
 		// 入力から戦闘を進め、演出終了時に結果画面へ切り替える
@@ -420,7 +445,7 @@ namespace Game {
 		const auto flight = m_aircraftController.ReadInput(input);
 		m_scene->Update(flight, simulationSeconds, input, combat);
 		const auto& combatState = m_scene->GetCombatSnapshot();
-		if (combatState.result == CombatResult::Defeat) m_captureMode = 0;
+		if (combatState.result == CombatResult::Defeat) m_captureMode = CaptureMode::Normal;
 		const bool defeatRadioActive =
 			combatState.cinematic.cinematicId == "defeat" && combatState.cinematic.radioLine >= 0;
 		const bool showClearScreen = endingWasActive && !combatState.cinematic.active &&
@@ -435,7 +460,7 @@ namespace Game {
 
 		if (showResultScreen) {
 			m_screen = showGameOver ? Screen::GameOver : Screen::Clear;
-			m_captureMode = 0;
+			m_captureMode = CaptureMode::Normal;
 			m_combatAudio.ResetPlayback();
 			return;
 		}
@@ -479,14 +504,14 @@ namespace Game {
 			}
 		}
 
-		if (m_captureMode != 0) PrepareCaptureScene();
-		const auto& scene = m_captureMode == 0 ? m_renderScene : m_captureScene;
+		if (m_captureMode != CaptureMode::Normal) PrepareCaptureScene();
+		const auto& scene = m_captureMode == CaptureMode::Normal ? m_renderScene : m_captureScene;
 		const auto view = m_renderer->UpdateFrameConstants(scene, static_cast<float>(renderSeconds));
 
 		// 描画リストはフレームごとに一度だけ初期化し、エフェクト、照準の順に重ねる
 		m_hud.Reset(view.width, view.height);
 
-		if (m_captureMode == 0) {
+		if (m_captureMode == CaptureMode::Normal) {
 			if (!combatState.cinematic.active)
 				m_effectPresenter.Build(m_scene->GetEffectSnapshot(), view, combatState.playerPosition, m_hud);
 			m_hudPresenter.Build(combatState, view, m_hud, m_usingGamepad);
@@ -499,10 +524,16 @@ namespace Game {
 	}
 
 	void Application::BuildMenuHud() {
+		constexpr float kMenuReferenceWidth = 800.0f;
+		constexpr float kMenuReferenceHeight = 600.0f;
+		constexpr float kMenuTitleHeightFraction = 0.4f;
+		constexpr float kMenuActionHeightFraction = 0.56f;
+		constexpr float kMenuTitleFontHeight = 48.0f;
+		constexpr float kMenuActionFontHeight = 26.0f;
 		const float width = float(m_window->GetWidth()), height = float(m_window->GetHeight());
 		m_hud.Reset(m_window->GetWidth(), m_window->GetHeight());
 		m_hud.FilledRect({0, 0}, {width, height}, {0, 0, 0, 1});
-		const float scale = std::min(width / 800.0f, height / 600.0f);
+		const float scale = std::min(width / kMenuReferenceWidth, height / kMenuReferenceHeight);
 		const auto centered = [&](std::string_view text, float y, float size) {
 			m_hud.Text(
 				{(width - HudDrawList::MeasureTextWidth(text, size)) * 0.5f, y}, text, size, {1, 1, 1, 1});
@@ -517,10 +548,10 @@ namespace Game {
 			title = "ミッションクリア";
 			action = " でタイトルに戻る";
 		}
-		centered(title, height * 0.4f, 48 * scale);
+		centered(title, height * kMenuTitleHeightFraction, kMenuTitleFontHeight * scale);
 		// コントローラーの機種にかかわらず、操作ガイドはPS4表記に統一する
 		const auto confirm = m_usingGamepad ? "×" : "Enter";
-		centered(std::string(confirm) + action, height * 0.56f, 26 * scale);
+		centered(std::string(confirm) + action, height * kMenuActionHeightFraction, kMenuActionFontHeight * scale);
 	}
 
 	void Application::PrepareCaptureScene() {
@@ -529,7 +560,7 @@ namespace Game {
 		m_captureScene.SetCamera(m_renderScene.GetCamera());
 		m_captureScene.SetEnvironment(m_renderScene.GetEnvironment());
 
-		if (m_captureMode == 1) {
+		if (m_captureMode == CaptureMode::EnvironmentAndShips) {
 			const auto& objects = &m_scene->GetRenderScene().GetObjects() == &m_scene->GetObjects()
 				? m_renderScene.GetObjects() : m_scene->GetObjects();
 			for (const auto& object : objects) {
@@ -547,9 +578,9 @@ namespace Game {
 
 	void Application::Render() {
 		const auto& scene = m_screen == Screen::Playing
-			? (m_captureMode == 0 ? m_renderScene : m_captureScene) : m_scene->GetRenderScene();
+			? (m_captureMode == CaptureMode::Normal ? m_renderScene : m_captureScene) : m_scene->GetRenderScene();
 		m_renderer->Render(m_window->GetWidth(), m_window->GetHeight(), scene,
-			m_screen != Screen::Playing || m_captureMode == 0 ? &m_hud : nullptr);
+			m_screen != Screen::Playing || m_captureMode == CaptureMode::Normal ? &m_hud : nullptr);
 	}
 
 } // namespace Game

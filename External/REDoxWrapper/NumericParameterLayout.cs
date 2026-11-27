@@ -42,7 +42,10 @@ internal sealed class NumericParameterLayout
 
         if (root.ValueKind != JsonValueKind.Object) return InvalidSchema;
 
-        Span<byte> seen = _lengths.Length <= 256 ? stackalloc byte[_lengths.Length] : new byte[_lengths.Length];
+        const int StackAllocatedSeenCapacity = 256;
+        Span<byte> seen = _lengths.Length <= StackAllocatedSeenCapacity
+            ? stackalloc byte[_lengths.Length]
+            : new byte[_lengths.Length];
         seen.Clear();
         int found = 0;
 

@@ -17,6 +17,10 @@ public static unsafe class REDoxApi
     private const int InvalidSchema = -3;
     private const int InvalidValue = -5;
     private const int UnexpectedFailure = -6;
+    private const int StackAllocatedFloatCapacity = 256;
+    private const int RetroFilmValueCount = 50;
+    private const int RetroFilmPaddingCount = 2;
+    private const int RetroFilmOutputCount = RetroFilmValueCount + RetroFilmPaddingCount;
 
     // ハンドルには生ポインターではなく管理テーブルのIDを使う
     // 取得と解放を同じロックで保護し、解放済み文書へのアクセスを防ぐ
@@ -157,7 +161,7 @@ public static unsafe class REDoxApi
         float* output,
         int outputCapacity)
     {
-        if (jsonUtf8 == null || jsonLength <= 0 || output == null || outputCapacity != 52)
+        if (jsonUtf8 == null || jsonLength <= 0 || output == null || outputCapacity != RetroFilmOutputCount)
         {
             return InvalidArguments;
         }
@@ -181,7 +185,7 @@ public static unsafe class REDoxApi
     [UnmanagedCallersOnly(EntryPoint = "MyRedoxGetRetroFilmParametersFromDocument", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static int MyRedoxGetRetroFilmParametersFromDocument(nint handle, float* output, int outputCapacity)
     {
-        if (handle == 0 || output == null || outputCapacity != 52) return InvalidArguments;
+        if (handle == 0 || output == null || outputCapacity != RetroFilmOutputCount) return InvalidArguments;
 
         lock (DocumentLock)
         {
@@ -193,7 +197,6 @@ public static unsafe class REDoxApi
 
     private static int ReadRetroFilmParameters(JsonDocument document, float* output, int outputCapacity)
     {
-        const int parameterCount = 52;
         try
         {
             REDox.DElement root = document.RootElement;
@@ -210,7 +213,7 @@ public static unsafe class REDoxApi
                 !TryGetObject(root, "flicker", out REDox.DElement flicker)) return InvalidSchema;
 
             // 全項目の検証が終わるまで呼び出し元の出力へ書き込まない
-            Span<float> values = stackalloc float[parameterCount];
+            Span<float> values = stackalloc float[RetroFilmOutputCount];
             int index = 0;
             bool valid =
                 AppendNumber(colorGrading, "desaturation", values, ref index) && AppendArray(colorGrading, "tint", 3, values, ref index) &&
@@ -230,13 +233,12 @@ public static unsafe class REDoxApi
                 AppendNumber(scratch, "edgeSoftness", values, ref index) && AppendNumber(scratch, "verticalFadeMin", values, ref index) &&
                 AppendNumber(scratch, "intensity", values, ref index) && AppendNumber(flicker, "fps", values, ref index) &&
                 AppendNumber(flicker, "amplitude", values, ref index) && AppendArray(root, "overlayColor", 3, values, ref index);
-            if (!valid || index != parameterCount - 2) return InvalidValue;
+            if (!valid || index != RetroFilmValueCount) return InvalidValue;
 
             // シェーダーと同じ配置になるよう末尾の余白を埋める
-            values[index++] = 0.0f;
-            values[index++] = 0.0f;
+            values[index..].Clear();
             values.CopyTo(new Span<float>(output, outputCapacity));
-            return index;
+            return RetroFilmOutputCount;
         }
         catch { return UnexpectedFailure; }
     }
@@ -296,7 +298,9 @@ public static unsafe class REDoxApi
             try
             {
                 // エラー時に呼び出し元の出力を途中まで書き換えない
-                Span<float> values = outputCapacity <= 256 ? stackalloc float[outputCapacity] : new float[outputCapacity];
+                Span<float> values = outputCapacity <= StackAllocatedFloatCapacity
+                    ? stackalloc float[outputCapacity]
+                    : new float[outputCapacity];
                 int result = layout.Read(document, values);
 
                 if (result > 0) values.CopyTo(new Span<float>(output, outputCapacity));
@@ -351,7 +355,9 @@ public static unsafe class REDoxApi
         if (lookup < 0) return lookup;
 
         // 検証中の値を一時領域へ集めて部分書き込みを防ぐ
-        Span<float> values = outputCapacity <= 256 ? stackalloc float[outputCapacity] : new float[outputCapacity];
+        Span<float> values = outputCapacity <= StackAllocatedFloatCapacity
+            ? stackalloc float[outputCapacity]
+            : new float[outputCapacity];
 
         if (value.ValueKind == JsonValueKind.Number)
         {

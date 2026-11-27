@@ -38,8 +38,9 @@ namespace Game {
 				return static_cast<unsigned>(value);
 			};
 
-			settings.steps = integer("steps", 16, 64);
-			settings.seed = integer("seed", 0, 16777215);
+			settings.steps = integer("steps",
+				Engine::CloudSettings::kMinimumRaymarchSteps, Engine::CloudSettings::kMaximumRaymarchSteps);
+			settings.seed = integer("seed", 0, Engine::CloudSettings::kMaximumShaderSeed);
 			Engine::ValidateCloudSettings(settings);
 			return settings;
 		} catch (const std::exception& error) {

@@ -3,6 +3,10 @@
 
 namespace Engine {
 	struct CloudSettings {
+		static constexpr unsigned kMinimumRaymarchSteps = 16;
+		static constexpr unsigned kMaximumRaymarchSteps = 64;
+		static constexpr unsigned kMaximumShaderSeed = (1u << 24) - 1;
+
 		bool enabled = false;
 		float bottom = 4300;
 		float top = 13000;

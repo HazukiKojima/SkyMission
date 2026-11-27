@@ -1,4 +1,5 @@
 #include "AircraftGun.h"
+#include "Game/Settings/SimulationTiming.h"
 #include "Engine/Resources/Mesh/Model.h"
 #include <algorithm>
 
@@ -31,7 +32,7 @@ namespace Game {
 
 		if (!std::isfinite(dt) || dt <= 0) return ages;
 
-		const double seconds = std::min(dt, 0.25f);
+		const double seconds = std::min(dt, kMaximumSimulationDeltaSeconds);
 
 		if (!input.fire) {
 			m_cooldown = std::max(0.0, m_cooldown - seconds);

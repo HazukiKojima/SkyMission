@@ -25,6 +25,12 @@ internal static class Program
     private static double s_checksum;
     private const int Samples = 9;
     private const double SampleMilliseconds = 100;
+    private const int WarmupMilliseconds = 200;
+    private const int WarmupBatchSize = 16;
+    private const double MinimumCalibrationMilliseconds = 15;
+    private const double ElapsedTimeFloorMilliseconds = 0.001;
+    private const int CalibrationIterationLimit = 1_000_000;
+    private const int SampleIterationLimit = 2_000_000;
 
     private static int Main(string[] args)
     {
@@ -281,7 +287,7 @@ internal static class Program
     {
         Stopwatch timer = Stopwatch.StartNew();
 
-        while (timer.ElapsedMilliseconds < 200) RunBatch(action, 16);
+        while (timer.ElapsedMilliseconds < WarmupMilliseconds) RunBatch(action, WarmupBatchSize);
     }
 
     private static int Calibrate(Func<double> action)
@@ -294,8 +300,10 @@ internal static class Program
             RunBatch(action, iterations);
             double elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
 
-            if (elapsed >= 15 || iterations >= 1_000_000)
-                return (int)Math.Clamp(iterations * SampleMilliseconds / Math.Max(elapsed, 0.001), 1, 2_000_000);
+            if (elapsed >= MinimumCalibrationMilliseconds || iterations >= CalibrationIterationLimit)
+                return (int)Math.Clamp(
+                    iterations * SampleMilliseconds / Math.Max(elapsed, ElapsedTimeFloorMilliseconds),
+                    1, SampleIterationLimit);
 
             iterations *= 2;
         }

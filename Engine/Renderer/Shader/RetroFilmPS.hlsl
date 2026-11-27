@@ -36,28 +36,45 @@ float Hash(float2 value)
 
 float FilmGrain(float2 pixel, float time, float luminance)
 {
+    const float fineGrainFrameStride = 17.0f;
+    const float coarseGrainFrameStride = 23.0f;
+    const float coarseGrainFrequencyScale = 0.55f;
+    const float coarseGrainBlendWeight = 0.4f;
+    const float highlightGrainWeight = 0.45f;
+    const float grainHighlightFadeStart = 0.15f;
+    const float grainHighlightFadeEnd = 0.85f;
     const float grainFrameRate = jitterYGrain.y;
     const float grainStrength = jitterYGrain.z;
 
     float frame = floor(time * grainFrameRate);
     // 細粒と粗粒を重ね、解像度が高くてもフィルムの乳剤らしいむらを残す
-    float fineNoise = Hash(floor(pixel) + frame * 17.0f);
-    float2 grainPosition = pixel * 0.55f;
+    float fineNoise = Hash(floor(pixel) + frame * fineGrainFrameStride);
+    float2 grainPosition = pixel * coarseGrainFrequencyScale;
     float2 grainCell = floor(grainPosition);
     float2 grainBlend = smoothstep(0.0f, 1.0f, frac(grainPosition));
+    float grainFrameOffset = frame * coarseGrainFrameStride;
     float coarseNoise = lerp(
-        lerp(Hash(grainCell + frame * 23.0f), Hash(grainCell + float2(1, 0) + frame * 23.0f), grainBlend.x),
-        lerp(Hash(grainCell + float2(0, 1) + frame * 23.0f),
-            Hash(grainCell + float2(1, 1) + frame * 23.0f), grainBlend.x), grainBlend.y);
-    float noise = lerp(fineNoise, coarseNoise, 0.4f);
+        lerp(Hash(grainCell + grainFrameOffset), Hash(grainCell + float2(1, 0) + grainFrameOffset), grainBlend.x),
+        lerp(Hash(grainCell + float2(0, 1) + grainFrameOffset),
+            Hash(grainCell + float2(1, 1) + grainFrameOffset), grainBlend.x), grainBlend.y);
+    float noise = lerp(fineNoise, coarseNoise, coarseGrainBlendWeight);
 
     // フィルムの粒子は、明るいハイライトよりも中間調と影で目立つ
-    float exposureWeight = lerp(1.0f, 0.45f, smoothstep(0.15f, 0.85f, luminance));
+    float exposureWeight = lerp(1.0f, highlightGrainWeight,
+        smoothstep(grainHighlightFadeStart, grainHighlightFadeEnd, luminance));
     return (noise - 0.5f) * grainStrength * exposureWeight;
 }
 
 float FilmDust(float2 pixel, float time)
 {
+    const float dustChanceFrameStride = 13.7f;
+    const float2 dustChanceOffset = float2(17.1f, 9.2f);
+    const float dustCenterXFrameStride = 19.3f;
+    const float dustCenterYFrameStride = 23.1f;
+    const float2 dustCenterXOffset = float2(3.1f, 8.7f);
+    const float2 dustCenterYOffset = float2(5.2f, 4.6f);
+    const float dustRadiusFrameStride = 29.7f;
+    const float dustFeatherStartFraction = 0.5f;
     const float dustFrameRate = dust.x;
     const float dustThreshold = dust.y;
     const float minimumDustRadius = dust.z;
@@ -67,7 +84,7 @@ float FilmDust(float2 pixel, float time)
     float cellSize = jitterYGrain.w;
     float2 cell = floor(pixel / cellSize);
     float frame = floor(time * dustFrameRate);
-    float chance = Hash(cell + frame * 13.7f + float2(17.1f, 9.2f));
+    float chance = Hash(cell + frame * dustChanceFrameStride + dustChanceOffset);
 
     // 選ばれたセル内にランダムな位置と大きさの埃を置く
     float dustAmount = 0.0f;
@@ -76,17 +93,27 @@ float FilmDust(float2 pixel, float time)
 
         float2 localPixel = frac(pixel / cellSize);
         float2 center = float2(
-            Hash(cell + frame * 19.3f + float2(3.1f, 8.7f)), Hash(cell + frame * 23.1f + float2(5.2f, 4.6f)));
+            Hash(cell + frame * dustCenterXFrameStride + dustCenterXOffset),
+            Hash(cell + frame * dustCenterYFrameStride + dustCenterYOffset));
 
         float distanceToDust = length((localPixel - center) * cellSize);
-        float radius = lerp(minimumDustRadius, maximumDustRadius, Hash(cell + frame * 29.7f));
-        dustAmount = (1.0f - smoothstep(radius * 0.5f, radius, distanceToDust)) * dustOpacity;
+        float radius = lerp(minimumDustRadius, maximumDustRadius, Hash(cell + frame * dustRadiusFrameStride));
+        dustAmount = (1.0f - smoothstep(radius * dustFeatherStartFraction, radius, distanceToDust)) * dustOpacity;
     }
     return dustAmount;
 }
 
 float FilmScratch(float2 pixel, float time)
 {
+    const float scratchCenterMin = 0.18f;
+    const float scratchCenterMax = 0.82f;
+    const float scratchWidthSeedOffset = 7.3f;
+    const float scratchCenterSeedOffset = 31.4f;
+    const float scratchWearSeedOffset = 13.1f;
+    const float minimumScratchFeatherPixels = 0.6f;
+    const float scratchWearCellPixels = 180.0f;
+    const float scratchWearFadeStart = 0.2f;
+    const float scratchWearFadeEnd = 0.8f;
     const float scratchFrameRate = dustScratch.z;
     const float scratchSpacing = dustScratch.y;
     const float scratchThreshold = dustScratch.w;
@@ -105,19 +132,20 @@ float FilmScratch(float2 pixel, float time)
     {
 
         float position = frac(pixel.x / scratchSpacing);
-        float width = lerp(minimumScratchWidth, maximumScratchWidth, Hash(float2(column, frame + 7.3f)));
-        float center = lerp(0.18f, 0.82f, Hash(float2(column, frame + 31.4f)));
+        float width = lerp(minimumScratchWidth, maximumScratchWidth,
+            Hash(float2(column, frame + scratchWidthSeedOffset)));
+        float center = lerp(scratchCenterMin, scratchCenterMax, Hash(float2(column, frame + scratchCenterSeedOffset)));
 
         // サブピクセルの傷には、ピクセル大のぼかしが必要。ないと線がどのピクセルにも掛からないことがある
-        float softness = max(scratchSoftness, 0.6f / max(scratchSpacing, 1.0f));
+        float softness = max(scratchSoftness, minimumScratchFeatherPixels / max(scratchSpacing, 1.0f));
         float scratchAmount = 1.0f - smoothstep(width, width + softness, abs(position - center));
-        float verticalCell = pixel.y / 180.0f;
+        float verticalCell = pixel.y / scratchWearCellPixels;
         float verticalBlend = frac(verticalCell);
         verticalBlend = verticalBlend * verticalBlend * (3 - 2 * verticalBlend);
 
-        float wear = lerp(Hash(float2(column + floor(verticalCell), frame + 13.1f)),
-            Hash(float2(column + floor(verticalCell) + 1, frame + 13.1f)), verticalBlend);
-        float verticalFade = lerp(minimumVerticalFade, 1.0f, smoothstep(0.2f, 0.8f, wear));
+        float wear = lerp(Hash(float2(column + floor(verticalCell), frame + scratchWearSeedOffset)),
+            Hash(float2(column + floor(verticalCell) + 1, frame + scratchWearSeedOffset)), verticalBlend);
+        float verticalFade = lerp(minimumVerticalFade, 1.0f, smoothstep(scratchWearFadeStart, scratchWearFadeEnd, wear));
 
         scratchResult = scratchAmount * verticalFade * scratchOpacity;
     }
@@ -126,16 +154,21 @@ float FilmScratch(float2 pixel, float time)
 
 float FilmFlicker(float time)
 {
+    const float flickerSeed = 47.2f;
     const float flickerFrameRate = scratchFlicker.y;
     const float flickerStrength = scratchFlicker.z;
 
     float frame = floor(time * flickerFrameRate);
-    float randomValue = Hash(float2(frame, 47.2f));
+    float randomValue = Hash(float2(frame, flickerSeed));
     return 1.0f + (randomValue - 0.5f) * flickerStrength;
 }
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
+    const float2 gateWeaveSeeds = float2(11.3f, 29.7f);
+    const float periodicJitterWeight = 0.7f;
+    const float randomJitterWeight = 0.3f;
+    const float highlightShoulderSoftness = 0.35f;
     const float desaturation = colorDesaturationTint.x;
     const float3 colorTint = colorDesaturationTint.yzw;
     const float colorGain = colorGainOffset.x;
@@ -152,10 +185,13 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     // フレーム単位の不規則な揺れを混ぜ、周期的なカメラ移動に見えるのを避ける
     float filmFrame = floor(time * jitterYGrain.y);
-    float2 gateWeave = float2(Hash(float2(filmFrame, 11.3f)), Hash(float2(filmFrame, 29.7f))) * 2 - 1;
+    float2 gateWeave = float2(Hash(float2(filmFrame, gateWeaveSeeds.x)),
+        Hash(float2(filmFrame, gateWeaveSeeds.y))) * 2 - 1;
     float2 jitter = float2(
-        (sin(time * horizontalJitterFrequency) * 0.7f + gateWeave.x * 0.3f) * horizontalJitterAmount,
-        (cos(time * verticalJitterFrequency) * 0.7f + gateWeave.y * 0.3f) * verticalJitterAmount);
+        (sin(time * horizontalJitterFrequency) * periodicJitterWeight + gateWeave.x * randomJitterWeight) *
+            horizontalJitterAmount,
+        (cos(time * verticalJitterFrequency) * periodicJitterWeight + gateWeave.y * randomJitterWeight) *
+            verticalJitterAmount);
 
     float2 uv = saturate(input.texcoord + jitter);
     uint sceneWidth, sceneHeight;
@@ -173,7 +209,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     // 乳剤の肩特性を近似し、明部の階調を残したまま白を柔らかくする
     float3 highlightExcess = max(color - highlight.x, 0.0f);
-    color -= highlightExcess * highlightExcess / (highlightExcess + 0.35f) * highlight.z;
+    color -= highlightExcess * highlightExcess / (highlightExcess + highlightShoulderSoftness) * highlight.z;
 
     // 暗部をわずかに浮かせ、ハイライトを柔らかくする
     color = lerp(blackLift.rgb, color, blackLift.w);

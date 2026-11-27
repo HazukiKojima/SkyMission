@@ -140,7 +140,8 @@ namespace Engine {
 
 	void RendererFrameUpdater::UpdateFilmConstants(const FrameViewData& frame,
 		const RetroFilmParameters& filmParameters, FilmConstantBufferData* film) const {
-		film->time = std::fmod(frame.time, 3600.0f);
+		constexpr float kFilmTimeWrapSeconds = 3600.0f;
+		film->time = std::fmod(frame.time, kFilmTimeWrapSeconds);
 		film->padding[0] = film->padding[1] = film->padding[2] = 0.0f;
 		film->parameters = filmParameters;
 	}

@@ -14,7 +14,8 @@ namespace Engine {
 			!range(settings.coverage, 0, 1) || !range(settings.density, 0, 0.02f) ||
 			!range(settings.scale, 1000, 20000) || !range(settings.wind.x, -100, 100) ||
 			!range(settings.wind.y, -100, 100) || !range(settings.maxDistance, 5000, 80000) ||
-			settings.steps < 16 || settings.steps > 64 || settings.seed > 16777215)
+			settings.steps < CloudSettings::kMinimumRaymarchSteps ||
+			settings.steps > CloudSettings::kMaximumRaymarchSteps || settings.seed > CloudSettings::kMaximumShaderSeed)
 			throw std::invalid_argument(
 				"Cloud layer, coverage, density, scale, wind, distance, steps or seed is invalid");
 	}

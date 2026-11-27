@@ -4,6 +4,13 @@
 #include <vector>
 
 namespace Engine {
+	namespace {
+		// RE:DOX ABI の InvalidSchema は未指定フィールドでも返る。
+		constexpr int kRedoxInvalidSchema = -3;
+		constexpr int kStringBufferBytes = 4096;
+		constexpr size_t kMaxVectorComponents = 3;
+	}
+
 	std::optional<size_t> JsonAssetReader::TryResolveArrayLength(
 		const std::filesystem::path& path, const std::string& key) const {
 		RedoxDocument transient;
@@ -14,7 +21,7 @@ namespace Engine {
 			reinterpret_cast<GetLength>(RedoxModule::GetFunction("MyRedoxGetArrayLengthFromDocument"));
 		const int result = getLength(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
 			static_cast<int>(key.size()));
-		if (result == -3) return std::nullopt;
+		if (result == kRedoxInvalidSchema) return std::nullopt;
 		if (result < 0)
 			throw std::runtime_error("JSON '" + path.string() + "', field '" + key +
 				"': expected an array (REDox " + std::to_string(result) + ")");
@@ -47,10 +54,10 @@ namespace Engine {
 		auto getString =
 			reinterpret_cast<RedoxGetString>(RedoxModule::GetFunction("MyRedoxGetStringFromDocument"));
 
-		unsigned char output[4096] = {};
+		unsigned char output[kStringBufferBytes] = {};
 		const int result = getString(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
 			static_cast<int>(key.size()), output, sizeof(output));
-		if (result == -3) return std::nullopt; // REDoxの未指定フィールド
+		if (result == kRedoxInvalidSchema) return std::nullopt;
 		if (result < 0) {
 			throw std::runtime_error(FieldContext(jsonPath, key) +
 				": failed to read string. REDox error code: " + std::to_string(result));
@@ -95,11 +102,11 @@ namespace Engine {
 			RedoxModule::GetFunction("MyRedoxGetFloatArrayFromDocument"));
 
 		// 数値1個または最大3成分のベクトルを受け取る
-		std::vector<float> output(3);
+		std::vector<float> output(kMaxVectorComponents);
 		const int result =
 			getFloatArray(document.GetHandle(), reinterpret_cast<const unsigned char*>(key.data()),
 				static_cast<int>(key.size()), output.data(), static_cast<int>(output.size()));
-		if (result == -3) return std::nullopt; // REDoxの未指定フィールド
+		if (result == kRedoxInvalidSchema) return std::nullopt;
 		if (result < 0) {
 			throw std::runtime_error(FieldContext(jsonPath, key) +
 				": failed to read number. REDox error code: " + std::to_string(result));

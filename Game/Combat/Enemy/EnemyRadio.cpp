@@ -40,7 +40,8 @@ namespace Game {
 			if (m_remaining > 0 && (!m_current.reaction || alive(m_current.actor))) return;
 
 			StopCurrent();
-			m_gap = 0.25f;
+			constexpr float dialogueGapSeconds = 0.25f;
+			m_gap = dialogueGapSeconds;
 		}
 
 		m_gap = std::max(0.0f, m_gap - dt);

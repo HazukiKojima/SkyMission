@@ -22,7 +22,7 @@ namespace Engine {
 		const float t = float(index) / (GridResolution - 1) * 2 - 1;
 
 		// 距離に応じた連続的なLOD。カメラ付近は密、水平線に向かうほど疎にし、パッチの継ぎ目を作らない
-		return std::copysign(std::expm1(std::abs(t) * 5.5f) / std::expm1(5.5f), t) * size * 0.5f;
+		return std::copysign(std::expm1(std::abs(t) * kOceanGridExponent) / std::expm1(kOceanGridExponent), t) * size * 0.5f;
 	}
 
 	void OceanGeometry::Initialize(
@@ -88,24 +88,24 @@ namespace Engine {
 			throw std::invalid_argument("steepness must be nonnegative and finite");
 
 		// 海面シェーダーと同じ6成分の波で高さを求める
-		const float baseWindX = 1.0f / std::sqrt(1.0f + 0.6f * 0.6f);
-		const float baseWindZ = 0.6f / std::sqrt(1.0f + 0.6f * 0.6f);
+		const float baseWindX = 1.0f / std::sqrt(1.0f + kOceanWindZ * kOceanWindZ);
+		const float baseWindZ = kOceanWindZ / std::sqrt(1.0f + kOceanWindZ * kOceanWindZ);
 		float height = 0.0f;
 
-		for (int i = 0; i < 6; ++i) {
-			const float phaseOffset = static_cast<float>(i) * 21.53f;
-			const float randomAngle = std::sin(static_cast<float>(i) * 7.3f) * 0.22f;
+		for (int i = 0; i < kOceanWaveCount; ++i) {
+			const float phaseOffset = static_cast<float>(i) * kOceanWavePhaseStride;
+			const float randomAngle = std::sin(static_cast<float>(i) * kOceanWaveDirectionStride) * kOceanWaveDirectionSpread;
 			const float sinAngle = std::sin(randomAngle);
 			const float cosAngle = std::cos(randomAngle);
 			const float directionX = cosAngle * baseWindX - sinAngle * baseWindZ;
 			const float directionZ = sinAngle * baseWindX + cosAngle * baseWindZ;
 			const float k = 2.0f * kPi / wavelength;
-			const float waveSpeed = std::sqrt(9.8f / k);
-			const float phase = k * (directionX * x + directionZ * z - waveSpeed * time * 3.0f) + phaseOffset;
+			const float waveSpeed = std::sqrt(kOceanWaveGravity / k);
+			const float phase = k * (directionX * x + directionZ * z - waveSpeed * time * kOceanWaveTimeScale) + phaseOffset;
 
 			height += (steepness / k) * std::sin(phase);
-			wavelength *= 0.82f;
-			steepness *= 0.72f;
+			wavelength *= kOceanWavelengthDecay;
+			steepness *= kOceanWaveSteepnessDecay;
 		}
 
 		return height;

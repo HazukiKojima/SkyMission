@@ -1,11 +1,17 @@
 #include "Window.h"
 #include "Engine/Diagnostics/Log.h"
+#include <hidusage.h>
 #include <algorithm>
 #include <cstddef>
 #include <utility>
 #include <vector>
 
 namespace Engine {
+	namespace {
+		constexpr int kLoadingCompletePercent = 100;
+		constexpr UINT kRawInputError = static_cast<UINT>(-1);
+	}
+
 	Window::Window(UINT width, UINT height, const wchar_t* title, HINSTANCE hInstance)
 		: m_width(width), m_height(height) {
 		// ウィンドウクラスを登録する
@@ -26,7 +32,8 @@ namespace Engine {
 
 		// 前面時のみ受信し、ウィンドウ操作やAlt+F4用の従来メッセージは残す
 		const RAWINPUTDEVICE devices[] = {
-			{0x01, 0x06, RIDEV_DEVNOTIFY, m_hwnd}, {0x01, 0x02, RIDEV_DEVNOTIFY, m_hwnd}};
+			{HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_KEYBOARD, RIDEV_DEVNOTIFY, m_hwnd},
+			{HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_MOUSE, RIDEV_DEVNOTIFY, m_hwnd}};
 		if (!RegisterRawInputDevices(devices, _countof(devices), sizeof(RAWINPUTDEVICE))) {
 			const HRESULT error = HRESULT_FROM_WIN32(GetLastError());
 			DestroyWindow(m_hwnd);
@@ -52,7 +59,8 @@ namespace Engine {
 				});
 				auto held = snapshot.gamepad;
 				held.presses = {};
-				held.northTapped = false;
+				held.northTapCount = 0;
+				held.northHoldStarted = false;
 				m_inputSamples.push_back({std::chrono::steady_clock::now(), held});
 			}
 		} else if (snapshot.active) {
@@ -93,7 +101,7 @@ namespace Engine {
 	}
 
 	void Window::SetLoadingProgress(int percent, std::wstring_view item) {
-		m_loadingPercent = std::clamp(percent, 0, 100);
+		m_loadingPercent = std::clamp(percent, 0, kLoadingCompletePercent);
 		m_loadingItem = item;
 		InvalidateRect(m_hwnd, nullptr, FALSE);
 		UpdateWindow(m_hwnd);
@@ -154,15 +162,15 @@ namespace Engine {
 	void Window::UnregisterRawInput() {
 		// プロセス共通の入力登録を、別のWindowから解除しない
 		UINT count = 0;
-		if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1)) return;
+		if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == kRawInputError) return;
 
 		std::vector<RAWINPUTDEVICE> registered(count), remove;
 		if (count &&
-			GetRegisteredRawInputDevices(registered.data(), &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
+			GetRegisteredRawInputDevices(registered.data(), &count, sizeof(RAWINPUTDEVICE)) == kRawInputError)
 			return;
 		for (const auto& device : registered) {
-			if (device.hwndTarget == m_hwnd && device.usUsagePage == 0x01 &&
-				(device.usUsage == 0x06 || device.usUsage == 0x02))
+			if (device.hwndTarget == m_hwnd && device.usUsagePage == HID_USAGE_PAGE_GENERIC &&
+				(device.usUsage == HID_USAGE_GENERIC_KEYBOARD || device.usUsage == HID_USAGE_GENERIC_MOUSE))
 				remove.push_back({device.usUsagePage, device.usUsage, RIDEV_REMOVE, nullptr});
 		}
 
@@ -179,13 +187,13 @@ namespace Engine {
 
 		// 受信前にRaw Inputパケットのサイズを確認する
 		UINT size = 0;
-		if (GetRawInputData(handle, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER)) == UINT(-1)) return;
+		if (GetRawInputData(handle, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER)) == kRawInputError) return;
 		if (size < sizeof(RAWINPUTHEADER)) return;
 
 		// GetRawInputDataの受信領域をDWORD境界にそろえる
 		std::vector<DWORD> storage((size + sizeof(DWORD) - 1) / sizeof(DWORD));
 		const UINT bytes = GetRawInputData(handle, RID_INPUT, storage.data(), &size, sizeof(RAWINPUTHEADER));
-		if (bytes == UINT(-1) || bytes < sizeof(RAWINPUTHEADER)) {
+		if (bytes == kRawInputError || bytes < sizeof(RAWINPUTHEADER)) {
 			Log("Window: failed to read raw input packet ({})\n", GetLastError());
 			return;
 		}
@@ -252,6 +260,14 @@ namespace Engine {
 				break;
 			case WM_PAINT:
 				if (self->m_loading) {
+					constexpr LONG kTrackWidthDivisor = 3;
+					constexpr LONG kMaxTrackHalfWidth = 220;
+					constexpr LONG kTrackHalfHeight = 5;
+					constexpr LONG kHeadingTopOffset = -46;
+					constexpr LONG kHeadingBottomOffset = -18;
+					constexpr LONG kDetailSidePadding = 8;
+					constexpr LONG kDetailTopOffset = 14;
+					constexpr LONG kDetailBottomOffset = 40;
 					PAINTSTRUCT paint{};
 					const HDC dc = BeginPaint(hwnd, &paint);
 					RECT area{};
@@ -261,21 +277,25 @@ namespace Engine {
 					SetTextColor(dc, RGB(230, 230, 230));
 					const LONG centerX = (area.left + area.right) / 2;
 					const LONG centerY = (area.top + area.bottom) / 2;
-					const LONG halfWidth = std::clamp((area.right - area.left) / 3, 0L, 220L);
-					RECT heading{area.left, centerY - 46, area.right, centerY - 18};
+					const LONG halfWidth = std::clamp(
+						(area.right - area.left) / kTrackWidthDivisor, 0L, kMaxTrackHalfWidth);
+					RECT heading{area.left, centerY + kHeadingTopOffset, area.right, centerY + kHeadingBottomOffset};
 					const std::wstring title = L"Loading SkyMission...  " +
 						std::to_wstring(self->m_loadingPercent) + L"%";
 					DrawTextW(dc, title.c_str(), -1, &heading, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
-					RECT track{centerX - halfWidth, centerY - 5, centerX + halfWidth, centerY + 5};
+					RECT track{centerX - halfWidth, centerY - kTrackHalfHeight,
+						centerX + halfWidth, centerY + kTrackHalfHeight};
 					const auto brush = static_cast<HBRUSH>(GetStockObject(DC_BRUSH));
 					SetDCBrushColor(dc, RGB(50, 55, 61));
 					FillRect(dc, &track, brush);
-					track.right = track.left + (track.right - track.left) * self->m_loadingPercent / 100;
+					track.right = track.left +
+						(track.right - track.left) * self->m_loadingPercent / kLoadingCompletePercent;
 					SetDCBrushColor(dc, RGB(255, 255, 255));
 					FillRect(dc, &track, brush);
 
-					RECT detail{area.left + 8, centerY + 14, area.right - 8, centerY + 40};
+					RECT detail{area.left + kDetailSidePadding, centerY + kDetailTopOffset,
+						area.right - kDetailSidePadding, centerY + kDetailBottomOffset};
 					DrawTextW(dc, self->m_loadingItem.c_str(), -1, &detail,
 						DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
 					EndPaint(hwnd, &paint);
@@ -325,7 +345,7 @@ namespace Engine {
 			case WM_CAPTURECHANGED:
 				if (reinterpret_cast<HWND>(lParam) != hwnd && self->m_cameraMouseCaptured) {
 					self->m_cameraMouseCaptured = false;
-					self->m_input.Clear();
+					self->m_input.ClearMouse();
 					self->RecordRawInput();
 				}
 				break;

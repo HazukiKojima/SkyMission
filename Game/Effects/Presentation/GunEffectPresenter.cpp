@@ -15,11 +15,12 @@ namespace Game {
 				EffectDrawSettings::explosionVertexBudget +
 			std::min(snapshot.impacts.size(), ImpactEffectSettings::maxCount) *
 				EffectDrawSettings::impactVertexBudget +
-			std::min(snapshot.deckSmoke.size(), DeckSmokeSettings::maxCount) * 6;
-		if (!context.HasVertexBudget(otherBudget + count * 6)) return;
+			std::min(snapshot.deckSmoke.size(), DeckSmokeSettings::maxCount) *
+				Engine::HudDrawList::QuadVertexCount;
+		if (!context.HasVertexBudget(otherBudget + count * Engine::HudDrawList::QuadVertexCount)) return;
 
 		for (size_t index = 0; index < count; ++index) {
-			if (!context.HasVertexBudget(6)) break;
+			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;
 
 			const auto& smoke = snapshot.gunSmoke[index];
 
@@ -46,6 +47,17 @@ namespace Game {
 	void CombatEffectPresenter::DrawGunFire(
 		const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const {
 		using namespace DirectX;
+		constexpr unsigned kFlashSequencePeriod = 1024;
+		constexpr float kFlashSequencePhaseStep = 1.73f;
+		constexpr float kFlashMuzzlePhaseStep = 2.41f;
+		constexpr float kBaseFlashSizeScale = 0.9f;
+		constexpr float kFlashSizeVariation = 0.1f;
+		constexpr float kFlashInnerRadiusScale = 0.45f;
+		constexpr float kFlameCenterFraction = 0.4f;
+		constexpr float kFlameRadiusScale = 0.65f;
+		constexpr float kFlameOuterWidth = 5.0f;
+		constexpr float kFlameInnerWidth = 2.0f;
+		constexpr unsigned kFlameTextureSeed = 31;
 
 		const float scale = context.GetScale();
 		const size_t tracerCount = std::min(snapshot.gunTracers.size(), GunEffectSettings::maxTracerCount);
@@ -75,23 +87,24 @@ namespace Game {
 			const float fade = 1 - flash.age / context.Settings().gun.flashLifetimeSeconds;
 
 			// 発射ごとの形を固定し、機体の移動による乱数のちらつきを防ぐ
-			const float phase = float(flash.sequence % 1024) * 1.73f + float(flash.muzzleIndex) * 2.41f;
-			const float variation = 0.9f + 0.1f * std::sin(phase);
+			const float phase = float(flash.sequence % kFlashSequencePeriod) * kFlashSequencePhaseStep +
+				float(flash.muzzleIndex) * kFlashMuzzlePhaseStep;
+			const float variation = kBaseFlashSizeScale + kFlashSizeVariation * std::sin(phase);
 			const auto muzzle = XMLoadFloat3(&flash.position);
 			const auto forward = XMVector3Normalize(XMLoadFloat3(&flash.direction));
 			const float radius = context.Settings().gun.flashRadius * variation;
 			context.DrawGlow(muzzle, radius, EffectTint(context.Settings().gun.flashOuterColor, fade));
 			context.DrawGlow(
-				muzzle, radius * 0.45f, EffectTint(context.Settings().gun.flashInnerColor, fade));
+				muzzle, radius * kFlashInnerRadiusScale, EffectTint(context.Settings().gun.flashInnerColor, fade));
 			const auto flameTip = muzzle + forward * (context.Settings().gun.flameLength * variation);
-			context.DrawCloud(muzzle + forward * (context.Settings().gun.flameLength * 0.4f), radius * 0.65f,
-				phase, 31, EffectTint(context.Settings().gun.flameColor, fade));
+			context.DrawCloud(muzzle + forward * (context.Settings().gun.flameLength * kFlameCenterFraction),
+				radius * kFlameRadiusScale, phase, kFlameTextureSeed, EffectTint(context.Settings().gun.flameColor, fade));
 			XMFLOAT3 tip;
 			XMStoreFloat3(&tip, flameTip);
 
 			if (const auto segment = context.ProjectClippedSegment(tip, flash.position))
-				context.DrawStreak(*segment, 5 * scale,
-					EffectTint(context.Settings().gun.flameOuterColor, fade), 2 * scale,
+				context.DrawStreak(*segment, kFlameOuterWidth * scale,
+					EffectTint(context.Settings().gun.flameOuterColor, fade), kFlameInnerWidth * scale,
 					EffectTint(context.Settings().gun.flameInnerColor, fade));
 		}
 	}

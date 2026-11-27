@@ -77,6 +77,7 @@
     <ClInclude Include="Engine\Renderer\Device\RenderDevice.h" />
     <ClInclude Include="Engine\Renderer\Frame\RendererConstantBuffers.h" />
     <ClInclude Include="Engine\Renderer\Environment\OceanGeometry.h" />
+    <ClInclude Include="Engine\Renderer\Environment\OceanWaveConstants.h" />
     <ClInclude Include="Engine\Renderer\Pipeline\RendererPipelines.h" />
     <ClInclude Include="Engine\Renderer\RendererAssets.h" />
     <ClInclude Include="Engine\Renderer\Frame\RendererFrameUpdater.h" />
@@ -599,6 +600,7 @@
   <ItemGroup>
     <ClInclude Include="Game\Settings\SettingsReader.h" />
     <ClInclude Include="Game\Settings\GameplaySettings.h" />
+    <ClInclude Include="Game\Settings\SimulationTiming.h" />
     <ClInclude Include="Game\Settings\RumbleSettings.h" />
     <ClInclude Include="Game\Combat\CombatRumble.h" />
     <ClInclude Include="Game\Settings\UiTextSettings.h" />

@@ -25,7 +25,13 @@ using Clock = std::chrono::steady_clock;
 namespace {
 	volatile double g_checksum = 0;
 	constexpr int kSamples = 7;
+	constexpr int kAiParameterCount = 30;
 	constexpr double kSampleSeconds = 0.1;
+	constexpr double kWarmupSeconds = 0.15;
+	constexpr double kMinimumCalibrationSeconds = 0.015;
+	constexpr double kElapsedTimeFloorSeconds = 1e-9;
+	constexpr int kCalibrationIterationLimit = 1'000'000;
+	constexpr int kSampleIterationLimit = 2'000'000;
 	struct Dataset {
 		std::string name;
 		std::vector<std::string> documents;
@@ -83,15 +89,15 @@ namespace {
 			: m_document(nlohmann::json::parse(input)) {}
 		__declspec(noinline) int ReadAi(
 			const std::vector<std::string>& fields, const FieldIndices& indices, std::span<float> output) {
-			if (output.size() != 30) return -1;
+			if (output.size() != kAiParameterCount) return -1;
 
 			auto found = m_cache.find(&fields);
 
 			if (found == m_cache.end()) {
 				if (!m_document.is_object()) return -3;
 
-				std::array<float, 30> values{};
-				std::array<bool, 30> seen{};
+				std::array<float, kAiParameterCount> values{};
+				std::array<bool, kAiParameterCount> seen{};
 				size_t count = 0;
 
 				for (auto item = m_document.begin(); item != m_document.end(); ++item) {
@@ -133,7 +139,7 @@ namespace {
 
 	  private:
 		nlohmann::json m_document;
-		std::unordered_map<const std::vector<std::string>*, std::array<float, 30>> m_cache;
+		std::unordered_map<const std::vector<std::string>*, std::array<float, kAiParameterCount>> m_cache;
 	};
 
 	struct Variant {
@@ -193,8 +199,9 @@ namespace {
 		while (true) {
 			const double seconds = Batch(action, iterations);
 
-			if (seconds >= 0.015 || iterations >= 1000000)
-				return int(std::clamp(iterations * kSampleSeconds / std::max(seconds, 1e-9), 1.0, 2000000.0));
+			if (seconds >= kMinimumCalibrationSeconds || iterations >= kCalibrationIterationLimit)
+				return int(std::clamp(iterations * kSampleSeconds / std::max(seconds, kElapsedTimeFloorSeconds),
+					1.0, double(kSampleIterationLimit)));
 
 			iterations *= 2;
 		}
@@ -249,7 +256,7 @@ int wmain(int argc, wchar_t** argv) {
 			fields.push_back(line);
 		}
 
-		if (fields.size() != 30) throw std::runtime_error("Expected 30 generated AI fields");
+		if (fields.size() != kAiParameterCount) throw std::runtime_error("Expected 30 generated AI fields");
 
 		FieldIndices indices;
 		indices.reserve(fields.size());
@@ -312,7 +319,7 @@ int wmain(int argc, wchar_t** argv) {
 			for (const auto& fixture : fixtures) {
 				const auto text = fixture.dump();
 				MatchedNlohmannDocument document(text);
-				std::array<float, 30> expected;
+				std::array<float, kAiParameterCount> expected;
 				expected.fill(-99);
 				const int result = document.ReadAi(fields, indices, expected);
 
@@ -323,10 +330,10 @@ int wmain(int argc, wchar_t** argv) {
 					std::fill(temporary.begin(), temporary.end(), '\0');
 
 					for (int repeat = 0; repeat < 2; ++repeat) {
-						std::array<float, 30> actual;
+						std::array<float, kAiParameterCount> actual;
 						actual.fill(-99);
 
-						if (bridge->readAi(handle, actual.data(), 30) != result || actual != expected)
+						if (bridge->readAi(handle, actual.data(), kAiParameterCount) != result || actual != expected)
 							throw std::runtime_error("Matched validation/cache/ownership mismatch");
 					}
 
@@ -380,7 +387,7 @@ int wmain(int argc, wchar_t** argv) {
 							sum += value;
 						}
 					} else {
-						std::array<float, 30> values{};
+						std::array<float, kAiParameterCount> values{};
 						Check(bridge->readAi(handle, values.data(), int(values.size())));
 
 						for (float value : values)
@@ -402,7 +409,7 @@ int wmain(int argc, wchar_t** argv) {
 									for (const auto& field : fields)
 										total += document.ReadNumber(field);
 								} else {
-									std::array<float, 30> values{};
+									std::array<float, kAiParameterCount> values{};
 									Check(document.ReadAi(fields, indices, values));
 
 									for (float value : values)
@@ -458,7 +465,7 @@ int wmain(int argc, wchar_t** argv) {
 
 				const auto start = Clock::now();
 
-				while (std::chrono::duration<double>(Clock::now() - start).count() < 0.15)
+				while (std::chrono::duration<double>(Clock::now() - start).count() < kWarmupSeconds)
 					Batch(task.action, 16);
 				task.iterations = Calibrate(task.action);
 			}

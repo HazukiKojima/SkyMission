@@ -8,7 +8,7 @@ namespace Game {
 		const auto& settings = context.Settings().aircraftTrail;
 		for (const auto& smoke : snapshot.aircraftSmoke) {
 			using namespace DirectX;
-			if (!context.HasVertexBudget(6)) break;
+			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;
 			const EffectRandom random(smoke.position);
 			const float progress = smoke.age / AircraftSmokePuff::lifetimeSeconds;
 			const float radius = (settings.smokeStartRadius + settings.smokeRadiusGrowth * progress) *
@@ -18,7 +18,7 @@ namespace Game {
 					(random.Sample(2) - 0.5f) * radius, 0);
 			const float fade = 1.0f - progress;
 			context.DrawCloud(position, radius, random.Sample(3) * XM_2PI + smoke.age * 0.25f,
-				static_cast<unsigned>(random.Sample(4) * 64.0f),
+				static_cast<unsigned>(random.Sample(4) * Engine::HudDrawList::CloudSeedVariants),
 				EffectTint(settings.smokeColor, fade * fade), EffectClipMode::BoundsVisible);
 		}
 	}
@@ -32,9 +32,11 @@ namespace Game {
 			const float pulse = fire.size * (0.88f + 0.12f * std::sin(fire.seconds * 39.0f));
 			const float minimumRadius = 5.0f * fire.size * context.GetScale();
 			context.DrawGlow(origin + wake * 6.0f, 13.0f * pulse, {1.0f, 0.24f, 0.02f, 0.82f});
-			for (unsigned i = 0; i < 6; ++i) {
-				const float offset = static_cast<float>(5 - i);
-				const float heat = 1.0f - offset * 0.2f;
+			constexpr unsigned lastCloud = aircraftFireCloudCount - 1;
+			constexpr float heatDropPerCloud = 1.0f / lastCloud;
+			for (unsigned i = 0; i < aircraftFireCloudCount; ++i) {
+				const float offset = static_cast<float>(lastCloud - i);
+				const float heat = 1.0f - offset * heatDropPerCloud;
 				const float flutter = std::sin(fire.seconds * 33.0f + offset * 2.1f);
 				const auto position = origin + wake * (offset * 4.6f * pulse) +
 					XMVectorSet(flutter * offset * 0.45f, offset * 0.25f, 0, 0);
@@ -50,7 +52,7 @@ namespace Game {
 	void CombatEffectPresenter::DrawAircraftVapor(const CombatEffectSnapshot& snapshot, const Engine::RenderView& view,
 		EffectDrawContext& context) const {
 		for (const auto& vapor : snapshot.wingtipVapor) {
-			if (!context.HasVertexBudget(12)) break;
+			if (!context.HasVertexBudget(2 * Engine::HudDrawList::QuadVertexCount)) break;
 			const auto segment = context.ProjectClippedSegment(vapor.head, vapor.tail);
 			if (!segment) continue;
 
@@ -68,7 +70,7 @@ namespace Game {
 		const float minimumContrailRadius = std::max(0.85f, 1.15f * context.GetScale());
 		const auto viewMatrix = DirectX::XMLoadFloat4x4(&view.view);
 		for (const auto& puff : snapshot.contrails) {
-			if (!context.HasVertexBudget(6)) break;
+			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;
 
 			// 翼端を離れた粒が少し後方で見え始めるようにする
 			constexpr float visibleAfterSeconds = 0.12f;
@@ -106,7 +108,8 @@ namespace Game {
 			const auto turbulence = XMVectorSet(random.Sample(1) - 0.5f, random.Sample(2) - 0.5f,
 				random.Sample(3) - 0.5f, 0) * (radius * progress * 0.7f);
 			context.DrawCloud(position + drift + turbulence, radius * widthScale,
-				random.Sample(4) * XM_2PI, static_cast<unsigned>(random.Sample(5) * 64.0f),
+				random.Sample(4) * XM_2PI,
+				static_cast<unsigned>(random.Sample(5) * Engine::HudDrawList::CloudSeedVariants),
 				{0.80f, 0.85f, 0.92f, opacity}, EffectClipMode::BoundsVisible,
 				minimumContrailRadius * widthScale);
 		}
