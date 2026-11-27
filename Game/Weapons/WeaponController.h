@@ -9,7 +9,9 @@ namespace Game {
 	class WeaponController {
 	  public:
 		WeaponInput ReadInput(const Engine::InputSnapshot& input) const {
-			return {.fire = input.leftMouseDown};
+			constexpr auto fireButton = Engine::GamepadButton::South;
+			return {.fire = input.active && (input.leftMouseDown || input.leftMousePressed ||
+				input.gamepad.IsDown(fireButton) || input.gamepad.PressCount(fireButton) != 0)};
 		}
 	};
 } // namespace Game

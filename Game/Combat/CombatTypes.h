@@ -4,9 +4,9 @@
 #include <array>
 #include <optional>
 #include <span>
-#include "MissionState.h"
+#include "Game/Mission/MissionState.h"
 #include "Game/Cinematics/CinematicTypes.h"
-#include "EnemyRadio.h"
+#include "Game/Combat/Enemy/EnemyRadio.h"
 
 namespace Game {
 	// 距離はワールド単位、時間は秒、角度は度。捕捉条件と維持条件を分けて揺れを抑える
@@ -20,6 +20,7 @@ namespace Game {
 		float lossGraceSeconds = 0.25f;
 		float assistAngleDegrees = 3;
 	};
+
 	struct CombatSettings {
 		CombatFeedbackSettings feedback;
 		TargetingSettings targeting;
@@ -27,6 +28,7 @@ namespace Game {
 		float playerHealth = 100;
 		float bulletDamage = 10;
 	};
+
 	// 戦闘処理へ渡す対象の値コピー。centerとvelocityはワールド座標系
 	struct CombatTarget {
 		Engine::ObjectId id = Engine::InvalidObjectId;
@@ -36,17 +38,21 @@ namespace Game {
 		float health = 100;
 		DirectX::XMFLOAT3 heading{0, 0, -1};
 	};
+
 	enum class LockState { None, Selected, Acquiring, Locked };
+
 	// directionは射撃方向、aimPointは自機速度を補正した照準点、secondsは迎撃までの秒数
 	struct AimSolution {
 		DirectX::XMFLOAT3 direction{};
 		DirectX::XMFLOAT3 aimPoint{};
 		float seconds = 0;
 	};
+
 	struct AimAssistance {
 		std::optional<CombatTarget> target;
 		float angleDegrees = 3;
 	};
+
 	// boundsはモデル空間、worldは現フレームの変換、previousPositionは前フレームの位置
 	struct CollisionTarget {
 		Engine::ObjectId id;
@@ -54,12 +60,15 @@ namespace Game {
 		DirectX::XMFLOAT3 previousPosition;
 		DirectX::XMFLOAT4X4 world;
 	};
+
 	struct DebugCollisionBox {
 		CollisionTarget target;
 		DirectX::XMFLOAT4 color;
 	};
+
 	enum class ProjectileKind { Gun, Rocket, Bomb };
 	enum class AttackSource { Player, EnemyAircraft, AntiAircraft };
+
 	// 命中処理と演出に渡す通知。position・directionはワールド座標系
 	struct HitEvent {
 		Engine::ObjectId target;
@@ -70,6 +79,7 @@ namespace Game {
 		AttackSource source = AttackSource::Player;
 		float damage = 0;
 	};
+
 	enum class CombatResult { Active, Victory, Defeat };
 	struct CombatAudioState {
 		bool flying = false;
@@ -81,6 +91,7 @@ namespace Game {
 		unsigned aircraftExplosions = 0;
 		unsigned shipExplosions = 0;
 	};
+
 	// シミュレーションからHUD・音声へ渡す表示用状態。表示側からゲーム状態を書き換えない
 	struct CombatSnapshot {
 		bool debugCollisionsEnabled = false;
@@ -116,6 +127,7 @@ namespace Game {
 		std::vector<CombatTarget> enemies;
 		unsigned firedVolleys = 0;
 		unsigned hitCount = 0;
+		unsigned enemyAircraftDestroyed = 0;
 		Engine::ObjectId selected = Engine::InvalidObjectId;
 		LockState lockState = LockState::None;
 		float acquireProgress = 0; // ロック捕捉の進行率（0～1）

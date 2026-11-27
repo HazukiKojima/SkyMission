@@ -2,6 +2,10 @@
 #define COMMON_LIGHTING_HLSLI
 
 static const float PI = 3.14159265359f;
+static const float kMinimumNormalLengthSquared = 1e-6f;
+static const float kMinimumGgxDenominator = 1e-5f;
+static const float kMinimumSpecularDenominator = 1e-4f;
+static const float kSchlickExponent = 5.0f;
 
 // 共通の照明パラメーター
 
@@ -20,7 +24,7 @@ struct CommonLightingParameters
 float3 SafeNormalize(float3 v)
 {
     float lengthSquared = dot(v, v);
-    return v * rsqrt(max(lengthSquared, 1e-6f));
+    return v * rsqrt(max(lengthSquared, kMinimumNormalLengthSquared));
 }
 
 float3 GetSunRadiance(CommonLightingParameters lighting)
@@ -55,7 +59,7 @@ float3 ToneMapReinhard(float3 hdrColor)
 
 float3 FresnelSchlick(float cosTheta, float3 F0)
 {
-    float f = pow(1.0f - saturate(cosTheta), 5.0f);
+    float f = pow(1.0f - saturate(cosTheta), kSchlickExponent);
 
     return F0 + (1.0f - F0) * f;
 }
@@ -64,7 +68,7 @@ float3 FresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
     float3 oneMinusRoughness = 1.0f - roughness;
 
-    return F0 + (max(oneMinusRoughness.xxx, F0) - F0) * pow(1.0f - saturate(cosTheta), 5.0f);
+    return F0 + (max(oneMinusRoughness.xxx, F0) - F0) * pow(1.0f - saturate(cosTheta), kSchlickExponent);
 }
 
 // GGXによる微小面の分布と遮蔽
@@ -77,7 +81,7 @@ float DistributionGGX(float NdotH, float roughness)
 
     float denominator = NdotH2 * (a2 - 1.0f) + 1.0f;
 
-    return a2 / max(PI * denominator * denominator, 1e-5f);
+    return a2 / max(PI * denominator * denominator, kMinimumGgxDenominator);
 }
 
 float GeometrySchlickGGX(float NdotX, float roughness)
@@ -85,7 +89,7 @@ float GeometrySchlickGGX(float NdotX, float roughness)
     float r = roughness + 1.0f;
     float k = (r * r) / 8.0f;
 
-    return NdotX / max(NdotX * (1.0f - k) + k, 1e-5f);
+    return NdotX / max(NdotX * (1.0f - k) + k, kMinimumGgxDenominator);
 }
 
 float GeometrySmith(float NdotV, float NdotL, float roughness)
@@ -104,20 +108,20 @@ float3 CalculateSunSpecular(float3 N, float3 V, float3 L, float roughness, Commo
     float NdotH = saturate(dot(N, H));
     float VdotH = saturate(dot(V, H));
 
-    // 背面の反射はゼロとし、分岐を抜けた後の戻り値を明示する
+    // 光が当たらない面の鏡面反射はゼロにする
     float3 contribution = 0.0f;
     if (NdotL > 0.0f)
     {
 
-        float3 F0 = float3(0.020f, 0.020f, 0.020f);
+        const float3 surfaceReflectance = float3(0.020f, 0.020f, 0.020f);
 
-        float3 F = FresnelSchlick(VdotH, F0);
+        float3 F = FresnelSchlick(VdotH, surfaceReflectance);
 
         float D = DistributionGGX(NdotH, roughness);
 
         float G = GeometrySmith(NdotV, NdotL, roughness);
 
-        float3 specular = (D * G * F) / max(4.0f * NdotV * NdotL, 1e-4f);
+        float3 specular = (D * G * F) / max(4.0f * NdotV * NdotL, kMinimumSpecularDenominator);
 
         contribution = specular * GetSunRadiance(lighting) * NdotL;
     }
@@ -144,19 +148,22 @@ float3 GetSkyColor(float3 direction, CommonLightingParameters lighting)
     float height = saturate(direction.y);
 
     // 地平線の色
-    float3 horizonColor = float3(0.68f, 0.82f, 0.98f);
+    const float3 horizonColor = float3(0.68f, 0.82f, 0.98f);
 
     // 天頂の色
-    float3 zenithColor = float3(0.07f, 0.23f, 0.54f);
+    const float3 zenithColor = float3(0.07f, 0.23f, 0.54f);
+    const float skyGradientExponent = 0.42f;
+    const float horizonScatteringExponent = 3.0f;
+    const float3 horizonScatteringColor = float3(0.06f, 0.08f, 0.10f);
 
-    float skyGradient = pow(height, 0.42f);
+    float skyGradient = pow(height, skyGradientExponent);
 
     float3 sky = lerp(horizonColor, zenithColor, skyGradient);
 
     // 地平線付近の大気散乱
-    float horizon = pow(1.0f - saturate(abs(direction.y)), 3.0f);
+    float horizon = pow(1.0f - saturate(abs(direction.y)), horizonScatteringExponent);
 
-    sky += float3(0.06f, 0.08f, 0.10f) * horizon;
+    sky += horizonScatteringColor * horizon;
 
     return sky;
 }

@@ -14,6 +14,18 @@ namespace Game {
 		bool pitchInputActive;
 		float speed;
 		float maximumSpeed;
+		float rollRadians = 0;
+	};
+
+	struct AircraftCameraShakeInput {
+		float acceleration = 0.0f;
+		bool highG = false;
+		bool gunFired = false;
+		bool missileLaunched = false;
+		bool gunHit = false;
+		bool heavyHit = false;
+		float explosionImpact = 0.0f;
+		bool carrierExploded = false;
 	};
 
 	class AircraftCameraController {
@@ -22,6 +34,7 @@ namespace Game {
 		void Configure(const CameraSettings& settings) {
 			m_settings = settings;
 		}
+
 		AircraftCameraController() = default;
 		~AircraftCameraController() = default;
 
@@ -32,11 +45,15 @@ namespace Game {
 		// 機体への追従かRaw Inputによる自由移動を更新する（deltaSecondsは秒）
 		void Update(float deltaSeconds, const Engine::InputSnapshot& input = {});
 		void SetFollowTarget(const AircraftCameraTarget& target);
-		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す。
+		void UpdateShake(float deltaSeconds, const AircraftCameraShakeInput& input);
+		void ResetShake();
+
+		// シーンが毎フレーム更新する注視位置。対象不在時はnulloptを渡す
 		void SetLookTarget(std::optional<DirectX::XMFLOAT3> target, bool automatic = false) {
 			m_lookTarget = target;
 			m_automaticLook = automatic && target.has_value();
 		}
+
 		// 初回と暗転中の切替に使い、追従開始時の補間移動を画面に出さない
 		void SnapToFollowTarget();
 
@@ -46,9 +63,11 @@ namespace Game {
 		const Engine::Camera& GetCamera() const {
 			return m_camera;
 		}
+
 		DirectX::XMMATRIX GetView() const {
 			return m_camera.GetView();
 		}
+
 		DirectX::XMFLOAT3 GetPosition() const {
 			return m_position;
 		}
@@ -72,6 +91,9 @@ namespace Game {
 		float m_followMaximumSpeed = 800.0f;
 		float m_followCameraYaw = 0.0f;
 		float m_followCameraPitch = 0.0f;
+		float m_targetBank = 0.0f;
+		float m_followBank = 0.0f;
+		float m_viewRoll = 0.0f;
 		float m_lookYaw = 0, m_lookPitch = 0;
 		std::optional<DirectX::XMFLOAT3> m_lookTarget;
 		bool m_automaticLook = false;
@@ -79,7 +101,12 @@ namespace Game {
 		float m_zoomScale = 1;
 		DirectX::XMFLOAT3 m_followLookAt = {0.0f, 0.0f, 0.0f};
 		DirectX::XMFLOAT3 m_followViewDirection = {0.0f, 0.0f, -1.0f};
-		// 機体の大きさと周辺視野を両立し、高速時も距離の変化を控えめにする
+
+		float m_shakePhase = 0.0f;
+		float m_flightShakeDegrees = 0.0f;
+		float m_impactDegrees = 0.0f;
+		float m_impactSeconds = 0.0f;
+		float m_impactDuration = 0.0f;
 
 		CameraSettings m_settings;
 		Engine::Camera m_camera;

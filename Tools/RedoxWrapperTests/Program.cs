@@ -40,7 +40,9 @@ internal static unsafe class Program
 
     private static void Main(string[] args)
     {
+        // フィールド順序と重複キーの扱いを参照APIと比較する
         var layout = new NumericParameterLayout(["a", "vector"], [1, 3]);
+
         foreach (string json in new[] {
             "{\"a\":1,\"vector\":[2,3,4]}",
             "{\"unused\":null,\"vector\":[2,3,4],\"a\":1}",
@@ -56,6 +58,7 @@ internal static unsafe class Program
             output.AsSpan().Fill(-1);
             Require(cached.ReadParameters(layout, output) == 4 && output[0] == 1 && output[3] == 4, "Caller mutated cached parameters");
         }
+
         foreach (string json in new[] {
             "{}", "{\"a\":null,\"vector\":[2,3,4]}", "{\"a\":\"1\",\"vector\":[2,3,4]}",
             "{\"a\":true,\"vector\":[2,3,4]}", "{\"a\":1,\"vector\":[2,3]}",
@@ -67,20 +70,24 @@ internal static unsafe class Program
             Require(cached.ReadParameters(layout, output) == -5 && output.All(value => value == -1), "Invalid layout partially wrote output");
             Require(cached.ReadParameters(layout, output) == -5, "Failed layout was cached as valid");
         }
+
         using (var document = JsonDocument.Parse("[]")) Require(layout.Read(document, new float[4]) == -3, "Root type validation changed");
 
+        // 生成レイアウトを使う従来APIと文書ハンドルAPIを照合する
         byte[] source = File.ReadAllBytes(Path.Combine(args[0], "Assets/Aircraft/F4U4Corsair/aiParameters.json"));
         using var expectedDocument = JsonDocument.Parse(source);
         float[] expected = GeneratedAircraftAIParameters.FieldNames.Select(name => expectedDocument.RootElement.GetProperty(name).GetSingle()).ToArray();
         nint handle = Create((byte[])source.Clone());
         float[] parameters = new float[expected.Length];
         Require(ReadAiBytes(source, parameters) == expected.Length && parameters.SequenceEqual(expected), "Legacy byte-input API changed");
+
         foreach (var invalid in new[] { ("{", -2), ("{}", -5), ("[]", -3) })
         {
             Array.Fill(parameters, -1);
             Require(ReadAiBytes(Encoding.UTF8.GetBytes(invalid.Item1), parameters) == invalid.Item2 &&
                 parameters.All(value => value == -1), "Legacy byte-input error or atomic output changed");
         }
+
         Require(ReadAiBytes(source, new float[expected.Length - 1]) == -1, "Legacy byte-input capacity validation changed");
         Require(ReadAi(handle, parameters) == expected.Length && parameters.SequenceEqual(expected), "Generated C++ field layout changed");
         Array.Fill(parameters, -1);
@@ -89,6 +96,7 @@ internal static unsafe class Program
         Require(Release(handle) == 0 && Release(handle) == -1 && ReadAi(handle, parameters) == -1, "Released handle remained usable");
 
         string originalText = Encoding.UTF8.GetString(source).Trim();
+
         foreach (string duplicate in new[] {
             "{\"cruiseSpeed\":777," + originalText[1..],
             originalText[..^1] + ",\"cruiseSpeed\":777}" })

@@ -179,21 +179,61 @@
     ],
     "smokeMaxOpacity": 0.85
   },
+  "explosionFeedback": {
+    "nearDistanceMeters": 150.0,
+    "farDistanceMeters": 1200.0,
+    "initialFlashSeconds": 0.16,
+    "finalFlashSeconds": 0.22,
+    "initialStrength": 0.72,
+    "cameraShakeMultiplier": 4.0,
+    "flashColor": [1.0, 0.77, 0.46, 0.28]
+  },
+  "aircraftCrash": {
+    "horizontalSpeedRetention": 0.92,
+    "initialDownwardSpeed": 62.0,
+    "initialExplosionRadiusMultiplier": 2.5,
+    "initialFlashDurationMultiplier": 2.2,
+    "finalExplosionRadiusMultiplier": 2.8,
+    "engineBurstProgress": [0.22, 0.56],
+    "fuelFireFlashProgress": 0.82,
+    "rollingDive": {
+      "durationSeconds": 2.145,
+      "downwardAcceleration": 164.0,
+      "drag": 0.53,
+      "turnRate": 0.12,
+      "bank": 0.65,
+      "rollRate": 5.4,
+      "spinRate": 0.0
+    },
+    "bankedDive": {
+      "durationSeconds": 2.21,
+      "downwardAcceleration": 136.0,
+      "drag": 0.65,
+      "turnRate": 0.85,
+      "bank": 1.65,
+      "rollRate": 0.55,
+      "spinRate": 0.0
+    },
+    "spin": {
+      "durationSeconds": 2.08,
+      "downwardAcceleration": 149.0,
+      "drag": 1.25,
+      "turnRate": 0.04,
+      "bank": 0.48,
+      "rollRate": 0.0,
+      "spinRate": 5.8
+    }
+  },
+  "aircraftTrail": {
+    "contrailSpacingMeters": 4.0,
+    "smokeIntervalSeconds": 0.028,
+    "smokeStartRadius": 3.5,
+    "smokeRadiusGrowth": 14.0,
+    "smokeColor": [0.075, 0.066, 0.060, 0.88]
+  },
   "carrier": {
     "explosionRadius": 220.0,
-    "smokeLifetimeSeconds": 10.0,
-    "smokeIntervalSeconds": 0.15,
-    "smokeRiseSpeed": 65.0,
-    "smokeStartRadius": 70.0,
-    "smokeGrowthPerSecond": 22.0,
-    "smokeOpacity": 0.6,
-    "smokeDriftSpeed": 12,
-    "smokeColor": [
-      0.18,
-      0.17,
-      0.16,
-      1
-    ]
+    "smokeStartDelaySeconds": 1.4
   },
   "rocket": {
     "smokeLifetimeSeconds": 0.8,
@@ -224,18 +264,6 @@
       0.45,
       0.06,
       0.8
-    ]
-  },
-  "deck": {
-    "startRadius": 25,
-    "growthPerSecond": 32,
-    "driftSpeed": 12,
-    "riseSpeed": 65,
-    "smokeColor": [
-      0.18,
-      0.17,
-      0.16,
-      1
     ]
   }
 }

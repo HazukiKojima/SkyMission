@@ -1,7 +1,7 @@
 #include "FlightScene.h"
 namespace Game {
-	// 再挑戦で戻すシミュレーションと表示状態だけを明示する。
-	// 画面寸法、再挑戦用データ自体、外部のRenderer/Applicationは含めない。
+	// 再挑戦で戻すシミュレーションと表示状態だけを明示する
+	// 画面寸法、再挑戦用データ自体、外部のRenderer/Applicationは含めない
 	struct FlightScene::RestartState {
 		FlightMission mission;
 		CarrierMissileSystem carrierMissiles;
@@ -28,6 +28,7 @@ namespace Game {
 		CombatEffectSystem effects;
 		size_t enemySequence;
 	};
+
 	void FlightScene::SaveInitialState() {
 		m_initialState = std::make_shared<const RestartState>(RestartState{.mission = m_mission,
 			.carrierMissiles = m_carrierMissiles,
@@ -55,7 +56,9 @@ namespace Game {
 			.effects = m_effects,
 			.enemySequence = m_enemySequence});
 	}
+
 	void FlightScene::Restart(float dt) {
+		// 保存した開始状態へ戻す
 		const auto& initial = *m_initialState;
 		m_mission = initial.mission;
 		m_carrierMissiles = initial.carrierMissiles;
@@ -82,12 +85,17 @@ namespace Game {
 		m_combat = initial.combat;
 		m_effects = initial.effects;
 		m_enemySequence = initial.enemySequence;
+		m_crashSequence = 0;
+
+		// 再挑戦に合わせて表示を更新する
 		OnResize(m_width, m_height);
 		ApplyRenderStates();
 		RefreshCombatSnapshot();
 		m_combat.audio.restarted = true;
 		m_combat.audio.flying = true;
 		UpdateCamera({}, dt, {});
+
+		// 演出の進行状態をリセットする
 		m_midMissionPlayed = m_endingPlayed = false;
 		m_reinforcementsPlayed = false;
 		m_carrierLookSeconds = 0;
@@ -99,12 +107,15 @@ namespace Game {
 		m_finalKills = 0;
 		m_finalEncouraged = false;
 		m_reinforcementHoldSeconds = m_victoryHoldSeconds = -1;
+
+		// 演出開始時の状態を準備する
 		const auto command = m_cinematics.find("midMission");
 		m_carrierTargetReady = command == m_cinematics.end() || command->second.radio.empty();
 		m_enemyRadio = {};
 		m_combat.enemyRadio = {};
 		m_cinematic = {};
 		m_combat.cinematic = {};
+
 		if (m_openingEnabled) StartOpening();
 	}
 } // namespace Game

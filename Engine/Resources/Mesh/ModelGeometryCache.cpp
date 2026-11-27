@@ -1,6 +1,6 @@
 #include "ModelGeometryCache.h"
-#include "Engine/Log.h"
-#include "Engine/StartupTiming.h"
+#include "Engine/Diagnostics/Log.h"
+#include "Engine/Diagnostics/StartupTiming.h"
 #include "ModelImporter.h"
 #include <assimp/Importer.hpp>
 #include <assimp/material.h>
@@ -17,25 +17,35 @@
 
 namespace Engine::ModelProcessing {
 	namespace {
-		constexpr uint64_t Magic =
-			0x534d47454f4d3032ULL; // Change when import/geometry/LOD processing changes.
+		// 読み込み、形状、LODの処理を変えたときに更新する
+		constexpr uint64_t Magic = 0x534d47454f4d3033ULL;
+		constexpr uint32_t kMaximumCachedCollectionEntries = 1'000'000;
+		constexpr std::streamoff kMaximumCacheBytes = 512LL * 1024 * 1024;
+		constexpr uint64_t kFnvOffsetBasis = 14695981039346656037ULL;
+		constexpr uint64_t kFnvPrime = 1099511628211ULL;
 
 		std::filesystem::path CachePath(
 			const std::filesystem::path& source, const ModelLoadOptions& options) {
 			auto extension = source.extension().wstring();
 			std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
-			// Other formats can depend on external geometry/material definitions.
+
+			// その他の形式は、外部の形状やマテリアル定義に依存することがある
 			if (extension != L".fbx") return {};
+
 			std::error_code error;
 			auto canonical = std::filesystem::weakly_canonical(source, error);
 			if (error) {
 				canonical = std::filesystem::absolute(source, error).lexically_normal();
 				if (error) return {};
 			}
+
 			const auto size = std::filesystem::file_size(source, error);
 			if (error) return {};
+
 			const auto modified = std::filesystem::last_write_time(source, error);
 			if (error) return {};
+
+			// 元データと読み込み条件からキャッシュキーを作る
 			const auto text = canonical.u8string();
 			std::string key(reinterpret_cast<const char*>(text.data()), text.size());
 			key += "|" + std::to_string(Magic) + "|" + std::to_string(size) + "|" +
@@ -45,11 +55,13 @@ namespace Engine::ModelProcessing {
 				std::to_string(static_cast<unsigned>(options.origin)) + "|" +
 				std::to_string(options.generateLods) + "|" + std::to_string(aiGetVersionMajor()) + "." +
 				std::to_string(aiGetVersionMinor()) + "." + std::to_string(aiGetVersionRevision());
-			uint64_t hash = 14695981039346656037ULL;
+			uint64_t hash = kFnvOffsetBasis;
+
 			for (unsigned char value : key) {
 				hash ^= value;
-				hash *= 1099511628211ULL;
+				hash *= kFnvPrime;
 			}
+
 			const auto temporary = std::filesystem::temp_directory_path(error);
 			return error ? std::filesystem::path{}
 						 : temporary / L"SkyMissionModelCache" / (std::to_wstring(hash) + L".geometry");
@@ -60,25 +72,30 @@ namespace Engine::ModelProcessing {
 			explicit Reader(const std::filesystem::path& path)
 				: input(path, std::ios::binary | std::ios::ate) {
 				const auto size = input.tellg();
-				if (size < 0 || size > 512LL * 1024 * 1024)
+
+				if (size < 0 || size > kMaximumCacheBytes)
 					throw std::runtime_error("Invalid geometry cache size");
 				remaining = static_cast<uint64_t>(size);
 				input.seekg(0);
 			}
+
 			template <class T> T Value() {
 				static_assert(std::is_trivially_copyable_v<T>);
 				T value{};
 				Read(&value, sizeof(T));
 				return value;
 			}
+
 			template <class T> std::vector<T> Vector() {
 				static_assert(std::is_trivially_copyable_v<T>);
 				const auto count = Value<uint64_t>();
 				if (count > remaining / sizeof(T)) throw std::runtime_error("Truncated geometry cache");
+
 				std::vector<T> values(static_cast<size_t>(count));
 				if (count) Read(values.data(), count * sizeof(T));
 				return values;
 			}
+
 			void Finish() const {
 				if (remaining) throw std::runtime_error("Unexpected geometry cache data");
 			}
@@ -90,6 +107,7 @@ namespace Engine::ModelProcessing {
 					throw std::runtime_error("Truncated geometry cache");
 				remaining -= size;
 			}
+
 			std::ifstream input;
 			uint64_t remaining = 0;
 		};
@@ -99,12 +117,17 @@ namespace Engine::ModelProcessing {
 			if (input.Value<uint64_t>() != Magic || input.Value<unsigned>() != lodCount)
 				throw std::runtime_error("Outdated geometry cache");
 			PreparedModelGeometry data;
+
+			// 境界と材質をキャッシュから復元する
 			data.bounds = input.Value<Bounds3>();
 			data.cullingRadius = input.Value<float>();
+
 			if (!std::isfinite(data.cullingRadius) || data.cullingRadius < 0)
 				throw std::runtime_error("Invalid cached bounds");
 			const auto materials = input.Value<uint32_t>();
-			if (materials > 1000000) throw std::runtime_error("Invalid cached material count");
+			if (materials > kMaximumCachedCollectionEntries)
+				throw std::runtime_error("Invalid cached material count");
+
 			for (uint32_t material = 0; material < materials; ++material) {
 				PreparedMaterial source;
 				const auto name = input.Vector<char>();
@@ -113,18 +136,25 @@ namespace Engine::ModelProcessing {
 					const auto reference = input.Vector<char>();
 					texture.assign(reference.begin(), reference.end());
 				}
+
 				data.materials.push_back(std::move(source));
 			}
+
+			// 銃口などの補助ノード位置を復元する
 			const auto nodes = input.Value<uint32_t>();
-			if (nodes > 1000000) throw std::runtime_error("Invalid cached node count");
+			if (nodes > kMaximumCachedCollectionEntries)
+				throw std::runtime_error("Invalid cached node count");
+
 			for (uint32_t node = 0; node < nodes; ++node) {
 				const auto name = input.Vector<char>();
 				const auto positions = input.Vector<DirectX::XMFLOAT3>();
 				data.nodePositions.emplace(std::string(name.begin(), name.end()), positions);
 			}
+
+			// LODごとに形状を復元してデータの整合性を調べる
 			for (unsigned level = 0; level < lodCount; ++level) {
 				const auto count = input.Value<uint32_t>();
-				if (!count || count > 1000000 || (level && count != data.levels[0].size()))
+				if (!count || count > kMaximumCachedCollectionEntries || (level && count != data.levels[0].size()))
 					throw std::runtime_error("Invalid cached mesh count");
 				for (uint32_t mesh = 0; mesh < count; ++mesh) {
 					MeshGeometry geometry;
@@ -134,6 +164,7 @@ namespace Engine::ModelProcessing {
 					geometry.nodeRotationAxis = input.Value<DirectX::XMFLOAT3>();
 					geometry.vertices = input.Vector<ModelVertex>();
 					geometry.indices = input.Vector<uint32_t>();
+
 					if ((!level && geometry.indices.empty()) || geometry.indices.size() % 3 ||
 						std::any_of(geometry.indices.begin(), geometry.indices.end(), [&](uint32_t index) {
 							return index >= geometry.vertices.size();
@@ -142,6 +173,7 @@ namespace Engine::ModelProcessing {
 					data.levels[level].push_back(std::move(geometry));
 				}
 			}
+
 			input.Finish();
 			data.loadedFromCache = true;
 			return data;
@@ -151,18 +183,23 @@ namespace Engine::ModelProcessing {
 			static_assert(std::is_trivially_copyable_v<T>);
 			output.write(reinterpret_cast<const char*>(&value), sizeof(T));
 		}
+
 		template <class T> void WriteVector(std::ostream& output, const std::vector<T>& values) {
 			static_assert(std::is_trivially_copyable_v<T>);
 			WriteValue(output, static_cast<uint64_t>(values.size()));
 			if (!values.empty())
 				output.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 		}
+
 		void SaveCache(
 			const std::filesystem::path& path, const PreparedModelGeometry& data, unsigned lodCount) {
 			if (path.empty()) return;
+
 			std::error_code error;
 			std::filesystem::create_directories(path.parent_path(), error);
 			if (error) return;
+
+			// 並行する書き込みを分離し、完成前のキャッシュを公開しない
 			auto temporary = path;
 			temporary += L"." + std::to_wstring(GetCurrentProcessId()) + L"." +
 				std::to_wstring(GetCurrentThreadId()) + L".tmp";
@@ -173,16 +210,19 @@ namespace Engine::ModelProcessing {
 				WriteValue(output, data.bounds);
 				WriteValue(output, data.cullingRadius);
 				WriteValue(output, static_cast<uint32_t>(data.materials.size()));
+
 				for (const auto& material : data.materials) {
 					WriteVector(output, std::vector<char>(material.name.begin(), material.name.end()));
 					for (const auto& texture : material.textures)
 						WriteVector(output, std::vector<char>(texture.begin(), texture.end()));
 				}
+
 				WriteValue(output, static_cast<uint32_t>(data.nodePositions.size()));
 				for (const auto& [name, positions] : data.nodePositions) {
 					WriteVector(output, std::vector<char>(name.begin(), name.end()));
 					WriteVector(output, positions);
 				}
+
 				for (unsigned level = 0; level < lodCount; ++level) {
 					WriteValue(output, static_cast<uint32_t>(data.levels[level].size()));
 					for (const auto& geometry : data.levels[level]) {
@@ -194,9 +234,12 @@ namespace Engine::ModelProcessing {
 						WriteVector(output, geometry.indices);
 					}
 				}
+
+				// 書き込みが完了したファイルだけをキャッシュへ置き換える
 				output.close();
 				if (output) MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING);
 			}
+
 			std::filesystem::remove(temporary, error);
 		}
 	} // namespace
@@ -205,7 +248,9 @@ namespace Engine::ModelProcessing {
 		const std::filesystem::path& source, const ModelLoadOptions& options) {
 		StartupTiming timing("model.prepared_cache");
 		const auto cache = CachePath(source, options);
-		const unsigned lodCount = options.generateLods ? 3 : 1;
+		const unsigned lodCount = options.generateLods ? kModelLodCount : 1;
+
+		// 処理済みの形状を優先して読み込む
 		if (!cache.empty()) {
 			try {
 				auto data = ReadCache(cache, lodCount);
@@ -214,9 +259,12 @@ namespace Engine::ModelProcessing {
 			} catch (const std::runtime_error& error) {
 				const std::string reason = std::string("model.cache_miss: ") + error.what();
 				StartupTiming diagnostic(reason);
+
 				// Missing, old or interrupted cache writes fall back to source processing.
 			}
 		}
+
+		// キャッシュを使えなければ元データから形状を作る
 		PreparedModelGeometry data;
 		timing.Mark("model.import");
 		const auto text = source.u8string();
@@ -224,32 +272,41 @@ namespace Engine::ModelProcessing {
 		const auto* scene = ModelImport::ImportScene(
 			importer, std::string(reinterpret_cast<const char*>(text.data()), text.size()));
 		if (!scene) return data;
+
 		timing.Mark("model.geometry_and_lods");
-		constexpr aiTextureType types[] = {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE,
-			aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_NORMALS};
+		const auto& types = ModelImport::MaterialTextureTypes;
 		for (unsigned i = 0; i < scene->mNumMaterials; ++i) {
 			PreparedMaterial material;
 			aiString name;
 			scene->mMaterials[i]->Get(AI_MATKEY_NAME, name);
 			material.name = name.C_Str();
+
 			for (size_t type = 0; type < std::size(types); ++type) {
 				aiString texture;
 				if (scene->mMaterials[i]->GetTexture(types[type], 0, &texture) == AI_SUCCESS)
 					material.textures[type] = texture.C_Str();
 			}
+
 			data.materials.push_back(std::move(material));
 		}
+
 		data.levels[0] = BuildModelGeometry(*scene, options, data.nodePositions);
 		if (data.levels[0].empty()) return data;
+
 		data.bounds = CalculateModelBounds(data.levels[0]);
 		data.cullingRadius = CalculateCullingRadius(data.levels[0], data.bounds);
 		const float extent = std::max({data.bounds.maximum.x - data.bounds.minimum.x,
 			data.bounds.maximum.y - data.bounds.minimum.y, data.bounds.maximum.z - data.bounds.minimum.z});
+
+		// 基準の形状から低精細のLODを作る
 		for (unsigned level = 1; level < lodCount; ++level) {
 			data.levels[level].reserve(data.levels[0].size());
+
 			for (const auto& geometry : data.levels[0])
 				data.levels[level].push_back(SimplifyGeometry(geometry, extent, level));
 		}
+
+		// 次回の読み込みに備えて処理結果を保存する
 		SaveCache(cache, data, lodCount);
 		return data;
 	}

@@ -8,6 +8,7 @@ namespace Game {
 		color.w *= alpha;
 		return color;
 	}
+
 	inline DirectX::XMFLOAT4 BlendEffectColor(
 		const DirectX::XMFLOAT4& cold, const DirectX::XMFLOAT4& hot, float factor) {
 		return {std::lerp(cold.x, hot.x, factor), std::lerp(cold.y, hot.y, factor),
@@ -36,6 +37,7 @@ namespace Game {
 		static constexpr size_t flashVertexBudget = 222;
 		static constexpr size_t tracerVertexBudget = 12;
 	};
+
 	// 時間は秒、距離はワールド単位、太さは1920x1080基準で指定する
 	struct ImpactEffectSettings {
 		static constexpr float lifetimeSeconds = 0.45f;
@@ -73,11 +75,6 @@ namespace Game {
 
 	struct CarrierEffectSettings {
 		static constexpr float explosionRadius = 220;
-		static constexpr float smokeLifetimeSeconds = 10;
-		static constexpr float smokeIntervalSeconds = 0.15f;
-		static constexpr float smokeStartRadius = 70, smokeGrowthPerSecond = 22;
-		static constexpr float smokeRiseSpeed = 65;
-		static constexpr size_t maxSmokeCount = 96;
 	};
 
 	struct RocketEffectSettings {
@@ -85,14 +82,6 @@ namespace Game {
 		static constexpr float emissionIntervalSeconds = 0.025f;
 		static constexpr size_t maxSmokeCount = 1024;
 		static constexpr size_t maxExhaustCount = 20;
-	};
-
-	struct DeckSmokeSettings {
-		static constexpr float lifetimeSeconds = CarrierEffectSettings::smokeLifetimeSeconds;
-		static constexpr size_t maxCount = CarrierEffectSettings::maxSmokeCount;
-	};
-	struct CombatEffectSettings {
-		static constexpr float maximumFrameSeconds = 0.25f;
 	};
 
 	struct EffectDrawSettings {
@@ -181,17 +170,49 @@ namespace Game {
 			float fragmentTrailSeconds = ExplosionEffectSettings::fragmentTrailSeconds;
 			float fragmentVelocityInheritance = ExplosionEffectSettings::fragmentVelocityInheritance;
 		} explosion;
+		struct ExplosionFeedbackTuning {
+			float nearDistanceMeters = 150.0f;
+			float farDistanceMeters = 1200.0f;
+			float initialFlashSeconds = 0.16f;
+			float finalFlashSeconds = 0.22f;
+			float initialStrength = 0.72f;
+			float cameraShakeMultiplier = 4.0f;
+			DirectX::XMFLOAT4 flashColor{1.0f, 0.77f, 0.46f, 0.28f};
+		} explosionFeedback;
+		struct AircraftCrashProfile {
+			float durationSeconds;
+			float downwardAcceleration;
+			float drag;
+			float turnRate;
+			float bank;
+			float rollRate;
+			float spinRate;
+		};
+		struct AircraftCrashTuning {
+			float horizontalSpeedRetention = 0.92f;
+			float initialDownwardSpeed = 62.0f;
+			float initialExplosionRadiusMultiplier = 2.5f;
+			float initialFlashDurationMultiplier = 2.2f;
+			float finalExplosionRadiusMultiplier = 2.8f;
+			std::array<float, 2> engineBurstProgress{0.22f, 0.56f};
+			static constexpr float fuelFireStartProgress = 0.20f;
+			float fuelFireFlashProgress = 0.82f;
+			std::array<AircraftCrashProfile, 3> profiles{{
+				{2.145f, 164.0f, 0.53f, 0.12f, 0.65f, 5.4f, 0.0f},
+				{2.21f, 136.0f, 0.65f, 0.85f, 1.65f, 0.55f, 0.0f},
+				{2.08f, 149.0f, 1.25f, 0.04f, 0.48f, 0.0f, 5.8f},
+			}};
+		} aircraftCrash;
+		struct AircraftTrailTuning {
+			float contrailSpacingMeters = 4.0f;
+			float smokeIntervalSeconds = 0.028f;
+			float smokeStartRadius = 3.5f;
+			float smokeRadiusGrowth = 14.0f;
+			DirectX::XMFLOAT4 smokeColor{0.075f, 0.066f, 0.060f, 0.88f};
+		} aircraftTrail;
 		struct CarrierEffectTuning : CarrierEffectSettings {
-			DirectX::XMFLOAT4 smokeColor{0.18f, 0.17f, 0.16f, 1.0f};
-
-			float smokeDriftSpeed = 12.0f;
-			float smokeOpacity = 0.6f;
 			float explosionRadius = CarrierEffectSettings::explosionRadius;
-			float smokeLifetimeSeconds = CarrierEffectSettings::smokeLifetimeSeconds;
-			float smokeIntervalSeconds = CarrierEffectSettings::smokeIntervalSeconds;
-			float smokeRiseSpeed = CarrierEffectSettings::smokeRiseSpeed;
-			float smokeStartRadius = CarrierEffectSettings::smokeStartRadius;
-			float smokeGrowthPerSecond = CarrierEffectSettings::smokeGrowthPerSecond;
+			float smokeStartDelaySeconds = 1.4f;
 		} carrier;
 		struct RocketEffectTuning : RocketEffectSettings {
 			DirectX::XMFLOAT4 smokeColor{0.65f, 0.65f, 0.62f, 1.0f};
@@ -205,114 +226,6 @@ namespace Game {
 			float smokeOpacity = 0.32f;
 			float smokeLifetimeSeconds = RocketEffectSettings::smokeLifetimeSeconds;
 		} rocket;
-		struct DeckSmokeTuning {
-			DirectX::XMFLOAT4 smokeColor{0.18f, 0.17f, 0.16f, 1.0f};
-
-			float startRadius = 25, growthPerSecond = 32, driftSpeed = 12, riseSpeed = 65;
-		} deck;
-		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
-			SettingsReader r(reader, path);
-			r.Number("/explosion/smokeMaxOpacity", explosion.smokeMaxOpacity, 0, 1);
-
-			r.Number("/impact/smokeMaxOpacity", impact.smokeMaxOpacity, 0, 1);
-
-			r.Color("/deck/smokeColor", deck.smokeColor);
-
-			r.Color("/rocket/smokeColor", rocket.smokeColor);
-			r.Color("/rocket/exhaustCoreColor", rocket.exhaustCoreColor);
-			r.Color("/rocket/exhaustGlowColor", rocket.exhaustGlowColor);
-			r.Color("/rocket/exhaustFlameColor", rocket.exhaustFlameColor);
-
-			r.Color("/carrier/smokeColor", carrier.smokeColor);
-
-			r.Color("/explosion/smokeDarkColor", explosion.smokeDarkColor);
-			r.Color("/explosion/smokeLightColor", explosion.smokeLightColor);
-			r.Color("/explosion/fireColdColor", explosion.fireColdColor);
-			r.Color("/explosion/fireHotColor", explosion.fireHotColor);
-			r.Color("/explosion/flashColor", explosion.flashColor);
-			r.Color("/explosion/fragmentSmokeColor", explosion.fragmentSmokeColor);
-			r.Color("/explosion/fragmentOuterColor", explosion.fragmentOuterColor);
-			r.Color("/explosion/fragmentInnerColor", explosion.fragmentInnerColor);
-
-			r.Color("/impact/smokeColor", impact.smokeColor);
-			r.Color("/impact/flashOuterColor", impact.flashOuterColor);
-			r.Color("/impact/flashInnerColor", impact.flashInnerColor);
-			r.Color("/impact/fragmentOuterColor", impact.fragmentOuterColor);
-			r.Color("/impact/fragmentColdColor", impact.fragmentColdColor);
-			r.Color("/impact/fragmentHotColor", impact.fragmentHotColor);
-
-			r.Color("/gun/smokeColor", gun.smokeColor);
-			r.Color("/gun/tracerOuterColor", gun.tracerOuterColor);
-			r.Color("/gun/tracerInnerColor", gun.tracerInnerColor);
-			r.Color("/gun/flashOuterColor", gun.flashOuterColor);
-			r.Color("/gun/flashInnerColor", gun.flashInnerColor);
-			r.Color("/gun/flameColor", gun.flameColor);
-			r.Color("/gun/flameOuterColor", gun.flameOuterColor);
-			r.Color("/gun/flameInnerColor", gun.flameInnerColor);
-
-			r.Number("/deck/riseSpeed", deck.riseSpeed, 0, 1000000);
-			r.Number("/deck/driftSpeed", deck.driftSpeed, 0, 1000000);
-			r.Number("/deck/growthPerSecond", deck.growthPerSecond, 0, 1000000);
-			r.Number("/deck/startRadius", deck.startRadius, 0, 1000000);
-			r.Number("/rocket/smokeGrowthPerSecond", rocket.smokeGrowthPerSecond, 0, 1000000);
-			r.Number("/rocket/smokeStartRadius", rocket.smokeStartRadius, 0, 1000000);
-			r.Number("/rocket/smokeRiseSpeed", rocket.smokeRiseSpeed, 0, 1000000);
-			r.Number("/rocket/smokeOpacity", rocket.smokeOpacity, 0, 1);
-			r.Number("/carrier/smokeDriftSpeed", carrier.smokeDriftSpeed, 0, 1000000);
-			r.Number("/carrier/smokeOpacity", carrier.smokeOpacity, 0, 1);
-			r.Integer("/explosion/fragmentCount", explosion.fragmentCount, 24);
-			r.Integer("/explosion/fireCount", explosion.fireCount, 17);
-			r.Integer("/explosion/smokeCount", explosion.smokeCount, 22);
-			r.Integer("/impact/fragmentCount", impact.fragmentCount, 28);
-			r.Integer("/impact/smokeCount", impact.smokeCount, 8);
-			r.Number("/gun/flashLifetimeSeconds", gun.flashLifetimeSeconds, 0.000001f, 1000000);
-			r.Number("/gun/flashRadius", gun.flashRadius, 0.000001f, 1000000);
-			r.Number("/gun/flameLength", gun.flameLength, 0.000001f, 1000000);
-			r.Number("/gun/tracerSeconds", gun.tracerSeconds, 0.000001f, 1000000);
-			r.Number("/gun/tracerMaxLength", gun.tracerMaxLength, 0.000001f, 1000000);
-			r.Number("/gun/tracerOuterWidth", gun.tracerOuterWidth, 0.000001f, 1000000);
-			r.Number("/gun/tracerInnerWidth", gun.tracerInnerWidth, 0.000001f, 1000000);
-			r.Number("/gun/smokeLifetimeSeconds", gun.smokeLifetimeSeconds, 0.000001f, 1000000);
-			r.Number("/gun/smokeStartRadius", gun.smokeStartRadius, 0.000001f, 1000000);
-			r.Number("/gun/smokeEndRadius", gun.smokeEndRadius, 0.000001f, 1000000);
-			r.Number("/gun/smokeOpacity", gun.smokeOpacity, 0.000001f, 1);
-			r.Number("/gun/smokeVelocityInheritance", gun.smokeVelocityInheritance, 0, 1);
-			r.Number("/gun/smokeDrag", gun.smokeDrag, 0.000001f, 1000000);
-			r.Number("/gun/smokeRiseSpeed", gun.smokeRiseSpeed, 0, 1000000);
-			r.Number("/impact/lifetimeSeconds", impact.lifetimeSeconds, 0.000001f, 1000000);
-			r.Number("/impact/flashSeconds", impact.flashSeconds, 0.000001f, 1000000);
-			r.Number("/impact/flashOuterRadius", impact.flashOuterRadius, 0.000001f, 1000000);
-			r.Number("/impact/flashInnerRadius", impact.flashInnerRadius, 0.000001f, 1000000);
-			r.Number("/impact/smokeFadeSeconds", impact.smokeFadeSeconds, 0.000001f, 1000000);
-			r.Number("/impact/fragmentMinLifetime", impact.fragmentMinLifetime, 0.000001f, 1000000);
-			r.Number("/impact/fragmentLifetimeRange", impact.fragmentLifetimeRange, 0.000001f, 1000000);
-			r.Number("/impact/fragmentMinSpeed", impact.fragmentMinSpeed, 0.000001f, 1000000);
-			r.Number("/impact/fragmentSpeedRange", impact.fragmentSpeedRange, 0.000001f, 1000000);
-			r.Number("/impact/fragmentDrag", impact.fragmentDrag, 0.000001f, 1000000);
-			r.Number("/impact/fragmentGravity", impact.fragmentGravity, 0.000001f, 1000000);
-			r.Number("/impact/fragmentVelocityInheritance", impact.fragmentVelocityInheritance, 0, 1);
-			r.Number("/explosion/lifetimeSeconds", explosion.lifetimeSeconds, 0.000001f, 1000000);
-			r.Number("/explosion/flashSeconds", explosion.flashSeconds, 0.000001f, 1000000);
-			r.Number("/explosion/smokeFadeSeconds", explosion.smokeFadeSeconds, 0.000001f, 1000000);
-			r.Number("/explosion/minRadius", explosion.minRadius, 0.000001f, 1000000);
-			r.Number("/explosion/maxRadius", explosion.maxRadius, 0.000001f, 1000000);
-			r.Number("/explosion/boundsRadiusScale", explosion.boundsRadiusScale, 0.000001f, 1000000);
-			r.Number("/explosion/fragmentGravity", explosion.fragmentGravity, 0.000001f, 1000000);
-			r.Number("/explosion/fragmentTrailSeconds", explosion.fragmentTrailSeconds, 0.000001f, 1000000);
-			r.Number("/explosion/fragmentVelocityInheritance", explosion.fragmentVelocityInheritance, 0, 1);
-			r.Number("/carrier/explosionRadius", carrier.explosionRadius, 0.000001f, 1000000);
-			r.Number("/carrier/smokeLifetimeSeconds", carrier.smokeLifetimeSeconds, 0.000001f, 1000000);
-			r.Number("/carrier/smokeIntervalSeconds", carrier.smokeIntervalSeconds, 0.000001f, 1000000);
-			r.Number("/carrier/smokeRiseSpeed", carrier.smokeRiseSpeed, 0, 1000000);
-			r.Number("/carrier/smokeStartRadius", carrier.smokeStartRadius, 0.000001f, 1000000);
-			r.Number("/carrier/smokeGrowthPerSecond", carrier.smokeGrowthPerSecond, 0.000001f, 1000000);
-			r.Number("/rocket/smokeLifetimeSeconds", rocket.smokeLifetimeSeconds, 0.000001f, 1000000);
-			r.Require(explosion.maxRadius >= explosion.minRadius, "effects", "inconsistent radii or widths");
-			r.Require(impact.flashOuterRadius >= impact.flashInnerRadius, "effects",
-				"inconsistent radii or widths");
-			r.Require(
-				gun.tracerOuterWidth >= gun.tracerInnerWidth, "effects", "inconsistent radii or widths");
-			r.Require(gun.smokeEndRadius >= gun.smokeStartRadius, "effects", "inconsistent radii or widths");
-		}
+		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};
 } // namespace Game

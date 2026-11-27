@@ -26,7 +26,7 @@ namespace Engine {
 			const std::filesystem::path& jsonPath, const std::string& key) const;
 		std::optional<std::string> TryResolveString(
 			const std::filesystem::path& jsonPath, const std::string& key) const;
-		// keyはルート項目名、または /briefing/0/lines のようなJSON Pointer。
+		// keyはルート項目名、または /briefing/0/lines のようなJSON Pointer
 		std::optional<size_t> TryResolveArrayLength(
 			const std::filesystem::path& jsonPath, const std::string& key) const;
 

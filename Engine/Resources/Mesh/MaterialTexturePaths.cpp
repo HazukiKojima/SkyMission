@@ -8,6 +8,8 @@ namespace Engine::MaterialTexturePaths {
 	std::filesystem::path FindTexturePath(const std::filesystem::path& modelDirectory,
 		const std::filesystem::path& texturePath, const ModelLoadOptions& options) {
 		const std::filesystem::path texturesDirectory = modelDirectory / options.textureDirectory;
+
+		// モデルの参照先から順に画像を探す
 		const std::filesystem::path candidates[] = {
 			texturePath.is_absolute() ? texturePath : modelDirectory / texturePath,
 			texturesDirectory / texturePath, texturesDirectory / texturePath.filename()};
@@ -15,12 +17,14 @@ namespace Engine::MaterialTexturePaths {
 		for (const auto& candidate : candidates) {
 			if (std::filesystem::is_regular_file(candidate)) return candidate;
 		}
-		// Some FBX exports retain .jpg references when the supplied image is .jpeg.
+
+		// 一部のFBXは、画像が.jpegでも.jpgとして参照したまま出力される
 		auto extension = texturePath.extension().wstring();
 		std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
 		if (extension == L".jpg" || extension == L".jpeg") {
 			auto alternate = texturesDirectory / texturePath.filename();
 			alternate.replace_extension(extension == L".jpg" ? L".jpeg" : L".jpg");
+
 			if (std::filesystem::is_regular_file(alternate)) return alternate;
 		}
 
@@ -41,32 +45,41 @@ namespace Engine::MaterialTexturePaths {
 		const std::string& materialName, const std::filesystem::path& baseColorPath,
 		const std::wstring& suffix, const ModelLoadOptions& options) {
 		if (suffix.empty()) return {};
+
 		const std::filesystem::path texturesDirectory = modelDirectory / options.textureDirectory;
 		const std::wstring& baseColorSuffix = options.baseColorStemSuffix;
 		std::wstring baseName = baseColorPath.stem().wstring();
 		std::wstring baseNameLower = baseName;
 		std::transform(baseNameLower.begin(), baseNameLower.end(), baseNameLower.begin(), towlower);
+
 		std::wstring baseSuffixLower = baseColorSuffix;
 		std::transform(baseSuffixLower.begin(), baseSuffixLower.end(), baseSuffixLower.begin(), towlower);
+
+		// ベースカラーと同じ名前の接頭部で関連画像を探す
 		const size_t baseColorPosition = baseNameLower.find(baseSuffixLower);
 		if (!baseColorSuffix.empty() && baseColorPosition != std::wstring::npos) {
 			const auto candidate = texturesDirectory / (baseName.substr(0, baseColorPosition) + suffix);
+
 			if (std::filesystem::exists(candidate)) return candidate;
 		}
 
+		// 見つからなければ材質名と接尾辞で画像を探す
 		std::string materialNameLower = materialName;
 		std::transform(materialNameLower.begin(), materialNameLower.end(), materialNameLower.begin(),
 			[](unsigned char c) {
 				return static_cast<char>(std::tolower(c));
 			});
+
 		std::error_code error;
 		for (const auto& entry : std::filesystem::directory_iterator(texturesDirectory, error)) {
 			if (error || !entry.is_regular_file()) continue;
+
 			std::wstring filename = entry.path().filename().wstring();
 			std::wstring filenameLower = filename;
 			std::transform(filenameLower.begin(), filenameLower.end(), filenameLower.begin(), towlower);
 			std::wstring suffixLower = suffix;
 			std::transform(suffixLower.begin(), suffixLower.end(), suffixLower.begin(), towlower);
+
 			if (filenameLower.size() < suffixLower.size() ||
 				filenameLower.substr(filenameLower.size() - suffixLower.size()) != suffixLower) {
 				continue;
@@ -76,9 +89,11 @@ namespace Engine::MaterialTexturePaths {
 			const auto utf8 = std::filesystem::path(prefix).u8string();
 			const std::string prefixUtf8(reinterpret_cast<const char*>(utf8.data()), utf8.size());
 			std::string prefixLower = prefixUtf8;
+
 			std::transform(prefixLower.begin(), prefixLower.end(), prefixLower.begin(), [](unsigned char c) {
 				return static_cast<char>(std::tolower(c));
 			});
+
 			if (prefixLower == materialNameLower) return entry.path();
 		}
 

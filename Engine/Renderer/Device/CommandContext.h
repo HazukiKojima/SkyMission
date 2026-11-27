@@ -9,14 +9,17 @@ namespace Engine {
 		CommandContext() = default;
 		~CommandContext();
 		CommandContext(const CommandContext&) = delete;
+
 		CommandContext& operator=(const CommandContext&) = delete;
 
 		void Initialize(RenderDevice* renderDevice);
 
+		// 対象フレームのGPU処理完了後に呼ぶ
 		void BeginFrame();
 		void EndFrame();
 		void MoveToNextFrame(RenderDevice* renderDevice);
 		void WaitForGpu();
+
 		// リサイズ後のインデックスに合わせるため、WaitForGpu後に呼ぶ
 		void SynchronizeFrameIndex(const RenderDevice& device) {
 			const UINT64 nextFenceValue = m_fenceValues[m_currentFrameIndex];
@@ -25,6 +28,7 @@ namespace Engine {
 			m_currentFrameIndex = device.GetFrameIndex();
 		}
 
+		// 全サブリソースに状態遷移を記録する
 		void TransitionResource(
 			ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
 
@@ -35,6 +39,7 @@ namespace Engine {
 		ID3D12GraphicsCommandList* GetCommandList() const {
 			return m_commandList.Get();
 		}
+
 		UINT GetFrameIndex() const {
 			return m_renderDevice->GetFrameIndex();
 		}

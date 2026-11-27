@@ -5,10 +5,15 @@ namespace Game {
 	Engine::CloudSettings LoadCloudSettings(
 		const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
 		if (!std::filesystem::exists(path)) return {};
+
 		try {
+			// 雲が無効なら詳細設定を読み込まずに戻る
 			const float enabled = reader.ResolveFloat(path, "enabled");
+
 			if (enabled != 0 && enabled != 1) throw std::invalid_argument("enabled must be 0 or 1");
 			if (!enabled) return {};
+
+			// 雲の分布と風の設定を読み込む
 			Engine::CloudSettings settings;
 			settings.enabled = true;
 			settings.bottom = reader.ResolveFloat(path, "bottom");
@@ -18,17 +23,24 @@ namespace Game {
 			settings.scale = reader.ResolveFloat(path, "scale");
 			settings.maxDistance = reader.ResolveFloat(path, "maxDistance");
 			const auto wind = reader.ResolveFloatArray(path, "wind");
+
 			if (wind.size() != 2) throw std::invalid_argument("wind must contain X/Z velocity");
+
 			settings.wind = {wind[0], wind[1]};
+
+			// 描画品質と乱数種に使う整数値を検証する
 			const auto integer = [&](const char* key, unsigned low, unsigned high) {
 				float value = reader.ResolveFloat(path, key);
+
 				if (!std::isfinite(value) || value < float(low) || value > float(high) ||
 					std::floor(value) != value)
 					throw std::invalid_argument(std::string(key) + " must be an integer within range");
 				return static_cast<unsigned>(value);
 			};
-			settings.steps = integer("steps", 16, 64);
-			settings.seed = integer("seed", 0, 16777215);
+
+			settings.steps = integer("steps",
+				Engine::CloudSettings::kMinimumRaymarchSteps, Engine::CloudSettings::kMaximumRaymarchSteps);
+			settings.seed = integer("seed", 0, Engine::CloudSettings::kMaximumShaderSeed);
 			Engine::ValidateCloudSettings(settings);
 			return settings;
 		} catch (const std::exception& error) {

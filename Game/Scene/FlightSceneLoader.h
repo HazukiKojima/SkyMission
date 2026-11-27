@@ -1,11 +1,12 @@
 #pragma once
 #include "Game/Settings/UiTextSettings.h"
 #include "Game/Settings/GameplaySettings.h"
+#include "Game/Settings/RumbleSettings.h"
 #include "Game/Effects/CombatEffectSettings.h"
 #include "Game/Aircraft/AircraftAIController.h"
 #include "Engine/Renderer/RendererDefinition.h"
 #include "Game/Weapons/WeaponDefinition.h"
-#include "Game/Weapons/BombDefinition.h"
+#include "Game/Weapons/Bomb/BombDefinition.h"
 #include "Game/Combat/CombatTypes.h"
 #include "Engine/Renderer/Hud/HudDrawList.h"
 #include "Game/Cinematics/CinematicSettings.h"
@@ -13,6 +14,7 @@
 namespace Engine {
 	class JsonAssetReader;
 }
+
 namespace Game {
 	inline constexpr const char* PlayerModelId = "player";
 	inline constexpr const char* EnemyModelId = "enemy";
@@ -24,6 +26,7 @@ namespace Game {
 		std::filesystem::path mission;
 		std::filesystem::path bomb;
 	};
+
 	struct AircraftDefinition {
 		AircraftAnimationSettings animation;
 		std::filesystem::path model;
@@ -31,6 +34,7 @@ namespace Game {
 		AircraftFlightParameters flightParameters;
 		Engine::ModelLoadOptions modelImport;
 	};
+
 	struct ShipDefinition {
 		Engine::ModelAssetDefinition asset;
 		DirectX::XMFLOAT3 position{}, rotationDegrees{};
@@ -38,6 +42,7 @@ namespace Game {
 		float waterlineOffset = 0;
 		DirectX::XMFLOAT4X4 BuildTransform() const;
 	};
+
 	std::vector<ShipDefinition> LoadShipDefinitions(
 		const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	struct FlightSceneDefinition {
@@ -45,6 +50,7 @@ namespace Game {
 		EnemyGunTuning enemyGunTuning;
 		EnemyAITuning enemyAITuning;
 		EffectSettings effects;
+		RumbleSettings rumble;
 		UiTuning ui;
 		UiTextSettings text;
 		Engine::RenderEnvironmentDefinition environment;
@@ -68,6 +74,7 @@ namespace Game {
 			return result;
 		}
 	};
+
 	class FlightSceneLoader {
 	  public:
 		FlightSceneDefinition Load(const SceneSourcePaths& paths) const;

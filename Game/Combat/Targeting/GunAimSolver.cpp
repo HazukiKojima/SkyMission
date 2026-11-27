@@ -1,0 +1,73 @@
+#include "GunAimSolver.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
+namespace Game {
+	namespace {
+		constexpr float kMinimumAimVectorLengthSquared = 1e-8f;
+		constexpr float kAimDotTolerance = 1e-6f;
+		constexpr double kInterceptCoefficientTolerance = 1e-8;
+		constexpr double kMinimumInterceptTimeSeconds = 1e-6;
+	}
+	using namespace DirectX;
+
+	bool IsWithinAngle(const XMFLOAT3& forward, const XMFLOAT3& direction, float degrees) {
+		const auto a = XMLoadFloat3(&forward);
+		const auto b = XMLoadFloat3(&direction);
+
+		if (XMVectorGetX(XMVector3LengthSq(a)) < kMinimumAimVectorLengthSquared ||
+			XMVectorGetX(XMVector3LengthSq(b)) < kMinimumAimVectorLengthSquared)
+			return false;
+		return XMVectorGetX(XMVector3Dot(XMVector3Normalize(a), XMVector3Normalize(b))) >=
+			std::cos(XMConvertToRadians(degrees)) - kAimDotTolerance;
+	}
+
+	std::optional<AimSolution> SolveGunAim(const XMFLOAT3& muzzle, const XMFLOAT3& shooterVelocity,
+		const CombatTarget& target, float speed, float lifetime) {
+		if (!std::isfinite(speed) || speed <= 0 || !std::isfinite(lifetime) || lifetime <= 0)
+			return std::nullopt;
+
+		// 射手から見た相対位置と相対速度を求める
+		const double rx = double(target.center.x) - muzzle.x;
+		const double ry = double(target.center.y) - muzzle.y;
+		const double rz = double(target.center.z) - muzzle.z;
+		const double ux = double(target.velocity.x) - shooterVelocity.x;
+		const double uy = double(target.velocity.y) - shooterVelocity.y;
+		const double uz = double(target.velocity.z) - shooterVelocity.z;
+
+		// 迎撃時刻の二次方程式を組み立てる
+		const double a = ux * ux + uy * uy + uz * uz - double(speed) * speed;
+		const double b = 2 * (rx * ux + ry * uy + rz * uz);
+		const double c = rx * rx + ry * ry + rz * rz;
+		double time = std::numeric_limits<double>::infinity();
+
+		// 最も早い正の迎撃時刻を求める
+		if (std::abs(a) <= kInterceptCoefficientTolerance * (double(speed) * speed + 1)) {
+			if (std::abs(b) > kInterceptCoefficientTolerance) time = -c / b;
+		} else {
+			const double discriminant = b * b - 4 * a * c;
+
+			if (discriminant < 0) return std::nullopt;
+
+			// 桁落ちを避けて解を求める
+			const double q = -0.5 * (b + std::copysign(std::sqrt(discriminant), b));
+			const double t1 = q / a;
+			const double t2 = q == 0 ? time : c / q;
+
+			if (t1 > kMinimumInterceptTimeSeconds) time = t1;
+			if (t2 > kMinimumInterceptTimeSeconds) time = std::min(time, t2);
+		}
+
+		// 寿命内の迎撃解を射線へ変換する
+		if (!std::isfinite(time) || time <= kMinimumInterceptTimeSeconds || time > lifetime) return std::nullopt;
+
+		const auto relative =
+			XMVectorSet(float(rx + ux * time), float(ry + uy * time), float(rz + uz * time), 0);
+		AimSolution solution;
+		XMStoreFloat3(&solution.direction, XMVector3Normalize(relative));
+		XMStoreFloat3(&solution.aimPoint, XMLoadFloat3(&muzzle) + relative);
+		solution.seconds = float(time);
+		return solution;
+	}
+} // namespace Game

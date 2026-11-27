@@ -1,13 +1,15 @@
 #include "Texture.h"
-#include "../../Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include <DirectXTex.h>
-#include "d3dx12.h"
+#include "External/DirectX/d3dx12.h"
 #include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <cstdint>
 #include <cmath>
 #include <filesystem>
+#include <climits>
+#include <limits>
 #include <mutex>
 #include <unordered_map>
 
@@ -16,6 +18,14 @@ namespace Engine {
 		constexpr uint64_t kTextureProcessingVersion = 2;
 		constexpr uint64_t kFnvOffsetBasis = 14695981039346656037ULL;
 		constexpr uint64_t kFnvPrime = 1099511628211ULL;
+		constexpr size_t kRgba8BytesPerPixel = 4;
+		constexpr size_t kRedChannel = 0;
+		constexpr size_t kGreenChannel = 1;
+		constexpr size_t kBlueChannel = 2;
+		constexpr size_t kAlphaChannel = 3;
+		constexpr auto kUnorm8Max = std::numeric_limits<uint8_t>::max();
+		constexpr float kUnorm8Midpoint = kUnorm8Max * 0.5f;
+
 		bool IsBlockCompressedFormat(DXGI_FORMAT format) {
 			return DirectX::IsCompressed(format);
 		}
@@ -25,6 +35,7 @@ namespace Engine {
 			const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 			std::error_code error;
 			const auto fileSize = std::filesystem::file_size(filePath, error);
+
 			if (error) return {};
 
 			const auto lastWriteTime = std::filesystem::last_write_time(filePath, error);
@@ -39,14 +50,17 @@ namespace Engine {
 				}
 			}
 
+			// 画像の処理条件からキャッシュキーを作る
 			uint64_t hash = kFnvOffsetBasis;
+
 			auto mix = [&hash](uint64_t value) {
-				for (int byteIndex = 0; byteIndex < 8; ++byteIndex) {
-					hash ^= value & 0xff;
+				for (size_t byteIndex = 0; byteIndex < sizeof(value); ++byteIndex) {
+					hash ^= value & UCHAR_MAX;
 					hash *= kFnvPrime;
-					value >>= 8;
+					value >>= CHAR_BIT;
 				}
 			};
+
 			for (wchar_t character : normalizedPath.wstring()) {
 				mix(static_cast<uint64_t>(towlower(character)));
 			}
@@ -58,6 +72,7 @@ namespace Engine {
 			mix(useSrgb ? 1 : 0);
 			mix(generateMipmaps ? 1 : 0);
 			mix(invertNormalGreen ? 1 : 0);
+
 			if (maxDimension != 0) mix(maxDimension);
 
 			error.clear();
@@ -73,6 +88,7 @@ namespace Engine {
 		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 		std::error_code error;
 		std::filesystem::path normalizedPath = std::filesystem::absolute(filePath, error);
+
 		if (error) {
 			normalizedPath = filePath;
 		}
@@ -86,6 +102,7 @@ namespace Engine {
 		cacheKey += L"|f" + std::to_wstring(static_cast<unsigned int>(targetFormat));
 		cacheKey += L"|max" + std::to_wstring(maxDimension);
 
+		// 条件が一致する生存中のテクスチャを共有する
 		static std::mutex cacheMutex;
 		static std::unordered_map<std::wstring, std::weak_ptr<Texture>> cache;
 		std::lock_guard<std::mutex> lock(cacheMutex);
@@ -94,6 +111,7 @@ namespace Engine {
 			if (std::shared_ptr<Texture> texture = cached->second.lock()) return texture;
 		}
 
+		// 新しく読み込んだテクスチャを共有キャッシュへ登録する
 		auto texture = std::make_shared<Texture>();
 		if (!texture->LoadFromFile(device, cmdList, filePath, options)) return {};
 
@@ -104,21 +122,27 @@ namespace Engine {
 	bool Texture::LoadFromFile(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
 		const std::wstring& filePath, const TextureLoadOptions& options) {
 		if (!DecodeAndProcessImage(filePath, options)) return false;
+
 		UploadImage(device, cmdList);
 		m_image.Release();
 		return true;
 	}
 
 	bool Texture::DecodeAndProcessImage(const std::wstring& filePath, const TextureLoadOptions& options) {
-		// HDR decoding and float mip generation are expensive too; retain their processed DDS.
+		// HDRのデコードと浮動小数点のミップ生成も重いので、処理済みのDDSを保持する
 		const auto cachePath = GetDiskCachePath(filePath, options);
 		if (TryLoadDiskCache(cachePath, options.targetFormat, filePath)) return true;
 		if (!DecodeSource(filePath, options.useSrgb) || !DecompressForProcessing(options)) return false;
+
+		// 形式変換の前に法線と画像サイズを補正する
 		CorrectNormalGreen(options.invertNormalGreen);
 		if (!ResizeToLimit(options.maxDimension)) return false;
+
 		// BC圧縮形式はミップ生成に非対応のため、生成後に圧縮する
 		if (!GenerateMipChain(options.generateMipmaps) || !ConvertFormat(options.targetFormat, filePath))
 			return false;
+
+		// 処理済み画像を次回起動用に保存する
 		TrySaveDiskCache(cachePath);
 		return true;
 	}
@@ -126,8 +150,10 @@ namespace Engine {
 	bool Texture::TryLoadDiskCache(
 		const std::filesystem::path& cachePath, DXGI_FORMAT targetFormat, const std::wstring& source) {
 		if (cachePath.empty()) return false;
+
 		std::error_code error;
 		if (!std::filesystem::exists(cachePath, error) || error) return false;
+
 		const HRESULT hr =
 			DirectX::LoadFromDDSFile(cachePath.c_str(), DirectX::DDS_FLAGS_NONE, &m_meta, m_image);
 		if (FAILED(hr) || (targetFormat != DXGI_FORMAT_UNKNOWN && m_meta.format != targetFormat)) {
@@ -165,6 +191,8 @@ namespace Engine {
 	bool Texture::DecompressForProcessing(const TextureLoadOptions& options) {
 		const auto& [useSrgb, generateMipmaps, invertNormalGreen, targetFormat, maxDimension] = options;
 		HRESULT hr = E_FAIL;
+
+		// 画像補正や形式変更が必要な圧縮画像だけを展開する
 		if (DirectX::IsCompressed(m_meta.format) &&
 			(invertNormalGreen || (generateMipmaps && m_meta.mipLevels == 1) ||
 				m_meta.format != targetFormat ||
@@ -174,6 +202,7 @@ namespace Engine {
 				DXGI_FORMAT_R8G8B8A8_UNORM, decompressed);
 			if (FAILED(hr)) {
 				Log("Texture decompression failed (HR: 0x{:08X})\n", static_cast<unsigned long>(hr));
+
 				return false;
 			}
 
@@ -187,12 +216,15 @@ namespace Engine {
 		const size_t extent = std::max(m_meta.width, m_meta.height);
 		if (maxDimension == 0 || extent <= maxDimension) return true;
 		if (m_meta.dimension != DirectX::TEX_DIMENSION_TEXTURE2D) return false;
+
+		// 縦横比を保って長辺を上限まで縮める
 		const size_t width = std::max<size_t>(1, m_meta.width * maxDimension / extent);
 		const size_t height = std::max<size_t>(1, m_meta.height * maxDimension / extent);
 		DirectX::ScratchImage resized;
 		const auto hr = DirectX::Resize(m_image.GetImages(), m_image.GetImageCount(), m_meta, width, height,
 			DirectX::TEX_FILTER_DEFAULT, resized);
 		if (FAILED(hr)) return false;
+
 		m_image = std::move(resized);
 		m_meta = m_image.GetMetadata();
 		return true;
@@ -203,10 +235,13 @@ namespace Engine {
 			(m_meta.format == DXGI_FORMAT_R8G8B8A8_UNORM || m_meta.format == DXGI_FORMAT_B8G8R8A8_UNORM)) {
 			for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
 				const DirectX::Image* image = &m_image.GetImages()[imageIndex];
+
 				for (size_t y = 0; y < image->height; ++y) {
 					uint8_t* row = image->pixels + y * image->rowPitch;
 					for (size_t x = 0; x < image->width; ++x) {
-						row[x * 4 + 1] = 255 - row[x * 4 + 1];
+						// 緑成分を反転して法線マップのY方向をそろえる
+						auto& green = row[x * kRgba8BytesPerPixel + kGreenChannel];
+						green = kUnorm8Max - green;
 					}
 				}
 			}
@@ -222,6 +257,7 @@ namespace Engine {
 				DirectX::TEX_FILTER_DEFAULT, 0, mipmappedImage);
 			if (FAILED(hr)) {
 				Log("Texture mip generation failed (HR: 0x{:08X})\n", static_cast<unsigned long>(hr));
+
 				return false;
 			}
 
@@ -236,6 +272,7 @@ namespace Engine {
 		if (targetFormat != DXGI_FORMAT_UNKNOWN && m_meta.format != targetFormat) {
 			const DXGI_FORMAT sourceFormat = m_meta.format;
 			DirectX::ScratchImage convertedImage;
+
 			if (IsBlockCompressedFormat(targetFormat)) {
 				DirectX::TEX_COMPRESS_FLAGS compressionFlags = DirectX::TEX_COMPRESS_PARALLEL;
 				if (targetFormat == DXGI_FORMAT_BC7_UNORM || targetFormat == DXGI_FORMAT_BC7_UNORM_SRGB) {
@@ -245,14 +282,14 @@ namespace Engine {
 
 				const auto compressionStart = std::chrono::steady_clock::now();
 				hr = DirectX::Compress(m_image.GetImages(), m_image.GetImageCount(), m_meta, targetFormat,
-					compressionFlags, 0.5f, convertedImage);
+					compressionFlags, DirectX::TEX_THRESHOLD_DEFAULT, convertedImage);
 				const auto compressionMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
 					std::chrono::steady_clock::now() - compressionStart)
 														 .count();
 				Log("Texture compression: {} ms\n", compressionMilliseconds);
 			} else {
 				hr = DirectX::Convert(m_image.GetImages(), m_image.GetImageCount(), m_meta, targetFormat,
-					DirectX::TEX_FILTER_DEFAULT, 0.5f, convertedImage);
+					DirectX::TEX_FILTER_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, convertedImage);
 			}
 
 			if (FAILED(hr)) {
@@ -269,18 +306,23 @@ namespace Engine {
 				(sourceFormat == DXGI_FORMAT_R8G8_UNORM || sourceFormat == DXGI_FORMAT_R8G8_SNORM ||
 					sourceFormat == DXGI_FORMAT_R16G16_UNORM || sourceFormat == DXGI_FORMAT_R16G16_SNORM ||
 					sourceFormat == DXGI_FORMAT_BC5_UNORM || sourceFormat == DXGI_FORMAT_BC5_SNORM);
+
+			// 2成分の法線画像をRGBAへ展開した場合はZ成分を復元する
 			if (reconstructNormalZ) {
 				for (size_t imageIndex = 0; imageIndex < m_image.GetImageCount(); ++imageIndex) {
 					const DirectX::Image* image = &m_image.GetImages()[imageIndex];
+
 					for (size_t y = 0; y < image->height; ++y) {
 						uint8_t* row = image->pixels + y * image->rowPitch;
 						for (size_t x = 0; x < image->width; ++x) {
-							uint8_t* pixel = row + x * 4;
-							const float normalX = pixel[0] / 127.5f - 1.0f;
-							const float normalY = pixel[1] / 127.5f - 1.0f;
+							uint8_t* pixel = row + x * kRgba8BytesPerPixel;
+
+							const float normalX = pixel[kRedChannel] / kUnorm8Midpoint - 1.0f;
+							const float normalY = pixel[kGreenChannel] / kUnorm8Midpoint - 1.0f;
 							const float normalZ =
 								std::sqrt(std::max(0.0f, 1.0f - normalX * normalX - normalY * normalY));
-							pixel[2] = static_cast<uint8_t>(std::lround((normalZ * 0.5f + 0.5f) * 255.0f));
+							pixel[kBlueChannel] = static_cast<uint8_t>(
+								std::lround((normalZ * 0.5f + 0.5f) * kUnorm8Max));
 						}
 					}
 				}
@@ -306,17 +348,15 @@ namespace Engine {
 	}
 
 	void Texture::UploadImage(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList) {
-		// GPU用テクスチャリソースを作成
+		// 画像本体と全ミップ・配列要素を収める転送領域を確保する
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, static_cast<UINT>(m_meta.width),
 			static_cast<UINT>(m_meta.height), static_cast<UINT16>(m_meta.arraySize),
 			static_cast<UINT16>(m_meta.mipLevels));
 
-		// デフォルトヒープにテクスチャを確保
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_texture)));
 
-		// 転送用アップロードバッファを作成
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(
 			m_texture.Get(), 0, static_cast<UINT>(m_meta.mipLevels * m_meta.arraySize));
 
@@ -325,7 +365,7 @@ namespace Engine {
 		ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProps, D3D12_HEAP_FLAG_NONE, &uploadDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_uploadHeap)));
 
-		// サブリソース配列を作成してアップロード
+		// 各画像の行間隔を保って転送元を指定する
 		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 		subresources.resize(m_meta.mipLevels * m_meta.arraySize);
 
@@ -358,11 +398,12 @@ namespace Engine {
 
 		m_meta = m_image.GetMetadata();
 		const DirectX::Image* image = m_image.GetImage(0, 0, 0);
-		image->pixels[0] = r;
-		image->pixels[1] = g;
-		image->pixels[2] = b;
-		image->pixels[3] = a;
+		image->pixels[kRedChannel] = r;
+		image->pixels[kGreenChannel] = g;
+		image->pixels[kBlueChannel] = b;
+		image->pixels[kAlphaChannel] = a;
 
+		// 単色の1ピクセルをGPUへ転送し、シェーダー参照用に遷移する
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, 1, 1, 1, 1);
 		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
@@ -379,6 +420,7 @@ namespace Engine {
 		subresource.RowPitch = image->rowPitch;
 		subresource.SlicePitch = image->slicePitch;
 		UpdateSubresources(cmdList, m_texture.Get(), m_uploadHeap.Get(), 0, 0, 1, &subresource);
+
 		D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		cmdList->ResourceBarrier(1, &barrier);
@@ -388,14 +430,16 @@ namespace Engine {
 
 	void Texture::CreateFromRgba(ID3D12Device* device, ID3D12GraphicsCommandList* commands, UINT width,
 		UINT height, std::span<const uint8_t> pixels) {
-		if (width == 0 || height == 0 || pixels.size() != size_t(width) * height * 4)
+		const size_t rowBytes = size_t(width) * kRgba8BytesPerPixel;
+		if (width == 0 || height == 0 || pixels.size() != rowBytes * height)
 			throw std::invalid_argument("Invalid RGBA texture dimensions or byte count");
 		ThrowIfFailed(m_image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
 		m_meta = m_image.GetMetadata();
+
+		// 入力と作業画像の行間隔を区別してコピーする
 		const auto* image = m_image.GetImage(0, 0, 0);
 		for (UINT row = 0; row < height; ++row)
-			std::memcpy(image->pixels + row * image->rowPitch, pixels.data() + size_t(row) * width * 4,
-				size_t(width) * 4);
+			std::memcpy(image->pixels + row * image->rowPitch, pixels.data() + size_t(row) * rowBytes, rowBytes);
 		UploadImage(device, commands);
 		m_image.Release();
 	}

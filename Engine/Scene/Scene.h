@@ -25,6 +25,8 @@ namespace Engine {
 		float nodeRotationRadians = 0.0f;
 		std::shared_ptr<Model> model;
 		DirectX::XMFLOAT4X4 worldTransform;
+		// モデル空間で平面の正側を描画する
+		DirectX::XMFLOAT4 localClipPlane{0, 0, 0, 1};
 	};
 
 	struct SceneEnvironment {
@@ -41,23 +43,29 @@ namespace Engine {
 		const Camera& GetCamera() const {
 			return m_camera;
 		}
+
 		void SetCamera(const Camera& camera) {
 			m_camera = camera;
 		}
+
 		const SceneEnvironment& GetEnvironment() const {
 			return m_environment;
 		}
+
 		void SetEnvironment(const SceneEnvironment& environment) {
 			m_environment = environment;
 		}
+
 		const std::vector<SceneObject>& GetObjects() const {
 			return m_objects;
 		}
+
 		// ポインタは集合の変更まで有効、継続参照にはIDを使う
 		SceneObject* FindObject(ObjectId id);
 		ObjectId AddObject(std::shared_ptr<Model> model);
 		ObjectId AddObject(std::shared_ptr<Model> model, const DirectX::XMFLOAT4X4& transform);
 		void RemoveObject(ObjectId id);
+		void InterpolateFrom(const Scene& previous, float alpha);
 
 	  private:
 		Camera m_camera;

@@ -41,8 +41,10 @@ public static unsafe class Bridge
 #if STANDARD_JSON
             // C++側の入力が解放されても文書が有効であるよう、所有するbyte[]を渡す
             return Store(Document.Parse(new ReadOnlySpan<byte>(json, length).ToArray()), handle);
+
 #else
             return Store(Document.Parse(new ReadOnlySpan<byte>(json, length)), handle);
+
 #endif
         }
         catch { return -1; }
@@ -65,6 +67,7 @@ public static unsafe class Bridge
         lock (Gate)
         {
             if (!Documents.Remove(handle, out Document? document)) return -1;
+
             document.Dispose();
         }
         return 0;
@@ -74,13 +77,18 @@ public static unsafe class Bridge
     public static int ReadAi(nint handle, float* values, int capacity)
     {
         if (capacity != GeneratedAircraftAIParameters.FieldCount) return -1;
+
         lock (Gate)
         {
             if (!Documents.TryGetValue(handle, out Document? document)) return -1;
+
+            // 両パーサーで同じ生成済みフィールド順に値を取得する
             int index = 0;
+
             foreach (string field in GeneratedAircraftAIParameters.FieldNames)
             {
                 if (!document.RootElement.TryGetProperty(field, out var value) || !value.TryGetSingle(out float number)) return -1;
+
                 values[index++] = number;
             }
         }
@@ -97,6 +105,7 @@ public static unsafe class Bridge
             {
                 if (!Documents.TryGetValue(handle, out Document? document) ||
                     !document.RootElement.TryGetProperty(field, out var value) || !value.TryGetSingle(out float number)) return -1;
+
                 *output = number;
             }
             return 0;

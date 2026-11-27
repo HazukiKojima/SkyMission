@@ -3,8 +3,8 @@
 #include "Game/Aircraft/ValidateFlightParameters.h"
 #include "Engine/Interop/Redox/JsonParametersLoader.h"
 #include "Engine/Resources/JsonAssetReader.h"
-#include "Engine/Scene/OceanParameters.h"
-#include "Engine/Scene/SkyParameters.h"
+#include "Engine/Renderer/Environment/OceanParameters.h"
+#include "Engine/Renderer/Environment/SkyParameters.h"
 #include "External/REDoxWrapper/Generated/AircraftAIParametersLayout.h"
 #include "External/REDoxWrapper/Generated/OceanParametersLayout.h"
 #include "External/REDoxWrapper/Generated/SkyParametersLayout.h"
@@ -15,7 +15,10 @@
 
 namespace Game {
 	using namespace Engine;
+
 	namespace {
+		constexpr float kMaximumEnemyAimAngleDegrees = 45.0f;
+		constexpr double kMinimumSunDirectionLengthSquared = 1e-12;
 
 		ModelLoadOptions LoadModelOptions(
 			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
@@ -26,6 +29,7 @@ namespace Game {
 					std::u8string(reinterpret_cast<const char8_t*>(value.data()), value.size()))
 					.wstring();
 			};
+
 			ModelLoadOptions options{.rotatingNodeName = reader.ResolveString(path, "propellerName"),
 				.textureDirectory = wide("textureDirectory"),
 				.baseColorStemSuffix = wide("baseColorStemSuffix"),
@@ -55,6 +59,7 @@ namespace Game {
 				.modelImport = LoadModelOptions(reader, path)};
 			if (!std::isfinite(aircraft.visualScale) || aircraft.visualScale <= 0)
 				throw std::runtime_error("Aircraft visualScale must be a positive finite number.");
+
 			aircraft.animation.Load(reader, path);
 			ValidateFlightParameters(aircraft.flightParameters);
 			return aircraft;
@@ -62,12 +67,14 @@ namespace Game {
 
 		DirectX::XMFLOAT3 LoadModelForward(const JsonAssetReader& reader, const std::filesystem::path& path) {
 			const auto axis = reader.ResolveString(path, "modelForward");
+
 			if (axis == "+X") return {1, 0, 0};
 			if (axis == "-X") return {-1, 0, 0};
 			if (axis == "+Y") return {0, 1, 0};
 			if (axis == "-Y") return {0, -1, 0};
 			if (axis == "+Z") return {0, 0, 1};
 			if (axis == "-Z") return {0, 0, -1};
+
 			throw std::invalid_argument("modelForward must be +X, -X, +Y, -Y, +Z or -Z");
 		}
 
@@ -78,17 +85,29 @@ namespace Game {
 				const auto text = path.u8string();
 				return std::string(reinterpret_cast<const char*>(text.data()), text.size());
 			};
+
 			WeaponDefinition definition;
 			definition.sourcePath = weaponPath;
 			try {
-				const char* muzzleKeys[] = {"muzzleL1", "muzzleL2", "muzzleR1", "muzzleR2"};
-				for (size_t i = 0; i < 4; ++i)
-					definition.gun.muzzleNames[i] = reader.ResolveString(weaponPath, muzzleKeys[i]);
+				const auto leftOuter = reader.TryResolveString(weaponPath, "muzzleL2");
+				const auto rightOuter = reader.TryResolveString(weaponPath, "muzzleR2");
+				if (leftOuter.has_value() != rightOuter.has_value())
+					throw std::invalid_argument("muzzleL2 and muzzleR2 must be specified together");
+
+				auto& names = definition.gun.muzzleNames;
+				names.push_back(reader.ResolveString(weaponPath, "muzzleL1"));
+				if (leftOuter) names.push_back(*leftOuter);
+				names.push_back(reader.ResolveString(weaponPath, "muzzleR1"));
+				if (rightOuter) names.push_back(*rightOuter);
 				definition.gun.fireInterval = reader.ResolveFloat(weaponPath, "fireInterval");
 				definition.gun.muzzleSpeed = reader.ResolveFloat(weaponPath, "muzzleSpeed");
 				definition.gun.lifetime = reader.ResolveFloat(weaponPath, "lifetime");
+
+				// 整数として使える弾数か変換前に検証する
 				const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
-				if (!std::isfinite(capacity) || capacity < 4 || std::floor(capacity) != capacity ||
+
+				if (!std::isfinite(capacity) || capacity < GunSettings::kMinimumProjectileCapacity ||
+					std::floor(capacity) != capacity ||
 					capacity > static_cast<float>(std::numeric_limits<int>::max() / 2))
 					throw std::invalid_argument(
 						"maxProjectiles must be an integer of at least 4 within supported range");
@@ -97,6 +116,8 @@ namespace Game {
 			} catch (const std::exception& error) {
 				throw std::runtime_error(pathText(weaponPath) + ": " + error.what());
 			}
+
+			// 弾モデルの設定を兵装定義へ取り込む
 			const auto ammoPath = reader.Resolve(weaponPath, "ammunition");
 			try {
 				definition.ammunition = {
@@ -123,15 +144,21 @@ namespace Game {
 				throw std::runtime_error(path.string() + ": " + error.what());
 			}
 		}
+
 		std::map<std::string, CinematicSettings> LoadCinematics(
 			const JsonAssetReader& reader, const std::filesystem::path& directory) {
+			// 演出一覧がなければ既定の冒頭演出を使う
 			const auto manifest = directory / L"cinematics.json";
+
 			if (!std::filesystem::exists(manifest))
 				return {{"opening", LoadCinematicSettings(reader, directory / L"opening.json")}};
+
 			std::map<std::string, CinematicSettings> result;
+
 			for (const auto* id : {"opening", "midMission", "reinforcements", "ending", "defeat", "patrolEncouragement", "patrolComplete", "carrierHit", "carrierComplete", "finalRally", "finalEncouragement"}) {
 				if (reader.TryResolveString(manifest, id)) {
 					const auto path = reader.Resolve(manifest, id);
+
 					if (!std::filesystem::is_regular_file(path))
 						throw std::runtime_error(
 							manifest.string() + ": missing cinematic '" + id + "': " + path.string());
@@ -149,6 +176,8 @@ namespace Game {
 					 parameters.repositionSeconds})
 				if (!std::isfinite(value) || value <= 0)
 					throw std::runtime_error("Invalid enemy attack-run parameter");
+
+			// 攻撃・巡航・離脱の速度と距離の順序を確認する
 			if (parameters.attackSpeed >= parameters.cruiseSpeed ||
 				parameters.cruiseSpeed >= parameters.escapeSpeed ||
 				parameters.disengageDistance >= parameters.tailDistance ||
@@ -173,9 +202,11 @@ namespace Game {
 				throw std::runtime_error("openingGraceSeconds must be positive and finite");
 			if (!std::isfinite(parameters.aimErrorDegrees) || parameters.aimErrorDegrees <= 0)
 				throw std::runtime_error("aimErrorDegrees must be positive and finite");
-			if (parameters.aimAngleDegrees > 45 || parameters.aimErrorDegrees > parameters.aimAngleDegrees ||
+			if (parameters.aimAngleDegrees > kMaximumEnemyAimAngleDegrees || parameters.aimErrorDegrees > parameters.aimAngleDegrees ||
 				parameters.disengageDistance >= parameters.attackDistance)
 				throw std::runtime_error("Invalid enemy aim or distance ranges");
+
+			// 巡回用の高度・応答・機動周期も検証する
 			if (!std::isfinite(parameters.directionChangeSeconds) ||
 				parameters.directionChangeSeconds <= 0.0f ||
 				!std::isfinite(parameters.altitudeChangeSeconds) ||
@@ -207,6 +238,7 @@ namespace Game {
 		void RequireEnvironment(
 			const std::filesystem::path& path, const std::string& field, bool valid, const char* reason) {
 			if (valid) return;
+
 			const auto text = path.u8string();
 			throw std::runtime_error("JSON '" +
 				std::string(reinterpret_cast<const char*>(text.data()), text.size()) + "', field '" + field +
@@ -251,7 +283,7 @@ namespace Game {
 			const auto& direction = sky.sunDirection;
 			const double lengthSquared = double(direction.x) * direction.x +
 				double(direction.y) * direction.y + double(direction.z) * direction.z;
-			RequireEnvironment(path, "sunDirection", std::isfinite(lengthSquared) && lengthSquared > 1e-12,
+			RequireEnvironment(path, "sunDirection", std::isfinite(lengthSquared) && lengthSquared > kMinimumSunDirectionLengthSquared,
 				"must be finite and nonzero");
 		}
 
@@ -260,6 +292,7 @@ namespace Game {
 			const auto skyJsonPath = reader.Resolve(paths.environment, "sky");
 			const auto oceanJsonPath = reader.Resolve(paths.environment, "ocean");
 
+			// 共有レイアウトの数値を読み、描画設定へ組み立てる
 			const OceanParameters oceanParameters =
 				parametersLoader.Load<OceanParameters>(oceanJsonPath, "MyRedoxGetOceanParameters");
 			const SkyParameters skyParameters =
@@ -297,6 +330,8 @@ namespace Game {
 	} // namespace
 	DirectX::XMFLOAT4X4 ShipDefinition::BuildTransform() const {
 		using namespace DirectX;
+
+		// 縮尺と回転を適用してから喫水補正を加えた位置へ移す
 		XMFLOAT4X4 transform;
 		XMStoreFloat4x4(&transform,
 			XMMatrixScaling(size, size, size) *
@@ -308,25 +343,36 @@ namespace Game {
 
 	std::vector<ShipDefinition> LoadShipDefinitions(
 		const JsonAssetReader& reader, const std::filesystem::path& path) {
+		constexpr unsigned kMaximumShipCount = 1024;
+		constexpr unsigned kMinimumTextureDimension = 4;
 		try {
 			const float count = reader.ResolveFloat(path, "shipCount");
-			if (!std::isfinite(count) || count < 0 || count > 1024 || std::floor(count) != count)
+
+			if (!std::isfinite(count) || count < 0 || count > kMaximumShipCount || std::floor(count) != count)
 				throw std::runtime_error("shipCount must be an integer in [0,1024]");
+
 			const float textureLimit = reader.ResolveFloat(path, "maxTextureDimension");
-			if (!std::isfinite(textureLimit) || textureLimit < 4 || textureLimit > 16384 ||
+
+			if (!std::isfinite(textureLimit) || textureLimit < kMinimumTextureDimension ||
+				textureLimit > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
 				std::floor(textureLimit) != textureLimit)
 				throw std::runtime_error("maxTextureDimension must be an integer in [4,16384]");
+
 			std::vector<ShipDefinition> ships;
+
+			// 艦ごとにモデルと配置を読み、変換後も有限値に収まるか検証する
 			for (int i = 1; i <= static_cast<int>(count); ++i) {
 				const auto prefix = "ship" + std::to_string(i);
 				const auto vector = [&](const char* suffix) {
 					const auto key = prefix + suffix;
 					const auto values = reader.ResolveFloatArray(path, key);
+
 					if (values.size() != 3 || !std::isfinite(values[0]) || !std::isfinite(values[1]) ||
 						!std::isfinite(values[2]))
 						throw std::runtime_error(key + " must contain three finite numbers");
 					return DirectX::XMFLOAT3{values[0], values[1], values[2]};
 				};
+
 				ShipDefinition ship;
 				ship.asset.id = prefix;
 				ship.asset.file = reader.Resolve(path, prefix + "Model");
@@ -338,15 +384,19 @@ namespace Game {
 				ship.rotationDegrees = vector("RotationDegrees");
 				ship.size = reader.ResolveFloat(path, prefix + "Size");
 				ship.waterlineOffset = reader.ResolveFloat(path, prefix + "WaterlineOffset");
+
 				if (!std::isfinite(ship.size) || ship.size <= 0)
 					throw std::runtime_error(prefix + "Size must be positive and finite");
 				if (!std::isfinite(ship.waterlineOffset))
 					throw std::runtime_error(prefix + "WaterlineOffset must be finite");
+
 				const auto transform = ship.BuildTransform();
+
 				for (const auto& row : transform.m)
 					for (float value : row)
 						if (!std::isfinite(value))
 							throw std::runtime_error(prefix + " transform exceeds finite range");
+
 				ships.push_back(std::move(ship));
 			}
 			return ships;
@@ -354,24 +404,30 @@ namespace Game {
 			throw std::runtime_error(path.string() + ": " + error.what());
 		}
 	}
+
 	FlightSceneDefinition FlightSceneLoader::Load(const SceneSourcePaths& paths) const {
+		// 一度のシーン読み込みで同じJSON文書を共有する
 		JsonDocumentCache documents;
 		JsonAssetReader reader(documents);
 		JsonParametersLoader parameters(documents);
 
 		MissionSettings mission;
+
 		if (!paths.mission.empty()) {
 			try {
 				const auto count = [&](const char* key, size_t maximum) {
 					const float value = reader.ResolveFloat(paths.mission, key);
+
 					if (!std::isfinite(value) || value < 1 || value > float(maximum) ||
 						std::floor(value) != value)
 						throw std::invalid_argument(std::string(key) + " must be an integer within range");
 					return static_cast<size_t>(value);
 				};
-				mission.patrolCount = count("patrolCount", 8);
-				mission.finalFighterCount = count("finalFighterCount", 8);
-				mission.maxHostileProjectiles = count("maxHostileProjectiles", 512);
+
+				mission.patrolCount = count("patrolCount", MissionSettings::kMaximumFightersPerWave);
+				mission.finalFighterCount = count("finalFighterCount", MissionSettings::kMaximumFightersPerWave);
+				mission.maxHostileProjectiles =
+					count("maxHostileProjectiles", MissionSettings::kMaximumHostileProjectileCapacity);
 				mission.LoadTuning(reader, paths.mission);
 				mission.bombReloadSeconds = reader.ResolveFloat(paths.mission, "bombReloadSeconds");
 				mission.carrierMissileSpeed = reader.ResolveFloat(paths.mission, "carrierMissileSpeed");
@@ -392,6 +448,8 @@ namespace Game {
 				throw std::runtime_error(paths.mission.string() + ": " + error.what());
 			}
 		}
+
+		// 共通の設定を読み込んでシーン定義へまとめる
 		const auto assetsRoot = paths.environment.parent_path().parent_path();
 		CameraSettings camera;
 		camera.Load(reader, assetsRoot / L"Camera/aircraftCamera.json");
@@ -409,6 +467,7 @@ namespace Game {
 			.enemyGunTuning = enemyGun,
 			.enemyAITuning = enemyAI,
 			.effects = effects,
+			.rumble = LoadRumbleSettings(reader, assetsRoot / L"Combat/rumble.json"),
 			.ui = ui,
 			.text = text,
 			.environment = LoadEnvironment(paths, reader, parameters),

@@ -1,17 +1,19 @@
 #pragma once
 #include "ModelGeometry.h"
+#include "ModelImporter.h"
 #include <array>
 #include <filesystem>
 
 namespace Engine::ModelProcessing {
-	// Material names and original references only; texture lookup/decoding still runs on every load.
+	// マテリアル名と元の参照だけ。テクスチャの探索とデコードは毎回行う
 	struct PreparedMaterial {
 		std::string name;
-		std::array<std::string, 5> textures; // base color, diffuse, metalness, roughness, normals
+		std::array<std::string, ModelImport::MaterialTextureTypes.size()> textures;
 	};
+
 	struct PreparedModelGeometry {
 		bool loadedFromCache = false;
-		std::array<std::vector<MeshGeometry>, 3> levels;
+		std::array<std::vector<MeshGeometry>, kModelLodCount> levels;
 		std::vector<PreparedMaterial> materials;
 		std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>> nodePositions;
 		Bounds3 bounds{};

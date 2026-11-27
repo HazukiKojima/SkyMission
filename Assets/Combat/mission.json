@@ -4,7 +4,7 @@
   "bombReloadSeconds": 4,
   "carrierMissileSpeed": 6000,
   "carrierHealth": 300,
-  "bombDamage": 150,
+  "bombDamage": 300,
   "commanderHealthMultiplier": 1.5,
   "enemyGunSpeed": 7500,
   "enemyGunInterval": 0.1,

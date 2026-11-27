@@ -1,23 +1,26 @@
-#include "../../Renderer/RootBindings.h"
+#include "Engine/Renderer/Pipeline/RootBindings.h"
 #include "Model.h"
 #include "ModelGeometry.h"
 #include "ModelGeometryCache.h"
 #include "MaterialTexturePaths.h"
 #include "../Buffer/BufferUtilities.h"
-#include "../../Log.h"
+#include "Engine/Diagnostics/Log.h"
 #include "../../Renderer/Device/RenderDevice.h"
 #include <assimp/material.h>
 #include <algorithm>
 #include <cmath>
 #include <cwctype>
 #include <limits>
-#include "Engine/StartupTiming.h"
+#include "Engine/Diagnostics/StartupTiming.h"
+
 namespace Engine {
 	using namespace ModelProcessing;
 	namespace {
 		std::filesystem::path ResolveMaterialTexture(const aiMaterial* material, aiTextureType type,
 			const std::filesystem::path& modelDirectory, const ModelLoadOptions& options) {
+			// 埋め込み画像は扱わず、外部ファイルの参照を解決する
 			aiString texturePath;
+
 			if (material->GetTexture(type, 0, &texturePath) != AI_SUCCESS || texturePath.length == 0 ||
 				texturePath.C_Str()[0] == '*') {
 				return {};
@@ -34,11 +37,13 @@ namespace Engine {
 		}
 
 	} // namespace
+
 	bool Model::Load(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 		const std::wstring& filePath, const ModelLoadOptions& options) {
+		// 以前の形状とGPUリソースを破棄する
 		for (auto& meshes : m_lodMeshes)
 			meshes.clear();
-		m_lodCount = options.generateLods ? 3u : 1u;
+		m_lodCount = options.generateLods ? kModelLodCount : 1u;
 		m_cullingRadius = 0;
 		m_nodePositions.clear();
 		m_localBounds.reset();
@@ -51,15 +56,20 @@ namespace Engine {
 		m_fallbackRoughnessTexture.reset();
 		m_fallbackNormalTexture.reset();
 
+		// 描画用の形状と境界情報を準備する
 		const std::filesystem::path modelPath(filePath);
 		auto prepared = PrepareModelGeometry(modelPath, options);
 		m_sourceMeshCount = prepared.levels[0].size();
 		if (prepared.levels[0].empty()) return false;
+
 		m_nodePositions = std::move(prepared.nodePositions);
 		m_localBounds = prepared.bounds;
 		m_cullingRadius = prepared.cullingRadius;
+
+		// 不足する材質を補ってメッシュをGPUへ転送する
 		StartupTiming timing("model.materials_and_upload");
 		InitializeFallbackTextures(device, commandList);
+
 		const auto modelDirectory = modelPath.parent_path();
 		return CreateMeshes(prepared, options, modelDirectory, device, commandList, renderDevice);
 	}
@@ -72,23 +82,28 @@ namespace Engine {
 			std::vector<ModelVertex> vertices;
 			std::vector<uint32_t> indices;
 		};
-		std::array<std::vector<Batch>, 3> batches;
+
+		// 同じ材質の静的メッシュをLODごとにまとめる
+		std::array<std::vector<Batch>, kModelLodCount> batches;
 		std::vector<TextureDescriptorSet> textureDescriptorSets;
 		std::unordered_map<unsigned, Mesh> materials;
 		for (size_t geometryIndex = 0; geometryIndex < prepared.levels[0].size(); ++geometryIndex) {
 			auto& geometry = prepared.levels[0][geometryIndex];
 			const auto materialIndex = geometry.materialIndex;
 			auto [material, inserted] = materials.try_emplace(materialIndex);
+
 			if (inserted) {
 				if (materialIndex < prepared.materials.size())
 					LoadMaterialTextures(material->second, prepared.materials[materialIndex], modelDirectory,
 						options, device, commandList);
 				AssignMaterialDescriptors(material->second, device, renderDevice, textureDescriptorSets);
 			}
+
 			for (unsigned lod = 0; lod < m_lodCount; ++lod) {
 				const unsigned level = m_lodCount - 1 - lod;
 				auto& data = prepared.levels[level][geometryIndex];
 				if (data.indices.empty()) continue;
+
 				auto& list = batches[level];
 				auto batch = list.end();
 				if (options.mergeStaticMeshes && !geometry.isRotatingNode)
@@ -96,6 +111,7 @@ namespace Engine {
 						return !item.mesh.isRotatingNode &&
 							item.mesh.textureSrvIndex == material->second.textureSrvIndex;
 					});
+
 				if (batch == list.end()) {
 					Mesh mesh = material->second;
 					mesh.isRotatingNode = geometry.isRotatingNode;
@@ -104,11 +120,15 @@ namespace Engine {
 					list.push_back({std::move(mesh), {}, {}});
 					batch = std::prev(list.end());
 				}
+
+				// 結合先の頂点位置に合わせてインデックスを補正する
 				const auto offset = static_cast<uint32_t>(batch->vertices.size());
 				for (auto index : data.indices)
 					batch->indices.push_back(index + offset);
 				batch->vertices.insert(batch->vertices.end(), data.vertices.begin(), data.vertices.end());
 			}
+
+			// 結合済みの元データを解放してメモリを抑える
 			std::vector<ModelVertex>().swap(geometry.vertices);
 			std::vector<uint32_t>().swap(geometry.indices);
 			for (unsigned level = 1; level < m_lodCount; ++level) {
@@ -116,6 +136,8 @@ namespace Engine {
 				std::vector<uint32_t>().swap(prepared.levels[level][geometryIndex].indices);
 			}
 		}
+
+		// 全バッチを収める共通バッファの容量を求める
 		std::vector<ModelVertex> vertices;
 		std::vector<uint32_t> indices;
 		size_t vertexCount = 0, indexCount = 0;
@@ -124,10 +146,13 @@ namespace Engine {
 				vertexCount += batch.vertices.size();
 				indexCount += batch.indices.size();
 			}
+
 		if (vertexCount > UINT_MAX / sizeof(ModelVertex) || indexCount > UINT_MAX / sizeof(uint32_t))
 			throw std::runtime_error("Combined model buffers exceed D3D12 view limits");
 		vertices.reserve(vertexCount);
 		indices.reserve(indexCount);
+
+		// 共通バッファ内の描画範囲を各メッシュに割り当てる
 		for (unsigned level = 0; level < m_lodCount; ++level) {
 			for (auto& batch : batches[level]) {
 				auto& mesh = batch.mesh;
@@ -142,9 +167,12 @@ namespace Engine {
 				std::vector<uint32_t>().swap(batch.indices);
 				m_lodMeshes[level].push_back(std::move(mesh));
 			}
+
 			if (m_lodMeshes[level].empty() && level > 0) m_lodMeshes[level] = m_lodMeshes[level - 1];
 		}
+
 		if (!IsLoaded()) return false;
+
 		UploadGeometry(device, commandList, vertices.data(), vertices.size() * sizeof(ModelVertex),
 			indices.data(), indices.size() * sizeof(uint32_t));
 		Log("Model batches {}, triangles {}/{}/{}\n", GetMeshCount(), GetTriangleCount(0),
@@ -173,14 +201,18 @@ namespace Engine {
 			mesh.roughnessTexture ? mesh.roughnessTexture.get() : m_fallbackRoughnessTexture.get();
 		const Texture* normalTexture =
 			mesh.normalTexture ? mesh.normalTexture.get() : m_fallbackNormalTexture.get();
+
+		// 同じテクスチャの組み合わせならSRVを再利用する
 		const auto descriptorSet =
 			std::find_if(sets.begin(), sets.end(), [&](const TextureDescriptorSet& set) {
 				return set.diffuse == diffuseTexture && set.metallic == metallicTexture &&
 					set.roughness == roughnessTexture && set.normal == normalTexture;
 			});
+
 		if (descriptorSet != sets.end()) {
 			mesh.textureSrvIndex = descriptorSet->srvIndex;
 		} else {
+			// シェーダーの参照順に4枚分のSRVを連続配置する
 			auto descriptorHandle = renderDevice->AllocateSrvDescriptor(&mesh.textureSrvIndex);
 			diffuseTexture->CreateShaderResourceView(device, descriptorHandle);
 			descriptorHandle = renderDevice->AllocateSrvDescriptor();
@@ -202,12 +234,14 @@ namespace Engine {
 			device, commandList, indices, indexBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
 		for (auto& meshes : m_lodMeshes)
 			for (auto& mesh : meshes) {
+				// バッファ内の相対位置をGPUアドレスへ変換する
 				mesh.vertexBufferView.BufferLocation += m_vertexBuffer->GetGPUVirtualAddress();
 				mesh.indexBufferView.BufferLocation += m_indexBuffer->GetGPUVirtualAddress();
 			}
 	}
 
 	void Model::InitializeFallbackTextures(ID3D12Device* device, ID3D12GraphicsCommandList* commands) {
+		// 画像がない材質には白色・非金属・最大粗さ・平坦な法線を使う
 		m_fallbackTexture = std::make_unique<Texture>();
 		if (!m_fallbackTexture->CreateFromSolidColor(device, commands, 255, 255, 255)) {
 			throw std::runtime_error("Failed to initialize fallback material texture.");
@@ -232,16 +266,19 @@ namespace Engine {
 	void Model::LoadMaterialTextures(Mesh& mesh, const PreparedMaterial& source,
 		const std::filesystem::path& modelDirectory, const ModelLoadOptions& options, ID3D12Device* device,
 		ID3D12GraphicsCommandList* commandList) {
+		// 保存した材質情報をAssimpの画像参照として組み立て直す
 		aiMaterial materialData;
 		const aiString sourceName(source.name);
 		materialData.AddProperty(&sourceName, AI_MATKEY_NAME);
-		constexpr aiTextureType types[] = {aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE,
-			aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS, aiTextureType_NORMALS};
+		const auto& types = ModelImport::MaterialTextureTypes;
 		for (size_t type = 0; type < std::size(types); ++type) {
 			if (source.textures[type].empty()) continue;
+
 			const aiString path(source.textures[type]);
 			materialData.AddProperty(&path, AI_MATKEY_TEXTURE(types[type], 0));
 		}
+
+		// ベースカラーを参照情報、命名規則、代替画像の順に探す
 		const aiMaterial* material = &materialData;
 		aiString materialName;
 		material->Get(AI_MATKEY_NAME, materialName);
@@ -271,6 +308,7 @@ namespace Engine {
 					.maxDimension = options.maxTextureDimension});
 		}
 
+		// 金属度と粗さは色変換しない単一成分として読む
 		const auto loadScalarMap = [&](aiTextureType type, const std::wstring& suffix, DXGI_FORMAT format) {
 			auto path = ResolveMaterialTexture(material, type, modelDirectory, options);
 			if (path.empty())
@@ -283,11 +321,13 @@ namespace Engine {
 					.targetFormat = format,
 					.maxDimension = options.maxTextureDimension});
 		};
+
 		mesh.metallicTexture =
 			loadScalarMap(aiTextureType_METALNESS, options.metallicSuffix, DXGI_FORMAT_BC4_UNORM);
 		mesh.roughnessTexture =
 			loadScalarMap(aiTextureType_DIFFUSE_ROUGHNESS, options.roughnessSuffix, DXGI_FORMAT_BC4_UNORM);
 
+		// 法線画像は参照情報と命名規則の順に探す
 		std::filesystem::path normalPath =
 			ResolveMaterialTexture(material, aiTextureType_NORMALS, modelDirectory, options);
 		if (normalPath.empty()) {
@@ -322,8 +362,10 @@ namespace Engine {
 			DirectX::XMFLOAT3 axis;
 			UINT enabled;
 		};
+
 		static_assert(sizeof(NodeRotationConstants) == RootBinding::NodeRotationDwords * sizeof(UINT));
 
+		// 選択したLODの各メッシュへ回転定数と材質を設定して描く
 		for (const Mesh& mesh : m_lodMeshes[std::min(lod, m_lodCount - 1)]) {
 			const NodeRotationConstants nodeRotationConstants = {nodeRotationAngle, mesh.nodeRotationPivot,
 				mesh.nodeRotationAxis, mesh.isRotatingNode ? 1u : 0u};

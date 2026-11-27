@@ -41,6 +41,7 @@ namespace Game {
 			std::vector<BYTE> samples;
 			WAVEFORMATEX format{};
 		};
+
 		struct CinematicAudioBank {
 			CinematicAudioSettings settings;
 			Clip bgm;

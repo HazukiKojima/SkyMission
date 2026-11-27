@@ -1,0 +1,185 @@
+#include "TargetingSystem.h"
+#include "Game/Settings/SimulationTiming.h"
+#include "GunAimSolver.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <tuple>
+
+namespace Game {
+	namespace {
+		constexpr float kLockTimerToleranceSeconds = 1e-6f;
+		constexpr float kForwardHemisphereDegrees = 90.0f;
+	}
+	using namespace DirectX;
+
+	void TargetingSystem::Configure(const TargetingSettings& settings) {
+		for (float value : {settings.selectionDistance, settings.acquireDistance,
+				 settings.acquireAngleDegrees, settings.acquireSeconds, settings.maintainDistance,
+				 settings.maintainAngleDegrees, settings.lossGraceSeconds, settings.assistAngleDegrees}) {
+			if (!std::isfinite(value) || value <= 0) {
+				throw std::invalid_argument("targeting values must be positive and finite");
+			}
+		}
+
+		if (settings.acquireDistance > settings.maintainDistance ||
+			settings.maintainDistance > settings.selectionDistance ||
+			settings.acquireAngleDegrees > settings.maintainAngleDegrees ||
+			settings.maintainAngleDegrees >= kForwardHemisphereDegrees ||
+			settings.assistAngleDegrees > settings.acquireAngleDegrees) {
+			throw std::invalid_argument("targeting distance/angle ranges are inconsistent");
+		}
+
+		m_settings = settings;
+		m_selected = Engine::InvalidObjectId;
+		m_state = LockState::None;
+		m_acquiredSeconds = 0;
+		m_lostSeconds = 0;
+	}
+
+	float TargetingSystem::GetProgress() const {
+		return std::clamp(m_acquiredSeconds / m_settings.acquireSeconds, 0.0f, 1.0f);
+	}
+
+	void TargetingSystem::UpdateObjective(const CombatTarget& target, const XMFLOAT3& position,
+		const XMFLOAT3& forward, float deltaSeconds) {
+		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
+		if (target.health <= 0 || target.id == Engine::InvalidObjectId) {
+			Update({}, position, forward, 0, deltaSeconds);
+			return;
+		}
+
+		if (m_selected != target.id) {
+			m_selected = target.id;
+			m_state = LockState::Selected;
+			m_acquiredSeconds = 0;
+			m_lostSeconds = 0;
+		}
+
+		UpdateLock(&target, position, forward, std::min(deltaSeconds, kMaximumSimulationDeltaSeconds));
+	}
+
+	void TargetingSystem::Update(std::span<const CombatTarget> enemies, const XMFLOAT3& position,
+		const XMFLOAT3& forward, unsigned cycleCount, float deltaSeconds) {
+		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
+
+		deltaSeconds = std::min(deltaSeconds, kMaximumSimulationDeltaSeconds);
+		const auto candidates = CollectCandidates(enemies, position);
+		const auto* target = SelectTarget(candidates, position, forward, cycleCount);
+		UpdateLock(target, position, forward, deltaSeconds);
+	}
+
+	std::vector<const CombatTarget*> TargetingSystem::CollectCandidates(
+		std::span<const CombatTarget> enemies, const XMFLOAT3& position) const {
+		std::vector<const CombatTarget*> candidates;
+		const auto distance = [&](const CombatTarget& target) {
+			return XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center) - XMLoadFloat3(&position)));
+		};
+
+		for (const auto& enemy : enemies) {
+			if (enemy.health > 0 && distance(enemy) <= m_settings.selectionDistance) {
+				candidates.push_back(&enemy);
+			}
+		}
+
+		// 切替順が入力配列の並びに依存しないようID順にそろえる
+		std::sort(candidates.begin(), candidates.end(), [](const auto* left, const auto* right) {
+			return left->id < right->id;
+		});
+		return candidates;
+	}
+
+	const CombatTarget* TargetingSystem::SelectTarget(std::span<const CombatTarget* const> candidates,
+		const XMFLOAT3& position, const XMFLOAT3& forward, unsigned cycleCount) {
+		const auto distance = [&](const CombatTarget& target) {
+			return XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center) - XMLoadFloat3(&position)));
+		};
+
+		// 現在の選択が候補に残っているか調べる
+		const auto previousSelectedId = m_selected;
+		auto found = std::find_if(candidates.begin(), candidates.end(), [&](auto* candidate) {
+			return candidate->id == m_selected;
+		});
+
+		// 入力と候補に応じて選択対象を決める
+		if (cycleCount != 0 && !candidates.empty()) {
+			const size_t next = found == candidates.end() ? cycleCount - 1 :
+				static_cast<size_t>(found - candidates.begin()) + cycleCount;
+			m_selected = candidates[next % candidates.size()]->id;
+		} else if (found == candidates.end()) {
+			m_selected = Engine::InvalidObjectId;
+			std::tuple<float, float, Engine::ObjectId> best{
+				std::numeric_limits<float>::infinity(), 0.0f, Engine::InvalidObjectId};
+			for (auto* candidate : candidates) {
+				const auto direction =
+					XMVector3Normalize(XMLoadFloat3(&candidate->center) - XMLoadFloat3(&position));
+				const float dot = XMVectorGetX(XMVector3Dot(direction, XMLoadFloat3(&forward)));
+
+				// 初回は前方を優先するが、選択対象の撃墜・喪失後は後方の敵も引き継ぐ
+				if (dot <= 0 && previousSelectedId == Engine::InvalidObjectId) continue;
+
+				// 機首方向との角度が小さい敵を優先し、同角度なら距離、IDの順で決める
+				const auto score = std::tuple{1 - dot, distance(*candidate), candidate->id};
+
+				if (score < best) {
+					best = score;
+					m_selected = candidate->id;
+				}
+			}
+		}
+
+		// 対象変更時は1周して同じ目標に戻る場合もロック進捗をリセットする
+		if (previousSelectedId != m_selected || (cycleCount != 0 && candidates.size() > 1)) {
+			m_acquiredSeconds = 0;
+			m_lostSeconds = 0;
+			m_state = LockState::Selected;
+		}
+
+		const auto selected = std::find_if(candidates.begin(), candidates.end(), [&](const auto* candidate) {
+			return candidate->id == m_selected;
+		});
+		return selected == candidates.end() ? nullptr : *selected;
+	}
+
+	void TargetingSystem::UpdateLock(
+		const CombatTarget* target, const XMFLOAT3& position, const XMFLOAT3& forward, float deltaSeconds) {
+		if (!target) {
+			m_state = LockState::None;
+			m_acquiredSeconds = 0;
+			m_lostSeconds = 0;
+			return;
+		}
+
+		const float targetDistance =
+			XMVectorGetX(XMVector3Length(XMLoadFloat3(&target->center) - XMLoadFloat3(&position)));
+		XMFLOAT3 direction;
+		XMStoreFloat3(&direction, XMLoadFloat3(&target->center) - XMLoadFloat3(&position));
+
+		// ロック解除には猶予時間を設ける
+		if (m_state == LockState::Locked) {
+			if (targetDistance <= m_settings.maintainDistance &&
+				IsWithinAngle(forward, direction, m_settings.maintainAngleDegrees)) {
+				m_lostSeconds = 0;
+			} else {
+				m_lostSeconds += deltaSeconds;
+			}
+
+			if (m_lostSeconds + kLockTimerToleranceSeconds < m_settings.lossGraceSeconds) return;
+
+			m_state = LockState::Selected;
+			m_acquiredSeconds = 0;
+			m_lostSeconds = 0;
+		}
+
+		// 取得条件を満たした時間でロックを進める
+		if (targetDistance <= m_settings.acquireDistance &&
+			IsWithinAngle(forward, direction, m_settings.acquireAngleDegrees)) {
+			m_acquiredSeconds = std::min(m_acquiredSeconds + deltaSeconds, m_settings.acquireSeconds);
+			m_state = m_acquiredSeconds + kLockTimerToleranceSeconds >= m_settings.acquireSeconds ? LockState::Locked
+																			 : LockState::Acquiring;
+		} else {
+			m_acquiredSeconds = 0;
+			m_state = LockState::Selected;
+		}
+	}
+} // namespace Game

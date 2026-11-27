@@ -30,8 +30,9 @@ struct PS_INPUT
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
-    // 共通の照明パラメーター
-
+    const float kSurfaceRoughness = 0.35f;
+    const float kFogStartMeters = 1500.0f;
+    const float kFogEndMeters = 12000.0f;
     CommonLightingParameters lighting;
 
     lighting.sunDirection = sunDirection;
@@ -41,12 +42,9 @@ float4 PS(PS_INPUT input) : SV_TARGET
     lighting.ambientColor = ambientColor;
     lighting.padding = 0.0f;
 
-    // 視線方向と光源方向
-
+    // 表面の基底から拡散光と鏡面反射を求める
     float3 V = SafeNormalize(cameraPos - input.worldPos);
     float3 L = SafeNormalize(lighting.sunDirection);
-
-    // 法線を計算する
 
     float3 N;
     float3 T;
@@ -56,31 +54,20 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     float NdotL = saturate(dot(N, L));
 
-    // 拡散反射
-
     float3 albedo = gDiffuse.Sample(gSampler, input.texcoord).rgb;
 
     float3 diffuse = albedo * NdotL;
 
-    // 環境光
-
     float3 ambient = albedo * GetAmbientRadiance(lighting);
 
-    // 太陽光の鏡面反射
-
-    float3 sunSpecular = CalculateSunSpecular(N, V, L, 0.35f, lighting);
-
-    // 照明の寄与を合成する
+    float3 sunSpecular = CalculateSunSpecular(N, V, L, kSurfaceRoughness, lighting);
 
     float3 color = diffuse + ambient + sunSpecular;
 
     // 距離に応じた大気の霧
 
     float distanceToCamera = length(cameraPos - input.worldPos);
-    float fogStart = 1500.0f;
-    float fogEnd = 12000.0f;
-
-    float fogFactor = saturate((distanceToCamera - fogStart) / (fogEnd - fogStart));
+    float fogFactor = saturate((distanceToCamera - kFogStartMeters) / (kFogEndMeters - kFogStartMeters));
 
     float3 atmosphere = GetSkyColor(V, lighting);
 

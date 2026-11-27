@@ -1,4 +1,5 @@
 #include "CombatEffectSystem.h"
+#include "Game/Settings/SimulationTiming.h"
 #include <algorithm>
 #include <cmath>
 
@@ -19,27 +20,108 @@ namespace Game {
 			if (effects.size() >= maximumCount) effects.erase(effects.begin());
 			effects.push_back(std::move(effect));
 		}
+
+		struct TrailPoint {
+			DirectX::XMFLOAT3 position;
+			float age;
+		};
+
+		TrailPoint SampleTrail(DirectX::FXMVECTOR start, DirectX::FXMVECTOR end, float fraction, float dt) {
+			TrailPoint sample;
+			DirectX::XMStoreFloat3(&sample.position, DirectX::XMVectorLerp(start, end, fraction));
+			sample.age = dt * (1.0f - fraction);
+			return sample;
+		}
 	} // namespace
+
+	ExplosionFeedback EvaluateExplosionFeedback(const CombatEffectSnapshot& snapshot,
+		const DirectX::XMFLOAT3& playerPosition, const EffectSettings::ExplosionFeedbackTuning& settings) {
+		using namespace DirectX;
+		const auto player = XMLoadFloat3(&playerPosition);
+		ExplosionFeedback feedback;
+
+		for (const auto& explosion : snapshot.explosions) {
+			if (explosion.style == ExplosionStyle::Standard) continue;
+			const bool finalBlast = explosion.style == ExplosionStyle::FallingDebris;
+			const float flashSeconds = finalBlast ? settings.finalFlashSeconds : settings.initialFlashSeconds;
+			if (explosion.age >= flashSeconds) continue;
+
+			const float distance = XMVectorGetX(XMVector3Length(XMLoadFloat3(&explosion.position) - player));
+			const float proximity = std::clamp((settings.farDistanceMeters - distance) /
+				(settings.farDistanceMeters - settings.nearDistanceMeters), 0.0f, 1.0f);
+			const float strength = proximity * proximity * (3.0f - 2.0f * proximity);
+			const float intensity = strength * (finalBlast ? 1.0f : settings.initialStrength);
+			const float decay = 1.0f - explosion.age / flashSeconds;
+			feedback.flash = std::max(feedback.flash, intensity * decay * decay);
+			if (explosion.age == 0) feedback.impact = std::max(feedback.impact, intensity);
+		}
+		return feedback;
+	}
 
 	void CombatEffectSystem::Update(float deltaSeconds) {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds <= 0) return;
-		const float step = std::min(deltaSeconds, CombatEffectSettings::maximumFrameSeconds);
+
+		// 寿命を進めて終了した演出を取り除く
+		const float step = std::min(deltaSeconds, kMaximumSimulationDeltaSeconds);
 		AdvanceEffects(m_snapshot.gunFlashes, step, m_settings.gun.flashLifetimeSeconds);
 		AdvanceEffects(m_snapshot.gunSmoke, step, m_settings.gun.smokeLifetimeSeconds);
 		m_snapshot.gunTracers.clear();
 		AdvanceEffects(m_snapshot.impacts, step, m_settings.impact.lifetimeSeconds);
 		AdvanceEffects(m_snapshot.rocketSmoke, step, m_settings.rocket.smokeLifetimeSeconds);
-		AdvanceEffects(m_snapshot.deckSmoke, step, m_settings.carrier.smokeLifetimeSeconds);
+		AdvanceEffects(m_snapshot.aircraftSmoke, step, AircraftSmokePuff::lifetimeSeconds);
+		if (m_snapshot.carrierSmoke) m_snapshot.carrierSmoke->age += step;
 		AdvanceEffects(m_snapshot.explosions, step, m_settings.explosion.lifetimeSeconds);
+	}
+
+	void CombatEffectSystem::UpdateAircraftVapor(float deltaSeconds) {
+		AdvanceEffects(m_snapshot.wingtipVapor, deltaSeconds, WingtipVaporSegment::lifetimeSeconds);
+		AdvanceEffects(m_snapshot.contrails, deltaSeconds, ContrailPuff::lifetimeSeconds);
+	}
+
+	void CombatEffectSystem::SpawnWingtipVapor(const WingtipVaporSegment& segment) {
+		AddBoundedEffect(m_snapshot.wingtipVapor, segment, WingtipVaporSegment::maximumCount);
+	}
+
+	void CombatEffectSystem::EmitContrail(
+		DirectX::FXMVECTOR start, DirectX::FXMVECTOR end, float dt, float& metersUntilPuff) {
+		using namespace DirectX;
+		const float spacingMeters = m_settings.aircraftTrail.contrailSpacingMeters;
+		const auto displacement = end - start;
+		const float traveled = XMVectorGetX(XMVector3Length(displacement));
+		if (traveled <= 0) return;
+		XMFLOAT3 direction;
+		XMStoreFloat3(&direction, displacement / traveled);
+
+		// 飛行距離で粒を配置して、フレームレートによる密度の変化を防ぐ
+		for (; metersUntilPuff < traveled; metersUntilPuff += spacingMeters) {
+			const auto sample = SampleTrail(start, end, metersUntilPuff / traveled, dt);
+			AddBoundedEffect(m_snapshot.contrails, ContrailPuff{sample.position, direction, sample.age},
+				ContrailPuff::maximumCount);
+		}
+		metersUntilPuff -= traveled;
+	}
+
+	void CombatEffectSystem::EmitAircraftSmokeTrail(DirectX::FXMVECTOR start, DirectX::FXMVECTOR end,
+		float previousSeconds, float currentSeconds) {
+		const float smokeInterval = m_settings.aircraftTrail.smokeIntervalSeconds;
+		const float dt = currentSeconds - previousSeconds;
+		if (dt <= 0) return;
+		for (float time = (std::floor(previousSeconds / smokeInterval) + 1) * smokeInterval;
+			time <= currentSeconds; time += smokeInterval) {
+			const auto sample = SampleTrail(start, end, (time - previousSeconds) / dt, dt);
+			SpawnAircraftSmoke({sample.position, sample.age});
+		}
 	}
 
 	void CombatEffectSystem::SpawnGunShot(const GunShotEvent& shot) {
 		if (shot.muzzleIndex >= GunEffectSettings::maxFlashCount || !std::isfinite(shot.age) || shot.age < 0)
 			return;
+
 		auto found =
 			std::find_if(m_snapshot.gunFlashes.begin(), m_snapshot.gunFlashes.end(), [&](const auto& flash) {
 				return flash.muzzleIndex == shot.muzzleIndex;
 			});
+
 		// 低FPSで閃光の寿命をまたいでも、最新の発射を一度は画面に出す
 		const GunMuzzleFlash flash{shot.muzzleIndex, shot.position, shot.direction,
 			std::min(shot.age, m_settings.gun.flashLifetimeSeconds * 0.5f), shot.sequence};
@@ -48,6 +130,7 @@ namespace Game {
 		else
 			*found = flash;
 
+		// まだ寿命内の発射煙だけを追加する
 		if (shot.age < m_settings.gun.smokeLifetimeSeconds) {
 			AddBoundedEffect(m_snapshot.gunSmoke, GunSmoke{shot.position, shot.aircraftVelocity, shot.age},
 				GunEffectSettings::maxSmokeCount);
@@ -74,16 +157,18 @@ namespace Game {
 
 	void CombatEffectSystem::SpawnRocketSmoke(const DirectX::XMFLOAT3& position, float age) {
 		if (!std::isfinite(age) || age < 0 || age >= m_settings.rocket.smokeLifetimeSeconds) return;
+
 		AddBoundedEffect(
 			m_snapshot.rocketSmoke, RocketTrailSample{position, age}, RocketEffectSettings::maxSmokeCount);
 	}
+
 	void CombatEffectSystem::SpawnCarrierExplosion(const DirectX::XMFLOAT3& position) {
 		AddExplosion({position, {}, 0, m_settings.carrier.explosionRadius});
+		m_snapshot.carrierSmoke = CarrierSmoke{position, -m_settings.carrier.smokeStartDelaySeconds};
 	}
 
-	void CombatEffectSystem::SpawnDeckSmoke(const DirectX::XMFLOAT3& position) {
-		AddBoundedEffect(
-			m_snapshot.deckSmoke, RocketTrailSample{position, 0}, CarrierEffectSettings::maxSmokeCount);
+	void CombatEffectSystem::SpawnAircraftSmoke(const AircraftSmokePuff& puff) {
+		AddBoundedEffect(m_snapshot.aircraftSmoke, puff, AircraftSmokePuff::maximumCount);
 	}
 
 	void CombatEffectSystem::SetRocketExhausts(std::vector<RocketExhaust> exhausts) {
@@ -98,13 +183,17 @@ namespace Game {
 	}
 
 	void CombatEffectSystem::SpawnExplosion(
-		const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity) {
-		AddExplosion({position, velocity, 0, m_settings.explosion.minRadius});
+		const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity, float radiusMultiplier,
+		float flashDurationMultiplier, ExplosionStyle style) {
+		AddExplosion({position, velocity, 0, m_settings.explosion.minRadius * radiusMultiplier,
+			flashDurationMultiplier, style});
 	}
 
 	void CombatEffectSystem::SpawnExplosion(
-		const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale) {
+		const Engine::SceneObject& aircraft, const DirectX::XMFLOAT3& velocity, float visualScale,
+		float radiusMultiplier, ExplosionStyle style) {
 		using namespace DirectX;
+
 		ExplosionEffect explosion{
 			{aircraft.worldTransform._41, aircraft.worldTransform._42, aircraft.worldTransform._43},
 			velocity};
@@ -120,6 +209,9 @@ namespace Game {
 					m_settings.explosion.minRadius, m_settings.explosion.maxRadius);
 			}
 		}
+
+		explosion.radius *= radiusMultiplier;
+		explosion.style = style;
 		AddExplosion(explosion);
 	}
 

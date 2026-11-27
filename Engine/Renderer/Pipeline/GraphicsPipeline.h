@@ -1,6 +1,6 @@
 #pragma once
 #include "../../EngineCommon.h"
-#include "../RootBindings.h"
+#include "Engine/Renderer/Pipeline/RootBindings.h"
 
 namespace Engine {
 	struct PipelineOptions {
@@ -25,6 +25,7 @@ namespace Engine {
 		ID3D12PipelineState* GetPSO() const {
 			return m_pso.Get();
 		}
+
 		ID3D12RootSignature* GetRootSignature() const {
 			return m_rootSignature.Get();
 		}

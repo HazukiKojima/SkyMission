@@ -3,10 +3,8 @@
 #include <map>
 namespace Game {
 	struct UiTextSettings {
-		static const UiTextSettings& Defaults() {
-			static const UiTextSettings defaults;
-			return defaults;
-		}
+		static const UiTextSettings& Defaults();
+
 		std::map<std::string, std::string, std::less<>> labels{
 			{"WASD：操縦", "WASD：操縦"},
 			{"Q / E：ヨー", "Q / E：ヨー"},
@@ -17,6 +15,17 @@ namespace Game {
 			{"Tab：目標切替", "Tab：目標切替"},
 			{"右クリック：ミサイル (ロック後)", "右クリック：ミサイル (ロック後)"},
 			{"操作方法", "操作方法"},
+			{"左スティック：操縦", "左スティック：操縦"},
+			{"L1 / R1：ヨー", "L1 / R1：ヨー"},
+			{"R2 / L2：加速 / 減速", "R2 / L2：加速 / 減速"},
+			{"右スティック：見回し", "右スティック：見回し"},
+			{"△ / △長押し：目標切替 / 目標を注視", "△ / △長押し：目標切替 / 目標を注視"},
+			{"×：機銃", "×：機銃"},
+			{"○：ミサイル (ロック後)", "○：ミサイル (ロック後)"},
+			{"×で射撃", "×で射撃"},
+			{"○で射撃", "○で射撃"},
+			{"ロックオン後、○で射撃", "ロックオン後、○で射撃"},
+			{"[○]", "[○]"},
 			{"左クリックで射撃", "左クリックで射撃"},
 			{"敵機に照準を合わせて撃墜せよ", "敵機に照準を合わせて撃墜せよ"},
 			{"母艦に照準を合わせてロックオン", "母艦に照準を合わせてロックオン"},
@@ -32,7 +41,6 @@ namespace Game {
 			{"後方から敵機射撃！", "後方から敵機射撃！"},
 			{"敵機射撃！", "敵機射撃！"},
 			{"任務達成", "任務達成"},
-			{"自機撃墜", "自機撃墜"},
 			{"被弾", "被弾"},
 			{"ロック完了", "ロック完了"},
 			{"目標なし", "目標なし"},
@@ -64,23 +72,11 @@ namespace Game {
 			{"哨戒機 ", "哨戒機 "},
 			{"敵戦闘機 ", "敵戦闘機 "},
 		};
+
 		const std::string& Text(const std::string& key) const {
 			return labels.at(key);
 		}
-		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path) {
-			SettingsReader r(reader, path);
-			for (auto& [key, value] : labels) {
-				std::string escaped;
-				for (char c : key) {
-					if (c == '~')
-						escaped += "~0";
-					else if (c == '/')
-						escaped += "~1";
-					else
-						escaped += c;
-				}
-				r.Text("/labels/" + escaped, value);
-			}
-		}
+
+		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};
 } // namespace Game

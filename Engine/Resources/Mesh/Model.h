@@ -28,32 +28,41 @@ namespace Engine {
 			const std::wstring& filePath, const ModelLoadOptions& options = {});
 		void Draw(ID3D12GraphicsCommandList* commandList, RenderDevice* renderDevice,
 			float nodeRotationAngle = 0.0f, unsigned lod = 0) const;
+
+		// 転送コマンドのGPU完了後に呼ぶ
 		void ReleaseUploadResources();
 
 		unsigned GetLodCount() const {
 			return m_lodCount;
 		}
+
 		size_t GetMeshCount(unsigned lod = 0) const {
 			return m_lodMeshes[std::min(lod, m_lodCount - 1)].size();
 		}
+
 		size_t GetTriangleCount(unsigned lod = 0) const {
 			size_t count = 0;
 			for (const auto& mesh : m_lodMeshes[std::min(lod, m_lodCount - 1)])
 				count += mesh.indexCount / 3;
 			return count;
 		}
+
 		float GetCullingRadius() const {
 			return m_cullingRadius;
 		}
+
 		size_t GetSourceMeshCount() const {
 			return m_sourceMeshCount;
 		}
+
 		// 同名ノードが複数ある場合も曖昧な位置を返さない
 		std::optional<DirectX::XMFLOAT3> FindNodePosition(std::string_view name) const;
 		size_t CountNodes(std::string_view name) const;
+
 		const std::optional<Bounds3>& GetLocalBounds() const {
 			return m_localBounds;
 		}
+
 		bool IsLoaded() const {
 			return !m_lodMeshes[0].empty();
 		}
@@ -80,6 +89,7 @@ namespace Engine {
 			const Texture* normal;
 			UINT srvIndex;
 		};
+
 		bool CreateMeshes(ModelProcessing::PreparedModelGeometry& prepared, const ModelLoadOptions& options,
 			const std::filesystem::path& directory, ID3D12Device* device, ID3D12GraphicsCommandList* commands,
 			RenderDevice* renderDevice);
@@ -100,8 +110,9 @@ namespace Engine {
 		std::unique_ptr<Texture> m_fallbackMetallicTexture;
 		std::unique_ptr<Texture> m_fallbackRoughnessTexture;
 		std::unique_ptr<Texture> m_fallbackNormalTexture;
-		std::array<std::vector<Mesh>, 3> m_lodMeshes;
+		std::array<std::vector<Mesh>, kModelLodCount> m_lodMeshes;
 		unsigned m_lodCount = 1;
+
 		float m_cullingRadius = 0;
 		size_t m_sourceMeshCount = 0;
 		std::unordered_map<std::string, std::vector<DirectX::XMFLOAT3>> m_nodePositions;

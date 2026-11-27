@@ -25,6 +25,7 @@ namespace Engine {
 			m_commandAllocators[0].Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 		ThrowIfFailed(m_commandList->Close());
 
+		// GPU完了待ちに使うフェンスとイベントを作る
 		ThrowIfFailed(device->CreateFence(
 			m_fenceValues[m_currentFrameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 		m_fenceValues[m_currentFrameIndex]++;
@@ -36,7 +37,6 @@ namespace Engine {
 	}
 
 	void CommandContext::BeginFrame() {
-		// GPU側の処理完了を前提に、該当フレーム用のアロケータとリストをリサイクル
 		ThrowIfFailed(m_commandAllocators[m_currentFrameIndex]->Reset());
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_currentFrameIndex].Get(), nullptr));
 	}
@@ -47,7 +47,6 @@ namespace Engine {
 		m_targetQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 	}
 
-	// 用途切り替え用の状態遷移バリアを全サブリソースに記録する
 	void CommandContext::TransitionResource(
 		ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) {
 		D3D12_RESOURCE_BARRIER barrier = {};
@@ -59,14 +58,13 @@ namespace Engine {
 		m_commandList->ResourceBarrier(1, &barrier);
 	}
 
-	// 次のフレームに進むためのシグナル送信およびGPUの進行待機同期
 	void CommandContext::MoveToNextFrame(RenderDevice* renderDevice) {
 		const UINT64 currentFenceValue = m_fenceValues[m_currentFrameIndex];
 		ThrowIfFailed(m_targetQueue->Signal(m_fence.Get(), currentFenceValue));
 
 		m_currentFrameIndex = renderDevice->GetFrameIndex();
 
-		// 次に進むフレームのバッファがまだGPUで使用中の場合、完了通知をイベント待機
+		// 次のフレーム領域を再利用できるまで待つ
 		if (m_fence->GetCompletedValue() < m_fenceValues[m_currentFrameIndex]) {
 			ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_currentFrameIndex], m_fenceEvent));
 			WaitForSingleObject(m_fenceEvent, INFINITE);
@@ -75,10 +73,10 @@ namespace Engine {
 		m_fenceValues[m_currentFrameIndex] = currentFenceValue + 1;
 	}
 
-	// リソースを安全に解放するため、投入済みコマンドのGPU完了を待つ
 	void CommandContext::WaitForGpu() {
 		if (!m_targetQueue || !m_fence) return;
 
+		// キューの末尾に完了通知を置いて投入済みの処理を待つ
 		ThrowIfFailed(m_targetQueue->Signal(m_fence.Get(), m_fenceValues[m_currentFrameIndex]));
 		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_currentFrameIndex], m_fenceEvent));
 		WaitForSingleObject(m_fenceEvent, INFINITE);

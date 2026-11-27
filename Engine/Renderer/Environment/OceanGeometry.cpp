@@ -1,0 +1,113 @@
+#include "OceanGeometry.h"
+#include "../../Resources/Buffer/BufferUtilities.h"
+#include <cmath>
+#include <numbers>
+#include <cstdint>
+#include <cstring>
+#include <vector>
+#include <stdexcept>
+
+namespace Engine {
+	namespace {
+		constexpr float kPi = std::numbers::pi_v<float>;
+		constexpr int kGridSize = OceanGeometry::GridResolution;
+
+		struct OceanVertex {
+			float pos[3];
+			float uv[2];
+		};
+	} // namespace
+
+	float OceanGeometry::GridCoordinate(int index, float size) {
+		const float t = float(index) / (GridResolution - 1) * 2 - 1;
+
+		// 距離に応じた連続的なLOD。カメラ付近は密、水平線に向かうほど疎にし、パッチの継ぎ目を作らない
+		return std::copysign(std::expm1(std::abs(t) * kOceanGridExponent) / std::expm1(kOceanGridExponent), t) * size * 0.5f;
+	}
+
+	void OceanGeometry::Initialize(
+		ID3D12Device* device, ID3D12GraphicsCommandList* commands, float oceanSize) {
+		std::vector<OceanVertex> vertices;
+		std::vector<uint32_t> indices;
+
+		vertices.reserve(static_cast<size_t>(kGridSize) * kGridSize);
+		indices.reserve(static_cast<size_t>(kGridSize - 1) * (kGridSize - 1) * 6);
+
+		// カメラ付近ほど密になる海面の頂点を作る
+		for (int z = 0; z < kGridSize; ++z) {
+			for (int x = 0; x < kGridSize; ++x) {
+				const float px = GridCoordinate(x, oceanSize);
+				const float pz = GridCoordinate(z, oceanSize);
+				const float u = px / oceanSize + 0.5f;
+				const float v = pz / oceanSize + 0.5f;
+
+				vertices.push_back({{px, 0.0f, pz}, {u, v}});
+			}
+		}
+
+		// 格子の各セルを二つの三角形へ分ける
+		for (int z = 0; z < kGridSize - 1; ++z) {
+			for (int x = 0; x < kGridSize - 1; ++x) {
+				const uint32_t i0 = z * kGridSize + x;
+				const uint32_t i1 = i0 + 1;
+				const uint32_t i2 = (z + 1) * kGridSize + x;
+				const uint32_t i3 = i2 + 1;
+				indices.push_back(i0);
+				indices.push_back(i1);
+				indices.push_back(i2);
+				indices.push_back(i1);
+				indices.push_back(i3);
+				indices.push_back(i2);
+			}
+		}
+
+		// 完成した海面をGPUの描画用バッファへ転送する
+		m_indexCount = static_cast<UINT>(indices.size());
+		m_vertexBuffer = std::make_unique<VertexBuffer>();
+		m_vertexBuffer->Initialize(device, commands, vertices.data(),
+			static_cast<UINT>(sizeof(OceanVertex) * vertices.size()), sizeof(OceanVertex));
+
+		m_indexBuffer = CreateStaticBuffer(device, commands, indices.data(),
+			sizeof(uint32_t) * indices.size(), D3D12_RESOURCE_STATE_INDEX_BUFFER, m_indexUpload);
+
+		m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+		m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_indexBufferView.SizeInBytes = static_cast<UINT>(sizeof(uint32_t) * indices.size());
+	}
+
+	void OceanGeometry::ReleaseUploadResources() {
+		if (m_vertexBuffer) m_vertexBuffer->ReleaseUploadResources();
+		m_indexUpload.Reset();
+	}
+
+	float OceanGeometry::CalculateWaveHeight(
+		float x, float z, float time, float wavelength, float steepness) {
+		if (!std::isfinite(wavelength) || wavelength <= 0)
+			throw std::invalid_argument("wavelength must be positive and finite");
+		if (!std::isfinite(steepness) || steepness < 0)
+			throw std::invalid_argument("steepness must be nonnegative and finite");
+
+		// 海面シェーダーと同じ6成分の波で高さを求める
+		const float baseWindX = 1.0f / std::sqrt(1.0f + kOceanWindZ * kOceanWindZ);
+		const float baseWindZ = kOceanWindZ / std::sqrt(1.0f + kOceanWindZ * kOceanWindZ);
+		float height = 0.0f;
+
+		for (int i = 0; i < kOceanWaveCount; ++i) {
+			const float phaseOffset = static_cast<float>(i) * kOceanWavePhaseStride;
+			const float randomAngle = std::sin(static_cast<float>(i) * kOceanWaveDirectionStride) * kOceanWaveDirectionSpread;
+			const float sinAngle = std::sin(randomAngle);
+			const float cosAngle = std::cos(randomAngle);
+			const float directionX = cosAngle * baseWindX - sinAngle * baseWindZ;
+			const float directionZ = sinAngle * baseWindX + cosAngle * baseWindZ;
+			const float k = 2.0f * kPi / wavelength;
+			const float waveSpeed = std::sqrt(kOceanWaveGravity / k);
+			const float phase = k * (directionX * x + directionZ * z - waveSpeed * time * kOceanWaveTimeScale) + phaseOffset;
+
+			height += (steepness / k) * std::sin(phase);
+			wavelength *= kOceanWavelengthDecay;
+			steepness *= kOceanWaveSteepnessDecay;
+		}
+
+		return height;
+	}
+} // namespace Engine

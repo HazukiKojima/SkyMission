@@ -15,50 +15,36 @@ namespace Engine::HudFont {
 		U"ぞ調子４次爆阻止"
 		U"能力奪"
 		U"オタト戻ショア"
-		U"抜前帰待動き滅生還新俺必ず叩";
-	inline constexpr unsigned AsciiCount = 95;
+		U"抜前帰待動き滅生還新俺必ず叩×○△ティ"
+		U"ゲムバ聞応答";
+	inline constexpr char32_t FirstAsciiGlyph = U' ';
+	inline constexpr char32_t LastAsciiGlyph = U'~';
+	inline constexpr unsigned AsciiCount = LastAsciiGlyph - FirstAsciiGlyph + 1;
+	inline constexpr unsigned SolidRegionSize = 8;
 	inline constexpr unsigned GlyphCount = AsciiCount + unsigned(Japanese.size());
-	static_assert(((GlyphCount + Columns - 1) / Columns) * Cell < Height - 8);
+	static_assert(((GlyphCount + Columns - 1) / Columns) * Cell < Height - SolidRegionSize);
+
 	inline const DirectX::XMFLOAT2 SolidUv{(Width - 0.5f) / Width, (Height - 0.5f) / Height};
 
-	inline char32_t Next(std::string_view& text) {
-		const auto first = static_cast<unsigned char>(text.front());
-		text.remove_prefix(1);
-		if (first < 0x80) return first;
-		unsigned count = 0;
-		char32_t value = 0, minimum = 0;
-		if (first >= 0xc2 && first <= 0xdf) {
-			count = 1;
-			value = first & 0x1f;
-			minimum = 0x80;
-		} else if (first >= 0xe0 && first <= 0xef) {
-			count = 2;
-			value = first & 0x0f;
-			minimum = 0x800;
-		} else if (first >= 0xf0 && first <= 0xf4) {
-			count = 3;
-			value = first & 0x07;
-			minimum = 0x10000;
-		} else
-			return U'?';
-		if (text.size() < count) return U'?';
-		for (unsigned i = 0; i < count; ++i) {
-			const auto next = static_cast<unsigned char>(text[i]);
-			if ((next & 0xc0) != 0x80) return U'?';
-			value = (value << 6) | (next & 0x3f);
-		}
-		text.remove_prefix(count);
-		return value < minimum || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff) ? U'?' : value;
-	}
+	char32_t Next(std::string_view& text);
+
 	inline unsigned Glyph(char32_t character) {
-		if (character >= 32 && character <= 126) return unsigned(character - 32);
+		if (character >= FirstAsciiGlyph && character <= LastAsciiGlyph)
+			return unsigned(character - FirstAsciiGlyph);
+
+		// 日本語グリフがなければ疑問符で代替する
 		const auto index = Japanese.find(character);
-		return index == Japanese.npos ? unsigned('?' - 32) : AsciiCount + unsigned(index);
+		return index == Japanese.npos ? unsigned(U'?' - FirstAsciiGlyph) : AsciiCount + unsigned(index);
 	}
+
 	inline float GlyphWidth(unsigned glyph) {
-		return glyph < AsciiCount ? 32.0f : 48.0f;
+		constexpr float asciiGlyphWidth = 32.0f;
+		return glyph < AsciiCount ? asciiGlyphWidth : static_cast<float>(Cell);
 	}
+
 	inline float Advance(unsigned glyph) {
-		return glyph < AsciiCount ? 24.0f : 44.0f;
+		constexpr float asciiAdvance = 24.0f;
+		constexpr float japaneseAdvance = 44.0f;
+		return glyph < AsciiCount ? asciiAdvance : japaneseAdvance;
 	}
 } // namespace Engine::HudFont

@@ -9,7 +9,7 @@
       "speaker": "司令官",
       "side": "friendly",
       "text": "敵母艦の発進能力を奪った。よくやった！",
-      "audio": "../Sound/敵母艦の発進能力を奪った。よくやった！.wav",
+      "audio": "../Sound/Voice/Commander/敵母艦の発進能力を奪った。よくやった！.wav",
       "startSeconds": 0,
       "durationSeconds": 3.7
     }

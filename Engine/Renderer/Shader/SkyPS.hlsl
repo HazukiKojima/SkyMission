@@ -35,6 +35,15 @@ struct PS_INPUT
 
 float4 PS(PS_INPUT input) : SV_TARGET
 {
+    const float horizonAtmosphereExponent = 3.0f;
+    const float horizonTextureWeight = 0.72f;
+    const float horizonAtmosphereWeight = 0.28f;
+    const float horizonGlowExponent = 7.0f;
+    const float3 horizonGlowColor = float3(0.025f, 0.035f, 0.045f);
+    const float sunDiskExponent = 18000.0f;
+    const float sunGlowExponent = 180.0f;
+    const float sunDiskStrength = 0.65f;
+    const float sunGlowStrength = 0.035f;
     // 照明パラメーターを組み立てる
 
     CommonLightingParameters lighting;
@@ -63,7 +72,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float height = saturate(skyDirection.y);
 
     // 地平線付近だけ少し大気色を混ぜる
-    float horizonFactor = pow(1.0f - height, 3.0f);
+    float horizonFactor = pow(1.0f - height, horizonAtmosphereExponent);
 
     float3 atmosphericColor = GetSkyColor(skyDirection, lighting);
 
@@ -72,29 +81,31 @@ float4 PS(PS_INPUT input) : SV_TARGET
 
     color = lerp(atmosphericColor, color, hdrBlend);
 
-    color = lerp(color, color * 0.72f + atmosphericColor * 0.28f, horizonFactor);
+    color = lerp(
+        color, color * horizonTextureWeight + atmosphericColor * horizonAtmosphereWeight, horizonFactor);
 
     // 地平線付近を明るくする
 
-    float horizonGlow = pow(saturate(1.0f - abs(skyDirection.y)), 7.0f);
+    float horizonGlow = pow(saturate(1.0f - abs(skyDirection.y)), horizonGlowExponent);
 
-    color += float3(0.025f, 0.035f, 0.045f) * horizonGlow;
+    color += horizonGlowColor * horizonGlow;
 
     // 太陽の円盤を描く
 
     float sunDot = saturate(dot(skyDirection, SafeNormalize(lighting.sunDirection)));
 
-    float sunDisk = pow(sunDot, 18000.0f);
+    float sunDisk = pow(sunDot, sunDiskExponent);
 
-    float sunGlow = pow(sunDot, 180.0f);
+    float sunGlow = pow(sunDot, sunGlowExponent);
 
-    color += lighting.sunColor * lighting.sunIntensity * (sunDisk * 0.65f + sunGlow * 0.035f);
+    color += lighting.sunColor * lighting.sunIntensity *
+        (sunDisk * sunDiskStrength + sunGlow * sunGlowStrength);
 
     // HDR色を表示範囲へ圧縮する
 
     color = ToneMapReinhard(color);
 
-    // ガンマ補正して出力する
+    // 負の成分を除いて出力する
 
     return float4(max(color, 0.0f), 1.0f);
 }

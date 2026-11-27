@@ -40,7 +40,7 @@
       "speaker": "司令官",
       "side": "friendly",
       "text": "敵機の全滅を確認。任務完了だ。……よく生き残った。帰還せよ！",
-      "audio": "../Sound/敵機の全滅を確認。任務完了だ。……よく生き残った。帰還せよ！.wav",
+      "audio": "../Sound/Voice/Commander/敵機の全滅を確認。任務完了だ。……よく生き残った。帰還せよ！.wav",
       "startSeconds": 0,
       "durationSeconds": 5.6
     }

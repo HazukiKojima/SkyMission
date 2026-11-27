@@ -39,12 +39,14 @@ namespace Game {
 		float maximumDisengageSeconds = 3.0f; // 旧設定との互換用。現在の戦闘AIでは使用しない
 		float repositionSeconds = 12.0f;	  // 旧設定との互換用。現在の戦闘AIでは使用しない
 	};
+
 	enum class AircraftCombatMode { Pursuit, Attack, Disengage, Evade, Recover, Reengage, ReturnToCarrier };
 	struct AircraftAITarget {
 		DirectX::XMFLOAT3 position{};
 		DirectX::XMFLOAT3 velocity{};
 		DirectX::XMFLOAT3 forward{0, 0, -1};
 	};
+
 	struct AircraftAIDecision {
 		AircraftInput flight;
 		bool fire = false;
@@ -57,18 +59,22 @@ namespace Game {
 	  public:
 		void ConfigureTuning(const EnemyAITuning& settings) {
 			m_tuning = settings;
+
 			if (m_combatTime == 0) m_reentrySeconds = settings.initialReentrySeconds;
 		}
+
 		// 射撃後は照準の保持時間だけをリセットし、攻撃航路は継続する
 		void NotifyWeaponFired() {
 			m_aimTime = 0;
 		}
+
 		// dtは秒。slotで機体ごとの行動差を固定し、defenseCenter指定時は防衛範囲へ帰還させる
 		// 操縦・射撃の要求を返すだけで、飛行モデルの更新や弾の生成は呼び出し側が行う
 		AircraftAIDecision ReadCombatInput(const AircraftFlightModel& aircraft,
 			const AircraftAITarget& target, const DirectX::XMFLOAT3& aimDirection, float dt,
 			const AircraftAIParameters& p, size_t slot, bool attackAllowed, bool weaponReady = true,
 			std::optional<DirectX::XMFLOAT3> defenseCenter = std::nullopt, bool opportunisticGun = false);
+
 		// 非戦闘時は一定間隔で方位と高度を変える操縦入力を返す
 		AircraftInput ReadInput(const AircraftFlightModel& aircraft, float targetSpeed, float deltaSeconds,
 			const AircraftAIParameters& parameters);

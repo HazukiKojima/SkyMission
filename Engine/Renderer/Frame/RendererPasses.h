@@ -1,0 +1,45 @@
+#pragma once
+#include "Engine/Renderer/RendererAssets.h"
+#include "Engine/Renderer/Pipeline/RendererPipelines.h"
+#include "RendererConstantBuffers.h"
+#include "Engine/Renderer/Environment/OceanGeometry.h"
+#include "../RetroFilmParameters.h"
+#include "RenderVisibility.h"
+#include <span>
+
+namespace Engine {
+	class Scene;
+	struct FrameContext {
+		ID3D12GraphicsCommandList* commandList;
+		RenderDevice* device;
+		RendererPipelines& pipelines;
+		RendererConstantBuffers& constantBuffers;
+		UINT frameIndex;
+	};
+
+	class SkyRenderPass {
+	  public:
+		void Record(const FrameContext& frame, RendererAssets& assets) const;
+	};
+
+	class OceanRenderPass {
+	  public:
+		void Record(const FrameContext& frame, RendererAssets& assets, OceanGeometry& geometry) const;
+	};
+
+	class ModelRenderPass {
+	  public:
+		void Record(const FrameContext& frame, const Scene& scene,
+			std::span<const ModelDrawDecision> decisions, RenderStatistics& statistics) const;
+	};
+
+	class RetroFilmRenderPass {
+	  public:
+		void Record(const FrameContext& frame) const;
+	};
+
+	class CloudRenderPass {
+	  public:
+		void Record(const FrameContext& frame) const;
+	};
+} // namespace Engine
