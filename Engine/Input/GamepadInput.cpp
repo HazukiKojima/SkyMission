@@ -1,5 +1,6 @@
 #include "GamepadInput.h"
 #include "Engine/Diagnostics/Log.h"
+#include "Engine/ExecutablePath.h"
 #include <algorithm>
 #include <bit>
 #include <cmath>
@@ -50,16 +51,23 @@ namespace Engine {
 	} // namespace
 
 	GamepadInput::GamepadInput() {
-		// Windows SDKのGameInput v0を使い、更新済みランタイムがあれば優先する。
-		// ランタイムのない環境でもキーボードとマウスで起動できるよう動的に読み込む。
-		const wchar_t* runtimes[] = {L"GameInputRedist.dll", L"GameInput.dll"};
-		for (const auto* name : runtimes) {
-			const HMODULE runtime = LoadLibraryExW(name, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		// EXEと同じフォルダーのランタイムを優先し、未配置の場合はWindows側を使う。
+		const struct {
+			std::filesystem::path path;
+			DWORD searchFlags;
+		} runtimes[] = {
+			{ExecutableDirectory() / L"GameInputRedist.dll", LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32},
+			{L"GameInputRedist.dll", LOAD_LIBRARY_SEARCH_SYSTEM32},
+			{L"GameInput.dll", LOAD_LIBRARY_SEARCH_SYSTEM32},
+		};
+		for (const auto& [path, searchFlags] : runtimes) {
+			const HMODULE runtime = LoadLibraryExW(path.c_str(), nullptr, searchFlags);
 			if (!runtime) continue;
 			const auto create =
 				std::bit_cast<decltype(&GameInputCreate)>(GetProcAddress(runtime, "GameInputCreate"));
 			if (create && SUCCEEDED(create(m_input.GetAddressOf())) && m_input) {
 				m_runtime = runtime;
+				Log(L"GameInput: initialized {}\n", path.native());
 				return;
 			}
 			m_input.Reset();

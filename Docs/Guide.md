@@ -9,52 +9,46 @@
 | OS | Windows 10 / Windows 11、x64 |
 | IDE / C++ | Visual Studio 2026（18.x）、デスクトップC++ワークロード、MSVC v145 |
 | Windows SDK | Windows SDK 10.0.26100.0 以降（DirectX 12・FXC・GameInputヘッダーを含む） |
-| .NET | .NET 10 SDKとNative AOTに必要なC++ビルドツール |
+| .NET | .NET 10 SDK 10.0.404 以降とNative AOTに必要なC++ビルドツール |
 | GPU | DirectX 12対応GPU。利用できない場合はWARPへフォールバック |
 
 Debug / Releaseのツールセットはv145に統一しています。動作確認の対象はx64です。
-`global.json` は.NET 10 SDKを選び、インストール済みの10.0系の最新feature bandへロールフォワードします。
-.NET 8 / 9 SDKだけの環境ではビルドできません。`dotnet --version` で10.0系が選ばれることを確認してください。
+`global.json` は.NET 10 SDK 10.0.404 以降を選び、インストール済みの10.0系の最新feature bandへロールフォワードします。
+リポジトリ直下で `dotnet --version` を実行すると、ビルドに使われるSDKのバージョンを確認できます。
 
 ## 初回ビルドと起動
 
-1. リポジトリを取得し、Visual Studio 2026で `SkyMission.slnx` を開きます。
-2. ソリューションのNuGetパッケージを復元します。C++側は `packages.config`、C#側は `External/REDoxWrapper/REDoxWrapper.csproj` の依存関係を使います。
-3. スタートアッププロジェクトを `SkyMission`、プラットフォームを `x64` に設定します。
-4. 最初に `Debug` をビルドし、Visual Studioから起動します。`Release` も同じv145構成でビルドできます。
+1. リポジトリを取得し、Visual Studio 2026で `SkyMission.slnx` を開きます。必要なコンポーネントが不足している場合は、Visual Studio Installer にリポジトリの `.vsconfig` をインポートできます。
+2. スタートアッププロジェクトが `SkyMission`、ビルド構成が `Debug | x64` であることを確認し、F5で起動します。`Release | x64` も同じv145構成でビルドできます。
 
-ビルド時にはJSONバインディングを生成し、REDoxWrapperをNative AOTのDLLとして発行して実行ファイルの横へコピーします。
-シェーダーもCSOへコンパイルします。生成ファイルを手作業で編集する必要はありません。
-
-パッケージ復元をコマンドで行う場合は、NuGet CLIと.NET SDKを用意した上で、リポジトリ直下から実行します。
-
-```powershell
-nuget restore packages.config -PackagesDirectory packages
-dotnet restore External/REDoxWrapper/REDoxWrapper.csproj
-```
+初回ビルドでNuGetからAssimp・DirectXTex・GameInput・REDoxの依存関係を復元します。
+ビルドではJSONバインディングを生成し、REDoxWrapperをNative AOTのDLLとして発行して実行ファイルの横へコピーします。
+シェーダーはCSOへコンパイルします。GameInputのランタイムと補助EXEも実行ファイルの横へコピーされるため、GameInputの事前インストールは不要です。
 
 Visual Studio 2026のDeveloper PowerShellでは、以下でもビルドできます。
 
 ```powershell
-MSBuild SkyMission.slnx /m /p:Configuration=Debug /p:Platform=x64
-MSBuild SkyMission.slnx /m /p:Configuration=Release /p:Platform=x64
+MSBuild SkyMission.slnx /restore /p:RestorePackagesConfig=true /m /p:Configuration=Debug /p:Platform=x64
+MSBuild SkyMission.slnx /restore /p:RestorePackagesConfig=true /m /p:Configuration=Release /p:Platform=x64
 ```
 
 開発ビルドは従来どおり `x64/Debug` または `x64/Release` から起動できます。
 初回はテクスチャ処理に時間がかかる場合があります。
 
-## 配布用ZIPの作成
+## GitHub Releases 用ZIPの作成
 
-PowerShellで `./Tools/Distribution/Package.ps1` を実行します。
+リポジトリ直下で `powershell -NoProfile -File .\Tools\Distribution\Package.ps1` を実行します。
 Release/x64をビルドし、`artifacts/distribution/日時/` に配布用フォルダーと `SkyMission.zip` を生成します。
 ビルド済みのReleaseを使う場合は `-SkipBuild` を指定できます。
+GitHub Releases には、生成された `SkyMission.zip` をリリースのアセットとして添付します。
 
 ```text
 SkyMission/
 ├─ SkyMission.exe          起動専用EXE（これをダブルクリック）
 ├─ Runtime/
 │  ├─ SkyMission.exe       ゲーム本体
-│  ├─ DLL類                REDox・Assimp・VCランタイム
+│  ├─ DLL類                REDox・Assimp・GameInput・VCランタイム
+│  ├─ GameInputRawInputProxy.exe
 │  └─ Shaders/             コンパイル済みシェーダー
 ├─ Assets/
 └─ はじめに.txt
@@ -63,6 +57,8 @@ SkyMission/
 ZIPをすべて展開し、一番上の `SkyMission.exe` を起動してください。
 起動専用EXEはVCランタイムに依存せず、Runtime内のゲーム本体を起動します。
 ゲーム本体のDLL依存関係は同じRuntimeフォルダー内で解決します。
+プレイするPCでVisual Studio、.NET SDK、GameInputの追加インストールは不要です。
+Windows 10/11 の N エディションでは、音声処理に必要な [Media Feature Pack](https://support.microsoft.com/en-us/windows/experience/platform-variants/media-feature-pack-for-windows-n) を Windows のオプション機能から追加してください。
 作業ディレクトリに関係なくAssetsとシェーダーを読み込みます。
 配布物にはOBJ・PDB・検証ログ・ソースコードを含めません。
 

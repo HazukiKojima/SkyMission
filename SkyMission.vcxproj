@@ -262,6 +262,17 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Platform)' == 'x64'">
+    <GameInputRuntimeDir>$(ProjectDir)packages\Microsoft.GameInput.4.1.315\native\bin\x64\</GameInputRuntimeDir>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(Platform)' == 'x64'">
+    <Content Include="$(GameInputRuntimeDir)GameInputRedist.dll;$(GameInputRuntimeDir)GameInputRawInputProxy.exe">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>False</Visible>
+    </Content>
+  </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
@@ -372,6 +383,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets'))" />
     <Error Condition="!Exists('packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpCpp.5.0.1.6\build\native\AssimpCpp.targets'))" />
+    <Error Condition="'$(Platform)' == 'x64' And (!Exists('$(GameInputRuntimeDir)GameInputRedist.dll') Or !Exists('$(GameInputRuntimeDir)GameInputRawInputProxy.exe'))" Text="Restore the Microsoft.GameInput NuGet package before building SkyMission." />
   </Target>
   <ItemGroup>
     <REDoxWrapperPublishInput Include="$(MSBuildProjectFullPath)" />

@@ -8,7 +8,7 @@ if (!$installation) { throw 'Visual Studio C++ tools are required.' }
 $msbuild = Join-Path $installation 'MSBuild/Current/Bin/MSBuild.exe'
 
 if (!$SkipBuild) {
-    & $msbuild (Join-Path $repository 'SkyMission.slnx') /m /p:Configuration=Release /p:Platform=x64 /v:minimal /nologo
+    & $msbuild (Join-Path $repository 'SkyMission.slnx') /restore /p:RestorePackagesConfig=true /m /p:Configuration=Release /p:Platform=x64 /v:minimal /nologo
 
     if ($LASTEXITCODE) { throw 'Release build failed.' }
 }
@@ -22,7 +22,8 @@ $runtime = Join-Path $package 'Runtime'
 $shaders = Join-Path $runtime 'Shaders'
 New-Item -ItemType Directory -Force $shaders | Out-Null
 
-foreach ($name in @('SkyMission.exe', 'REDoxWrapper.dll', 'assimp-vc142-mt.dll')) {
+foreach ($name in @('SkyMission.exe', 'REDoxWrapper.dll', 'assimp-vc142-mt.dll',
+        'GameInputRedist.dll', 'GameInputRawInputProxy.exe')) {
     Copy-Item -LiteralPath (Join-Path $build $name) -Destination $runtime
 }
 
