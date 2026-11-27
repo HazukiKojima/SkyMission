@@ -25,7 +25,8 @@ namespace Engine {
 
 	void Renderer::Initialize(HWND hwnd, UINT width, UINT height, const RendererDefinition& assets,
 		const LoadProgressCallback& reportProgress) {
-		const size_t total = 3 + RendererAssets::EnvironmentTextureCount + assets.models.size();
+		constexpr size_t kRendererSetupStageCount = 3; // デバイス、パイプライン、HUDと初期転送
+		const size_t total = kRendererSetupStageCount + RendererAssets::EnvironmentTextureCount + assets.models.size();
 		size_t completed = 0;
 		const auto reportItem = [&](std::wstring_view label) {
 			if (reportProgress) reportProgress(completed, total, label);
@@ -153,11 +154,10 @@ namespace Engine {
 
 		// 画面クリア
 		auto rtv = m_device->GetSceneRtvHandle();
-		const float clearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
-		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+		cmd->ClearRenderTargetView(rtv, RenderDevice::SceneClearColor, 0, nullptr);
 
 		auto dsv = m_device->GetDsvHandle();
-		cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, RenderDevice::SceneClearDepth, 0, 0, nullptr);
 		cmd->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
 		// 空、海、モデルの順で描き、各パスの終了時刻を記録する

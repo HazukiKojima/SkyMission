@@ -17,6 +17,8 @@ namespace Game {
 	using namespace Engine;
 
 	namespace {
+		constexpr float kMaximumEnemyAimAngleDegrees = 45.0f;
+		constexpr double kMinimumSunDirectionLengthSquared = 1e-12;
 
 		ModelLoadOptions LoadModelOptions(
 			const JsonAssetReader& reader, const std::filesystem::path& aircraftPath) {
@@ -104,7 +106,8 @@ namespace Game {
 				// 整数として使える弾数か変換前に検証する
 				const float capacity = reader.ResolveFloat(weaponPath, "maxProjectiles");
 
-				if (!std::isfinite(capacity) || capacity < 4 || std::floor(capacity) != capacity ||
+				if (!std::isfinite(capacity) || capacity < GunSettings::kMinimumProjectileCapacity ||
+					std::floor(capacity) != capacity ||
 					capacity > static_cast<float>(std::numeric_limits<int>::max() / 2))
 					throw std::invalid_argument(
 						"maxProjectiles must be an integer of at least 4 within supported range");
@@ -199,7 +202,7 @@ namespace Game {
 				throw std::runtime_error("openingGraceSeconds must be positive and finite");
 			if (!std::isfinite(parameters.aimErrorDegrees) || parameters.aimErrorDegrees <= 0)
 				throw std::runtime_error("aimErrorDegrees must be positive and finite");
-			if (parameters.aimAngleDegrees > 45 || parameters.aimErrorDegrees > parameters.aimAngleDegrees ||
+			if (parameters.aimAngleDegrees > kMaximumEnemyAimAngleDegrees || parameters.aimErrorDegrees > parameters.aimAngleDegrees ||
 				parameters.disengageDistance >= parameters.attackDistance)
 				throw std::runtime_error("Invalid enemy aim or distance ranges");
 
@@ -280,7 +283,7 @@ namespace Game {
 			const auto& direction = sky.sunDirection;
 			const double lengthSquared = double(direction.x) * direction.x +
 				double(direction.y) * direction.y + double(direction.z) * direction.z;
-			RequireEnvironment(path, "sunDirection", std::isfinite(lengthSquared) && lengthSquared > 1e-12,
+			RequireEnvironment(path, "sunDirection", std::isfinite(lengthSquared) && lengthSquared > kMinimumSunDirectionLengthSquared,
 				"must be finite and nonzero");
 		}
 
@@ -340,15 +343,18 @@ namespace Game {
 
 	std::vector<ShipDefinition> LoadShipDefinitions(
 		const JsonAssetReader& reader, const std::filesystem::path& path) {
+		constexpr unsigned kMaximumShipCount = 1024;
+		constexpr unsigned kMinimumTextureDimension = 4;
 		try {
 			const float count = reader.ResolveFloat(path, "shipCount");
 
-			if (!std::isfinite(count) || count < 0 || count > 1024 || std::floor(count) != count)
+			if (!std::isfinite(count) || count < 0 || count > kMaximumShipCount || std::floor(count) != count)
 				throw std::runtime_error("shipCount must be an integer in [0,1024]");
 
 			const float textureLimit = reader.ResolveFloat(path, "maxTextureDimension");
 
-			if (!std::isfinite(textureLimit) || textureLimit < 4 || textureLimit > 16384 ||
+			if (!std::isfinite(textureLimit) || textureLimit < kMinimumTextureDimension ||
+				textureLimit > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
 				std::floor(textureLimit) != textureLimit)
 				throw std::runtime_error("maxTextureDimension must be an integer in [4,16384]");
 
@@ -418,9 +424,10 @@ namespace Game {
 					return static_cast<size_t>(value);
 				};
 
-				mission.patrolCount = count("patrolCount", 8);
-				mission.finalFighterCount = count("finalFighterCount", 8);
-				mission.maxHostileProjectiles = count("maxHostileProjectiles", 512);
+				mission.patrolCount = count("patrolCount", MissionSettings::kMaximumFightersPerWave);
+				mission.finalFighterCount = count("finalFighterCount", MissionSettings::kMaximumFightersPerWave);
+				mission.maxHostileProjectiles =
+					count("maxHostileProjectiles", MissionSettings::kMaximumHostileProjectileCapacity);
 				mission.LoadTuning(reader, paths.mission);
 				mission.bombReloadSeconds = reader.ResolveFloat(paths.mission, "bombReloadSeconds");
 				mission.carrierMissileSpeed = reader.ResolveFloat(paths.mission, "carrierMissileSpeed");

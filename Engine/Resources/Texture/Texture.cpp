@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <cmath>
 #include <filesystem>
+#include <climits>
+#include <limits>
 #include <mutex>
 #include <unordered_map>
 
@@ -16,6 +18,13 @@ namespace Engine {
 		constexpr uint64_t kTextureProcessingVersion = 2;
 		constexpr uint64_t kFnvOffsetBasis = 14695981039346656037ULL;
 		constexpr uint64_t kFnvPrime = 1099511628211ULL;
+		constexpr size_t kRgba8BytesPerPixel = 4;
+		constexpr size_t kRedChannel = 0;
+		constexpr size_t kGreenChannel = 1;
+		constexpr size_t kBlueChannel = 2;
+		constexpr size_t kAlphaChannel = 3;
+		constexpr auto kUnorm8Max = std::numeric_limits<uint8_t>::max();
+		constexpr float kUnorm8Midpoint = kUnorm8Max * 0.5f;
 
 		bool IsBlockCompressedFormat(DXGI_FORMAT format) {
 			return DirectX::IsCompressed(format);
@@ -45,10 +54,10 @@ namespace Engine {
 			uint64_t hash = kFnvOffsetBasis;
 
 			auto mix = [&hash](uint64_t value) {
-				for (int byteIndex = 0; byteIndex < 8; ++byteIndex) {
-					hash ^= value & 0xff;
+				for (size_t byteIndex = 0; byteIndex < sizeof(value); ++byteIndex) {
+					hash ^= value & UCHAR_MAX;
 					hash *= kFnvPrime;
-					value >>= 8;
+					value >>= CHAR_BIT;
 				}
 			};
 
@@ -231,7 +240,8 @@ namespace Engine {
 					uint8_t* row = image->pixels + y * image->rowPitch;
 					for (size_t x = 0; x < image->width; ++x) {
 						// 緑成分を反転して法線マップのY方向をそろえる
-						row[x * 4 + 1] = 255 - row[x * 4 + 1];
+						auto& green = row[x * kRgba8BytesPerPixel + kGreenChannel];
+						green = kUnorm8Max - green;
 					}
 				}
 			}
@@ -272,14 +282,14 @@ namespace Engine {
 
 				const auto compressionStart = std::chrono::steady_clock::now();
 				hr = DirectX::Compress(m_image.GetImages(), m_image.GetImageCount(), m_meta, targetFormat,
-					compressionFlags, 0.5f, convertedImage);
+					compressionFlags, DirectX::TEX_THRESHOLD_DEFAULT, convertedImage);
 				const auto compressionMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
 					std::chrono::steady_clock::now() - compressionStart)
 														 .count();
 				Log("Texture compression: {} ms\n", compressionMilliseconds);
 			} else {
 				hr = DirectX::Convert(m_image.GetImages(), m_image.GetImageCount(), m_meta, targetFormat,
-					DirectX::TEX_FILTER_DEFAULT, 0.5f, convertedImage);
+					DirectX::TEX_FILTER_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, convertedImage);
 			}
 
 			if (FAILED(hr)) {
@@ -305,13 +315,14 @@ namespace Engine {
 					for (size_t y = 0; y < image->height; ++y) {
 						uint8_t* row = image->pixels + y * image->rowPitch;
 						for (size_t x = 0; x < image->width; ++x) {
-							uint8_t* pixel = row + x * 4;
+							uint8_t* pixel = row + x * kRgba8BytesPerPixel;
 
-							const float normalX = pixel[0] / 127.5f - 1.0f;
-							const float normalY = pixel[1] / 127.5f - 1.0f;
+							const float normalX = pixel[kRedChannel] / kUnorm8Midpoint - 1.0f;
+							const float normalY = pixel[kGreenChannel] / kUnorm8Midpoint - 1.0f;
 							const float normalZ =
 								std::sqrt(std::max(0.0f, 1.0f - normalX * normalX - normalY * normalY));
-							pixel[2] = static_cast<uint8_t>(std::lround((normalZ * 0.5f + 0.5f) * 255.0f));
+							pixel[kBlueChannel] = static_cast<uint8_t>(
+								std::lround((normalZ * 0.5f + 0.5f) * kUnorm8Max));
 						}
 					}
 				}
@@ -387,10 +398,10 @@ namespace Engine {
 
 		m_meta = m_image.GetMetadata();
 		const DirectX::Image* image = m_image.GetImage(0, 0, 0);
-		image->pixels[0] = r;
-		image->pixels[1] = g;
-		image->pixels[2] = b;
-		image->pixels[3] = a;
+		image->pixels[kRedChannel] = r;
+		image->pixels[kGreenChannel] = g;
+		image->pixels[kBlueChannel] = b;
+		image->pixels[kAlphaChannel] = a;
 
 		// 単色の1ピクセルをGPUへ転送し、シェーダー参照用に遷移する
 		auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(m_meta.format, 1, 1, 1, 1);
@@ -419,7 +430,8 @@ namespace Engine {
 
 	void Texture::CreateFromRgba(ID3D12Device* device, ID3D12GraphicsCommandList* commands, UINT width,
 		UINT height, std::span<const uint8_t> pixels) {
-		if (width == 0 || height == 0 || pixels.size() != size_t(width) * height * 4)
+		const size_t rowBytes = size_t(width) * kRgba8BytesPerPixel;
+		if (width == 0 || height == 0 || pixels.size() != rowBytes * height)
 			throw std::invalid_argument("Invalid RGBA texture dimensions or byte count");
 		ThrowIfFailed(m_image.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1));
 		m_meta = m_image.GetMetadata();
@@ -427,8 +439,7 @@ namespace Engine {
 		// 入力と作業画像の行間隔を区別してコピーする
 		const auto* image = m_image.GetImage(0, 0, 0);
 		for (UINT row = 0; row < height; ++row)
-			std::memcpy(image->pixels + row * image->rowPitch, pixels.data() + size_t(row) * width * 4,
-				size_t(width) * 4);
+			std::memcpy(image->pixels + row * image->rowPitch, pixels.data() + size_t(row) * rowBytes, rowBytes);
 		UploadImage(device, commands);
 		m_image.Release();
 	}

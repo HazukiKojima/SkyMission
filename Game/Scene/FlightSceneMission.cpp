@@ -47,7 +47,7 @@ namespace Game {
 				reinforcementsReady = false;
 			} else {
 				m_reinforcementHoldSeconds = m_reinforcementHoldSeconds < 0
-					? 1.0f : std::max(0.0f, m_reinforcementHoldSeconds - dt);
+					? kReinforcementHoldSeconds : std::max(0.0f, m_reinforcementHoldSeconds - dt);
 				reinforcementsReady = m_reinforcementHoldSeconds <= 0;
 			}
 		}
@@ -186,7 +186,7 @@ namespace Game {
 			}
 
 			// 2発分の空きがないときは発射せず、片方だけの斉射を避ける
-			if (m_hostileProjectiles.GetCount() + 2 > m_enemyGunSettings.maxProjectiles) continue;
+			if (m_hostileProjectiles.GetCount() + kEnemyGunVolleySize > m_enemyGunSettings.maxProjectiles) continue;
 
 			const auto directions = SpreadEnemyGunDirections(
 				direction, enemy.slot, enemy.gunPattern.GetShotIndex(), m_enemyGunTuning);

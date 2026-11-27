@@ -1,22 +1,27 @@
 #include "BombSystem.h"
+#include "Game/Settings/SimulationTiming.h"
 #include "Game/Weapons/Projectile/ProjectilePose.h"
 #include "Game/Weapons/Projectile/ProjectileCollision.h"
 #include <stdexcept>
 
 namespace Game {
+	namespace {
+		constexpr float kMinimumModelForwardLength = 0.001f;
+		constexpr float kSeaImpactHeightTolerance = 0.001f;
+	}
 	using namespace DirectX;
 
 	void BombSystem::Configure(
 		float reloadSeconds, std::shared_ptr<Engine::Model> model, const XMFLOAT3& modelForward) {
-		if (!std::isfinite(reloadSeconds) || reloadSeconds < 1 ||
-			reloadSeconds > BombTuning::lifetimeSeconds || !model)
+		if (!std::isfinite(reloadSeconds) || reloadSeconds < kMinimumOrdnanceReloadSeconds ||
+			reloadSeconds > kMaximumOrdnanceReloadSeconds || !model)
 			throw std::invalid_argument("Bomb requires a model and reload interval in [1,120]");
 
 		// 弾モデルの前方軸を検証する
 		const auto forward = XMLoadFloat3(&modelForward);
 		const float length = XMVectorGetX(XMVector3Length(forward));
 
-		if (!std::isfinite(length) || length < 0.001f)
+		if (!std::isfinite(length) || length < kMinimumModelForwardLength)
 			throw std::invalid_argument("Bomb modelForward must be finite and nonzero");
 		if (!m_bombs.empty()) throw std::logic_error("Cannot configure active bombs");
 
@@ -35,7 +40,8 @@ namespace Game {
 	}
 
 	size_t BombSystem::RequiredModelCapacity(float reloadSeconds) {
-		if (!std::isfinite(reloadSeconds) || reloadSeconds < 1 || reloadSeconds > BombTuning::lifetimeSeconds)
+		if (!std::isfinite(reloadSeconds) || reloadSeconds < kMinimumOrdnanceReloadSeconds ||
+			reloadSeconds > kMaximumOrdnanceReloadSeconds)
 			throw std::invalid_argument("Bomb reload interval must be in [1,120]");
 		return static_cast<size_t>(std::ceil(BombTuning::lifetimeSeconds / reloadSeconds)) + 2;
 	}
@@ -54,7 +60,7 @@ namespace Game {
 	void BombSystem::Update(Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& deck) {
 		if (!std::isfinite(dt) || dt <= 0) return;
 
-		dt = std::min(dt, 0.25f);
+		dt = std::min(dt, kMaximumSimulationDeltaSeconds);
 		m_cooldownSeconds = std::max(0.0f, m_cooldownSeconds - dt);
 
 		// 投下済みの爆弾を海面到達まで進める
@@ -84,7 +90,7 @@ namespace Game {
 			}
 
 			// 海面到達か寿命切れで爆弾を取り除く
-			if (bomb.flight.position.y <= 0.001f || bomb.remainingSeconds <= 0) {
+			if (bomb.flight.position.y <= kSeaImpactHeightTolerance || bomb.remainingSeconds <= 0) {
 				m_missImpacts.push_back(bomb.flight.position);
 				scene.RemoveObject(bomb.id);
 				return true;

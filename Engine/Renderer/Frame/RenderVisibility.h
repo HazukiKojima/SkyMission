@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/Resources/Mesh/ModelLoadOptions.h"
 #include "Engine/Scene/Scene.h"
 #include <DirectXCollision.h>
 #include <algorithm>
@@ -11,7 +12,7 @@ namespace Engine {
 
 	struct RenderStatistics {
 		size_t visibleObjects = 0, culledObjects = 0, modelDrawCalls = 0, modelTriangles = 0;
-		size_t lodObjects[3]{};
+		size_t lodObjects[kModelLodCount]{};
 		UINT oceanTriangles = 0;
 	};
 

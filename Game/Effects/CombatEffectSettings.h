@@ -94,10 +94,6 @@ namespace Game {
 		static constexpr size_t maxCount = CarrierEffectSettings::maxSmokeCount;
 	};
 
-	struct CombatEffectSettings {
-		static constexpr float maximumFrameSeconds = 0.25f;
-	};
-
 	struct EffectDrawSettings {
 		// 視認性を保つため、エフェクトより後に描く照準と文字の頂点を確保する
 		static constexpr size_t hudReservedVertices = 6000;
@@ -208,6 +204,9 @@ namespace Game {
 			float initialExplosionRadiusMultiplier = 2.5f;
 			float initialFlashDurationMultiplier = 2.2f;
 			float finalExplosionRadiusMultiplier = 2.8f;
+			std::array<float, 2> engineBurstProgress{0.22f, 0.56f};
+			static constexpr float fuelFireStartProgress = 0.20f;
+			float fuelFireFlashProgress = 0.82f;
 			std::array<AircraftCrashProfile, 3> profiles{{
 				{2.145f, 164.0f, 0.53f, 0.12f, 0.65f, 5.4f, 0.0f},
 				{2.21f, 136.0f, 0.65f, 0.85f, 1.65f, 0.55f, 0.0f},

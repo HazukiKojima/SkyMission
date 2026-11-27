@@ -5,6 +5,15 @@
 using namespace DirectX;
 
 namespace Game {
+	namespace {
+		constexpr float kFreeCameraPitchMarginRadians = 0.01f;
+		constexpr float kAutomaticLookFovScale = 0.85f;
+		constexpr double kMinimumLookTargetDistance = 0.001;
+		constexpr float kMinimumHorizontalForwardLengthSquared = 0.0001f;
+		constexpr float kMinimumFollowSpeedRange = 0.001f;
+		constexpr float kChaseFramingFadeAngleRadians = 0.5f;
+		constexpr float kHorizontalShakeScale = 0.65f;
+	}
 
 	void AircraftCameraController::Initialize(float fovY, float aspect, float nearZ, float farZ) {
 		m_camera.Initialize(fovY, aspect, nearZ, farZ);
@@ -73,7 +82,7 @@ namespace Game {
 			m_pitch -= static_cast<float>(input.mouseDeltaY) * m_settings.mouseSensitivity;
 		}
 
-		const float pitchLimit = XM_PIDIV2 - 0.01f;
+		const float pitchLimit = XM_PIDIV2 - kFreeCameraPitchMarginRadians;
 		m_pitch = std::clamp(m_pitch, -pitchLimit, pitchLimit);
 
 		UpdateView();
@@ -93,7 +102,7 @@ namespace Game {
 	void AircraftCameraController::UpdateFollow(float deltaSeconds, const Engine::InputSnapshot& input) {
 		UpdateFollowOrientation(deltaSeconds);
 		UpdateLookOffset(deltaSeconds, input);
-		const float zoom = m_automaticLook ? 0.85f : 1.0f;
+		const float zoom = m_automaticLook ? kAutomaticLookFovScale : 1.0f;
 		m_zoomScale += (zoom - m_zoomScale) * (1 - std::exp(-m_settings.lookReturnRate * deltaSeconds));
 		m_camera.SetVerticalFov(m_baseFovY * m_zoomScale);
 		UpdateFollowPosition(deltaSeconds);
@@ -139,9 +148,9 @@ namespace Game {
 				const double horizontal = std::hypot(dx, dz);
 				const double distance = std::hypot(horizontal, dy);
 
-				if (std::isfinite(distance) && distance > 0.001) {
+				if (std::isfinite(distance) && distance > kMinimumLookTargetDistance) {
 					// 真上・真下ではヨーを維持し、水平角の不定による反転を避ける
-					targetYaw = horizontal > 0.001
+					targetYaw = horizontal > kMinimumLookTargetDistance
 						? std::remainder(float(std::atan2(dx, -dz)) - m_followCameraYaw, XM_2PI)
 						: m_lookYaw;
 					targetPitch = std::clamp(float(std::atan2(dy, horizontal)) - m_followCameraPitch,
@@ -166,7 +175,7 @@ namespace Game {
 			const XMVECTOR forward = XMLoadFloat3(&m_followForward);
 			const XMVECTOR horizontalForward =
 				XMVectorSet(XMVectorGetX(forward), 0.0f, XMVectorGetZ(forward), 0.0f);
-			if (XMVectorGetX(XMVector3LengthSq(horizontalForward)) > 0.0001f) {
+			if (XMVectorGetX(XMVector3LengthSq(horizontalForward)) > kMinimumHorizontalForwardLengthSquared) {
 				followDirection = XMVector3Normalize(horizontalForward);
 			}
 		}
@@ -201,14 +210,15 @@ namespace Game {
 		const XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 		// 速度が上がるほど機体からカメラを離す
-		const float speedRange = std::max(m_followMaximumSpeed - m_settings.speedDistanceStart, 0.001f);
+		const float speedRange = std::max(
+			m_followMaximumSpeed - m_settings.speedDistanceStart, kMinimumFollowSpeedRange);
 		const float speedRatio =
 			std::clamp((m_followSpeed - m_settings.speedDistanceStart) / speedRange, 0.0f, 1.0f);
 		const float followDistance = m_settings.followDistance +
 			(m_settings.maxFollowDistance - m_settings.followDistance) * speedRatio;
 		// 見回しと目標注視では旋回時の構図補正を徐々に弱める
 		const float chaseWeight = 1.0f -
-			std::clamp(std::hypot(m_lookYaw, m_lookPitch) / 0.5f, 0.0f, 1.0f);
+			std::clamp(std::hypot(m_lookYaw, m_lookPitch) / kChaseFramingFadeAngleRadians, 0.0f, 1.0f);
 		const float bank = m_followBank * chaseWeight;
 		m_viewRoll = -bank * XMConvertToRadians(m_settings.bankRollDegrees);
 		const XMVECTOR right = XMVectorSet(-std::cos(orbitYaw), 0, -std::sin(orbitYaw), 0);
@@ -272,7 +282,7 @@ namespace Game {
 			const XMVECTOR up = XMVector3Cross(forward, right);
 			// 追従位置や補間状態に揺れを戻さず、描画する視線だけをずらす
 			XMFLOAT3 direction;
-			XMStoreFloat3(&direction, forward + right * (std::sin(m_shakePhase) * amplitude * 0.65f) +
+			XMStoreFloat3(&direction, forward + right * (std::sin(m_shakePhase) * amplitude * kHorizontalShakeScale) +
 				up * (std::cos(m_shakePhase) * amplitude));
 			XMFLOAT3 cameraUp;
 			XMStoreFloat3(&cameraUp, XMVector3Rotate(up, XMQuaternionRotationNormal(forward, m_viewRoll)));

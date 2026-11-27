@@ -9,6 +9,10 @@
 namespace Game {
 	enum class MissionPhase { Patrol, CarrierAttack, FinalFighters, Commander, Complete, Failed };
 	struct MissionSettings {
+		static constexpr unsigned kMaximumFightersPerWave = 8;
+		static constexpr unsigned kMinimumHostileProjectileCapacity = 4;
+		static constexpr unsigned kMaximumHostileProjectileCapacity = 512;
+
 		size_t patrolCount = 4;
 		size_t finalFighterCount = 4;
 		float bombReloadSeconds = 4;
@@ -21,7 +25,7 @@ namespace Game {
 		float commanderGunInterval = 0.08f;
 		float aaRange = 6500;
 		float aaInterval = 0.8f;
-		size_t maxHostileProjectiles = 512;
+		size_t maxHostileProjectiles = kMaximumHostileProjectileCapacity;
 		float deckHeightFraction = 0.445f;
 		float deckWidthFraction = 0.75f;
 		float deckLengthFraction = 0.9f;

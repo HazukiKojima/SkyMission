@@ -31,6 +31,10 @@ namespace Engine {
 	  public:
 		// 容量超過時は描画処理がlength_errorを送出する。追加前の予算管理に利用する
 		static constexpr size_t MaxVertices = 32768;
+		static constexpr size_t QuadVertexCount = 6;
+		static constexpr size_t SoftDiscSegmentCount = 24;
+		static constexpr size_t SoftDiscVertexCount = SoftDiscSegmentCount * 3;
+		static constexpr unsigned CloudSeedVariants = 64;
 
 		HudDrawList() {
 			m_vertices.reserve(MaxVertices);

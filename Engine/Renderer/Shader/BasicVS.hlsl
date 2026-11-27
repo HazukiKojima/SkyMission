@@ -1,3 +1,10 @@
+#include "../Environment/OceanWaveConstants.h"
+
+static const float kBasicWaveTimeScale = 0.8f;
+static const float kBasicWaveDirectionSpread = 1.1f;
+static const float kBasicWaveLength = 30.0f;
+static const float kBasicWaveSteepness = 0.055f;
+
 cbuffer MatrixBuffer : register(b0)
 {
     float4x4 mvp;
@@ -31,10 +38,10 @@ float3 CalculateGerstnerWave(float2 dir, float steepness, float wavelength, floa
     inout float3 binormal, float phaseOffset)
 {
     float k = 2.0f * 3.14159265359f / wavelength;
-    float c = sqrt(9.8f / k);
+    float c = sqrt(kOceanWaveGravity / k);
     float2 d = normalize(dir);
 
-    float f = k * (dot(d, p.xz) - c * time * 0.8f) + phaseOffset;
+    float f = k * (dot(d, p.xz) - c * time * kBasicWaveTimeScale) + phaseOffset;
     float a = steepness / k;
 
     float sinf = sin(f);
@@ -61,17 +68,17 @@ PS_INPUT VS(VS_INPUT input)
     float3 tangent = float3(1.0f, 0.0f, 0.0f);
     float3 binormal = float3(0.0f, 0.0f, 1.0f);
 
-    float2 baseWindDir = normalize(float2(1.0f, 0.6f));
-    float wavelength = 30.0f;
-    float steepness = 0.055f;
+    float2 baseWindDir = normalize(float2(1.0f, kOceanWindZ));
+    float wavelength = kBasicWaveLength;
+    float steepness = kBasicWaveSteepness;
 
-    const int NUM_WAVES = 6;
+
 
     // 向きと波長の異なる6成分の波を重ねる
-    for (int i = 0; i < NUM_WAVES; ++i)
+    for (int i = 0; i < kOceanWaveCount; ++i)
     {
-        float phaseOffset = (float)i * 21.53f;
-        float randomAngle = sin((float)i * 7.3f) * 1.1f;
+        float phaseOffset = (float)i * kOceanWavePhaseStride;
+        float randomAngle = sin((float)i * kOceanWaveDirectionStride) * kBasicWaveDirectionSpread;
 
         float s_rot = sin(randomAngle);
         float c_rot = cos(randomAngle);
@@ -80,8 +87,8 @@ PS_INPUT VS(VS_INPUT input)
 
         pos += CalculateGerstnerWave(waveDir, steepness, wavelength, wavePos, tangent, binormal, phaseOffset);
 
-        wavelength *= 0.82f;
-        steepness *= 0.72f;
+        wavelength *= kOceanWavelengthDecay;
+        steepness *= kOceanWaveSteepnessDecay;
     }
 
     // 重ねた波の接線から法線を求めてピクセルシェーダーへ渡す

@@ -6,9 +6,12 @@
 namespace Game {
 	void CinematicPresenter::Build(const CinematicPresentation& presentation, const Engine::RenderView& view,
 		Engine::HudDrawList& list, bool usingGamepad) const {
+		constexpr float kBriefingTotalPadding = 120.0f;
+		constexpr float kCinematicSideInset = 48.0f;
+		constexpr float kHintMaxBarHeightFraction = 0.8f;
 		if (!presentation.active || view.width == 0 || view.height == 0) return;
 
-		const float scale = std::min(float(view.width) / 1920, float(view.height) / 1080);
+		const float scale = HudStyle::FitScale(view.width, view.height);
 		const auto& textSettings = presentation.text;
 		const float textScale = scale * textSettings.textScale;
 
@@ -20,8 +23,8 @@ namespace Game {
 			const float widest = std::max(Engine::HudDrawList::MeasureTextWidth(text[0], 1),
 				Engine::HudDrawList::MeasureTextWidth(text[1], 1));
 			const float size = std::min({textSettings.briefingFontSize * textScale,
-				(view.height - 120 * scale) / (1 + textSettings.lineSpacing),
-				(view.width - 120 * scale) / std::max(1.0f, widest)});
+				(view.height - kBriefingTotalPadding * scale) / (1 + textSettings.lineSpacing),
+				(view.width - kBriefingTotalPadding * scale) / std::max(1.0f, widest)});
 			const float spacing = size * textSettings.lineSpacing;
 
 			for (int row = 0; row < 2; ++row)
@@ -35,16 +38,18 @@ namespace Game {
 		list.FilledRect({0, 0}, {float(view.width), barHeight}, {0, 0, 0, 1});
 		list.FilledRect({0, view.height - barHeight}, {float(view.width), barHeight}, {0, 0, 0, 1});
 
+		const float sideInset = kCinematicSideInset * scale;
+		const float textWidth = view.width - 2 * sideInset;
 		if (presentation.formationShot) {
 			const float titleSize = std::min(textSettings.titleFontSize * textScale,
-				(view.width - 96 * scale) /
+				textWidth /
 					std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(presentation.title, 1)));
 			const float subtitleSize = std::min(textSettings.subtitleFontSize * textScale,
-				(view.width - 96 * scale) /
+				textWidth /
 					std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(presentation.subtitle, 1)));
-			list.Text({48 * scale, view.height - barHeight - textSettings.titleBottomOffset * textScale},
+			list.Text({sideInset, view.height - barHeight - textSettings.titleBottomOffset * textScale},
 				presentation.title, titleSize, m_ink);
-			list.Text({48 * scale, view.height - barHeight - textSettings.subtitleBottomOffset * textScale},
+			list.Text({sideInset, view.height - barHeight - textSettings.subtitleBottomOffset * textScale},
 				presentation.subtitle, subtitleSize, m_ink);
 		}
 
@@ -58,9 +63,9 @@ namespace Game {
 		if (presentation.cinematicId == "defeat") return;
 
 		const auto& hint = usingGamepad ? textSettings.gamepadSkipHint : textSettings.skipHint;
-		const float fontSize = std::min({textSettings.hintFontSize * textScale, barHeight * 0.8f,
-			(view.width - 96 * scale) / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(hint, 1))});
-		list.Text({view.width - 48 * scale - Engine::HudDrawList::MeasureTextWidth(hint, fontSize),
+		const float fontSize = std::min({textSettings.hintFontSize * textScale, barHeight * kHintMaxBarHeightFraction,
+			textWidth / std::max(1.0f, Engine::HudDrawList::MeasureTextWidth(hint, 1))});
+		list.Text({view.width - sideInset - Engine::HudDrawList::MeasureTextWidth(hint, fontSize),
 					  view.height - barHeight * 0.5f - fontSize * 0.5f},
 			hint, fontSize, m_ink);
 	}

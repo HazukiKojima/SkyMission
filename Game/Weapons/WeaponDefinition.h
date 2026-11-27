@@ -8,6 +8,10 @@
 namespace Game {
 	// 各銃口で共有する発射設定。時間は秒、muzzleSpeedはワールド単位/秒
 	struct GunSettings {
+		static constexpr size_t kTwinMuzzleCount = 2;
+		static constexpr size_t kQuadMuzzleCount = 4;
+		static constexpr size_t kMinimumProjectileCapacity = kQuadMuzzleCount;
+
 		std::vector<std::string> muzzleNames;
 		float fireInterval = 0.1f;
 		float muzzleSpeed = 900.0f;

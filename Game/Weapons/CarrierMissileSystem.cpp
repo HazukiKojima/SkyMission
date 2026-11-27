@@ -1,4 +1,5 @@
 #include "CarrierMissileSystem.h"
+#include "Game/Settings/SimulationTiming.h"
 #include "Game/Weapons/Projectile/ProjectilePose.h"
 #include "Game/Weapons/Projectile/ProjectileCollision.h"
 #include <stdexcept>
@@ -7,20 +8,21 @@ namespace Game {
 	using namespace DirectX;
 
 	namespace {
-		constexpr float kMaximumReloadSeconds = 120;
+		constexpr float kMinimumModelForwardLength = 0.001f;
+		constexpr float kSeaImpactHeightTolerance = 0.001f;
 		constexpr float kMaximumSimulationStepSeconds = 1.0f / 240;
 	} // namespace
 
 	void CarrierMissileSystem::Configure(
 		float reloadSeconds, std::shared_ptr<Engine::Model> model, const XMFLOAT3& modelForward) {
-		if (!std::isfinite(reloadSeconds) || reloadSeconds < 1 || reloadSeconds > kMaximumReloadSeconds ||
-			!model)
+		if (!std::isfinite(reloadSeconds) || reloadSeconds < kMinimumOrdnanceReloadSeconds ||
+			reloadSeconds > kMaximumOrdnanceReloadSeconds || !model)
 			throw std::invalid_argument("Missile requires a model and reload interval in [1,120]");
 
 		const auto forward = XMLoadFloat3(&modelForward);
 		const float length = XMVectorGetX(XMVector3Length(forward));
 
-		if (!std::isfinite(length) || length < 0.001f)
+		if (!std::isfinite(length) || length < kMinimumModelForwardLength)
 			throw std::invalid_argument("Missile modelForward must be finite and nonzero");
 		if (!m_missiles.empty()) throw std::logic_error("Cannot configure active missiles");
 
@@ -44,7 +46,8 @@ namespace Game {
 	}
 
 	size_t CarrierMissileSystem::RequiredModelCapacity(float reloadSeconds, const MissileSettings& settings) {
-		if (!std::isfinite(reloadSeconds) || reloadSeconds < 1 || reloadSeconds > kMaximumReloadSeconds)
+		if (!std::isfinite(reloadSeconds) || reloadSeconds < kMinimumOrdnanceReloadSeconds ||
+			reloadSeconds > kMaximumOrdnanceReloadSeconds)
 			throw std::invalid_argument("Missile reload interval must be in [1,120]");
 		return settings.ammoCount *
 			(static_cast<size_t>(std::ceil(settings.lifetimeSeconds / reloadSeconds)) + 1);
@@ -85,7 +88,7 @@ namespace Game {
 		Engine::Scene& scene, float dt, const std::optional<CollisionTarget>& hull) {
 		if (!std::isfinite(dt) || dt <= 0) return;
 
-		dt = std::min(dt, 0.25f);
+		dt = std::min(dt, kMaximumSimulationDeltaSeconds);
 
 		// 再装填が終わったら弾数を戻す
 		if (m_cooldownSeconds > 0) {
@@ -156,7 +159,7 @@ namespace Game {
 					missile.smokeSeconds += m_settings.smokeIntervalSeconds;
 				}
 
-				if (missile.flight.position.y <= 0.001f || missile.remainingSeconds <= 0) {
+				if (missile.flight.position.y <= kSeaImpactHeightTolerance || missile.remainingSeconds <= 0) {
 					m_missImpacts.push_back(missile.flight.position);
 					scene.RemoveObject(missile.id);
 					return true;

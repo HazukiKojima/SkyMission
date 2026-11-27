@@ -17,6 +17,9 @@
 #include <string_view>
 
 namespace {
+constexpr int kWarmupRuns = 5;
+constexpr int kSampleCount = 7;
+constexpr double kMinimumSampleSeconds = 0.15;
 using Json = nlohmann::json;
 using Handle = std::intptr_t;
 bool useNative = false, recording = false;
@@ -315,14 +318,15 @@ int main(int argc,char** argv) try {
     trace.open(std::filesystem::path(argv[2])/(stem+"-trace.txt"));
     recording = true; run(); recording = false; trace.close();
 
-    for (int warmup=0; warmup<5; ++warmup) run();
+    for (int warmup=0; warmup<kWarmupRuns; ++warmup) run();
     std::ofstream csv(std::filesystem::path(argv[2])/(stem+".csv"));
     csv << "backend,process,sample,iterations,microseconds_per_load\n" << std::setprecision(12);
 
     // 各標本を一定時間繰り返し、1回の読み込み時間へ換算する
-    for(int sample=0;sample<7;++sample) {
+    for(int sample=0;sample<kSampleCount;++sample) {
         before = Clock::now(); int count=0; double elapsed;
-        do {run(); ++count; elapsed=std::chrono::duration<double>(Clock::now()-before).count();} while(elapsed<0.15);
+        do {run(); ++count; elapsed=std::chrono::duration<double>(Clock::now()-before).count();}
+        while(elapsed<kMinimumSampleSeconds);
         csv << argv[3] << ',' << argv[4] << ',' << sample << ',' << count << ',' << elapsed*1e6/count << '\n';
     }
 

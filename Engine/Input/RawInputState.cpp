@@ -10,6 +10,7 @@ namespace Engine {
 
 	void RawInputState::ClearMouse() {
 		m_mice.clear();
+		m_leftMousePressed = false;
 		m_rightMousePressCount = 0;
 		m_deltaX = 0;
 		m_deltaY = 0;
@@ -17,16 +18,14 @@ namespace Engine {
 
 	void RawInputState::ForgetDevice(HANDLE device) {
 		m_keyboards.erase(device);
-		if (m_mice.erase(device)) {
-			m_deltaX = 0;
-			m_deltaY = 0;
-		}
+		m_mice.erase(device);
 	}
 
 	void RawInputState::ProcessKeyboard(HANDLE device, const RAWKEYBOARD& keyboard) {
 		// 疑似キー・入力超過通知の0xffは押下状態に含めない
 		constexpr USHORT kKeyboardOverrunMakeCode = 0xff;
-		if (!m_active || keyboard.VKey >= 0xff || keyboard.MakeCode == kKeyboardOverrunMakeCode) return;
+		constexpr USHORT kInvalidVirtualKey = 0xff;
+		if (!m_active || keyboard.VKey >= kInvalidVirtualKey || keyboard.MakeCode == kKeyboardOverrunMakeCode) return;
 
 		// Pauseに含まれる、解放通知のないE1付き疑似Ctrl押下を除外する
 		if (keyboard.VKey == VK_CONTROL && (keyboard.Flags & RI_KEY_E1)) return;
@@ -37,8 +36,10 @@ namespace Engine {
 			key = keyboard.Flags & RI_KEY_E0 ? VK_RCONTROL : VK_LCONTROL;
 		else if (key == VK_MENU)
 			key = keyboard.Flags & RI_KEY_E0 ? VK_RMENU : VK_LMENU;
-		else if (key == VK_SHIFT)
-			key = keyboard.MakeCode == 0x36 ? VK_RSHIFT : VK_LSHIFT;
+		else if (key == VK_SHIFT) {
+			constexpr USHORT kRightShiftMakeCode = 0x36;
+			key = keyboard.MakeCode == kRightShiftMakeCode ? VK_RSHIFT : VK_LSHIFT;
+		}
 		const bool down = (keyboard.Flags & RI_KEY_BREAK) == 0;
 		bool wasDown = false;
 
@@ -65,7 +66,10 @@ namespace Engine {
 			m_rightMousePressCount < std::numeric_limits<std::uint16_t>::max())
 			++m_rightMousePressCount;
 		auto& state = m_mice[device];
+		if ((mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) && !IsLeftMouseDown())
+			m_leftMousePressed = true;
 
+		const bool wasMiddleDown = IsMiddleMouseDown();
 		// 受信元マウスのボタン状態を更新する
 		if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) state.leftDown = true;
 		if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) state.leftDown = false;
@@ -78,8 +82,11 @@ namespace Engine {
 		std::int64_t dx = mouse.lLastX, dy = mouse.lLastY;
 		if (mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
 			// 絶対位置入力は0〜65535の正規化座標から変換する
-			const LONG x = static_cast<LONG>(std::int64_t(mouse.lLastX) * (desktopWidth - 1) / 65535);
-			const LONG y = static_cast<LONG>(std::int64_t(mouse.lLastY) * (desktopHeight - 1) / 65535);
+			constexpr auto kMaxAbsoluteMouseCoordinate = std::numeric_limits<std::uint16_t>::max();
+			const LONG x = static_cast<LONG>(
+				std::int64_t(mouse.lLastX) * (desktopWidth - 1) / kMaxAbsoluteMouseCoordinate);
+			const LONG y = static_cast<LONG>(
+				std::int64_t(mouse.lLastY) * (desktopHeight - 1) / kMaxAbsoluteMouseCoordinate);
 			const bool virtualDesktop = (mouse.usFlags & MOUSE_VIRTUAL_DESKTOP) != 0;
 
 			if (state.hasAbsolute && state.virtualDesktop == virtualDesktop && state.width == desktopWidth &&
@@ -97,7 +104,7 @@ namespace Engine {
 			state.hasAbsolute = false;
 
 		// 中ボタン操作中の移動量を蓄積する
-		if (IsMiddleMouseDown()) {
+		if (wasMiddleDown || IsMiddleMouseDown()) {
 			m_deltaX += dx;
 			m_deltaY += dy;
 		}
@@ -115,6 +122,7 @@ namespace Engine {
 			snapshot.pressedKeys = m_pressedKeys;
 			snapshot.keyPressCounts = m_keyPressCounts;
 			snapshot.leftMouseDown = IsLeftMouseDown();
+			snapshot.leftMousePressed = m_leftMousePressed;
 			snapshot.middleMouseDown = IsMiddleMouseDown();
 			snapshot.mouseDeltaX = m_deltaX;
 			snapshot.mouseDeltaY = m_deltaY;
@@ -125,6 +133,7 @@ namespace Engine {
 		m_deltaY = 0;
 		m_pressedKeys.fill(false);
 		m_keyPressCounts.fill(0);
+		m_leftMousePressed = false;
 		m_rightMousePressCount = 0;
 		return snapshot;
 	}

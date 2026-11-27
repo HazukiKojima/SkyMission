@@ -8,11 +8,17 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <algorithm>
+#include <cstdint>
 #include <cwctype>
 #include <filesystem>
+#include <string_view>
 
 namespace Engine::ModelImport {
 	namespace {
+		constexpr std::string_view kSceneCacheVersion = "|scene-v2-static|";
+		constexpr uint64_t kFnvOffsetBasis = 14695981039346656037ULL;
+		constexpr uint64_t kFnvPrime = 1099511628211ULL;
+
 		std::filesystem::path ModelSceneCachePath(const std::filesystem::path& source, unsigned flags) {
 			auto extension = source.extension().wstring();
 			std::transform(extension.begin(), extension.end(), extension.begin(), towlower);
@@ -35,16 +41,17 @@ namespace Engine::ModelImport {
 
 			// 読み込み条件をキャッシュキーに反映する
 			const auto pathText = canonical.u8string();
-			const auto key = std::string(reinterpret_cast<const char*>(pathText.data()), pathText.size()) +
-				"|scene-v2-static|" + std::to_string(size) + "|" +
+			std::string key(reinterpret_cast<const char*>(pathText.data()), pathText.size());
+			key += kSceneCacheVersion;
+			key += std::to_string(size) + "|" +
 				std::to_string(modified.time_since_epoch().count()) + "|" + std::to_string(flags) + "|" +
 				std::to_string(aiGetVersionMajor()) + "." + std::to_string(aiGetVersionMinor()) + "." +
 				std::to_string(aiGetVersionRevision());
-			uint64_t hash = 14695981039346656037ULL;
+			uint64_t hash = kFnvOffsetBasis;
 
 			for (unsigned char value : key) {
 				hash ^= value;
-				hash *= 1099511628211ULL;
+				hash *= kFnvPrime;
 			}
 
 			const auto temp = std::filesystem::temp_directory_path(error);

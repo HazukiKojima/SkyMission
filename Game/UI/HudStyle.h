@@ -4,6 +4,13 @@
 #include <cmath>
 
 namespace Game::HudStyle {
+	inline constexpr float ReferenceWidth = 1920.0f;
+	inline constexpr float ReferenceHeight = 1080.0f;
+
+	inline float FitScale(unsigned width, unsigned height) {
+		return std::min(width / ReferenceWidth, height / ReferenceHeight);
+	}
+
 	// HUDとレーダーで共有するRGBA色。各成分は0～1の範囲で指定する
 	inline const DirectX::XMFLOAT4 Ink{232.0f / 255, 217.0f / 255, 181.0f / 255, 0.95f};
 	inline const DirectX::XMFLOAT4 Selected{0.95f, 0.65f, 0.24f, 1};

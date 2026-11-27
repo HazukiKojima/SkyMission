@@ -3,6 +3,10 @@
 #include <cmath>
 
 namespace Game {
+	namespace {
+		constexpr float kMinimumInvertibleDeterminant = 1e-12f;
+		constexpr float kParallelSegmentAxisTolerance = 1e-8f;
+	}
 	std::optional<float> IntersectMovingTarget(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end,
 		const CollisionTarget& target, float startFraction, float endFraction) {
 		using namespace DirectX;
@@ -12,7 +16,7 @@ namespace Game {
 		XMVECTOR determinant;
 		const auto inverse = XMMatrixInverse(&determinant, world);
 
-		if (std::abs(XMVectorGetX(determinant)) < 1e-12f) return std::nullopt;
+		if (std::abs(XMVectorGetX(determinant)) < kMinimumInvertibleDeterminant) return std::nullopt;
 
 		const auto displacement = world.r[3] - XMLoadFloat3(&target.previousPosition);
 
@@ -36,7 +40,7 @@ namespace Game {
 		for (int axis = 0; axis < 3; ++axis) {
 			const float delta = ends[axis] - origins[axis];
 
-			if (std::abs(delta) < 1e-8f) {
+			if (std::abs(delta) < kParallelSegmentAxisTolerance) {
 				if (origins[axis] < minimum[axis] || origins[axis] > maximum[axis]) return std::nullopt;
 			} else {
 				float nearFraction = (minimum[axis] - origins[axis]) / delta;

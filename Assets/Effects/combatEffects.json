@@ -194,6 +194,8 @@
     "initialExplosionRadiusMultiplier": 2.5,
     "initialFlashDurationMultiplier": 2.2,
     "finalExplosionRadiusMultiplier": 2.8,
+    "engineBurstProgress": [0.22, 0.56],
+    "fuelFireFlashProgress": 0.82,
     "rollingDive": {
       "durationSeconds": 2.145,
       "downwardAcceleration": 164.0,

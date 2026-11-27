@@ -192,7 +192,7 @@ namespace Game {
 		void UpdateCarrierMissiles(const CombatInput& input, float dt);
 		void UpdateHostileWeapons(float dt);
 		void UpdateEnemyGuns();
-		void UpdateTargeting(const CombatGeometry& geometry, bool next, float dt);
+		void UpdateTargeting(const CombatGeometry& geometry, unsigned cycleCount, float dt);
 		void UpdateCamera(const AircraftInput& input, float dt, const Engine::InputSnapshot& cameraInput);
 		void ApplyHits();
 		void ApplyCarrierHit(const HitEvent& hit);
@@ -291,6 +291,7 @@ namespace Game {
 		bool m_carrierCompleteReported = false;
 		size_t m_finalKills = 0;
 		bool m_finalEncouraged = false;
+		static constexpr float kReinforcementHoldSeconds = 1.0f;
 		float m_reinforcementHoldSeconds = -1;
 		float m_victoryHoldSeconds = -1;
 		void UpdateFinalCommand();

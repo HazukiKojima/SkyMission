@@ -3,25 +3,29 @@
 namespace Game {
 	void CarrierMissileFlight::GuideTo(const DirectX::XMFLOAT3& target, float radians) {
 		using namespace DirectX;
+		constexpr float kMinimumTargetDistanceSquared = 0.0001f;
+		constexpr float kMinimumSteeringAxisLengthSquared = 0.0001f;
+		constexpr float kMinimumSteeringAngleRadians = 0.00001f;
 
 		const auto value = XMLoadFloat3(&velocity);
 		const auto desired = XMLoadFloat3(&target) - XMLoadFloat3(&position);
 
-		if (XMVectorGetX(XMVector3LengthSq(desired)) < 0.0001f) return;
+		if (XMVectorGetX(XMVector3LengthSq(desired)) < kMinimumTargetDistanceSquared) return;
 
 		// 目標へ向くための旋回角を求める
 		const auto from = XMVector3Normalize(value), to = XMVector3Normalize(desired);
 		const float angle = std::acos(std::clamp(XMVectorGetX(XMVector3Dot(from, to)), -1.0f, 1.0f));
 
-		if (angle < 0.00001f) return;
+		if (angle < kMinimumSteeringAngleRadians) return;
 
 		// 回転軸が決まらない場合の代替軸を選ぶ
 		auto axis = XMVector3Cross(from, to);
 
-		if (XMVectorGetX(XMVector3LengthSq(axis)) < 0.0001f) {
+		if (XMVectorGetX(XMVector3LengthSq(axis)) < kMinimumSteeringAxisLengthSquared) {
 			axis = XMVector3Cross(from, XMVectorSet(0, 1, 0, 0));
 
-			if (XMVectorGetX(XMVector3LengthSq(axis)) < 0.0001f) axis = XMVectorSet(1, 0, 0, 0);
+			if (XMVectorGetX(XMVector3LengthSq(axis)) < kMinimumSteeringAxisLengthSquared)
+				axis = XMVectorSet(1, 0, 0, 0);
 		}
 
 		// 速度を保って旋回角の範囲内で向きを変える
@@ -30,7 +34,8 @@ namespace Game {
 	}
 
 	std::optional<float> CarrierMissileFlight::TimeToHeight(float height) const {
-		if (std::abs(velocity.y) < 0.0001f) return std::nullopt;
+		constexpr float kMinimumVerticalSpeed = 0.0001f;
+		if (std::abs(velocity.y) < kMinimumVerticalSpeed) return std::nullopt;
 
 		// 指定高度への到達時刻を現在の鉛直速度から求める
 		const float seconds = (height - position.y) / velocity.y;

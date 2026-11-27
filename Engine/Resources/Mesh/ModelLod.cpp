@@ -7,6 +7,14 @@ namespace Engine::ModelProcessing {
 	MeshGeometry SimplifyGeometry(const MeshGeometry& source, float extent, unsigned lod) {
 		if (lod == 0 || source.isRotatingNode) return source;
 
+		constexpr float kMediumDetailMinimumComponentRatio = 0.006f;
+		constexpr float kLowDetailMinimumComponentRatio = 0.018f;
+		constexpr float kMediumDetailCellsPerExtent = 128.0f;
+		constexpr float kLowDetailCellsPerExtent = 48.0f;
+		constexpr float kTextureCoordinateMagnitudeLimit = 1e6f;
+		constexpr float kClustersPerTextureUnit = 32.0f;
+		const bool mediumDetail = lod == static_cast<unsigned>(ModelDetailLevel::Medium);
+
 		// LODで省ける小さな部品を判定する
 		auto low = source.vertices.front().position, high = low;
 		for (const auto& v : source.vertices) {
@@ -19,7 +27,9 @@ namespace Engine::ModelProcessing {
 		}
 
 		const float componentSize = std::max({high.x - low.x, high.y - low.y, high.z - low.z});
-		if (componentSize < extent * (lod == 1 ? 0.006f : 0.018f)) return {};
+		const float minimumComponentRatio = mediumDetail
+			? kMediumDetailMinimumComponentRatio : kLowDetailMinimumComponentRatio;
+		if (componentSize < extent * minimumComponentRatio) return {};
 
 		// 位置と表面属性が近い頂点を同じクラスタへまとめる
 		struct Key {
@@ -29,16 +39,23 @@ namespace Engine::ModelProcessing {
 
 		struct Hash {
 			size_t operator()(const Key& key) const {
-				size_t hash = 14695981039346656037ULL;
+				constexpr auto kFnvOffsetBasis = 14695981039346656037ULL;
+				constexpr auto kFnvPrime = 1099511628211ULL;
+				size_t hash = kFnvOffsetBasis;
 				for (int value : key.values) {
 					hash ^= static_cast<unsigned>(value);
-					hash *= 1099511628211ULL;
+					hash *= kFnvPrime;
 				}
 				return hash;
 			}
 		};
 
-		const float cell = extent / (lod == 1 ? 128.0f : 48.0f);
+		const float cell = extent / (mediumDetail ? kMediumDetailCellsPerExtent : kLowDetailCellsPerExtent);
+		const auto textureCluster = [kTextureCoordinateMagnitudeLimit](float uv) {
+			const float bounded = std::clamp(
+				uv, -kTextureCoordinateMagnitudeLimit, kTextureCoordinateMagnitudeLimit);
+			return static_cast<int>(std::floor(bounded * kClustersPerTextureUnit));
+		};
 		MeshGeometry result;
 		result.materialIndex = source.materialIndex;
 		std::unordered_map<Key, uint32_t, Hash> clusters;
@@ -58,8 +75,7 @@ namespace Engine::ModelProcessing {
 
 			const Key key{{int(std::floor(v.position.x / cell)), int(std::floor(v.position.y / cell)),
 				int(std::floor(v.position.z / cell)),
-				int(std::floor(std::clamp(v.texcoord.x, -1e6f, 1e6f) * 32)),
-				int(std::floor(std::clamp(v.texcoord.y, -1e6f, 1e6f) * 32)), axis * 2 + (n[axis] < 0 ? 1 : 0),
+				textureCluster(v.texcoord.x), textureCluster(v.texcoord.y), axis * 2 + (n[axis] < 0 ? 1 : 0),
 				v.tangent.w < 0 ? 1 : 0}};
 			const auto [entry, inserted] =
 				clusters.emplace(key, static_cast<uint32_t>(result.vertices.size()));

@@ -1,4 +1,5 @@
 #include "GpuFrameProfiler.h"
+#include <ratio>
 
 namespace Engine {
 	void GpuFrameProfiler::Initialize(ID3D12Device* device, ID3D12CommandQueue* queue) {
@@ -31,10 +32,18 @@ namespace Engine {
 			ThrowIfFailed(m_readback->Map(0, &reads, &data));
 
 			const auto* ticks = static_cast<const uint64_t*>(data) + Marks * frame;
-			std::array<double, 6> ms{};
-			for (unsigned i = 0; i < 6; ++i)
-				ms[i] = double(ticks[i + 1] - ticks[i]) * 1000.0 / double(m_frequency);
-			m_latest = {true, ms[0], ms[1], ms[2], ms[3], ms[4], ms[5]};
+			const auto durationMs = [&](GpuTimestamp begin, GpuTimestamp end) {
+				return double(ticks[static_cast<unsigned>(end)] - ticks[static_cast<unsigned>(begin)]) *
+					std::milli::den / double(m_frequency);
+			};
+			m_latest = {
+				.valid = true,
+				.skyMs = durationMs(GpuTimestamp::FrameBegin, GpuTimestamp::SkyEnd),
+				.oceanMs = durationMs(GpuTimestamp::SkyEnd, GpuTimestamp::OceanEnd),
+				.modelsMs = durationMs(GpuTimestamp::OceanEnd, GpuTimestamp::ModelsEnd),
+				.cloudsMs = durationMs(GpuTimestamp::ModelsEnd, GpuTimestamp::CloudsEnd),
+				.postProcessMs = durationMs(GpuTimestamp::CloudsEnd, GpuTimestamp::PostProcessEnd),
+				.hudMs = durationMs(GpuTimestamp::PostProcessEnd, GpuTimestamp::HudEnd)};
 			const CD3DX12_RANGE noWrites(0, 0);
 			m_readback->Unmap(0, &noWrites);
 		}

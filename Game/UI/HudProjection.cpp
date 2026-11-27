@@ -3,6 +3,10 @@
 #include <cmath>
 
 namespace Game {
+	namespace {
+		constexpr float kMinimumClipW = 1e-5f;
+	}
+
 	HudProjector::HudProjector(const Engine::RenderView& view) : m_width(view.width), m_height(view.height) {
 		// 1フレーム中で共有するビュー・射影行列を一度だけ合成する
 		DirectX::XMStoreFloat4x4(&m_viewProjection,
@@ -17,7 +21,7 @@ namespace Game {
 		const float w = XMVectorGetW(clip);
 
 		// 背面の点でも画面外表示用の投影方向を保つ
-		const float divisor = std::max(std::abs(w), 1e-5f);
+		const float divisor = std::max(std::abs(w), kMinimumClipW);
 		const float x = XMVectorGetX(clip) / divisor;
 		const float y = XMVectorGetY(clip) / divisor;
 		const float z = XMVectorGetZ(clip) / divisor;
@@ -47,9 +51,9 @@ namespace Game {
 
 		// 透視除算の前に6面と正のwで切り、背面から伸びる巨大な線を防ぐ
 		const float headDistances[] = {
-			a.w + a.x, a.w - a.x, a.w + a.y, a.w - a.y, a.z, a.w - a.z, a.w - 1e-5f};
+			a.w + a.x, a.w - a.x, a.w + a.y, a.w - a.y, a.z, a.w - a.z, a.w - kMinimumClipW};
 		const float tailDistances[] = {
-			b.w + b.x, b.w - b.x, b.w + b.y, b.w - b.y, b.z, b.w - b.z, b.w - 1e-5f};
+			b.w + b.x, b.w - b.x, b.w + b.y, b.w - b.y, b.z, b.w - b.z, b.w - kMinimumClipW};
 		float enter = 0;
 		float exit = 1;
 
@@ -74,7 +78,7 @@ namespace Game {
 		// 切り詰めた線分の両端を画面座標へ変換する
 		const auto toPixel = [&](float fraction) {
 			const auto clip = XMVectorLerp(headClip, tailClip, fraction);
-			const float w = std::max(XMVectorGetW(clip), 1e-5f);
+			const float w = std::max(XMVectorGetW(clip), kMinimumClipW);
 			return XMFLOAT2{std::clamp((XMVectorGetX(clip) / w + 1) * m_width * 0.5f, 0.0f, float(m_width)),
 				std::clamp((1 - XMVectorGetY(clip) / w) * m_height * 0.5f, 0.0f, float(m_height))};
 		};

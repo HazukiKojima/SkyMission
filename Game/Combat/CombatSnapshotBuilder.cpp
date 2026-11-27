@@ -2,6 +2,9 @@
 #include "Game/Combat/Targeting/GunAimSolver.h"
 #include <algorithm>
 namespace Game {
+	namespace {
+		constexpr float kMinimumPredictedProjectileSpeed = 0.001f;
+	}
 	void BuildCombatSnapshot(CombatSnapshot& snapshot, const CombatSnapshotInput& input) {
 		using namespace DirectX;
 
@@ -35,7 +38,7 @@ namespace Game {
 			constexpr float distance = CombatSnapshot::gunSightDistance;
 			const float speed = XMVectorGetX(XMVector3Length(velocity));
 
-			if (speed > 0.001f) {
+			if (speed > kMinimumPredictedProjectileSpeed) {
 				float seconds = std::min(distance / speed, input.gun.lifetime);
 				const float vy = XMVectorGetY(velocity);
 

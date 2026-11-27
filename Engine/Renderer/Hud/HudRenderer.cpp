@@ -3,10 +3,20 @@
 #include "Engine/ExecutablePath.h"
 #include "Engine/Resources/Buffer/BufferUtilities.h"
 #include <d3dcompiler.h>
+#include <climits>
 #include <cstring>
+#include <limits>
 
 namespace Engine {
 	namespace {
+		constexpr int kFontCharacterHeightPixels = -36;
+		constexpr int kAsciiFontAverageWidthPixels = 20;
+		constexpr int kGlyphLeftInsetPixels = 2;
+		constexpr int kGlyphTopInsetPixels = 3;
+		constexpr size_t kAtlasBytesPerPixel = 4;
+		constexpr size_t kAtlasAlphaChannel = 3;
+		constexpr auto kOpaqueChannel = std::numeric_limits<uint8_t>::max();
+
 		std::vector<uint8_t> CreateFontAtlas() {
 			// 文字アトラスの描画環境を用意する
 			const HDC dc = CreateCompatibleDC(nullptr);
@@ -17,13 +27,13 @@ namespace Engine {
 			info.bmiHeader.biWidth = HudFont::Width;
 			info.bmiHeader.biHeight = -LONG(HudFont::Height);
 			info.bmiHeader.biPlanes = 1;
-			info.bmiHeader.biBitCount = 32;
+			info.bmiHeader.biBitCount = kAtlasBytesPerPixel * CHAR_BIT;
 			void* pixels = nullptr;
 
 			const auto bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
-			const auto font = CreateFontW(-36, 20, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+			const auto font = CreateFontW(kFontCharacterHeightPixels, kAsciiFontAverageWidthPixels, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
 				OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH, L"Consolas");
-			const auto japaneseFont = CreateFontW(-36, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+			const auto japaneseFont = CreateFontW(kFontCharacterHeightPixels, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 				SHIFTJIS_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH,
 				L"UD デジタル 教科書体 N");
 			if (!bitmap || !font || !japaneseFont) {
@@ -36,8 +46,8 @@ namespace Engine {
 
 			const auto oldBitmap = SelectObject(dc, bitmap);
 			const auto oldFont = SelectObject(dc, font);
-			std::memset(pixels, 0, HudFont::Width * HudFont::Height * 4);
-			SetTextColor(dc, RGB(255, 255, 255));
+			std::memset(pixels, 0, HudFont::Width * HudFont::Height * kAtlasBytesPerPixel);
+			SetTextColor(dc, RGB(kOpaqueChannel, kOpaqueChannel, kOpaqueChannel));
 			SetBkColor(dc, RGB(0, 0, 0));
 			SetBkMode(dc, TRANSPARENT);
 
@@ -45,28 +55,28 @@ namespace Engine {
 			for (unsigned glyph = 0; glyph < HudFont::GlyphCount; ++glyph) {
 				const bool ascii = glyph < HudFont::AsciiCount;
 				const wchar_t text =
-					wchar_t(ascii ? glyph + 32 : HudFont::Japanese[glyph - HudFont::AsciiCount]);
+					wchar_t(ascii ? glyph + HudFont::FirstAsciiGlyph : HudFont::Japanese[glyph - HudFont::AsciiCount]);
 				SelectObject(dc, ascii || text == L'▶' ? font : japaneseFont);
 
 				const int x = int(glyph % HudFont::Columns * HudFont::Cell);
 				const int y = int(glyph / HudFont::Columns * HudFont::Cell);
 				const RECT cell{x, y, x + LONG(HudFont::GlyphWidth(glyph)), y + LONG(HudFont::Cell)};
-				ExtTextOutW(dc, x + 2, y + 3, ETO_CLIPPED, &cell, &text, 1, nullptr);
+				ExtTextOutW(dc, x + kGlyphLeftInsetPixels, y + kGlyphTopInsetPixels, ETO_CLIPPED, &cell, &text, 1, nullptr);
 			}
 
 			// 文字の明るさをアルファへ変換する
 			GdiFlush();
-			std::vector<uint8_t> rgba(HudFont::Width * HudFont::Height * 4);
+			std::vector<uint8_t> rgba(HudFont::Width * HudFont::Height * kAtlasBytesPerPixel);
 			const auto* source = static_cast<const uint8_t*>(pixels);
-			for (size_t i = 0; i < rgba.size(); i += 4) {
-				rgba[i] = rgba[i + 1] = rgba[i + 2] = 255;
-				rgba[i + 3] = source[i];
+			for (size_t i = 0; i < rgba.size(); i += kAtlasBytesPerPixel) {
+				rgba[i] = rgba[i + 1] = rgba[i + 2] = kOpaqueChannel;
+				rgba[i + kAtlasAlphaChannel] = source[i];
 			}
 
 			// 図形の塗りつぶし用の領域を確保する
-			for (unsigned y = HudFont::Height - 8; y < HudFont::Height; ++y)
-				for (unsigned x = HudFont::Width - 8; x < HudFont::Width; ++x)
-					rgba[(y * HudFont::Width + x) * 4 + 3] = 255;
+			for (unsigned y = HudFont::Height - HudFont::SolidRegionSize; y < HudFont::Height; ++y)
+				for (unsigned x = HudFont::Width - HudFont::SolidRegionSize; x < HudFont::Width; ++x)
+					rgba[(y * HudFont::Width + x) * kAtlasBytesPerPixel + kAtlasAlphaChannel] = kOpaqueChannel;
 
 			// 使用したGDIリソースを解放する
 			SelectObject(dc, oldFont);

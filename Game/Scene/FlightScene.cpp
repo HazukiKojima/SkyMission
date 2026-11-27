@@ -1,4 +1,5 @@
 #include "FlightScene.h"
+#include "Game/Settings/SimulationTiming.h"
 #include "FlightSceneLoader.h"
 #include <algorithm>
 #include <array>
@@ -20,6 +21,7 @@ namespace Game {
 
 		std::optional<std::array<DirectX::XMFLOAT3, 2>> FindWingtips(const Engine::SceneObject& object) {
 			using namespace DirectX;
+			constexpr float kWingtipBoundsFraction = 0.97f;
 			if (!object.model) return std::nullopt;
 
 			const auto left = object.model->FindNodePosition("Wingtip_L");
@@ -30,19 +32,24 @@ namespace Game {
 
 			const auto center = bounds->Center();
 			return std::array{
-				left.value_or(XMFLOAT3{std::lerp(center.x, bounds->maximum.x, 0.97f), center.y, center.z}),
-				right.value_or(XMFLOAT3{std::lerp(center.x, bounds->minimum.x, 0.97f), center.y, center.z})};
+				left.value_or(XMFLOAT3{std::lerp(center.x, bounds->maximum.x, kWingtipBoundsFraction),
+					center.y, center.z}),
+				right.value_or(XMFLOAT3{std::lerp(center.x, bounds->minimum.x, kWingtipBoundsFraction),
+					center.y, center.z})};
 		}
 
 		void EmitWingtipVapor(CombatEffectSystem& effects, const Engine::SceneObject& object,
 			const DirectX::XMFLOAT4X4& previous, const AircraftFlightModel& aircraft, float scale,
 			float dt) {
 			using namespace DirectX;
+			constexpr float kWingtipVaporMinimumTurnRate = 0.30f;
+			constexpr float kWingtipVaporTurnRateRamp = 0.40f;
 			const auto current = aircraft.GetWorldTransform();
 			// 機首方向の変化で急旋回と引き起こしを拾い、軸回りのロールは除く
 			const float turnRate = XMVectorGetX(XMVector3Length(XMVectorSet(
 				current._31 - previous._31, current._32 - previous._32, current._33 - previous._33, 0))) / dt;
-			const float strength = std::clamp((turnRate - 0.30f) / 0.40f, 0.0f, 1.0f);
+			const float strength = std::clamp(
+				(turnRate - kWingtipVaporMinimumTurnRate) / kWingtipVaporTurnRateRamp, 0.0f, 1.0f);
 			if (strength <= 0) return;
 
 			const auto tips = FindWingtips(object);
@@ -65,7 +72,8 @@ namespace Game {
 			throw std::invalid_argument("Mission requires a model resolver and valid viewport/clip range");
 		}
 
-		if (assets.ships.size() < 3) {
+		constexpr size_t kRequiredFleetShipCount = 3;
+		if (assets.ships.size() < kRequiredFleetShipCount) {
 			throw std::invalid_argument("Mission requires a carrier and two escorts");
 		}
 
@@ -164,13 +172,13 @@ namespace Game {
 		m_combat.hitCount = 0;
 		m_combat.enemyAircraftDestroyed = 0;
 #if defined(_DEBUG)
-		if (cameraInput.WasKeyPressed(VK_F3)) m_debugCollisionsEnabled = !m_debugCollisionsEnabled;
+		if (cameraInput.GetKeyPressCount(VK_F3) % 2 != 0) m_debugCollisionsEnabled = !m_debugCollisionsEnabled;
 #endif
 		RefreshDebugCollisions();
 
 		if (!std::isfinite(dt) || dt <= 0) return;
 
-		dt = std::min(dt, 0.25f);
+		dt = std::min(dt, kMaximumSimulationDeltaSeconds);
 		m_effects.UpdateAircraftVapor(dt);
 		m_effects.ClearAircraftFires();
 
@@ -262,7 +270,7 @@ namespace Game {
 
 	void FlightScene::UpdateWeapons(const CombatInput& input, float dt) {
 		const auto geometry = BuildCombatGeometry();
-		UpdateTargeting(geometry, input.nextTarget, dt);
+		UpdateTargeting(geometry, input.targetCycleCount, dt);
 		const auto targets = BuildCollisionTargets();
 		m_projectiles.Update(m_scene, dt, targets);
 		FirePlayerGun(input, dt, geometry, targets);
@@ -372,11 +380,11 @@ namespace Game {
 			m_playerAnimation.AdvancePropeller(m_playerPropellerAngle, m_player.GetSpeed(), dt);
 	}
 
-	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, bool next, float dt) {
+	void FlightScene::UpdateTargeting(const CombatGeometry& geometry, unsigned cycleCount, float dt) {
 		if (m_mission.GetPhase() == MissionPhase::CarrierAttack && !m_mission.IsDeckDisabled()) {
 			// 空母紹介の完了までは目標の捕捉を始めない
 			if (!m_carrierTargetReady) {
-				m_targeting.Update({}, geometry.muzzle, geometry.forward, false, 0);
+				m_targeting.Update({}, geometry.muzzle, geometry.forward, 0, 0);
 				return;
 			}
 
@@ -388,7 +396,7 @@ namespace Game {
 			}
 		}
 
-		m_targeting.Update(geometry.enemies, geometry.muzzle, geometry.forward, next, dt);
+		m_targeting.Update(geometry.enemies, geometry.muzzle, geometry.forward, cycleCount, dt);
 	}
 
 	void FlightScene::UpdateEnemies(float dt) {
@@ -455,7 +463,7 @@ namespace Game {
 			m_cameraController.SetFollowTarget({.position = m_player.GetPosition(),
 				.heading = m_player.GetHeading(),
 				.forward = m_player.GetForward(),
-				.pitchInputActive = input.pitch > 0.01f || input.pitch < -0.01f,
+				.pitchInputActive = std::abs(input.pitch) > AircraftInput::kAttitudeInputThreshold,
 				.speed = m_player.GetSpeed(),
 				.maximumSpeed = m_player.GetMaximumSpeed(),
 				.rollRadians = m_player.GetRoll()});
@@ -496,7 +504,8 @@ namespace Game {
 			: 0.0f;
 		m_cameraController.UpdateShake(dt, {
 			.acceleration = flying ? input.throttle : 0.0f,
-			.highG = flying && input.highGTurn && std::max(std::abs(input.turn), std::abs(input.yaw)) > 0.05f,
+			.highG = flying && input.highGTurn &&
+				std::max(std::abs(input.turn), std::abs(input.yaw)) > AircraftInput::kHighGTurnIntentThreshold,
 			.gunFired = m_combat.firedVolleys > 0,
 			.missileLaunched = m_combat.audio.missileLaunches > 0,
 			.gunHit = m_combat.audio.gunHits > 0,
@@ -674,7 +683,7 @@ namespace Game {
 		m_combat.forward = geometry.forward;
 
 		// 命中・増援後の対象を再検証する。捕捉時間はここでは進めない
-		UpdateTargeting(geometry, false, 0);
+		UpdateTargeting(geometry, 0, 0);
 		m_combat.selected = m_targeting.GetSelected();
 		m_combat.lockState = m_targeting.GetState();
 		m_combat.acquireProgress = m_targeting.GetProgress();

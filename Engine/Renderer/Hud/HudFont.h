@@ -17,27 +17,34 @@ namespace Engine::HudFont {
 		U"オタト戻ショア"
 		U"抜前帰待動き滅生還新俺必ず叩×○△ティ"
 		U"ゲムバ聞応答";
-	inline constexpr unsigned AsciiCount = 95;
+	inline constexpr char32_t FirstAsciiGlyph = U' ';
+	inline constexpr char32_t LastAsciiGlyph = U'~';
+	inline constexpr unsigned AsciiCount = LastAsciiGlyph - FirstAsciiGlyph + 1;
+	inline constexpr unsigned SolidRegionSize = 8;
 	inline constexpr unsigned GlyphCount = AsciiCount + unsigned(Japanese.size());
-	static_assert(((GlyphCount + Columns - 1) / Columns) * Cell < Height - 8);
+	static_assert(((GlyphCount + Columns - 1) / Columns) * Cell < Height - SolidRegionSize);
 
 	inline const DirectX::XMFLOAT2 SolidUv{(Width - 0.5f) / Width, (Height - 0.5f) / Height};
 
 	char32_t Next(std::string_view& text);
 
 	inline unsigned Glyph(char32_t character) {
-		if (character >= 32 && character <= 126) return unsigned(character - 32);
+		if (character >= FirstAsciiGlyph && character <= LastAsciiGlyph)
+			return unsigned(character - FirstAsciiGlyph);
 
 		// 日本語グリフがなければ疑問符で代替する
 		const auto index = Japanese.find(character);
-		return index == Japanese.npos ? unsigned('?' - 32) : AsciiCount + unsigned(index);
+		return index == Japanese.npos ? unsigned(U'?' - FirstAsciiGlyph) : AsciiCount + unsigned(index);
 	}
 
 	inline float GlyphWidth(unsigned glyph) {
-		return glyph < AsciiCount ? 32.0f : 48.0f;
+		constexpr float asciiGlyphWidth = 32.0f;
+		return glyph < AsciiCount ? asciiGlyphWidth : static_cast<float>(Cell);
 	}
 
 	inline float Advance(unsigned glyph) {
-		return glyph < AsciiCount ? 24.0f : 44.0f;
+		constexpr float asciiAdvance = 24.0f;
+		constexpr float japaneseAdvance = 44.0f;
+		return glyph < AsciiCount ? asciiAdvance : japaneseAdvance;
 	}
 } // namespace Engine::HudFont

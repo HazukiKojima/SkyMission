@@ -4,6 +4,9 @@
 #include <stdexcept>
 
 namespace Game {
+	namespace {
+		constexpr float kPositiveZHeadingDegrees = 180.0f;
+	}
 	using namespace DirectX;
 
 	void CinematicScene::Initialize(const CinematicShotSettings& settings,
@@ -29,7 +32,8 @@ namespace Game {
 		m_framingScale = std::max({bounds.maximum.x - bounds.minimum.x, bounds.maximum.y - bounds.minimum.y,
 							 bounds.maximum.z - bounds.minimum.z}) *
 			m_visualScale / kReferenceAircraftExtentMeters;
-		m_framingScale = std::max(m_framingScale, 0.01f);
+		constexpr float kMinimumFramingScale = 0.01f;
+		m_framingScale = std::max(m_framingScale, kMinimumFramingScale);
 		m_aircraft.resize(settings.formationOffsets.size());
 
 		// 設定された編隊数だけ描画用の機体を作る
@@ -43,7 +47,7 @@ namespace Game {
 		XMFLOAT3 lead = m_origin;
 		const float heading = XMConvertToRadians(m_settings.headingDegrees);
 
-		if (m_settings.headingDegrees == 180)
+		if (m_settings.headingDegrees == kPositiveZHeadingDegrees)
 			lead.z += pose.travelMeters;
 		else {
 			lead.x -= std::sin(heading) * pose.travelMeters;

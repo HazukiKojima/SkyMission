@@ -68,8 +68,8 @@ namespace Game {
 		bool m_usingGamepad = false;
 		Engine::HudDrawList m_hud;
 
-		// F6: normal -> environment with ships -> environment only.
-		unsigned m_captureMode = 0;
+		enum class CaptureMode { Normal, EnvironmentAndShips, EnvironmentOnly, Count };
+		CaptureMode m_captureMode = CaptureMode::Normal;
 		Engine::Scene m_captureScene;
 		std::vector<std::shared_ptr<Engine::Model>> m_captureShipModels;
 		std::wstring m_windowTitle = L"SkyMission";

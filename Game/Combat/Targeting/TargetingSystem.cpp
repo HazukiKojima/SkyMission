@@ -1,4 +1,5 @@
 #include "TargetingSystem.h"
+#include "Game/Settings/SimulationTiming.h"
 #include "GunAimSolver.h"
 #include <algorithm>
 #include <cmath>
@@ -6,6 +7,10 @@
 #include <tuple>
 
 namespace Game {
+	namespace {
+		constexpr float kLockTimerToleranceSeconds = 1e-6f;
+		constexpr float kForwardHemisphereDegrees = 90.0f;
+	}
 	using namespace DirectX;
 
 	void TargetingSystem::Configure(const TargetingSettings& settings) {
@@ -20,7 +25,7 @@ namespace Game {
 		if (settings.acquireDistance > settings.maintainDistance ||
 			settings.maintainDistance > settings.selectionDistance ||
 			settings.acquireAngleDegrees > settings.maintainAngleDegrees ||
-			settings.maintainAngleDegrees >= 90 ||
+			settings.maintainAngleDegrees >= kForwardHemisphereDegrees ||
 			settings.assistAngleDegrees > settings.acquireAngleDegrees) {
 			throw std::invalid_argument("targeting distance/angle ranges are inconsistent");
 		}
@@ -40,7 +45,7 @@ namespace Game {
 		const XMFLOAT3& forward, float deltaSeconds) {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
 		if (target.health <= 0 || target.id == Engine::InvalidObjectId) {
-			Update({}, position, forward, false, deltaSeconds);
+			Update({}, position, forward, 0, deltaSeconds);
 			return;
 		}
 
@@ -51,16 +56,16 @@ namespace Game {
 			m_lostSeconds = 0;
 		}
 
-		UpdateLock(&target, position, forward, std::min(deltaSeconds, 0.25f));
+		UpdateLock(&target, position, forward, std::min(deltaSeconds, kMaximumSimulationDeltaSeconds));
 	}
 
 	void TargetingSystem::Update(std::span<const CombatTarget> enemies, const XMFLOAT3& position,
-		const XMFLOAT3& forward, bool cycleRequested, float deltaSeconds) {
+		const XMFLOAT3& forward, unsigned cycleCount, float deltaSeconds) {
 		if (!std::isfinite(deltaSeconds) || deltaSeconds < 0) return;
 
-		deltaSeconds = std::min(deltaSeconds, 0.25f);
+		deltaSeconds = std::min(deltaSeconds, kMaximumSimulationDeltaSeconds);
 		const auto candidates = CollectCandidates(enemies, position);
-		const auto* target = SelectTarget(candidates, position, forward, cycleRequested);
+		const auto* target = SelectTarget(candidates, position, forward, cycleCount);
 		UpdateLock(target, position, forward, deltaSeconds);
 	}
 
@@ -85,7 +90,7 @@ namespace Game {
 	}
 
 	const CombatTarget* TargetingSystem::SelectTarget(std::span<const CombatTarget* const> candidates,
-		const XMFLOAT3& position, const XMFLOAT3& forward, bool cycleRequested) {
+		const XMFLOAT3& position, const XMFLOAT3& forward, unsigned cycleCount) {
 		const auto distance = [&](const CombatTarget& target) {
 			return XMVectorGetX(XMVector3Length(XMLoadFloat3(&target.center) - XMLoadFloat3(&position)));
 		};
@@ -97,16 +102,10 @@ namespace Game {
 		});
 
 		// 入力と候補に応じて選択対象を決める
-		if (cycleRequested && !candidates.empty()) {
-			if (found != candidates.end()) {
-				++found;
-			}
-
-			if (found == candidates.end()) {
-				found = candidates.begin();
-			}
-
-			m_selected = (*found)->id;
+		if (cycleCount != 0 && !candidates.empty()) {
+			const size_t next = found == candidates.end() ? cycleCount - 1 :
+				static_cast<size_t>(found - candidates.begin()) + cycleCount;
+			m_selected = candidates[next % candidates.size()]->id;
 		} else if (found == candidates.end()) {
 			m_selected = Engine::InvalidObjectId;
 			std::tuple<float, float, Engine::ObjectId> best{
@@ -129,8 +128,8 @@ namespace Game {
 			}
 		}
 
-		// 対象変更時はロック進捗をリセットする
-		if (previousSelectedId != m_selected) {
+		// 対象変更時は1周して同じ目標に戻る場合もロック進捗をリセットする
+		if (previousSelectedId != m_selected || (cycleCount != 0 && candidates.size() > 1)) {
 			m_acquiredSeconds = 0;
 			m_lostSeconds = 0;
 			m_state = LockState::Selected;
@@ -165,7 +164,7 @@ namespace Game {
 				m_lostSeconds += deltaSeconds;
 			}
 
-			if (m_lostSeconds + 1e-6f < m_settings.lossGraceSeconds) return;
+			if (m_lostSeconds + kLockTimerToleranceSeconds < m_settings.lossGraceSeconds) return;
 
 			m_state = LockState::Selected;
 			m_acquiredSeconds = 0;
@@ -176,7 +175,7 @@ namespace Game {
 		if (targetDistance <= m_settings.acquireDistance &&
 			IsWithinAngle(forward, direction, m_settings.acquireAngleDegrees)) {
 			m_acquiredSeconds = std::min(m_acquiredSeconds + deltaSeconds, m_settings.acquireSeconds);
-			m_state = m_acquiredSeconds + 1e-6f >= m_settings.acquireSeconds ? LockState::Locked
+			m_state = m_acquiredSeconds + kLockTimerToleranceSeconds >= m_settings.acquireSeconds ? LockState::Locked
 																			 : LockState::Acquiring;
 		} else {
 			m_acquiredSeconds = 0;

@@ -3,8 +3,11 @@
 Texture2D gClouds : register(t2);
 float3 CompositeClouds(float2 uv, float3 background)
 {
+    const float kMinimumDepthWeightDistance = 50.0f;
+    const float kRelativeDepthWeightDistance = 0.1f;
+    const float kMinimumCompositeWeight = 0.001f;
     float3 result = background;
-    if (cloudMotion.w >= 0.5f && cloudLayer.z > 0 && cloudLayer.w > 0)
+    if (cloudMotion.w >= kCloudEnabledThreshold && cloudLayer.z > 0 && cloudLayer.w > 0)
     {
         float3 ray = CloudViewRay(uv);
 
@@ -29,12 +32,13 @@ float3 CompositeClouds(float2 uv, float3 background)
                 float2 tapUv = (float2(tapPixel) + 0.5f) / dimensions;
                 float tapDistance = CloudSceneDistance(tapUv, CloudViewRay(tapUv));
                 float weight = (x == 0 ? 1 - blend.x : blend.x) * (y == 0 ? 1 - blend.y : blend.y);
-                weight *= exp2(-abs(tapDistance - surfaceDistance) / max(50, surfaceDistance * 0.1f));
+                weight *= exp2(-abs(tapDistance - surfaceDistance) /
+                    max(kMinimumDepthWeightDistance, surfaceDistance * kRelativeDepthWeightDistance));
                 clouds += gClouds.Load(int3(tapPixel, 0)) * weight;
                 totalWeight += weight;
             }
 
-            if (totalWeight > 0.001f)
+            if (totalWeight > kMinimumCompositeWeight)
             {
                 clouds /= totalWeight;
 

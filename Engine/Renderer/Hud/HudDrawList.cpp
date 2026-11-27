@@ -8,7 +8,7 @@ namespace Engine {
 	void HudDrawList::Quad(const DirectX::XMFLOAT2 (&positions)[4], DirectX::XMFLOAT2 uv0,
 		DirectX::XMFLOAT2 uv1, DirectX::XMFLOAT4 color) {
 		if (m_width == 0 || m_height == 0) return;
-		if (m_vertices.size() + 6 > MaxVertices) throw std::length_error("HUD vertex capacity exceeded");
+		if (m_vertices.size() + QuadVertexCount > MaxVertices) throw std::length_error("HUD vertex capacity exceeded");
 
 		// 画面座標の四角形をクリップ空間の二つの三角形へ変換する
 		const DirectX::XMFLOAT2 uv[] = {uv0, {uv1.x, uv0.y}, uv1, {uv0.x, uv1.y}};
@@ -28,10 +28,11 @@ namespace Engine {
 	}
 
 	void HudDrawList::Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color) {
+		constexpr float kMinimumLineLengthPixels = 0.001f;
 		const float dx = b.x - a.x;
 		const float dy = b.y - a.y;
 		const float length = std::hypot(dx, dy);
-		if (length < 0.001f) return;
+		if (length < kMinimumLineLengthPixels) return;
 
 		// 線分に垂直な方向へ広げて太さを付ける
 		const float x = -dy / length * width * 0.5f;
@@ -53,15 +54,14 @@ namespace Engine {
 			points[i] = {center.x + (corners[i].x * c - corners[i].y * s) * radius,
 				center.y + (corners[i].x * s + corners[i].y * c) * radius};
 		// 負のU座標を手続き的な煙と炎の描画に割り当てる
-		const float offset = float(seed % 64) * 4;
+		const float offset = float(seed % CloudSeedVariants) * 4;
 		Quad(points, {-3, offset}, {-1, offset + 2}, color);
 	}
 
 	void HudDrawList::SoftDisc(DirectX::XMFLOAT2 center, float radius, DirectX::XMFLOAT4 color) {
 		if (m_width == 0 || m_height == 0 || radius <= 0 || color.w <= 0) return;
 
-		constexpr int segments = 24;
-		if (m_vertices.size() + segments * 3 > MaxVertices)
+		if (m_vertices.size() + SoftDiscVertexCount > MaxVertices)
 			throw std::length_error("HUD vertex capacity exceeded");
 		const auto uv = HudFont::SolidUv;
 
@@ -72,9 +72,9 @@ namespace Engine {
 		};
 
 		// 中心から外周へ透明になる三角形を並べる
-		for (int i = 0; i < segments; ++i) {
-			const float a = DirectX::XM_2PI * i / segments;
-			const float b = DirectX::XM_2PI * (i + 1) / segments;
+		for (size_t i = 0; i < SoftDiscSegmentCount; ++i) {
+			const float a = DirectX::XM_2PI * i / SoftDiscSegmentCount;
+			const float b = DirectX::XM_2PI * (i + 1) / SoftDiscSegmentCount;
 			vertex(center, 1);
 			vertex({center.x + std::cos(a) * radius, center.y + std::sin(a) * radius}, 0);
 			vertex({center.x + std::cos(b) * radius, center.y + std::sin(b) * radius}, 0);
@@ -85,8 +85,10 @@ namespace Engine {
 		DirectX::XMFLOAT2 center, float radius, float progress, float width, DirectX::XMFLOAT4 color) {
 		// 進行率に応じた円弧を短い線分で描く
 		const float arc = std::clamp(progress, 0.0f, 1.0f) * DirectX::XM_2PI;
-		for (float begin = 0; begin < arc; begin += DirectX::XM_2PI / 64) {
-			const float end = std::min(begin + DirectX::XM_2PI / 64, arc);
+		constexpr unsigned kCircleSegments = 64;
+		constexpr float segmentRadians = DirectX::XM_2PI / kCircleSegments;
+		for (float begin = 0; begin < arc; begin += segmentRadians) {
+			const float end = std::min(begin + segmentRadians, arc);
 			Line({center.x + std::sin(begin) * radius, center.y - std::cos(begin) * radius},
 				{center.x + std::sin(end) * radius, center.y - std::cos(end) * radius}, width, color);
 		}

@@ -4,16 +4,23 @@
 #include <limits>
 
 namespace Game {
+	namespace {
+		constexpr float kMinimumAimVectorLengthSquared = 1e-8f;
+		constexpr float kAimDotTolerance = 1e-6f;
+		constexpr double kInterceptCoefficientTolerance = 1e-8;
+		constexpr double kMinimumInterceptTimeSeconds = 1e-6;
+	}
 	using namespace DirectX;
 
 	bool IsWithinAngle(const XMFLOAT3& forward, const XMFLOAT3& direction, float degrees) {
 		const auto a = XMLoadFloat3(&forward);
 		const auto b = XMLoadFloat3(&direction);
 
-		if (XMVectorGetX(XMVector3LengthSq(a)) < 1e-8f || XMVectorGetX(XMVector3LengthSq(b)) < 1e-8f)
+		if (XMVectorGetX(XMVector3LengthSq(a)) < kMinimumAimVectorLengthSquared ||
+			XMVectorGetX(XMVector3LengthSq(b)) < kMinimumAimVectorLengthSquared)
 			return false;
 		return XMVectorGetX(XMVector3Dot(XMVector3Normalize(a), XMVector3Normalize(b))) >=
-			std::cos(XMConvertToRadians(degrees)) - 1e-6f;
+			std::cos(XMConvertToRadians(degrees)) - kAimDotTolerance;
 	}
 
 	std::optional<AimSolution> SolveGunAim(const XMFLOAT3& muzzle, const XMFLOAT3& shooterVelocity,
@@ -36,8 +43,8 @@ namespace Game {
 		double time = std::numeric_limits<double>::infinity();
 
 		// 最も早い正の迎撃時刻を求める
-		if (std::abs(a) <= 1e-8 * (double(speed) * speed + 1)) {
-			if (std::abs(b) > 1e-8) time = -c / b;
+		if (std::abs(a) <= kInterceptCoefficientTolerance * (double(speed) * speed + 1)) {
+			if (std::abs(b) > kInterceptCoefficientTolerance) time = -c / b;
 		} else {
 			const double discriminant = b * b - 4 * a * c;
 
@@ -48,12 +55,12 @@ namespace Game {
 			const double t1 = q / a;
 			const double t2 = q == 0 ? time : c / q;
 
-			if (t1 > 1e-6) time = t1;
-			if (t2 > 1e-6) time = std::min(time, t2);
+			if (t1 > kMinimumInterceptTimeSeconds) time = t1;
+			if (t2 > kMinimumInterceptTimeSeconds) time = std::min(time, t2);
 		}
 
 		// 寿命内の迎撃解を射線へ変換する
-		if (!std::isfinite(time) || time <= 1e-6 || time > lifetime) return std::nullopt;
+		if (!std::isfinite(time) || time <= kMinimumInterceptTimeSeconds || time > lifetime) return std::nullopt;
 
 		const auto relative =
 			XMVectorSet(float(rx + ux * time), float(ry + uy * time), float(rz + uz * time), 0);

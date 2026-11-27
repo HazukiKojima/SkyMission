@@ -7,6 +7,9 @@
 namespace Game {
 	// 操縦軸は-1～1の入力。highGTurnとautoLevelRollは操縦補助の要求を表す
 	struct AircraftInput {
+		static constexpr float kAttitudeInputThreshold = 0.01f;
+		static constexpr float kHighGTurnIntentThreshold = 0.05f;
+
 		float pitch = 0.0f;
 		float turn = 0.0f;
 		float yaw = 0.0f;

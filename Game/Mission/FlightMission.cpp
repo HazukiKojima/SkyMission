@@ -4,6 +4,11 @@
 #include <algorithm>
 #include <cmath>
 namespace Game {
+	namespace {
+		constexpr float kMinimumCarrierSeparationForHeading = 1.0f;
+		constexpr float kMinimumHorizontalApproachLength = 0.001f;
+		constexpr uint32_t kOpeningDelaySalt = 79;
+	}
 	using namespace DirectX;
 
 	void FlightMission::Configure(const MissionSettings& settings, std::shared_ptr<Engine::Model> enemyModel,
@@ -32,7 +37,11 @@ namespace Game {
 				m_reinforcementElapsedSeconds = 0;
 			else
 				m_reinforcementElapsedSeconds += dt;
-			if (m_reinforcementElapsedSeconds + 1e-6f < 4.0f || !reinforcementsReady) return false;
+			constexpr float reinforcementDelaySeconds = 4.0f;
+			constexpr float elapsedTimeToleranceSeconds = 1e-6f;
+			if (m_reinforcementElapsedSeconds + elapsedTimeToleranceSeconds < reinforcementDelaySeconds ||
+				!reinforcementsReady)
+				return false;
 		}
 
 		const bool changed = m_mission.Advance(remaining, alive);
@@ -96,7 +105,7 @@ namespace Game {
 		if (const auto* carrier = scene.FindObject(m_carrierId)) {
 			away = {player.x - carrier->worldTransform._41, 0, player.z - carrier->worldTransform._43};
 
-			if (std::hypot(away.x, away.z) < 1) {
+			if (std::hypot(away.x, away.z) < kMinimumCarrierSeparationForHeading) {
 				away = {0, 0, 1};
 			}
 
@@ -117,7 +126,7 @@ namespace Game {
 
 		XMFLOAT3 approach{forward.x, 0, forward.z};
 
-		if (std::hypot(approach.x, approach.z) < 0.001f) {
+		if (std::hypot(approach.x, approach.z) < kMinimumHorizontalApproachLength) {
 			approach = {0, 0, -1};
 		}
 
@@ -171,7 +180,7 @@ namespace Game {
 
 		// 射撃条件はJSONを使い、初動の待ち時間だけ機体ごとにずらす
 		ai.openingGraceSeconds +=
-			EnemyVariation(formationSlot, 0, 79) * m_missionSettings.maximumOpeningDelaySeconds;
+			EnemyVariation(formationSlot, 0, kOpeningDelaySalt) * m_missionSettings.maximumOpeningDelaySeconds;
 		return ai;
 	}
 

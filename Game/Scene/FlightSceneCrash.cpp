@@ -1,11 +1,41 @@
 #include "FlightScene.h"
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <limits>
 
 namespace Game {
 	namespace {
+		constexpr float kWingCutFraction = 0.27f;
+		constexpr float kFuselageCutFraction = 0.57f;
+		constexpr float kDetachedPartPivotFraction = 0.4f;
+		constexpr float kDetachedPartSpeedRetention = 0.68f;
+		constexpr float kDetachedPartGravity = 36.0f;
+		constexpr DirectX::XMFLOAT3 kDetachedPartSpinRates{3.0f, 1.8f, 4.5f};
+		constexpr DirectX::XMFLOAT3 kWingSeparationVelocity{48.0f, 8.0f, -8.0f};
+		constexpr DirectX::XMFLOAT3 kFuselageSeparationVelocity{30.0f, 14.0f, 54.0f};
+		constexpr float kWingBreakBlastScale = 0.8f;
+		constexpr float kFuselageBreakBlastScale = 1.6f;
+		constexpr float kPartBreakFlashDurationScale = 1.5f;
+		constexpr float kWingImpactBlastScale = 0.85f;
+		constexpr float kFuselageImpactBlastScale = 1.7f;
+		constexpr float kEnginePositionFraction = 0.20f;
+		constexpr float kEngineBurstBaseBlastScale = 1.5f;
+		constexpr float kEngineBurstFlashDurationScale = 1.65f;
+		constexpr float kFuelFireBaseWingFraction = 0.24f;
+		constexpr float kFuelFireWingSpreadFraction = 0.50f;
+		constexpr float kFuelFireInitialSize = 0.8f;
+		constexpr float kFuelFireSizeIncrease = 1.35f;
+		constexpr float kFuelFireBlastScale = 1.6f;
+		constexpr float kFuelFireFlashDurationScale = 2.0f;
+		constexpr float kFuselageBreakProgress = 0.53f;
+		constexpr float kWingPartExplosionProgress = 0.66f;
+		constexpr float kFuselagePartExplosionProgress = 0.86f;
+		constexpr float kSpinPitchRadians = -0.85f;
+		constexpr float kSpinPitchOscillationRadians = 0.16f;
+		constexpr float kSpinPitchOscillationRate = 5.0f;
+		constexpr float kShallowestDivePitchRadians = -0.50f;
+		constexpr float kCrashAttitudeBlendRate = 18.0f;
+
 		std::optional<float> GetLowestAircraftY(const Engine::SceneObject& aircraft) {
 			using namespace DirectX;
 			if (!aircraft.model) return std::nullopt;
@@ -66,8 +96,8 @@ namespace Game {
 		const auto center = bounds->Center();
 		const float side = enemy.crashSmokeOrigin.x < center.x ? -1.0f : 1.0f;
 		const float cut = wing
-			? std::lerp(center.x, side < 0 ? bounds->minimum.x : bounds->maximum.x, 0.27f)
-			: std::lerp(bounds->minimum.z, bounds->maximum.z, 0.57f);
+			? std::lerp(center.x, side < 0 ? bounds->minimum.x : bounds->maximum.x, kWingCutFraction)
+			: std::lerp(bounds->minimum.z, bounds->maximum.z, kFuselageCutFraction);
 		const XMFLOAT4 plane = wing ? XMFLOAT4{side, 0, 0, -side * cut} : XMFLOAT4{0, 0, 1, -cut};
 		object->localClipPlane = {-plane.x, -plane.y, -plane.z, -plane.w};
 		// 火元を機体側に残し、切り離した側の空間に炎が浮かないようにする
@@ -79,14 +109,14 @@ namespace Game {
 		auto part = *object;
 		part.localClipPlane = plane;
 		enemy.detachedPartPivot = wing
-			? XMFLOAT3{std::lerp(cut, side < 0 ? bounds->minimum.x : bounds->maximum.x, 0.4f), center.y, center.z}
-			: XMFLOAT3{center.x, center.y, std::lerp(cut, bounds->maximum.z, 0.4f)};
+			? XMFLOAT3{std::lerp(cut, side < 0 ? bounds->minimum.x : bounds->maximum.x, kDetachedPartPivotFraction), center.y, center.z}
+			: XMFLOAT3{center.x, center.y, std::lerp(cut, bounds->maximum.z, kDetachedPartPivotFraction)};
 
 		const auto world = XMLoadFloat4x4(&part.worldTransform);
-		const auto localKick = wing ? XMVectorSet(side * 48.0f, 8.0f, -8.0f, 0)
-			: XMVectorSet(side * 30.0f, 14.0f, 54.0f, 0);
+		const auto separation = wing ? kWingSeparationVelocity : kFuselageSeparationVelocity;
+		const auto localKick = XMVectorSet(side * separation.x, separation.y, separation.z, 0);
 		const auto kick = XMVector3TransformNormal(localKick, world) / enemy.visualScale;
-		XMStoreFloat3(&enemy.detachedPartVelocity, XMLoadFloat3(&enemy.crashVelocity) * 0.68f + kick);
+		XMStoreFloat3(&enemy.detachedPartVelocity, XMLoadFloat3(&enemy.crashVelocity) * kDetachedPartSpeedRetention + kick);
 		enemy.detachedPartId = m_scene.AddObject(part.model, part.worldTransform);
 		part.id = enemy.detachedPartId;
 		*m_scene.FindObject(enemy.detachedPartId) = std::move(part);
@@ -94,7 +124,8 @@ namespace Game {
 		XMFLOAT3 breakPoint;
 		XMStoreFloat3(&breakPoint, XMVector3TransformCoord(
 			wing ? XMVectorSet(cut, center.y, center.z, 1) : XMVectorSet(center.x, center.y, cut, 1), world));
-		m_effects.SpawnExplosion(breakPoint, {}, wing ? 0.8f : 1.6f, 1.5f);
+		m_effects.SpawnExplosion(breakPoint, {}, wing ? kWingBreakBlastScale : kFuselageBreakBlastScale,
+			kPartBreakFlashDurationScale);
 		if (!wing) ++m_combat.audio.missileHits;
 	}
 
@@ -106,20 +137,22 @@ namespace Game {
 		const auto pivot = XMLoadFloat3(&enemy.detachedPartPivot);
 		const auto world = XMLoadFloat4x4(&part->worldTransform);
 		const auto spin = XMMatrixTranslationFromVector(-pivot) *
-			XMMatrixRotationRollPitchYaw(dt * 3.0f, dt * 1.8f, dt * 4.5f) *
+			XMMatrixRotationRollPitchYaw(
+				dt * kDetachedPartSpinRates.x, dt * kDetachedPartSpinRates.y, dt * kDetachedPartSpinRates.z) *
 			XMMatrixTranslationFromVector(pivot);
 		auto& velocity = enemy.detachedPartVelocity;
-		const auto movement = XMVectorSet(velocity.x * dt, (velocity.y - 18.0f * dt) * dt, velocity.z * dt, 0);
+		const auto movement = XMVectorSet(velocity.x * dt, (velocity.y - 0.5f * kDetachedPartGravity * dt) * dt, velocity.z * dt, 0);
 		const auto nextWorld = spin * world * XMMatrixTranslationFromVector(movement);
 		XMStoreFloat4x4(&part->worldTransform, nextWorld);
-		velocity.y -= 36.0f * dt;
+		velocity.y -= kDetachedPartGravity * dt;
 
 		XMFLOAT3 position;
 		XMStoreFloat3(&position, XMVector3TransformCoord(pivot, nextWorld));
 		if (!explode && position.y > 0) return;
 
 		position.y = std::max(position.y, 0.0f);
-		m_effects.SpawnExplosion(position, {}, enemy.crashEffect == CrashEffect::FuselageBreak ? 1.7f : 0.85f);
+		m_effects.SpawnExplosion(position, {}, enemy.crashEffect == CrashEffect::FuselageBreak
+			? kFuselageImpactBlastScale : kWingImpactBlastScale);
 		++m_combat.audio.aircraftExplosions;
 		m_scene.RemoveObject(enemy.detachedPartId);
 		enemy.detachedPartId = Engine::InvalidObjectId;
@@ -134,35 +167,37 @@ namespace Game {
 		const auto world = XMLoadFloat4x4(&object.worldTransform);
 		const auto center = bounds->Center();
 		const float progress = enemy.crashSeconds / duration;
+		const auto& settings = m_effects.GetSettings().aircraftCrash;
 
 		if (enemy.crashEffect == CrashEffect::EngineBursts) {
-			const XMFLOAT3 engine{center.x, center.y, std::lerp(bounds->minimum.z, center.z, 0.20f)};
+			const XMFLOAT3 engine{center.x, center.y, std::lerp(bounds->minimum.z, center.z, kEnginePositionFraction)};
 			XMFLOAT3 position;
 			XMStoreFloat3(&position, XMVector3TransformCoord(XMLoadFloat3(&engine), world));
-			constexpr std::array burstTimes{0.22f, 0.56f};
-			for (const float fraction : burstTimes) {
+			for (const float fraction : settings.engineBurstProgress) {
 				if (previousSeconds < duration * fraction && progress >= fraction) {
-					m_effects.SpawnExplosion(position, {}, 1.5f + fraction, 1.65f);
+					m_effects.SpawnExplosion(position, {}, kEngineBurstBaseBlastScale + fraction, kEngineBurstFlashDurationScale);
 					m_effects.SpawnAircraftSmoke({position, 0});
 					++m_combat.audio.missileHits;
 				}
 			}
 		} else if (enemy.crashEffect == CrashEffect::FuelFire) {
-			const float spread = std::clamp((progress - 0.20f) / 0.65f, 0.0f, 1.0f);
+			constexpr float fuelFireSpreadProgressRange = 0.65f;
+			const float spread = std::clamp(
+				(progress - settings.fuelFireStartProgress) / fuelFireSpreadProgressRange, 0.0f, 1.0f);
 			if (spread <= 0) return;
 			const float side = enemy.crashSmokeOrigin.x < center.x ? -1.0f : 1.0f;
 			const float wingtip = side < 0 ? bounds->minimum.x : bounds->maximum.x;
-			const auto position = XMVectorSet(std::lerp(center.x, wingtip, 0.24f + 0.50f * spread),
+			const auto position = XMVectorSet(std::lerp(center.x, wingtip, kFuelFireBaseWingFraction + kFuelFireWingSpreadFraction * spread),
 				center.y, center.z, 1);
 			AircraftFire fire;
 			XMStoreFloat3(&fire.position, XMVector3TransformCoord(position, world));
 			XMStoreFloat3(&fire.direction, XMVector3Normalize(XMLoadFloat3(&enemy.crashVelocity)));
 			fire.seconds = enemy.crashSeconds;
-			fire.size = 0.8f + spread * 1.35f;
+			fire.size = kFuelFireInitialSize + spread * kFuelFireSizeIncrease;
 			m_effects.AddAircraftFire(fire);
-			constexpr float flashTime = 0.82f;
-			if (previousSeconds < duration * flashTime && progress >= flashTime)
-				m_effects.SpawnExplosion(fire.position, {}, 1.6f, 2.0f);
+			if (previousSeconds < duration * settings.fuelFireFlashProgress &&
+				progress >= settings.fuelFireFlashProgress)
+				m_effects.SpawnExplosion(fire.position, {}, kFuelFireBlastScale, kFuelFireFlashDurationScale);
 		}
 	}
 
@@ -176,8 +211,9 @@ namespace Game {
 			const float duration = profile.durationSeconds;
 			const float previousSeconds = enemy.crashSeconds;
 			const float step = std::min(dt, duration - previousSeconds);
-			const float breakupTime = duration * 0.53f;
-			const float partExplosionTime = duration * (enemy.crashEffect == CrashEffect::WingBreak ? 0.66f : 0.86f);
+			const float breakupTime = duration * kFuselageBreakProgress;
+			const float partExplosionTime = duration * (enemy.crashEffect == CrashEffect::WingBreak
+				? kWingPartExplosionProgress : kFuselagePartExplosionProgress);
 			UpdateDetachedAircraftPart(enemy, step, previousSeconds + step >= partExplosionTime);
 			if (enemy.crashEffect == CrashEffect::FuselageBreak &&
 				previousSeconds < breakupTime && previousSeconds + step >= breakupTime)
@@ -203,14 +239,15 @@ namespace Game {
 				XMStoreFloat3(&position, XMLoadFloat3(&previousPosition) + (previousVelocity + nextVelocity) * (0.5f * step));
 
 				const float divePitch = std::atan2(velocity.y, std::hypot(velocity.x, velocity.z));
-				const float pitch = profile.spinRate > 0 ? -0.85f + 0.16f * std::sin(enemy.crashSeconds * 5.0f)
-					: std::min(divePitch, -0.50f);
+				const float pitch = profile.spinRate > 0 ? kSpinPitchRadians + kSpinPitchOscillationRadians *
+						std::sin(enemy.crashSeconds * kSpinPitchOscillationRate)
+					: std::min(divePitch, kShallowestDivePitchRadians);
 				const float yaw = std::atan2(-velocity.x, -velocity.z) + side * profile.spinRate * enemy.crashSeconds;
 				const float roll = side * (profile.bank + profile.rollRate * enemy.crashSeconds);
 				const auto flightPose = enemy.flightModel.GetWorldTransform();
 				const auto initial = XMQuaternionRotationMatrix(XMLoadFloat4x4(&flightPose));
 				const auto crashAttitude = XMQuaternionRotationRollPitchYaw(pitch, yaw, roll);
-				const float blend = 1.0f - std::exp(-enemy.crashSeconds * 18.0f);
+				const float blend = 1.0f - std::exp(-enemy.crashSeconds * kCrashAttitudeBlendRate);
 				const float scale = enemy.visualScale;
 				XMStoreFloat4x4(&world, XMMatrixScaling(scale, scale, scale) *
 					XMMatrixRotationQuaternion(XMQuaternionSlerp(initial, crashAttitude, blend)));

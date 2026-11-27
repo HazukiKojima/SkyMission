@@ -4,15 +4,15 @@ namespace Engine {
 	unsigned SelectModelLod(float diameterPixels, unsigned count) {
 		constexpr float kLowDetailThresholdPixels = 70;
 		constexpr float kMediumDetailThresholdPixels = 200;
-		unsigned lod = 0;
+		auto lod = ModelDetailLevel::Full;
 		if (diameterPixels < kLowDetailThresholdPixels) {
-			lod = 2;
+			lod = ModelDetailLevel::Low;
 		} else if (diameterPixels < kMediumDetailThresholdPixels) {
-			lod = 1;
+			lod = ModelDetailLevel::Medium;
 		}
 
 		// モデルが持つLOD数の範囲へ収める
-		return std::min(lod, count - 1);
+		return std::min(static_cast<unsigned>(lod), count - 1);
 	}
 
 	DirectX::BoundingSphere WorldCullingSphere(
@@ -42,6 +42,7 @@ namespace Engine {
 	std::vector<ModelDrawDecision> BuildModelDrawDecisions(
 		const Scene& scene, DirectX::FXMMATRIX view, DirectX::CXMMATRIX projection, UINT height) {
 		using namespace DirectX;
+		constexpr float kMinimumLodProjectionDepth = 0.001f;
 
 		// 視錐台をワールド空間へ変換する
 		BoundingFrustum local, frustum;
@@ -64,7 +65,7 @@ namespace Engine {
 				XMFLOAT3 centerView;
 				XMStoreFloat3(&centerView, XMVector3TransformCoord(XMLoadFloat3(&sphere.Center), view));
 				const float pixels = sphere.Radius * XMVectorGetY(projection.r[1]) * float(height) /
-					std::max(centerView.z, 0.001f);
+					std::max(centerView.z, kMinimumLodProjectionDepth);
 				decision.lod = SelectModelLod(pixels, object.model->GetLodCount());
 			}
 

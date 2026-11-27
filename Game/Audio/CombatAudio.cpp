@@ -16,6 +16,10 @@
 namespace Game {
 	namespace {
 		constexpr DWORD kSampleRate = 48000;
+		constexpr WORD kPcmBitsPerSample = 16;
+		constexpr WORD kPcmBytesPerSample = kPcmBitsPerSample / 8;
+		constexpr size_t kMaximumDecodedBytesPerChannel = 64 * 1024 * 1024;
+		constexpr float kEnemyRadioPlaybackVolume = 0.5f;
 		constexpr DWORD kAudioStream = static_cast<DWORD>(MF_SOURCE_READER_FIRST_AUDIO_STREAM);
 		constexpr DWORD kAllStreams = static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS);
 		constexpr int kNoWarning = 0;
@@ -26,9 +30,9 @@ namespace Game {
 			format.wFormatTag = WAVE_FORMAT_PCM;
 			format.nChannels = 1;
 			format.nSamplesPerSec = kSampleRate;
-			format.wBitsPerSample = 16;
-			format.nBlockAlign = 2;
-			format.nAvgBytesPerSec = kSampleRate * 2;
+			format.wBitsPerSample = kPcmBitsPerSample;
+			format.nBlockAlign = kPcmBytesPerSample;
+			format.nAvgBytesPerSec = kSampleRate * kPcmBytesPerSample;
 			return format;
 		}
 
@@ -58,9 +62,10 @@ namespace Game {
 			FAILED(requested->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM)) ||
 			FAILED(requested->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, channels)) ||
 			FAILED(requested->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, kSampleRate)) ||
-			FAILED(requested->SetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, 16)) ||
-			FAILED(requested->SetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT, channels * 2)) ||
-			FAILED(requested->SetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, kSampleRate * channels * 2)) ||
+			FAILED(requested->SetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, kPcmBitsPerSample)) ||
+			FAILED(requested->SetUINT32(MF_MT_AUDIO_BLOCK_ALIGNMENT, channels * kPcmBytesPerSample)) ||
+			FAILED(requested->SetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
+				kSampleRate * channels * kPcmBytesPerSample)) ||
 			FAILED(reader->SetStreamSelection(kAllStreams, FALSE)) ||
 			FAILED(reader->SetStreamSelection(kAudioStream, TRUE)) ||
 			FAILED(reader->SetCurrentMediaType(kAudioStream, nullptr, requested.Get()))) {
@@ -81,8 +86,8 @@ namespace Game {
 		CoTaskMemFree(wave);
 
 		if (format.wFormatTag != WAVE_FORMAT_PCM || format.nChannels != channels ||
-			format.nSamplesPerSec != kSampleRate || format.wBitsPerSample != 16 ||
-			format.nBlockAlign != channels * 2) {
+			format.nSamplesPerSec != kSampleRate || format.wBitsPerSample != kPcmBitsPerSample ||
+			format.nBlockAlign != channels * kPcmBytesPerSample) {
 			return false;
 		}
 
@@ -110,7 +115,7 @@ namespace Game {
 				if (FAILED(buffer->Lock(&data, nullptr, &length))) return false;
 
 				// 破損ファイルでも起動時のメモリ使用量を制限する
-				if (decoded.samples.size() + length > 64 * 1024 * 1024 * channels) {
+				if (decoded.samples.size() + length > kMaximumDecodedBytesPerChannel * channels) {
 					buffer->Unlock();
 					return false;
 				}
@@ -471,7 +476,7 @@ namespace Game {
 		buffer.AudioBytes = static_cast<UINT32>(clip.samples.size());
 		buffer.pAudioData = clip.samples.data();
 		buffer.Flags = XAUDIO2_END_OF_STREAM;
-		m_enemyRadioVoice->SetVolume(0.5f);
+		m_enemyRadioVoice->SetVolume(kEnemyRadioPlaybackVolume);
 
 		if (FAILED(m_enemyRadioVoice->SubmitSourceBuffer(&buffer)) || FAILED(m_enemyRadioVoice->Start()))
 			StopVoice(m_enemyRadioVoice);
@@ -497,7 +502,8 @@ namespace Game {
 		}
 
 		if (std::isfinite(deltaSeconds) && deltaSeconds > 0) {
-			m_warningCountdownSeconds -= std::min(deltaSeconds, 0.25f);
+			constexpr float kMaximumWarningDeltaSeconds = 0.25f;
+			m_warningCountdownSeconds -= std::min(deltaSeconds, kMaximumWarningDeltaSeconds);
 		}
 
 		if (warning != kNoWarning && m_warningCountdownSeconds <= 0) {
@@ -535,25 +541,46 @@ namespace Game {
 	}
 
 	std::vector<int16_t> CombatAudio::Synthesize(SoundKind kind) {
+		constexpr float kWarningDurationSeconds = 0.1f;
+		constexpr float kHitDurationSeconds = 0.12f;
+		constexpr float kMissileWarningFrequencyHz = 1600.0f;
+		constexpr float kLockWarningFrequencyHz = 900.0f;
+		constexpr float kWarningEnvelopeRate = 200.0f;
+		constexpr float kWarningPcmAmplitude = 16000.0f;
+		constexpr float kHitToneFrequencyHz = 2100.0f;
+		constexpr float kHitToneMix = 0.25f;
+		constexpr float kHitNoiseMix = 0.65f;
+		constexpr float kHitAttackRate = 3000.0f;
+		constexpr float kHitDecayRate = 42.0f;
+		constexpr float kHitPcmAmplitude = 24000.0f;
+		constexpr float kRadiansPerCycle = DirectX::XM_2PI;
+		constexpr uint32_t kHitNoiseSeed = 719;
+		constexpr uint32_t kNoiseMultiplier = 1664525u;
+		constexpr uint32_t kNoiseIncrement = 1013904223u;
+		constexpr unsigned kNoiseDiscardBits = 8;
+		constexpr float kNoiseMidpoint = 8388607.5f;
 		const bool warning = kind != SoundKind::Hit;
-		const float duration = warning ? 0.1f : 0.12f;
+		const float duration = warning ? kWarningDurationSeconds : kHitDurationSeconds;
 		std::vector<int16_t> samples(static_cast<std::size_t>(kSampleRate * duration));
-		uint32_t randomState = 719;
+		uint32_t randomState = kHitNoiseSeed;
 
 		// 警告は正弦波、命中音は減衰するノイズと高音を合成する
 		for (std::size_t i = 0; i < samples.size(); ++i) {
 			const float time = static_cast<float>(i) / kSampleRate;
 
 			if (warning) {
-				const float frequency = kind == SoundKind::MissileWarning ? 1600.0f : 900.0f;
-				const float envelope = std::min(time * 200, 1.0f) * std::min((duration - time) * 200, 1.0f);
-				samples[i] = static_cast<int16_t>(std::sin(6.2831853f * frequency * time) * envelope * 16000);
+				const float frequency = kind == SoundKind::MissileWarning
+					? kMissileWarningFrequencyHz : kLockWarningFrequencyHz;
+				const float envelope = std::min(time * kWarningEnvelopeRate, 1.0f) *
+					std::min((duration - time) * kWarningEnvelopeRate, 1.0f);
+				samples[i] = static_cast<int16_t>(
+					std::sin(kRadiansPerCycle * frequency * time) * envelope * kWarningPcmAmplitude);
 			} else {
-				randomState = randomState * 1664525u + 1013904223u;
-				const float noise = static_cast<float>(randomState >> 8) / 8388607.5f - 1;
-				const float tone = std::sin(6.2831853f * 2100 * time) * 0.25f;
-				const float envelope = std::min(time * 3000, 1.0f) * std::exp(-time * 42);
-				samples[i] = static_cast<int16_t>((noise * 0.65f + tone) * envelope * 24000);
+				randomState = randomState * kNoiseMultiplier + kNoiseIncrement;
+				const float noise = static_cast<float>(randomState >> kNoiseDiscardBits) / kNoiseMidpoint - 1;
+				const float tone = std::sin(kRadiansPerCycle * kHitToneFrequencyHz * time) * kHitToneMix;
+				const float envelope = std::min(time * kHitAttackRate, 1.0f) * std::exp(-time * kHitDecayRate);
+				samples[i] = static_cast<int16_t>((noise * kHitNoiseMix + tone) * envelope * kHitPcmAmplitude);
 			}
 		}
 		return samples;
