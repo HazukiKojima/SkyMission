@@ -511,6 +511,7 @@ namespace Game {
 			.gunHit = m_combat.audio.gunHits > 0,
 			.heavyHit = m_combat.audio.missileHits > 0,
 			.explosionImpact = explosionImpact,
+			.carrierExploded = hasPlayer && m_combat.audio.shipExplosions > 0,
 		});
 		m_cameraController.Update(dt, cameraInput);
 		m_carrierLookSeconds = std::max(0.0f, m_carrierLookSeconds - dt);

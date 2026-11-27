@@ -38,6 +38,8 @@ namespace Game {
 		float hitSeconds = 0.42f;
 		float enemyDestroyedDegrees = 0.25f;
 		float enemyDestroyedSeconds = 0.32f;
+		float carrierExplosionDegrees = 2.5f;
+		float carrierExplosionSeconds = 1.35f;
 		float frequencyHz = 9.0f;
 		float responsePerSecond = 9.0f;
 	};
