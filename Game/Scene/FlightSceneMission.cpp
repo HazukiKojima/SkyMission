@@ -77,8 +77,6 @@ namespace Game {
 				break;
 			}
 		}
-
-		m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
 	}
 
 	void FlightScene::ConfigureEnemyWeapons(const WeaponDefinition& definition,

@@ -23,47 +23,60 @@ namespace Game {
 				(kCloudVelocityDriftSeconds * (1 - std::exp(-effect.age * kCloudVelocityDriftRate)));
 		}
 
-		void DrawExplosionSmoke(const ExplosionEffect& effect, EffectDrawContext& context) {
-			constexpr float kBacklightDurationSeconds = 0.24f;
-			constexpr float kInitialBacklitSmokeOpacity = 0.58f;
-			constexpr float kSmokeOpacityGrowthRate = 5.0f;
-			const float ageSeconds = effect.age;
-			const float radiusScale = effect.radius;
-			const auto origin = XMLoadFloat3(&effect.position);
-			const auto drift = ExplosionCloudDrift(effect);
-			const bool backlit = effect.style == ExplosionStyle::BacklitSmoke;
-			const float glow = backlit
-				? std::clamp(1.0f - ageSeconds / kBacklightDurationSeconds, 0.0f, 1.0f) : 0.0f;
+	} // namespace
 
-			// 大きさと上昇速度の異なる煙塊を重ねて乱流を表現する
-			for (int i = 0; i < context.Settings().explosion.smokeCount; ++i) {
-				const float phase = i * EffectDrawSettings::goldenAngleRadians;
-				const float variation = 0.55f + (i % 7) * 0.11f;
-				const float spread =
-					radiusScale * (0.2f + (1 - std::exp(-ageSeconds * 1.4f)) * 1.3f) * variation;
-				const auto location = origin + drift +
-					XMVectorSet(std::cos(phase) * spread,
-						std::sin(phase) * spread * 0.6f +
-							ageSeconds * radiusScale * (0.35f + (i % 4) * 0.12f),
-						std::sin(phase * 2) * spread * 0.5f, 0);
-				const float alpha = std::min(
-					(backlit ? kInitialBacklitSmokeOpacity : 0.0f) + ageSeconds * kSmokeOpacityGrowthRate,
-					context.Settings().explosion.smokeMaxOpacity) *
-					std::clamp((context.Settings().explosion.lifetimeSeconds - ageSeconds) /
-							context.Settings().explosion.smokeFadeSeconds,
-						0.0f, 1.0f);
-				auto shade = BlendEffectColor(context.Settings().explosion.smokeDarkColor,
-					context.Settings().explosion.smokeLightColor, float(i % 5) / (backlit ? 8.0f : 4.0f));
-				if (backlit) {
-					// 明るい煙と暗い煙を重ね、閃光が隙間から漏れるようにする
-					const float illumination = glow * glow * (i % 3 == 0 ? 0.95f : 0.18f);
-					shade = BlendEffectColor(shade, {1.0f, 0.30f, 0.035f, 1.0f}, illumination);
-				}
-				const unsigned seed = i + 1;
-				context.DrawCloud(location, radiusScale * (0.38f + ageSeconds * 0.27f) * variation,
-					ExplosionCloudRotation(seed, ageSeconds), seed, EffectTint(shade, alpha));
+	void CombatEffectPresenter::DrawExplosionSmoke(
+		const ExplosionEffect& effect, EffectDrawContext& context, bool continuous) {
+		constexpr float kBacklightDurationSeconds = 0.24f;
+		constexpr float kInitialBacklitSmokeOpacity = 0.58f;
+		constexpr float kSmokeOpacityGrowthRate = 5.0f;
+		constexpr float kCarrierSmokeFadeInSeconds = 0.75f;
+		const auto& settings = context.Settings().explosion;
+		const int smokeCount = settings.smokeCount * (continuous ? carrierSmokeCountMultiplier : 1);
+		const float plumeFadeIn = continuous ? std::min(effect.age / kCarrierSmokeFadeInSeconds, 1.0f) : 1.0f;
+		const float radiusScale = effect.radius;
+		const auto origin = XMLoadFloat3(&effect.position);
+		const auto drift = ExplosionCloudDrift(effect);
+		const bool backlit = effect.style == ExplosionStyle::BacklitSmoke;
+		const float glow = backlit
+			? std::clamp(1.0f - effect.age / kBacklightDurationSeconds, 0.0f, 1.0f) : 0.0f;
+
+		// 大きさと上昇速度の異なる煙塊を重ねて乱流を表現する
+		for (int i = 0; i < smokeCount; ++i) {
+			// 継続する煙では煙塊ごとの時刻をずらし、透明になった塊だけを爆心に戻す
+			const float ageSeconds = continuous
+				? std::fmod(effect.age + settings.lifetimeSeconds * i / smokeCount, settings.lifetimeSeconds)
+				: effect.age;
+			const float phase = i * EffectDrawSettings::goldenAngleRadians;
+			const float variation = 0.55f + (i % 7) * 0.11f;
+			const float spread =
+				radiusScale * (0.2f + (1 - std::exp(-ageSeconds * 1.4f)) * 1.3f) * variation;
+			const auto location = origin + drift +
+				XMVectorSet(std::cos(phase) * spread,
+					std::sin(phase) * spread * 0.6f +
+						ageSeconds * radiusScale * (0.35f + (i % 4) * 0.12f),
+					std::sin(phase * 2) * spread * 0.5f, 0);
+			const float smokeFadeOut = std::clamp(
+				(settings.lifetimeSeconds - ageSeconds) / settings.smokeFadeSeconds, 0.0f, 1.0f);
+			const float carrierFadeIn = std::min(ageSeconds / kCarrierSmokeFadeInSeconds, 1.0f);
+			const float alpha = continuous
+				? settings.smokeMaxOpacity * plumeFadeIn * carrierFadeIn * smokeFadeOut
+				: std::min((backlit ? kInitialBacklitSmokeOpacity : 0.0f) + ageSeconds * kSmokeOpacityGrowthRate,
+					settings.smokeMaxOpacity) * smokeFadeOut;
+			auto shade = BlendEffectColor(settings.smokeDarkColor,
+				settings.smokeLightColor, float(i % 5) / (backlit ? 8.0f : 4.0f));
+			if (backlit) {
+				// 明るい煙と暗い煙を重ね、閃光が隙間から漏れるようにする
+				const float illumination = glow * glow * (i % 3 == 0 ? 0.95f : 0.18f);
+				shade = BlendEffectColor(shade, {1.0f, 0.30f, 0.035f, 1.0f}, illumination);
 			}
+			const unsigned seed = i + 1;
+			context.DrawCloud(location, radiusScale * (0.38f + ageSeconds * 0.27f) * variation,
+				ExplosionCloudRotation(seed, ageSeconds), seed, EffectTint(shade, alpha));
 		}
+	}
+
+	namespace {
 
 		void DrawExplosionFire(const ExplosionEffect& effect, EffectDrawContext& context) {
 			constexpr int kFireTimingVariants = 5;

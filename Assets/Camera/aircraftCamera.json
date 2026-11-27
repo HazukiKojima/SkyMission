@@ -29,6 +29,8 @@
     "hitSeconds": 0.42,
     "enemyDestroyedDegrees": 0.25,
     "enemyDestroyedSeconds": 0.32,
+    "carrierExplosionDegrees": 2.5,
+    "carrierExplosionSeconds": 1.35,
     "frequencyHz": 9,
     "responsePerSecond": 9
   }

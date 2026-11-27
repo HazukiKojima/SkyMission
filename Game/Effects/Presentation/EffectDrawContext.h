@@ -6,10 +6,6 @@
 namespace Game {
 	// 中心が画面内のものだけ描くか、外周の一部が見えるものも描くかを選ぶ
 	enum class EffectClipMode { CenterVisible, BoundsVisible };
-	struct ProjectedEffectSegment {
-		DirectX::XMFLOAT2 head;
-		DirectX::XMFLOAT2 tail;
-	};
 
 	// 発生位置とサンプル番号から再現可能な値を作り、フレーム間の模様のちらつきを防ぐ
 	class EffectRandom {
@@ -40,17 +36,18 @@ namespace Game {
 			float minimumPixelRadius = 0);
 		void DrawGlow(DirectX::FXMVECTOR position, float radius, DirectX::XMFLOAT4 color,
 			EffectClipMode clipMode = EffectClipMode::BoundsVisible);
-		std::optional<ProjectedEffectSegment> ProjectSegment(
+		std::optional<HudSegmentProjection> ProjectSegment(
 			DirectX::FXMVECTOR head, DirectX::FXMVECTOR tail) const;
-		std::optional<ProjectedEffectSegment> ProjectClippedSegment(
+		std::optional<HudSegmentProjection> ProjectClippedSegment(
 			const DirectX::XMFLOAT3& head, const DirectX::XMFLOAT3& tail) const;
-		void DrawStreak(const ProjectedEffectSegment& segment, float outerWidth, DirectX::XMFLOAT4 outerColor,
+		void DrawStreak(const HudSegmentProjection& segment, float outerWidth, DirectX::XMFLOAT4 outerColor,
 			float innerWidth, DirectX::XMFLOAT4 innerColor);
 
 	  private:
 		struct ProjectedBillboard {
 			DirectX::XMFLOAT2 center;
 			float radius;
+			float depth;
 		};
 
 		std::optional<ProjectedBillboard> ProjectBillboard(

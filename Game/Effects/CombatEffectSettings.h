@@ -75,11 +75,6 @@ namespace Game {
 
 	struct CarrierEffectSettings {
 		static constexpr float explosionRadius = 220;
-		static constexpr float smokeLifetimeSeconds = 10;
-		static constexpr float smokeIntervalSeconds = 0.15f;
-		static constexpr float smokeStartRadius = 70, smokeGrowthPerSecond = 22;
-		static constexpr float smokeRiseSpeed = 65;
-		static constexpr size_t maxSmokeCount = 96;
 	};
 
 	struct RocketEffectSettings {
@@ -87,11 +82,6 @@ namespace Game {
 		static constexpr float emissionIntervalSeconds = 0.025f;
 		static constexpr size_t maxSmokeCount = 1024;
 		static constexpr size_t maxExhaustCount = 20;
-	};
-
-	struct DeckSmokeSettings {
-		static constexpr float lifetimeSeconds = CarrierEffectSettings::smokeLifetimeSeconds;
-		static constexpr size_t maxCount = CarrierEffectSettings::maxSmokeCount;
 	};
 
 	struct EffectDrawSettings {
@@ -221,16 +211,8 @@ namespace Game {
 			DirectX::XMFLOAT4 smokeColor{0.075f, 0.066f, 0.060f, 0.88f};
 		} aircraftTrail;
 		struct CarrierEffectTuning : CarrierEffectSettings {
-			DirectX::XMFLOAT4 smokeColor{0.18f, 0.17f, 0.16f, 1.0f};
-
-			float smokeDriftSpeed = 12.0f;
-			float smokeOpacity = 0.6f;
 			float explosionRadius = CarrierEffectSettings::explosionRadius;
-			float smokeLifetimeSeconds = CarrierEffectSettings::smokeLifetimeSeconds;
-			float smokeIntervalSeconds = CarrierEffectSettings::smokeIntervalSeconds;
-			float smokeRiseSpeed = CarrierEffectSettings::smokeRiseSpeed;
-			float smokeStartRadius = CarrierEffectSettings::smokeStartRadius;
-			float smokeGrowthPerSecond = CarrierEffectSettings::smokeGrowthPerSecond;
+			float smokeStartDelaySeconds = 1.4f;
 		} carrier;
 		struct RocketEffectTuning : RocketEffectSettings {
 			DirectX::XMFLOAT4 smokeColor{0.65f, 0.65f, 0.62f, 1.0f};
@@ -244,11 +226,6 @@ namespace Game {
 			float smokeOpacity = 0.32f;
 			float smokeLifetimeSeconds = RocketEffectSettings::smokeLifetimeSeconds;
 		} rocket;
-		struct DeckSmokeTuning {
-			DirectX::XMFLOAT4 smokeColor{0.18f, 0.17f, 0.16f, 1.0f};
-
-			float startRadius = 25, growthPerSecond = 32, driftSpeed = 12, riseSpeed = 65;
-		} deck;
 		void Load(const Engine::JsonAssetReader& reader, const std::filesystem::path& path);
 	};
 } // namespace Game

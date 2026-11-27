@@ -9,14 +9,17 @@ namespace Game {
 		using namespace DirectX;
 
 		const size_t count = std::min(snapshot.gunSmoke.size(), GunEffectSettings::maxSmokeCount);
+		const size_t carrierSmokeVertices = snapshot.carrierSmoke && snapshot.carrierSmoke->age >= 0
+			? context.Settings().explosion.smokeCount * carrierSmokeCountMultiplier *
+				Engine::HudDrawList::QuadVertexCount
+			: 0;
 
 		// 混雑時は薄い発射煙から省き、ほかの演出と予約済みの発射光を優先する
 		const size_t otherBudget = std::min(snapshot.explosions.size(), ExplosionEffectSettings::maxCount) *
 				EffectDrawSettings::explosionVertexBudget +
 			std::min(snapshot.impacts.size(), ImpactEffectSettings::maxCount) *
 				EffectDrawSettings::impactVertexBudget +
-			std::min(snapshot.deckSmoke.size(), DeckSmokeSettings::maxCount) *
-				Engine::HudDrawList::QuadVertexCount;
+			carrierSmokeVertices;
 		if (!context.HasVertexBudget(otherBudget + count * Engine::HudDrawList::QuadVertexCount)) return;
 
 		for (size_t index = 0; index < count; ++index) {

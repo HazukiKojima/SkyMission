@@ -210,7 +210,6 @@ namespace Game {
 				m_effects.Update(dt);
 				UpdateCrashingEnemies(dt);
 				UpdateEnemyRadio(dt);
-				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
 
 				if (m_combat.result == CombatResult::Victory) {
 					UpdateVictoryOrdnance(dt);
@@ -511,6 +510,7 @@ namespace Game {
 			.gunHit = m_combat.audio.gunHits > 0,
 			.heavyHit = m_combat.audio.missileHits > 0,
 			.explosionImpact = explosionImpact,
+			.carrierExploded = hasPlayer && m_combat.audio.shipExplosions > 0,
 		});
 		m_cameraController.Update(dt, cameraInput);
 		m_carrierLookSeconds = std::max(0.0f, m_carrierLookSeconds - dt);

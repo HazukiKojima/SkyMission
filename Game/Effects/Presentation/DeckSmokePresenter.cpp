@@ -1,26 +1,17 @@
 #include "CombatEffectPresenter.h"
 #include "EffectDrawContext.h"
-#include <algorithm>
 
 namespace Game {
 	void CombatEffectPresenter::DrawDeckSmoke(
 		const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const {
-		using namespace DirectX;
+		if (!snapshot.carrierSmoke || snapshot.carrierSmoke->age < 0) return;
 
-		for (const auto& smoke : snapshot.deckSmoke) {
-			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;
+		const auto requiredVertices = context.Settings().explosion.smokeCount *
+			carrierSmokeCountMultiplier * Engine::HudDrawList::QuadVertexCount;
+		if (!context.HasVertexBudget(requiredVertices)) return;
 
-			// 上昇と横流れを加えて甲板の煙を広げる
-			const auto location = XMLoadFloat3(&smoke.position) +
-				XMVectorSet(smoke.age * context.Settings().deck.driftSpeed,
-					smoke.age * context.Settings().deck.riseSpeed, 0, 0);
-			const EffectRandom random(smoke.position);
-			context.DrawCloud(location,
-				context.Settings().deck.startRadius + smoke.age * context.Settings().deck.growthPerSecond,
-				random.Sample(0) * XM_2PI, 17,
-				EffectTint(context.Settings().deck.smokeColor,
-					std::clamp(1 - smoke.age / context.Settings().carrier.smokeLifetimeSeconds, 0.0f, 1.0f) *
-						context.Settings().carrier.smokeOpacity));
-		}
+		const auto& smoke = *snapshot.carrierSmoke;
+		DrawExplosionSmoke({.position = smoke.position, .age = smoke.age,
+			.radius = context.Settings().carrier.explosionRadius}, context, true);
 	}
 } // namespace Game

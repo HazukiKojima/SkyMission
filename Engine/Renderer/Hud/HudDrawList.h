@@ -23,6 +23,8 @@ namespace Engine {
 		DirectX::XMFLOAT2 position;
 		DirectX::XMFLOAT2 uv;
 		DirectX::XMFLOAT4 color;
+		// 0～1はシーン深度。負の値は遮蔽のないHUD要素。
+		float sceneDepth = -1.0f;
 	};
 
 	// 左上原点・右向きX・下向きYのピクセル座標からHUD頂点を蓄積する
@@ -47,11 +49,13 @@ namespace Engine {
 			m_height = height;
 		}
 
-		void Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color);
+		void Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color,
+			DirectX::XMFLOAT2 depths = {-1.0f, -1.0f});
 		void FilledRect(DirectX::XMFLOAT2 position, DirectX::XMFLOAT2 size, DirectX::XMFLOAT4 color);
 		void CloudPuff(
-			DirectX::XMFLOAT2 center, float radius, float rotation, unsigned seed, DirectX::XMFLOAT4 color);
-		void SoftDisc(DirectX::XMFLOAT2 center, float radius, DirectX::XMFLOAT4 color);
+			DirectX::XMFLOAT2 center, float radius, float rotation, unsigned seed, DirectX::XMFLOAT4 color,
+			float sceneDepth = -1.0f);
+		void SoftDisc(DirectX::XMFLOAT2 center, float radius, DirectX::XMFLOAT4 color, float sceneDepth = -1.0f);
 
 		// progressは0～1の円弧割合。12時方向から時計回りに描き、1で全周となる
 		void Circle(
@@ -69,7 +73,7 @@ namespace Engine {
 
 	  private:
 		void Quad(const DirectX::XMFLOAT2 (&positions)[4], DirectX::XMFLOAT2 uv0, DirectX::XMFLOAT2 uv1,
-			DirectX::XMFLOAT4 color);
+			DirectX::XMFLOAT4 color, DirectX::XMFLOAT2 depths = {-1.0f, -1.0f});
 		unsigned m_width = 0;
 		unsigned m_height = 0;
 

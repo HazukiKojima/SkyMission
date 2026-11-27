@@ -7,23 +7,6 @@ namespace Game {
 		const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const {
 		using namespace DirectX;
 
-		// 甲板の煙に艦船用の上昇・拡大設定を重ねる
-		for (const auto& smoke : snapshot.deckSmoke) {
-			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;
-
-			const auto location = XMLoadFloat3(&smoke.position) +
-				XMVectorSet(smoke.age * context.Settings().carrier.smokeDriftSpeed,
-					smoke.age * context.Settings().carrier.smokeRiseSpeed, 0, 0);
-			const EffectRandom random(smoke.position);
-			context.DrawCloud(location,
-				context.Settings().carrier.smokeStartRadius +
-					smoke.age * context.Settings().carrier.smokeGrowthPerSecond,
-				random.Sample(0) * XM_2PI, 17,
-				EffectTint(context.Settings().carrier.smokeColor,
-					std::clamp(1 - smoke.age / context.Settings().carrier.smokeLifetimeSeconds, 0.0f, 1.0f) *
-						context.Settings().carrier.smokeOpacity));
-		}
-
 		// 放出済みの煙は機体から独立して残し、時間とともに広げて消す
 		for (const auto& smoke : snapshot.rocketSmoke) {
 			if (!context.HasVertexBudget(Engine::HudDrawList::QuadVertexCount)) break;

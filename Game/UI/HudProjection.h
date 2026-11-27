@@ -7,6 +7,7 @@ namespace Game {
 	struct HudSegmentProjection {
 		DirectX::XMFLOAT2 head;
 		DirectX::XMFLOAT2 tail;
+		DirectX::XMFLOAT2 depths;
 	};
 
 	struct HudProjection {
@@ -18,6 +19,7 @@ namespace Game {
 
 		// カメラの背面側（クリップ座標のw <= 0）にあるか
 		bool behind = false;
+		float depth = 0;
 	};
 
 	// 同じフレームの投影行列と画面サイズを保持し、複数のHUD要素で共有する

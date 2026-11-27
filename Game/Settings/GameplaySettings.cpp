@@ -66,6 +66,8 @@ namespace Game {
 		r.Number("/shake/hitSeconds", shake.hitSeconds, 0, kMaximumCameraShakeSeconds);
 		r.Number("/shake/enemyDestroyedDegrees", shake.enemyDestroyedDegrees, 0, kMaximumCameraShakeDegrees);
 		r.Number("/shake/enemyDestroyedSeconds", shake.enemyDestroyedSeconds, 0, kMaximumCameraShakeSeconds);
+		r.Number("/shake/carrierExplosionDegrees", shake.carrierExplosionDegrees, 0, kMaximumCameraShakeDegrees);
+		r.Number("/shake/carrierExplosionSeconds", shake.carrierExplosionSeconds, 0, kMaximumCameraShakeSeconds);
 		r.Number("/shake/frequencyHz", shake.frequencyHz, 1, 20);
 		r.Number("/shake/responsePerSecond", shake.responsePerSecond, 0.1f, 100);
 		r.Require(maxFollowDistance >= followDistance, "CameraSettings", "inconsistent settings");

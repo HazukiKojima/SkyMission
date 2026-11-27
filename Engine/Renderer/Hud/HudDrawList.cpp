@@ -6,7 +6,7 @@
 
 namespace Engine {
 	void HudDrawList::Quad(const DirectX::XMFLOAT2 (&positions)[4], DirectX::XMFLOAT2 uv0,
-		DirectX::XMFLOAT2 uv1, DirectX::XMFLOAT4 color) {
+		DirectX::XMFLOAT2 uv1, DirectX::XMFLOAT4 color, DirectX::XMFLOAT2 depths) {
 		if (m_width == 0 || m_height == 0) return;
 		if (m_vertices.size() + QuadVertexCount > MaxVertices) throw std::length_error("HUD vertex capacity exceeded");
 
@@ -15,7 +15,7 @@ namespace Engine {
 		for (const int index : {0, 1, 2, 0, 2, 3})
 			m_vertices.push_back(
 				{{positions[index].x * 2 / m_width - 1, 1 - positions[index].y * 2 / m_height}, uv[index],
-					color});
+					color, index == 0 || index == 3 ? depths.x : depths.y});
 	}
 
 	void HudDrawList::FilledRect(
@@ -27,7 +27,8 @@ namespace Engine {
 		Quad(p, HudFont::SolidUv, HudFont::SolidUv, color);
 	}
 
-	void HudDrawList::Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color) {
+	void HudDrawList::Line(DirectX::XMFLOAT2 a, DirectX::XMFLOAT2 b, float width, DirectX::XMFLOAT4 color,
+		DirectX::XMFLOAT2 depths) {
 		constexpr float kMinimumLineLengthPixels = 0.001f;
 		const float dx = b.x - a.x;
 		const float dy = b.y - a.y;
@@ -39,11 +40,12 @@ namespace Engine {
 		const float y = dx / length * width * 0.5f;
 		const DirectX::XMFLOAT2 p[] = {
 			{a.x + x, a.y + y}, {b.x + x, b.y + y}, {b.x - x, b.y - y}, {a.x - x, a.y - y}};
-		Quad(p, HudFont::SolidUv, HudFont::SolidUv, color);
+		Quad(p, HudFont::SolidUv, HudFont::SolidUv, color, depths);
 	}
 
 	void HudDrawList::CloudPuff(
-		DirectX::XMFLOAT2 center, float radius, float rotation, unsigned seed, DirectX::XMFLOAT4 color) {
+		DirectX::XMFLOAT2 center, float radius, float rotation, unsigned seed, DirectX::XMFLOAT4 color,
+		float sceneDepth) {
 		if (radius <= 0 || color.w <= 0) return;
 
 		const float c = std::cos(rotation);
@@ -55,10 +57,10 @@ namespace Engine {
 				center.y + (corners[i].x * s + corners[i].y * c) * radius};
 		// 負のU座標を手続き的な煙と炎の描画に割り当てる
 		const float offset = float(seed % CloudSeedVariants) * 4;
-		Quad(points, {-3, offset}, {-1, offset + 2}, color);
+		Quad(points, {-3, offset}, {-1, offset + 2}, color, {sceneDepth, sceneDepth});
 	}
 
-	void HudDrawList::SoftDisc(DirectX::XMFLOAT2 center, float radius, DirectX::XMFLOAT4 color) {
+	void HudDrawList::SoftDisc(DirectX::XMFLOAT2 center, float radius, DirectX::XMFLOAT4 color, float sceneDepth) {
 		if (m_width == 0 || m_height == 0 || radius <= 0 || color.w <= 0) return;
 
 		if (m_vertices.size() + SoftDiscVertexCount > MaxVertices)
@@ -68,7 +70,7 @@ namespace Engine {
 		const auto vertex = [&](DirectX::XMFLOAT2 point, float alpha) {
 			auto tint = color;
 			tint.w *= alpha;
-			m_vertices.push_back({{point.x * 2 / m_width - 1, 1 - point.y * 2 / m_height}, uv, tint});
+			m_vertices.push_back({{point.x * 2 / m_width - 1, 1 - point.y * 2 / m_height}, uv, tint, sceneDepth});
 		};
 
 		// 中心から外周へ透明になる三角形を並べる

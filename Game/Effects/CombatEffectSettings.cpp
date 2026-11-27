@@ -7,14 +7,10 @@ namespace Game {
 
 		r.Number("/impact/smokeMaxOpacity", impact.smokeMaxOpacity, 0, 1);
 
-		r.Color("/deck/smokeColor", deck.smokeColor);
-
 		r.Color("/rocket/smokeColor", rocket.smokeColor);
 		r.Color("/rocket/exhaustCoreColor", rocket.exhaustCoreColor);
 		r.Color("/rocket/exhaustGlowColor", rocket.exhaustGlowColor);
 		r.Color("/rocket/exhaustFlameColor", rocket.exhaustFlameColor);
-
-		r.Color("/carrier/smokeColor", carrier.smokeColor);
 
 		r.Color("/explosion/smokeDarkColor", explosion.smokeDarkColor);
 		r.Color("/explosion/smokeLightColor", explosion.smokeLightColor);
@@ -42,16 +38,10 @@ namespace Game {
 		r.Color("/gun/flameInnerColor", gun.flameInnerColor);
 
 		// 煙の動きと粒子数を読み込む
-		r.Number("/deck/riseSpeed", deck.riseSpeed, 0);
-		r.Number("/deck/driftSpeed", deck.driftSpeed, 0);
-		r.Number("/deck/growthPerSecond", deck.growthPerSecond, 0);
-		r.Number("/deck/startRadius", deck.startRadius, 0);
 		r.Number("/rocket/smokeGrowthPerSecond", rocket.smokeGrowthPerSecond, 0);
 		r.Number("/rocket/smokeStartRadius", rocket.smokeStartRadius, 0);
 		r.Number("/rocket/smokeRiseSpeed", rocket.smokeRiseSpeed, 0);
 		r.Number("/rocket/smokeOpacity", rocket.smokeOpacity, 0, 1);
-		r.Number("/carrier/smokeDriftSpeed", carrier.smokeDriftSpeed, 0);
-		r.Number("/carrier/smokeOpacity", carrier.smokeOpacity, 0, 1);
 		r.Integer("/explosion/fragmentCount", explosion.fragmentCount, 24);
 		r.Integer("/explosion/fireCount", explosion.fireCount, 17);
 		r.Integer("/explosion/smokeCount", explosion.smokeCount, 22);
@@ -99,11 +89,7 @@ namespace Game {
 		r.Number("/explosion/fragmentTrailSeconds", explosion.fragmentTrailSeconds);
 		r.Number("/explosion/fragmentVelocityInheritance", explosion.fragmentVelocityInheritance, 0, 1);
 		r.Number("/carrier/explosionRadius", carrier.explosionRadius);
-		r.Number("/carrier/smokeLifetimeSeconds", carrier.smokeLifetimeSeconds);
-		r.Number("/carrier/smokeIntervalSeconds", carrier.smokeIntervalSeconds);
-		r.Number("/carrier/smokeRiseSpeed", carrier.smokeRiseSpeed, 0);
-		r.Number("/carrier/smokeStartRadius", carrier.smokeStartRadius);
-		r.Number("/carrier/smokeGrowthPerSecond", carrier.smokeGrowthPerSecond);
+		r.Number("/carrier/smokeStartDelaySeconds", carrier.smokeStartDelaySeconds, 0);
 		r.Number("/rocket/smokeLifetimeSeconds", rocket.smokeLifetimeSeconds);
 
 		// 内外の半径と幅が逆転していないか確認する

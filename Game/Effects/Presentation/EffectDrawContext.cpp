@@ -36,11 +36,9 @@ namespace Game {
 		m_additionalReservedVertices = std::min(vertices, GunEffectSettings::reservedVertices);
 	}
 
-	std::optional<ProjectedEffectSegment> EffectDrawContext::ProjectClippedSegment(
+	std::optional<HudSegmentProjection> EffectDrawContext::ProjectClippedSegment(
 		const DirectX::XMFLOAT3& head, const DirectX::XMFLOAT3& tail) const {
-		if (const auto segment = m_projector.ProjectClippedSegment(head, tail))
-			return ProjectedEffectSegment{segment->head, segment->tail};
-		return std::nullopt;
+		return m_projector.ProjectClippedSegment(head, tail);
 	}
 
 	float EffectDrawContext::GetScale() const {
@@ -61,6 +59,8 @@ namespace Game {
 		const auto projectedEdge = m_projector.Project(edge);
 
 		if (projectedCenter.behind || projectedEdge.behind) return std::nullopt;
+		const float depth = projectedCenter.depth;
+		if (!std::isfinite(depth) || depth < 0 || depth > 1) return std::nullopt;
 
 		const float pixels = std::max(minimumPixelRadius, std::hypot(
 			projectedEdge.pixel.x - projectedCenter.pixel.x, projectedEdge.pixel.y - projectedCenter.pixel.y));
@@ -69,29 +69,29 @@ namespace Game {
 		// 中心が画面内にある場合だけ採用する
 		if (clipMode == EffectClipMode::CenterVisible) {
 			if (!projectedCenter.visible) return std::nullopt;
-			return ProjectedBillboard{point, std::min(pixels, float(m_view.height))};
+			return ProjectedBillboard{point, std::min(pixels, float(m_view.height)), depth};
 		}
 
 		// 爆発の中心が画面外でも、火球や煙の一部が見える間は描画する
 		if (point.x + pixels < 0 || point.y + pixels < 0 || point.x - pixels > m_view.width ||
 			point.y - pixels > m_view.height)
 			return std::nullopt;
-		return ProjectedBillboard{point, std::min(pixels, float(std::max(m_view.width, m_view.height)) * 2)};
+		return ProjectedBillboard{point, std::min(pixels, float(std::max(m_view.width, m_view.height)) * 2), depth};
 	}
 
 	void EffectDrawContext::DrawCloud(DirectX::FXMVECTOR position, float radius, float rotation,
 		unsigned seed, DirectX::XMFLOAT4 color, EffectClipMode clipMode, float minimumPixelRadius) {
 		if (const auto billboard = ProjectBillboard(position, radius, clipMode, minimumPixelRadius))
-			m_list.CloudPuff(billboard->center, billboard->radius, rotation, seed, color);
+			m_list.CloudPuff(billboard->center, billboard->radius, rotation, seed, color, billboard->depth);
 	}
 
 	void EffectDrawContext::DrawGlow(
 		DirectX::FXMVECTOR position, float radius, DirectX::XMFLOAT4 color, EffectClipMode clipMode) {
 		if (const auto billboard = ProjectBillboard(position, radius, clipMode))
-			m_list.SoftDisc(billboard->center, billboard->radius, color);
+			m_list.SoftDisc(billboard->center, billboard->radius, color, billboard->depth);
 	}
 
-	std::optional<ProjectedEffectSegment> EffectDrawContext::ProjectSegment(
+	std::optional<HudSegmentProjection> EffectDrawContext::ProjectSegment(
 		DirectX::FXMVECTOR head, DirectX::FXMVECTOR tail) const {
 		DirectX::XMFLOAT3 headPosition;
 		DirectX::XMFLOAT3 tailPosition;
@@ -101,12 +101,13 @@ namespace Game {
 		const auto tailProjection = m_projector.Project(tailPosition);
 
 		if (!headProjection.visible || !tailProjection.visible) return std::nullopt;
-		return ProjectedEffectSegment{headProjection.pixel, tailProjection.pixel};
+		return HudSegmentProjection{headProjection.pixel, tailProjection.pixel,
+			{headProjection.depth, tailProjection.depth}};
 	}
 
-	void EffectDrawContext::DrawStreak(const ProjectedEffectSegment& segment, float outerWidth,
+	void EffectDrawContext::DrawStreak(const HudSegmentProjection& segment, float outerWidth,
 		DirectX::XMFLOAT4 outerColor, float innerWidth, DirectX::XMFLOAT4 innerColor) {
-		m_list.Line(segment.head, segment.tail, outerWidth, outerColor);
-		m_list.Line(segment.head, segment.tail, innerWidth, innerColor);
+		m_list.Line(segment.head, segment.tail, outerWidth, outerColor, segment.depths);
+		m_list.Line(segment.head, segment.tail, innerWidth, innerColor, segment.depths);
 	}
 } // namespace Game

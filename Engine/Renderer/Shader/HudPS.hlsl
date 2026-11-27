@@ -1,4 +1,5 @@
 Texture2D atlas : register(t0);
+Texture2D<float> sceneDepth : register(t1);
 SamplerState atlasSampler : register(s0);
 
 static const int kTurbulenceOctaves = 4;
@@ -36,8 +37,14 @@ float Turbulence(float2 p)
     return value;
 }
 
-float4 PS(float4 position : SV_POSITION, float2 uv : TEXCOORD0, float4 color : COLOR0) : SV_TARGET
+float4 PS(float4 position : SV_POSITION, float2 uv : TEXCOORD0, float4 color : COLOR0,
+    noperspective float effectDepth : TEXCOORD1) : SV_TARGET
 {
+    // ワールドエフェクトのうち、手前のシーン形状に隠れる部分を除く
+    [branch]
+    if (effectDepth >= 0.0f)
+        clip(sceneDepth.Load(int3(int2(position.xy), 0)) - effectDepth);
+
     // 負のU座標は文字ではなく煙や炎として描く
     if (uv.x < kProceduralUvThreshold)
     {
