@@ -233,19 +233,7 @@
   },
   "carrier": {
     "explosionRadius": 220.0,
-    "smokeLifetimeSeconds": 10.0,
-    "smokeIntervalSeconds": 0.15,
-    "smokeRiseSpeed": 65.0,
-    "smokeStartRadius": 70.0,
-    "smokeGrowthPerSecond": 22.0,
-    "smokeOpacity": 0.6,
-    "smokeDriftSpeed": 12,
-    "smokeColor": [
-      0.18,
-      0.17,
-      0.16,
-      1
-    ]
+    "smokeStartDelaySeconds": 1.4
   },
   "rocket": {
     "smokeLifetimeSeconds": 0.8,
@@ -276,18 +264,6 @@
       0.45,
       0.06,
       0.8
-    ]
-  },
-  "deck": {
-    "startRadius": 25,
-    "growthPerSecond": 32,
-    "driftSpeed": 12,
-    "riseSpeed": 65,
-    "smokeColor": [
-      0.18,
-      0.17,
-      0.16,
-      1
     ]
   }
 }

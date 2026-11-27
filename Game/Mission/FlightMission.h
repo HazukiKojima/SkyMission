@@ -35,7 +35,6 @@ namespace Game {
 			size_t count, SquadronKind kind, float enemyHealth, const DirectX::XMFLOAT3& forward = {0, 0, -1},
 			size_t slotBase = 0);
 		bool Advance(size_t remaining, bool alive, float dt, bool reinforcementsReady);
-		void UpdateDeckSmoke(Engine::Scene& scene, CombatEffectSystem& effects, float dt);
 		void UpdateAntiAircraftGuns(Engine::Scene& scene, const AircraftFlightModel& player,
 			ProjectileSystem& projectiles, float battleSeconds, float dt);
 
@@ -113,7 +112,6 @@ namespace Game {
 		Engine::ObjectId m_carrierId = Engine::InvalidObjectId;
 		std::vector<EscortState> m_escorts;
 		float m_missionMessageSeconds = 8;
-		float m_deckSmokeSeconds = 0;
 		DirectX::XMFLOAT3 m_airCombatPosition{};
 		std::optional<DirectX::XMFLOAT3> m_defenseCenter;
 	};

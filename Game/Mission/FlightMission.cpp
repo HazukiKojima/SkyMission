@@ -196,20 +196,6 @@ namespace Game {
 		return result;
 	}
 
-	void FlightMission::UpdateDeckSmoke(Engine::Scene& scene, CombatEffectSystem& effects, float dt) {
-		if (m_mission.IsDeckDisabled()) {
-			m_deckSmokeSeconds -= dt;
-
-			if (m_deckSmokeSeconds <= 0) {
-				if (const auto center = GetCarrierCenter(scene)) {
-					effects.SpawnDeckSmoke(*center);
-				}
-
-				m_deckSmokeSeconds = effects.GetSettings().carrier.smokeIntervalSeconds;
-			}
-		}
-	}
-
 	void FlightMission::UpdateAntiAircraftGuns(Engine::Scene& scene, const AircraftFlightModel& player,
 		ProjectileSystem& projectiles, float battleSeconds, float dt) {
 		for (size_t i = 0; i < m_escorts.size(); ++i) {

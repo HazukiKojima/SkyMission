@@ -17,6 +17,7 @@ namespace Game {
 
 	  private:
 		static constexpr unsigned aircraftFireCloudCount = 6;
+		static constexpr int carrierSmokeCountMultiplier = 2;
 		static constexpr size_t aircraftFireVertexBudget =
 			2 * Engine::HudDrawList::SoftDiscVertexCount +
 			aircraftFireCloudCount * Engine::HudDrawList::QuadVertexCount;
@@ -30,6 +31,8 @@ namespace Game {
 		void DrawRocketEffects(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
 		void DrawExplosion(
 			const ExplosionEffect& effect, EffectDrawContext& context, float fragmentScale) const;
+		static void DrawExplosionSmoke(
+			const ExplosionEffect& effect, EffectDrawContext& context, bool continuous = false);
 		void DrawDeckSmoke(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;
 		void DrawImpact(const ImpactEffect& effect, EffectDrawContext& context) const;
 		void DrawGunSmoke(const CombatEffectSnapshot& snapshot, EffectDrawContext& context) const;

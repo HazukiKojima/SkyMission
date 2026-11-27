@@ -210,7 +210,6 @@ namespace Game {
 				m_effects.Update(dt);
 				UpdateCrashingEnemies(dt);
 				UpdateEnemyRadio(dt);
-				m_mission.UpdateDeckSmoke(m_scene, m_effects, dt);
 
 				if (m_combat.result == CombatResult::Victory) {
 					UpdateVictoryOrdnance(dt);

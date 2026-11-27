@@ -1,6 +1,7 @@
 #pragma once
 #include <DirectXMath.h>
 #include "CombatEffectSettings.h"
+#include <optional>
 #include <vector>
 #include "Game/Weapons/Gun/GunShotEvent.h"
 
@@ -20,6 +21,11 @@ namespace Game {
 	};
 
 	struct RocketTrailSample {
+		DirectX::XMFLOAT3 position{};
+		float age = 0;
+	};
+
+	struct CarrierSmoke {
 		DirectX::XMFLOAT3 position{};
 		float age = 0;
 	};
@@ -82,7 +88,7 @@ namespace Game {
 		std::vector<GunMuzzleFlash> gunFlashes;
 		std::vector<GunSmoke> gunSmoke;
 		std::vector<GunTracerSegment> gunTracers;
-		std::vector<RocketTrailSample> deckSmoke;
+		std::optional<CarrierSmoke> carrierSmoke;
 		std::vector<ImpactEffect> impacts;
 		std::vector<ExplosionEffect> explosions;
 		std::vector<RocketTrailSample> rocketSmoke;

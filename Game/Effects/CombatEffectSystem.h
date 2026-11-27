@@ -34,7 +34,6 @@ namespace Game {
 		void ClearAircraftFires() { m_snapshot.aircraftFires.clear(); }
 		void AddAircraftFire(const AircraftFire& fire) { m_snapshot.aircraftFires.push_back(fire); }
 		void SpawnCarrierExplosion(const DirectX::XMFLOAT3& position);
-		void SpawnDeckSmoke(const DirectX::XMFLOAT3& position);
 		void SetRocketExhausts(std::vector<RocketExhaust> exhausts);
 		void SpawnImpact(const HitEvent& hit, const DirectX::XMFLOAT3& targetVelocity);
 		void SpawnExplosion(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& velocity,

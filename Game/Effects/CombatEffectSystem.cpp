@@ -69,7 +69,7 @@ namespace Game {
 		AdvanceEffects(m_snapshot.impacts, step, m_settings.impact.lifetimeSeconds);
 		AdvanceEffects(m_snapshot.rocketSmoke, step, m_settings.rocket.smokeLifetimeSeconds);
 		AdvanceEffects(m_snapshot.aircraftSmoke, step, AircraftSmokePuff::lifetimeSeconds);
-		AdvanceEffects(m_snapshot.deckSmoke, step, m_settings.carrier.smokeLifetimeSeconds);
+		if (m_snapshot.carrierSmoke) m_snapshot.carrierSmoke->age += step;
 		AdvanceEffects(m_snapshot.explosions, step, m_settings.explosion.lifetimeSeconds);
 	}
 
@@ -164,15 +164,11 @@ namespace Game {
 
 	void CombatEffectSystem::SpawnCarrierExplosion(const DirectX::XMFLOAT3& position) {
 		AddExplosion({position, {}, 0, m_settings.carrier.explosionRadius});
+		m_snapshot.carrierSmoke = CarrierSmoke{position, -m_settings.carrier.smokeStartDelaySeconds};
 	}
 
 	void CombatEffectSystem::SpawnAircraftSmoke(const AircraftSmokePuff& puff) {
 		AddBoundedEffect(m_snapshot.aircraftSmoke, puff, AircraftSmokePuff::maximumCount);
-	}
-
-	void CombatEffectSystem::SpawnDeckSmoke(const DirectX::XMFLOAT3& position) {
-		AddBoundedEffect(
-			m_snapshot.deckSmoke, RocketTrailSample{position, 0}, CarrierEffectSettings::maxSmokeCount);
 	}
 
 	void CombatEffectSystem::SetRocketExhausts(std::vector<RocketExhaust> exhausts) {
