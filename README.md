@@ -19,7 +19,9 @@ C++20とDirectX 12で開発したWindows向けのゲームです。
 
 ## 遊び方
 
-配布ZIPが手元にある場合は、展開して直下の `SkyMission.exe` を起動します。ソースから起動する手順は[開発・操作ガイド](Docs/Guide.md#初回ビルドと起動)にあります。
+配布ZIPが手元にある場合は、展開して直下の `SkyMission.exe` を起動します。配布版の起動にSDKは不要です。
+
+Visual Studio 2026で `SkyMission.slnx` をビルドするには、Windows SDK 10.0.26100.0以降と .NET 10 SDK 10.0.404以降が必要です。未導入の場合は、初回ビルドの前にインストールしてください。手順は[開発・操作ガイド](Docs/Guide.md#初回ビルドと起動)を参照してください。
 
 タイトル画面で **Enter**、Xboxの **A**、またはPlayStationの **×** を押すと開始します。
 
