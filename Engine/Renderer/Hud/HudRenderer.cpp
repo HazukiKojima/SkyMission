@@ -4,7 +4,9 @@
 #include "Engine/Resources/Buffer/BufferUtilities.h"
 #include <d3dcompiler.h>
 #include <climits>
+#include <cstddef>
 #include <cstring>
+#include <iterator>
 #include <limits>
 
 namespace Engine {
@@ -98,15 +100,18 @@ namespace Engine {
 		m_atlas.CreateShaderResourceView(gpu, device.AllocateSrvDescriptor(&m_srv));
 
 		// HUD用の描画パイプラインを作る
-		CD3DX12_DESCRIPTOR_RANGE range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		const CD3DX12_DESCRIPTOR_RANGE ranges[] = {
+			{D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0}, {D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1}};
 
-		CD3DX12_ROOT_PARAMETER parameter;
-		parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_PIXEL);
+		CD3DX12_ROOT_PARAMETER parameters[std::size(ranges)];
+		for (size_t i = 0; i < std::size(ranges); ++i)
+			parameters[i].InitAsDescriptorTable(1, &ranges[i], D3D12_SHADER_VISIBILITY_PIXEL);
 		CD3DX12_STATIC_SAMPLER_DESC sampler(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR,
 			D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 			D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
 		const CD3DX12_ROOT_SIGNATURE_DESC rootDesc(
-			1, &parameter, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+			static_cast<UINT>(std::size(parameters)), parameters, 1, &sampler,
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 		ComPtr<ID3DBlob> rootBlob, error, vs, ps;
 		ThrowIfFailed(
 			D3D12SerializeRootSignature(&rootDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootBlob, &error));
@@ -118,12 +123,14 @@ namespace Engine {
 			{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-				0}};
+				0},
+			{"TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT, 0, static_cast<UINT>(offsetof(HudVertex, sceneDepth)),
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
 		desc.pRootSignature = m_root.Get();
 		desc.VS = {vs->GetBufferPointer(), vs->GetBufferSize()};
 		desc.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
-		desc.InputLayout = {layout, 3};
+		desc.InputLayout = {layout, static_cast<UINT>(std::size(layout))};
 		desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
@@ -164,6 +171,7 @@ namespace Engine {
 		ID3D12DescriptorHeap* heaps[] = {device.GetSrvDescriptorHeap()};
 		commands->SetDescriptorHeaps(1, heaps);
 		commands->SetGraphicsRootDescriptorTable(0, device.GetSrvGpuHandle(m_srv));
+		commands->SetGraphicsRootDescriptorTable(1, device.GetSrvGpuHandle(device.GetSceneDepthSrvIndex()));
 
 		const D3D12_VERTEX_BUFFER_VIEW view{m_vertices[frame]->GetGPUVirtualAddress(),
 			UINT(vertices.size() * sizeof(HudVertex)), sizeof(HudVertex)};

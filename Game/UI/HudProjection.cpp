@@ -28,7 +28,7 @@ namespace Game {
 
 		// 正規化した座標を左上原点の画面座標へ移す
 		return {{(x + 1) * m_width * 0.5f, (1 - y) * m_height * 0.5f},
-			w > 0 && std::abs(x) <= 1 && std::abs(y) <= 1 && z >= 0 && z <= 1, w <= 0};
+			w > 0 && std::abs(x) <= 1 && std::abs(y) <= 1 && z >= 0 && z <= 1, w <= 0, z};
 	}
 
 	HudProjection ProjectHudPoint(const DirectX::XMFLOAT3& point, const Engine::RenderView& view) {
@@ -79,9 +79,12 @@ namespace Game {
 		const auto toPixel = [&](float fraction) {
 			const auto clip = XMVectorLerp(headClip, tailClip, fraction);
 			const float w = std::max(XMVectorGetW(clip), kMinimumClipW);
-			return XMFLOAT2{std::clamp((XMVectorGetX(clip) / w + 1) * m_width * 0.5f, 0.0f, float(m_width)),
-				std::clamp((1 - XMVectorGetY(clip) / w) * m_height * 0.5f, 0.0f, float(m_height))};
+			return XMFLOAT3{std::clamp((XMVectorGetX(clip) / w + 1) * m_width * 0.5f, 0.0f, float(m_width)),
+				std::clamp((1 - XMVectorGetY(clip) / w) * m_height * 0.5f, 0.0f, float(m_height)),
+				std::clamp(XMVectorGetZ(clip) / w, 0.0f, 1.0f)};
 		};
-		return HudSegmentProjection{toPixel(enter), toPixel(exit)};
+		const auto start = toPixel(enter);
+		const auto end = toPixel(exit);
+		return HudSegmentProjection{{start.x, start.y}, {end.x, end.y}, {start.z, end.z}};
 	}
 } // namespace Game
